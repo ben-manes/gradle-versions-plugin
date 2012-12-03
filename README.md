@@ -50,9 +50,9 @@ This displays a report to the console, e.g.
 ------------------------------------------------------------
 The following dependencies are using the newest release version:
  - com.google.code.findbugs:jsr305:2.0.1
+ - com.google.inject:guice:3.0
  - com.google.inject.extensions:guice-multibindings:3.0
  - com.google.inject.extensions:guice-servlet:3.0
- - com.google.inject:guice:3.0
 
 The following dependencies exceed the version found at the release revision level:
  - org.scalatra:scalatra [2.3.0-SNAPSHOT <- 2.2.0-RC1]

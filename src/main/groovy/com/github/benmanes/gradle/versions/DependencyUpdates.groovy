@@ -80,25 +80,25 @@ class DependencyUpdates extends DefaultTask {
   /** Organizes the dependencies into version mappings. */
   def getVersionMapping(current, resolved) {
     def currentVersions = current.collectEntries { dependency ->
-       [label(dependency), dependency.version]
+       [keyOf(dependency), dependency.version]
     }
     def latestVersions = resolved.collectEntries { dependency ->
-      [label(dependency.module.id), dependency.moduleVersion]
+      [keyOf(dependency.module.id), dependency.moduleVersion]
     }
     def sameVersions = currentVersions.intersect(latestVersions)
 
     def comparator = new LatestVersionSemanticComparator()
-    def upgradeVersions = latestVersions.findAll { label, version ->
-      comparator.compare(version, currentVersions[label]) > 0
+    def upgradeVersions = latestVersions.findAll { key, version ->
+      comparator.compare(version, currentVersions[key]) > 0
     }
-    def downgradeVersions = latestVersions.findAll { label, version ->
-      comparator.compare(version, currentVersions[label]) < 0
+    def downgradeVersions = latestVersions.findAll { key, version ->
+      comparator.compare(version, currentVersions[key]) < 0
     }
     [currentVersions, latestVersions, sameVersions, downgradeVersions, upgradeVersions]
   }
 
-  /** Returns the dependency's group and name. */
-  def String label(dependency) { dependency.group + ':' + dependency.name }
+  /** Returns a key based on the dependency's group and name. */
+  def keyOf(dependency) { [group: dependency.group, name: dependency.name] }
 
   /** Returns the resolution revision level. */
   def revisionLevel() { System.properties.get('revision', revision) }
@@ -127,7 +127,9 @@ class DependencyUpdates extends DefaultTask {
       println "\nAll dependencies have newer versions."
     } else {
       println "\nThe following dependencies are using the newest ${revisionLevel()} version:"
-      sameVersions.sort().each { println " - ${it.key}:${it.value}" }
+      sameVersions
+        .sort { a, b -> compareKeys(a.key, b.key) }
+        .each { println " - ${label(it.key)}:${it.value}" }
     }
   }
 
@@ -135,10 +137,12 @@ class DependencyUpdates extends DefaultTask {
     if (!downgradeVersions.isEmpty()) {
       println("\nThe following dependencies exceed the version found at the "
         + revisionLevel() + " revision level:")
-      downgradeVersions.sort().each { label, version ->
-        def currentVersion = currentVersions[label]
-        println " - ${label} [${currentVersion} <- ${version}]"
-      }
+      downgradeVersions
+        .sort { a, b -> compareKeys(a.key, b.key) }
+        .each { key, version ->
+          def currentVersion = currentVersions[key]
+          println " - ${label(key)} [${currentVersion} <- ${version}]"
+        }
     }
   }
 
@@ -147,20 +151,32 @@ class DependencyUpdates extends DefaultTask {
       println "\nAll dependencies are using the latest ${revisionLevel()} versions."
     } else {
       println("\nThe following dependencies have newer ${revisionLevel()} versions:")
-      upgradeVersions.sort().each { label, version ->
-        def currentVersion = currentVersions[label]
-        println " - ${label} [${currentVersion} -> ${version}]"
-      }
+      upgradeVersions
+        .sort { a, b -> compareKeys(a.key, b.key) }
+        .each { key, version ->
+          def currentVersion = currentVersions[key]
+          println " - ${label(key)} [${currentVersion} -> ${version}]"
+        }
     }
   }
 
   def displayUnresolved(unresolved) {
     if (!unresolved.isEmpty()) {
       println("\nFailed to determine the latest version for the following dependencies:")
-      unresolved.sort { a, b -> label(a.selector) <=> label(b.selector) }.each {
-        println " - " + label(it.selector)
-        logger.info "The exception that is the cause of unresolved state:", it.problem
-      }
+      unresolved
+        .sort { a, b -> compareKeys(a, b) }
+        .each {
+          println " - " + label(keyOf(it.selector))
+          logger.info "The exception that is the cause of unresolved state:", it.problem
+        }
     }
   }
+
+  /** Compares the dependency keys. */
+  def compareKeys(a, b) {
+    (a['group'] == b['group']) ? a['name'] <=> b['name'] : a['group'] <=> b['group']
+  }
+
+  /** Returns the dependency key as a stringified label. */
+  def label(key) { key.group + ':' + key.name }
 }
