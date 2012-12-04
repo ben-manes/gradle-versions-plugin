@@ -83,11 +83,13 @@ uploadArchives {
 
     name = 'mavenCentralReleaseDeployer'
 
-    repository(url: 'https://oss.sonatype.org/service/local/staging/deploy/maven2/') {
-      authentication(
-        userName: properties.get('mavenCentralUsername', 'N/A'), 
-        password: properties.get('mavenCentralPassword', 'N/A'))
-      releases(updatePolicy: 'always')
+    doFirst {
+      repository(url: 'https://oss.sonatype.org/service/local/staging/deploy/maven2/') {
+        authentication(
+          userName: project.mavenCentralUsername,
+          password: project.mavenCentralPassword)
+        releases(updatePolicy: 'always')
+      }
     }
 
     pom.project pomConfiguration
