@@ -17,7 +17,7 @@ buildscript {
   }
   
   dependencies {
-    classpath 'com.github.benmanes:gradle-versions-plugin:0.1'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.1'
   }
 }
 ```
@@ -48,6 +48,7 @@ This displays a report to the console, e.g.
 ------------------------------------------------------------
 : Project Dependency Updates
 ------------------------------------------------------------
+
 The following dependencies are using the newest release version:
  - com.google.code.findbugs:jsr305:2.0.1
  - com.google.inject:guice:3.0
