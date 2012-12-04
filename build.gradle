@@ -2,7 +2,7 @@ apply plugin: 'signing'
 apply plugin: 'groovy'
 apply plugin: 'maven'
 
-group = 'com.github.benmanes'
+group = 'com.github.ben-manes'
 version = '0.1'
 
 dependencies {
@@ -85,8 +85,8 @@ uploadArchives {
 
     repository(url: 'https://oss.sonatype.org/service/local/staging/deploy/maven2/') {
       authentication(
-        userName: properties.get('mavenCentralUsername', "N/A"), 
-        password: properties.get('mavenCentralPassword', "N/A"))
+        userName: properties.get('mavenCentralUsername', 'N/A'), 
+        password: properties.get('mavenCentralPassword', 'N/A'))
       releases(updatePolicy: 'always')
     }
 
