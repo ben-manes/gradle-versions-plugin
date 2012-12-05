@@ -1,0 +1,37 @@
+apply plugin: 'versions'
+
+defaultTasks 'dependencyUpdates'
+
+buildscript {
+  repositories {
+    // Use 'gradle install' to install latest
+    mavenLocal()
+  }
+
+  dependencies {
+    classpath 'com.github.ben-manes:gradle-versions-plugin:latest.integration'
+  }
+}
+
+configurations {
+  upToDate
+  exceedLatest
+  upgradesFound
+  unresolvable
+}
+
+dependencies {
+  upToDate 'backport-util-concurrent:backport-util-concurrent:3.1',
+           'backport-util-concurrent:backport-util-concurrent-java12:3.1'
+  exceedLatest 'com.google.guava:guava:99.0-SNAPSHOT',
+               'com.google.guava:guava-tests:99.0-SNAPSHOT'
+  upgradesFound 'com.google.inject:guice:2.0',
+                'com.google.inject.extensions:guice-multibindings:2.0'
+  unresolvable 'com.github.ben-manes:unresolvable:1.0',
+               'com.github.ben-manes:unresolvable2:1.0'
+}
+
+repositories {
+  mavenCentral()
+}
+

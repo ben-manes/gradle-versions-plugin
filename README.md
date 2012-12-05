@@ -17,7 +17,7 @@ buildscript {
   }
   
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.1'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.2'
   }
 }
 ```
@@ -27,7 +27,8 @@ buildscript {
 ### `dependencyUpdates`
 
 Displays a report of the project dependencies that are up-to-date, exceed the latest version found,
-have upgrades, or failed to be resolved. 
+have upgrades, or failed to be resolved. When a dependency cannot be resolved the exception is
+logged at the `info` level.
 
 The `revision` task property controls the resolution strategy of determining what consistitutes the
 latest version of a dependency. The following strategies are supported:
@@ -39,7 +40,7 @@ latest version of a dependency. The following strategies are supported:
 The strategy can be specified either on the task or as a system property for ad hoc usage:
 
 ```groovy
-gradle dependencyUpdates -Drevision=integration
+gradle dependencyUpdates -Drevision=release
 ```
 
 This displays a report to the console, e.g.
@@ -64,3 +65,4 @@ The following dependencies have newer release versions:
  - com.amazonaws:aws-java-sdk [1.3.21.1 -> 1.3.26]
  - com.beust:jcommander [1.27 -> 1.30]
 ```
+

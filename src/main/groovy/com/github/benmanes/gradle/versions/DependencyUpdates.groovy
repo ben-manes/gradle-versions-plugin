@@ -162,9 +162,9 @@ class DependencyUpdates extends DefaultTask {
 
   def displayUnresolved(unresolved) {
     if (!unresolved.isEmpty()) {
-      println("\nFailed to determine the latest version for the following dependencies:")
+      println("\nFailed to determine the latest version for the following dependencies (use --info to see exceptions):")
       unresolved
-        .sort { a, b -> compareKeys(a, b) }
+        .sort { a, b -> compareKeys(keyOf(a.selector), keyOf(b.selector)) }
         .each {
           println " - " + label(keyOf(it.selector))
           logger.info "The exception that is the cause of unresolved state:", it.problem
