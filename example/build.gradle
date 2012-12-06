@@ -6,6 +6,8 @@ buildscript {
   repositories {
     // Use 'gradle install' to install latest
     mavenLocal()
+    mavenCentral()
+    maven { url = "https://oss.sonatype.org/content/repositories/releases/" }
   }
 
   dependencies {
@@ -30,8 +32,3 @@ dependencies {
   unresolvable 'com.github.ben-manes:unresolvable:1.0',
                'com.github.ben-manes:unresolvable2:1.0'
 }
-
-repositories {
-  mavenCentral()
-}
-

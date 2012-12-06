@@ -5,8 +5,8 @@ this plugin provides a task to determine which dependencies have updates.
 
 ## Usage
 
-This plugin is hosted on Maven Central Repository. You can add it to your build script using the
-following configuration:
+This plugin is hosted on the Maven Central Repository. You can add it to your build script using
+the following configuration:
 
 ```groovy
 apply plugin: 'versions'
@@ -17,7 +17,7 @@ buildscript {
   }
   
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.2'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.3'
   }
 }
 ```

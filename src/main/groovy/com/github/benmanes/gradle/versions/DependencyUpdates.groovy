@@ -16,7 +16,6 @@
 package com.github.benmanes.gradle.versions
 
 import org.gradle.api.DefaultTask
-import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.internal.artifacts.version.LatestVersionSemanticComparator
@@ -72,9 +71,34 @@ class DependencyUpdates extends DefaultTask {
         transitive = false
       }
     }
-    def lenient = project.configurations.detachedConfiguration(unresolved as Dependency[])
-      .resolvedConfiguration.lenientConfiguration
-    [lenient.firstLevelModuleDependencies, lenient.unresolvedModuleDependencies]
+    resolveWithAllRepositories {
+      def lenient = project.configurations.detachedConfiguration(unresolved as Dependency[])
+        .resolvedConfiguration.lenientConfiguration
+      [lenient.firstLevelModuleDependencies, lenient.unresolvedModuleDependencies]
+    }
+  }
+
+  /**
+   * Performs the closure with the project temporarily using all of the repositories collected
+   * across all projects. The additional repositories added are removed after the operation
+   * completes.
+   */
+  def resolveWithAllRepositories(closure) {
+    def repositories = project.allprojects.collectMany{ proj ->
+      (proj.repositories + proj.buildscript.repositories)
+    }.findAll { project.repositories.add(it) }
+
+    logger.info "Resolving with repositories:"
+    project.repositories.each { repository ->
+      def hasUrl = repository.metaClass.respondsTo(repository, "url")
+      logger.info ' - ' + repository.name + (hasUrl ? ": ${repository.url}" : '')
+    }
+
+    try {
+      closure.call()
+    } finally {
+      project.repositories.removeAll(repositories)
+    }
   }
 
   /** Organizes the dependencies into version mappings. */
@@ -162,7 +186,8 @@ class DependencyUpdates extends DefaultTask {
 
   def displayUnresolved(unresolved) {
     if (!unresolved.isEmpty()) {
-      println("\nFailed to determine the latest version for the following dependencies (use --info to see exceptions):")
+      println("\nFailed to determine the latest version for the following dependencies: "
+        + "(use --info for details):")
       unresolved
         .sort { a, b -> compareKeys(keyOf(a.selector), keyOf(b.selector)) }
         .each {
