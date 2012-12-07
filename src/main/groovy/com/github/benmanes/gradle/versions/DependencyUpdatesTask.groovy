@@ -15,18 +15,32 @@
  */
 package com.github.benmanes.gradle.versions
 
-import org.gradle.api.Plugin
-import org.gradle.api.Project
+import org.gradle.api.DefaultTask
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.TaskAction
 
 /**
- * Registers the plugin's tasks.
+ * A task that reports which dependencies have newer versions.
  *
  * @author Ben Manes (ben.manes@gmail.com)
  */
-public class VersionsPlugin implements Plugin<Project> {
+class DependencyUpdatesTask extends DefaultTask {
 
-  @Override
-  public void apply(Project project) {
-    project.tasks.add('dependencyUpdates', DependencyUpdatesTask)
+  @Input
+  String revision = 'milestone'
+
+  DependencyUpdatesTask() {
+    description = 'Displays the dependency updates for the project.'
+    group = 'Help'
   }
+
+  @TaskAction
+  def dependencyUpdates() {
+    def evaluator = new DependencyUpdates(project, revisionLevel())
+    def reporter = evaluator.run()
+    reporter.writeToConsole()
+  }
+
+  /** Returns the resolution revision level. */
+  def revisionLevel() { System.properties.get('revision', revision) }
 }

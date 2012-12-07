@@ -3,7 +3,7 @@ apply plugin: 'groovy'
 apply plugin: 'maven'
 
 group = 'com.github.ben-manes'
-version = '0.3'
+version = '0.4'
 
 dependencies {
   groovy localGroovy()
