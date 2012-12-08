@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.gradle.versions
 
+import groovy.transform.TupleConstructor
+
 import static com.github.benmanes.gradle.versions.DependencyUpdates.keyOf
 
 /**
@@ -22,11 +24,17 @@ import static com.github.benmanes.gradle.versions.DependencyUpdates.keyOf
  *
  * @author Ben Manes (ben.manes@gmail.com)
  */
+@TupleConstructor
 class DependencyUpdatesReporter {
-  /** The latest versions of each dependency (as scoped by the revision level). */
-  def latestVersions
+  /** The project evaluated against. */
+  def project
+  /** The revision strategy evaluated with. */
+  def revision
+
   /** The current versions of each dependency declared in the project(s). */
   def currentVersions
+  /** The latest versions of each dependency (as scoped by the revision level). */
+  def latestVersions
 
   /** The dependencies that are up to date (same as latest found). */
   def upToDateVersions
@@ -36,23 +44,6 @@ class DependencyUpdatesReporter {
   def upgradeVersions
   /** The dependencies that could not be resolved. */
   def unresolved
-
-  /** The revision strategy evaluated with. */
-  def revision
-  /** The project evaluated against. */
-  def project
-
-  def DependencyUpdatesReporter(project, revision, currentVersions, latestVersions,
-      upToDateVersions, downgradeVersions, upgradeVersions, unresolved) {
-    this.downgradeVersions = downgradeVersions
-    this.upToDateVersions = upToDateVersions
-    this.upgradeVersions = upgradeVersions
-    this.currentVersions = currentVersions
-    this.latestVersions = latestVersions
-    this.revision = revision
-    this.unresolved = unresolved
-    this.project = project
-  }
 
   /** Writes the report to the console. */
   def writeToConsole() {

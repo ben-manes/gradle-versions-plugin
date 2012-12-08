@@ -29,7 +29,7 @@ class DependencyUpdatesSpec extends Specification {
     given:
       def project = singleProject()
     when:
-      def reporter = evaluator(project).run()
+      def reporter = evaluate(project)
       reporter.writeToConsole()
     then:
       with(reporter) {
@@ -43,9 +43,9 @@ class DependencyUpdatesSpec extends Specification {
   def 'Single project with no repositories'() {
     given:
       def project = singleProject()
-      addDependencies(project)
+      addDependenciesTo(project)
     when:
-      def reporter = evaluator(project).run()
+      def reporter = evaluate(project)
       reporter.writeToConsole()
     then:
       with(reporter) {
@@ -59,11 +59,11 @@ class DependencyUpdatesSpec extends Specification {
   def 'Single project with a good and bad repository'() {
     given:
       def project = singleProject()
-      addRepository(project)
-      addBadRepository(project)
-      addDependencies(project)
+      addRepositoryTo(project)
+      addBadRepositoryTo(project)
+      addDependenciesTo(project)
     when:
-      def reporter = evaluator(project).run()
+      def reporter = evaluate(project)
       reporter.writeToConsole()
     then:
       with(reporter) {
@@ -77,10 +77,10 @@ class DependencyUpdatesSpec extends Specification {
   def 'Single project'() {
     given:
       def project = singleProject()
-      addRepository(project)
-      addDependencies(project)
+      addRepositoryTo(project)
+      addDependenciesTo(project)
     when:
-      def reporter = evaluator(project).run()
+      def reporter = evaluate(project, revision)
       reporter.writeToConsole()
     then:
       with(reporter) {
@@ -89,15 +89,17 @@ class DependencyUpdatesSpec extends Specification {
         upToDateVersions.size() == 2
         downgradeVersions.size() == 2
       }
+    where:
+      revision = ['release', 'milestone', 'integration']
   }
 
   def 'Multi-project with repository on parent'() {
     given:
       def (rootProject, childProject) = multiProject()
-      addRepository(rootProject)
-      addDependencies(childProject)
+      addRepositoryTo(rootProject)
+      addDependenciesTo(childProject)
     when:
-      def reporter = evaluator(rootProject).run()
+      def reporter = evaluate(rootProject, revision)
       reporter.writeToConsole()
     then:
       with(reporter) {
@@ -106,15 +108,17 @@ class DependencyUpdatesSpec extends Specification {
         upToDateVersions.size() == 2
         downgradeVersions.size() == 2
       }
+    where:
+      revision = ['release', 'milestone', 'integration']
   }
 
   def 'Multi-project with repository on child'() {
     given:
       def (rootProject, childProject, leafProject) = multiProject()
-      addRepository(childProject)
-      addDependencies(leafProject)
+      addRepositoryTo(childProject)
+      addDependenciesTo(leafProject)
     when:
-      def reporter = evaluator(rootProject).run()
+      def reporter = evaluate(rootProject, revision)
       reporter.writeToConsole()
     then:
       with(reporter) {
@@ -123,6 +127,8 @@ class DependencyUpdatesSpec extends Specification {
         upToDateVersions.size() == 2
         downgradeVersions.size() == 2
       }
+    where:
+      revision = ['release', 'milestone', 'integration']
   }
 
   def singleProject() {
@@ -136,23 +142,23 @@ class DependencyUpdatesSpec extends Specification {
     [rootProject, childProject, leafProject]
   }
 
-  def evaluator(project, revision = 'milestone') {
-    new DependencyUpdates(project, revision)
+  def evaluate(project, revision = 'milestone') {
+    new DependencyUpdates(project, revision).run()
   }
 
-  def addRepository(project) {
+  def addRepositoryTo(project) {
     project.repositories {
       mavenCentral()
     }
   }
 
-  def addBadRepository(project) {
+  def addBadRepositoryTo(project) {
     project.repositories {
       maven { url = 'http://www.example.com' }
     }
   }
 
-  def addDependencies(project) {
+  def addDependenciesTo(project) {
     project.configurations {
       upToDate
       exceedLatest

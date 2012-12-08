@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.gradle.versions
 
+import groovy.transform.TupleConstructor
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.internal.artifacts.version.LatestVersionSemanticComparator
@@ -31,14 +32,10 @@ import org.gradle.api.internal.artifacts.version.LatestVersionSemanticComparator
  *
  * @author Ben Manes (ben.manes@gmail.com)
  */
+@TupleConstructor
 class DependencyUpdates {
-  def revision
   def project
-
-  DependencyUpdates(project, revision) {
-    this.revision = revision
-    this.project = project
-  }
+  def revision
 
   /** Evaluates the dependencies and returns a reporter. */
   def run() {
