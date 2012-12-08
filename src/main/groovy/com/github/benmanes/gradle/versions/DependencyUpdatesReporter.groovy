@@ -23,24 +23,33 @@ import static com.github.benmanes.gradle.versions.DependencyUpdates.keyOf
  * @author Ben Manes (ben.manes@gmail.com)
  */
 class DependencyUpdatesReporter {
-  def downgradeVersions
-  def upgradeVersions
-  def currentVersions
+  /** The latest versions of each dependency (as scoped by the revision level). */
   def latestVersions
-  def sameVersions
+  /** The current versions of each dependency declared in the project(s). */
+  def currentVersions
+
+  /** The dependencies that are up to date (same as latest found). */
+  def upToDateVersions
+  /** The dependencies that exceed the latest found (e.g. may not want SNAPSHOTs). */
+  def downgradeVersions
+  /** The dependencies where upgrades were found (below latest found). */
+  def upgradeVersions
+  /** The dependencies that could not be resolved. */
   def unresolved
 
-  def revisionLevel
+  /** The revision strategy evaluated with. */
+  def revision
+  /** The project evaluated against. */
   def project
 
-  def DependencyUpdatesReporter(project, revisionLevel, currentVersions, latestVersions,
-      sameVersions, downgradeVersions, upgradeVersions, unresolved) {
+  def DependencyUpdatesReporter(project, revision, currentVersions, latestVersions,
+      upToDateVersions, downgradeVersions, upgradeVersions, unresolved) {
     this.downgradeVersions = downgradeVersions
+    this.upToDateVersions = upToDateVersions
     this.upgradeVersions = upgradeVersions
     this.currentVersions = currentVersions
     this.latestVersions = latestVersions
-    this.revisionLevel = revisionLevel
-    this.sameVersions = sameVersions
+    this.revision = revision
     this.unresolved = unresolved
     this.project = project
   }
@@ -69,7 +78,6 @@ class DependencyUpdatesReporter {
     writeUnresolved(printStream)
   }
 
-
   private def writeHeader(printStream) {
     printStream.println """
       |------------------------------------------------------------
@@ -78,12 +86,12 @@ class DependencyUpdatesReporter {
   }
 
   private def writeUpToDate(printStream) {
-    if (sameVersions.isEmpty()) {
+    if (upToDateVersions.isEmpty()) {
       printStream.println "\nAll dependencies have newer versions."
     } else {
       printStream.println(
-        "\nThe following dependencies are using the newest ${revisionLevel} version:")
-      sameVersions
+        "\nThe following dependencies are using the newest ${revision} version:")
+      upToDateVersions
         .sort { a, b -> compareKeys(a.key, b.key) }
         .each { printStream.println " - ${label(it.key)}:${it.value}" }
     }
@@ -92,7 +100,7 @@ class DependencyUpdatesReporter {
   private def writeExceedLatestFound(printStream) {
     if (!downgradeVersions.isEmpty()) {
       printStream.println("\nThe following dependencies exceed the version found at the "
-        + revisionLevel + " revision level:")
+        + revision + " revision level:")
       downgradeVersions
         .sort { a, b -> compareKeys(a.key, b.key) }
         .each { key, version ->
@@ -104,9 +112,9 @@ class DependencyUpdatesReporter {
 
   private def writeUpgrades(printStream) {
     if (upgradeVersions.isEmpty()) {
-      printStream.println "\nAll dependencies are using the latest ${revisionLevel} versions."
+      printStream.println "\nAll dependencies are using the latest ${revision} versions."
     } else {
-      printStream.println "\nThe following dependencies have newer ${revisionLevel} versions:"
+      printStream.println "\nThe following dependencies have newer ${revision} versions:"
       upgradeVersions
         .sort { a, b -> compareKeys(a.key, b.key) }
         .each { key, version ->

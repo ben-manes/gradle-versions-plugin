@@ -8,6 +8,12 @@ version = '0.4'
 dependencies {
   groovy localGroovy()
   compile gradleApi()
+
+  testCompile 'org.spockframework:spock-core:0.7-groovy-1.8'
+}
+
+repositories {
+  mavenCentral()
 }
 
 jar {

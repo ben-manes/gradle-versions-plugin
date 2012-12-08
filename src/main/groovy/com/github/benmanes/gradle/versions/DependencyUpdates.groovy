@@ -44,10 +44,10 @@ class DependencyUpdates {
   def run() {
     def current = getProjectAndBuildscriptDependencies()
     def (resolved, unresolved) = resolveLatestDepedencies(current)
-    def (currentVersions, latestVersions, sameVersions, downgradeVersions, upgradeVersions) =
+    def (currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions) =
       getVersionMapping(current, resolved)
-    new DependencyUpdatesReporter(project, revision, currentVersions,
-      latestVersions, sameVersions, downgradeVersions, upgradeVersions, unresolved)
+    new DependencyUpdatesReporter(project, revision, currentVersions, latestVersions,
+      upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
   }
 
   /** Returns {@link ExternalDependency} collected from the project and buildscript. */
@@ -110,7 +110,7 @@ class DependencyUpdates {
     def latestVersions = resolved.collectEntries { dependency ->
       [keyOf(dependency.module.id), dependency.moduleVersion]
     }
-    def sameVersions = currentVersions.intersect(latestVersions)
+    def upToDateVersions = currentVersions.intersect(latestVersions)
 
     def comparator = new LatestVersionSemanticComparator()
     def upgradeVersions = latestVersions.findAll { key, version ->
@@ -119,7 +119,7 @@ class DependencyUpdates {
     def downgradeVersions = latestVersions.findAll { key, version ->
       comparator.compare(version, currentVersions[key]) < 0
     }
-    [currentVersions, latestVersions, sameVersions, downgradeVersions, upgradeVersions]
+    [currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions]
   }
 
   /** Returns a key based on the dependency's group and name. */
