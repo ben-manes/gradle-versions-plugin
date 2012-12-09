@@ -17,6 +17,7 @@ package com.github.benmanes.gradle.versions;
 
 import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  * A specification for the dependency updates task.
@@ -74,6 +75,7 @@ class DependencyUpdatesSpec extends Specification {
       }
   }
 
+  @Unroll('Single project (#revision)')
   def 'Single project'() {
     given:
       def project = singleProject()
@@ -90,9 +92,10 @@ class DependencyUpdatesSpec extends Specification {
         downgradeVersions.size() == 2
       }
     where:
-      revision = ['release', 'milestone', 'integration']
+      revision << ['release', 'milestone', 'integration']
   }
 
+  @Unroll('Multi-project with repository on parent (#revision)')
   def 'Multi-project with repository on parent'() {
     given:
       def (rootProject, childProject) = multiProject()
@@ -109,9 +112,10 @@ class DependencyUpdatesSpec extends Specification {
         downgradeVersions.size() == 2
       }
     where:
-      revision = ['release', 'milestone', 'integration']
+      revision << ['release', 'milestone', 'integration']
   }
 
+  @Unroll('Multi-project with repository on child (#revision)')
   def 'Multi-project with repository on child'() {
     given:
       def (rootProject, childProject, leafProject) = multiProject()
@@ -128,7 +132,7 @@ class DependencyUpdatesSpec extends Specification {
         downgradeVersions.size() == 2
       }
     where:
-      revision = ['release', 'milestone', 'integration']
+      revision << ['release', 'milestone', 'integration']
   }
 
   def singleProject() {
