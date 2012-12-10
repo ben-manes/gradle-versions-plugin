@@ -120,7 +120,7 @@ class DependencyUpdatesSpec extends Specification {
     given:
       def (rootProject, childProject, leafProject) = multiProject()
       addRepositoryTo(childProject)
-      addDependenciesTo(leafProject)
+      addDependenciesTo(rootProject)
     when:
       def reporter = evaluate(rootProject, revision)
       reporter.writeToConsole()

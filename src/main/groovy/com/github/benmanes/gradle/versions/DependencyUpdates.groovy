@@ -20,6 +20,8 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.internal.artifacts.version.LatestVersionSemanticComparator
 
+import static org.gradle.api.specs.Specs.SATISFIES_ALL
+
 /**
  * An evaluator for reporting of which dependencies have newer versions.
  * <p>
@@ -42,12 +44,12 @@ class DependencyUpdates {
     def current = getProjectAndBuildscriptDependencies()
     def (resolved, unresolved) = resolveLatestDepedencies(current)
     def (currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions) =
-      getVersionMapping(current, resolved)
+      composeVersionMapping(current, resolved)
     new DependencyUpdatesReporter(project, revision, currentVersions, latestVersions,
       upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
   }
 
-  /** Returns {@link ExternalDependency} collected from the project and buildscript. */
+  /** Returns {@link ExternalDependency} collected from all projects and buildscripts. */
   private def getProjectAndBuildscriptDependencies() {
     project.allprojects.collectMany{ proj ->
       def configurations = (proj.configurations + proj.buildscript.configurations)
@@ -60,19 +62,16 @@ class DependencyUpdates {
    * the latest dependencies to determine the newest versions.
    */
   private def resolveLatestDepedencies(current) {
-    if (current.empty) {
-      return [[], []]
-    }
-    def unresolved = current.collect { dependency ->
+    def latest = current.collect { dependency ->
       project.dependencies.create(group: dependency.group, name: dependency.name,
           version: "latest.${revision}") {
         transitive = false
       }
     }
     resolveWithAllRepositories {
-      def lenient = project.configurations.detachedConfiguration(unresolved as Dependency[])
+      def conf = project.configurations.detachedConfiguration(latest as Dependency[])
         .resolvedConfiguration.lenientConfiguration
-      [lenient.firstLevelModuleDependencies, lenient.unresolvedModuleDependencies]
+      [conf.getFirstLevelModuleDependencies(SATISFIES_ALL), conf.unresolvedModuleDependencies]
     }
   }
 
@@ -100,7 +99,7 @@ class DependencyUpdates {
   }
 
   /** Organizes the dependencies into version mappings. */
-  private def getVersionMapping(current, resolved) {
+  private def composeVersionMapping(current, resolved) {
     def currentVersions = current.collectEntries { dependency ->
        [keyOf(dependency), dependency.version]
     }
