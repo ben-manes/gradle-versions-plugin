@@ -5,9 +5,8 @@ defaultTasks 'dependencyUpdates'
 buildscript {
   repositories {
     // Use 'gradle install' to install latest
-    mavenLocal()
     mavenCentral()
-    maven { url = "https://oss.sonatype.org/content/repositories/releases/" }
+    mavenLocal()
   }
 
   dependencies {

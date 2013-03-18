@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.gradle.versions
+package com.github.benmanes.gradle.versions.updates
 
 import groovy.transform.TupleConstructor
 import org.gradle.api.artifacts.Dependency
@@ -23,7 +23,7 @@ import org.gradle.api.internal.artifacts.version.LatestVersionSemanticComparator
 import static org.gradle.api.specs.Specs.SATISFIES_ALL
 
 /**
- * An evaluator for reporting of which dependencies have newer versions.
+ * An evaluator for reporting of which dependencies have later versions.
  * <p>
  * The <tt>revision</tt> property controls the resolution strategy:
  * <ul>

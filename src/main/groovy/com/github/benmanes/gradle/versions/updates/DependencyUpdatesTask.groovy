@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.gradle.versions
+package com.github.benmanes.gradle.versions.updates
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
 
 /**
- * A task that reports which dependencies have newer versions.
+ * A task that reports which dependencies have later versions.
  *
  * @author Ben Manes (ben.manes@gmail.com)
  */

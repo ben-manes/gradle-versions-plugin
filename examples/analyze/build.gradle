@@ -1,0 +1,24 @@
+apply plugin: 'versions'
+apply plugin: 'java'
+
+defaultTasks 'dependencyAnalyze'
+
+buildscript {
+  repositories {
+    // Use 'gradle install' to install latest
+    mavenCentral()
+    mavenLocal()
+  }
+
+  dependencies {
+    classpath 'com.github.ben-manes:gradle-versions-plugin:latest.integration'
+  }
+}
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  compile 'com.google.guava:guava:14.0.1'
+}

@@ -13,14 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.gradle.versions
+package com.github.benmanes.gradle.versions.updates
 
 import groovy.transform.TupleConstructor
 
-import static com.github.benmanes.gradle.versions.DependencyUpdates.keyOf
+import static com.github.benmanes.gradle.versions.updates.DependencyUpdates.keyOf
+
 
 /**
- * A reporter for the results determining dependency updates.
+ * A reporter for the dependency updates results.
  *
  * @author Ben Manes (ben.manes@gmail.com)
  */
@@ -78,10 +79,10 @@ class DependencyUpdatesReporter {
 
   private def writeUpToDate(printStream) {
     if (upToDateVersions.isEmpty()) {
-      printStream.println "\nAll dependencies have newer versions."
+      printStream.println "\nAll dependencies have later versions."
     } else {
       printStream.println(
-        "\nThe following dependencies are using the newest ${revision} version:")
+        "\nThe following dependencies are using the latest ${revision} version:")
       upToDateVersions
         .sort { a, b -> compareKeys(a.key, b.key) }
         .each { printStream.println " - ${label(it.key)}:${it.value}" }
@@ -105,7 +106,7 @@ class DependencyUpdatesReporter {
     if (upgradeVersions.isEmpty()) {
       printStream.println "\nAll dependencies are using the latest ${revision} versions."
     } else {
-      printStream.println "\nThe following dependencies have newer ${revision} versions:"
+      printStream.println "\nThe following dependencies have later ${revision} versions:"
       upgradeVersions
         .sort { a, b -> compareKeys(a.key, b.key) }
         .each { key, version ->
