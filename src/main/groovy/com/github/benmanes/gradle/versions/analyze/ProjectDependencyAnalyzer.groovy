@@ -61,8 +61,7 @@ class ProjectDependencyAnalyzer {
       artifacts.findAll { ResolvedArtifact artifact -> artifact.file in unusedDeclaredArtifacts }.unique {it.file} as Set)
   }
 
-  private Set<ResolvedDependency> getFirstLevelDependencies(Project project, String configurationName)
-  {
+  private Set<ResolvedDependency> getFirstLevelDependencies(Project project, String configurationName) {
     project.configurations."$configurationName".resolvedConfiguration.firstLevelModuleDependencies
   }
 
@@ -90,18 +89,19 @@ class ProjectDependencyAnalyzer {
   }
 
   private Set<File> findModuleArtifactFiles(Set<ResolvedDependency> dependencies) {
-    dependencies*.moduleArtifacts*.collect {it.file}.unique().flatten()
+    dependencies*.moduleArtifacts*.collectMany {it.file}.unique()
   }
 
   /**
    * Find and analyze all class files to determine which external classes are used.
+   *
    * @param project
    * @return a Set of class names
    */
   private Collection analyzeClassDependencies(Project project) {
-    return project.sourceSets*.output.classesDir?.collect { File file ->
+    return project.sourceSets*.output.classesDir?.collectMany { File file ->
       dependencyAnalyzer.analyze(file.toURI().toURL())
-    }?.flatten()?.unique()
+    }?.unique()
   }
 
   /**

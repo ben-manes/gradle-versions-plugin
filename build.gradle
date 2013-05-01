@@ -19,8 +19,8 @@ repositories {
 }
 
 dependencies {
-  groovy localGroovy()
   compile gradleApi()
+  compile localGroovy()
 
   compile 'org.apache.maven.shared:maven-dependency-analyzer:1.4'
   compile 'org.codehaus.plexus:plexus-container-default:1.5.5'
@@ -80,5 +80,5 @@ modifyPom {
 }
 
 task wrapper(type: Wrapper, description: 'Generates the gradle wrapper.') {
-  gradleVersion = '1.5-rc-1'
+  gradleVersion = '1.6-rc-1'
 }
