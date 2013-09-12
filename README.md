@@ -17,7 +17,7 @@ buildscript {
   }
   
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.3'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.4'
   }
 }
 ```
@@ -30,7 +30,7 @@ Displays a report of the project dependencies that are up-to-date, exceed the la
 have upgrades, or failed to be resolved. When a dependency cannot be resolved the exception is
 logged at the `info` level.
 
-The `revision` task property controls the resolution strategy of determining what consistitutes the
+The `revision` task property controls the resolution strategy of determining what constitutes the
 latest version of a dependency. The following strategies are supported:
 
   * release: selects the latest release
@@ -50,7 +50,7 @@ This displays a report to the console, e.g.
 : Project Dependency Updates
 ------------------------------------------------------------
 
-The following dependencies are using the newest release version:
+The following dependencies are using the latest release version:
  - com.google.code.findbugs:jsr305:2.0.1
  - com.google.inject:guice:3.0
  - com.google.inject.extensions:guice-multibindings:3.0
@@ -61,7 +61,7 @@ The following dependencies exceed the version found at the release revision leve
  - org.scalatra:scalatra-auth [2.3.0-SNAPSHOT <- 2.2.0-RC1]
  - org.scalatra:scalatra-specs2 [2.3.0-SNAPSHOT <- 2.2.0-RC1]
 
-The following dependencies have newer release versions:
+The following dependencies have later release versions:
  - com.amazonaws:aws-java-sdk [1.3.21.1 -> 1.3.26]
  - com.beust:jcommander [1.27 -> 1.30]
 ```

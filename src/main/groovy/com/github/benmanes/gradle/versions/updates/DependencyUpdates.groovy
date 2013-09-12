@@ -18,7 +18,6 @@ package com.github.benmanes.gradle.versions.updates
 import groovy.transform.TupleConstructor
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalDependency
-import org.gradle.api.internal.artifacts.version.LatestVersionSemanticComparator
 
 import static org.gradle.api.specs.Specs.SATISFIES_ALL
 
@@ -36,6 +35,11 @@ import static org.gradle.api.specs.Specs.SATISFIES_ALL
  */
 @TupleConstructor
 class DependencyUpdates {
+  static final String COMPARATOR_17 =
+    'org.gradle.api.internal.artifacts.version.LatestVersionSemanticComparator'
+  static final String COMPARATOR_18 =
+    'org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.ResolverStrategy'
+
   def project
   def revision
 
@@ -108,7 +112,7 @@ class DependencyUpdates {
     }
     def upToDateVersions = currentVersions.intersect(latestVersions)
 
-    def comparator = new LatestVersionSemanticComparator()
+    def comparator = getVersionComparator()
     def upgradeVersions = latestVersions.findAll { key, version ->
       comparator.compare(version, currentVersions[key]) > 0
     }
@@ -116,6 +120,16 @@ class DependencyUpdates {
       comparator.compare(version, currentVersions[key]) < 0
     }
     [currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions]
+  }
+
+  /** Retrieves the internal version comparator compatible with the Gradle version. */
+  def getVersionComparator() {
+    def classLoader = Thread.currentThread().getContextClassLoader()
+    if (project.gradle.gradleVersion < '1.8') {
+      classLoader.loadClass(COMPARATOR_17).newInstance()
+    } else {
+      classLoader.loadClass(COMPARATOR_18).newInstance().getVersionMatcher()
+    }
   }
 
   /** Returns a key based on the dependency's group and name. */

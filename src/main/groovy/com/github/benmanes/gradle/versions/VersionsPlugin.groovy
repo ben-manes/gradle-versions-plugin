@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.gradle.versions
 
-import com.github.benmanes.gradle.versions.analyze.DependencyAnalyzeTask
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -29,7 +28,7 @@ public class VersionsPlugin implements Plugin<Project> {
 
   @Override
   public void apply(Project project) {
-    project.tasks.create('dependencyAnalyze', DependencyAnalyzeTask)
+    // project.tasks.create('dependencyAnalyze', DependencyAnalyzeTask)
     project.tasks.create('dependencyUpdates', DependencyUpdatesTask)
   }
 }
