@@ -113,10 +113,11 @@ class DependencyUpdates {
     def comparator = getVersionComparator()
 
     def versionInfo = latestVersions.groupBy { key, version ->
-      if (currentVersions[key] == version){
-        return 0
+      if (currentVersions[key] == version) {
+        0
+      } else {
+        (Math.signum(comparator.compare(version, currentVersions[key]))) as int
       }
-      return (Math.signum(comparator.compare(version, currentVersions[key]))) as int
     }
     def upToDateVersions = versionInfo[0] ?: []
     def upgradeVersions = versionInfo[1] ?: []
