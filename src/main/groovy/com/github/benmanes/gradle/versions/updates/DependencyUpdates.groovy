@@ -110,15 +110,17 @@ class DependencyUpdates {
     def latestVersions = resolved.collectEntries { dependency ->
       [keyOf(dependency.module.id), dependency.moduleVersion]
     }
-    def upToDateVersions = currentVersions.intersect(latestVersions)
-
     def comparator = getVersionComparator()
-    def upgradeVersions = latestVersions.findAll { key, version ->
-      comparator.compare(version, currentVersions[key]) > 0
+
+    def versionInfo = latestVersions.groupBy { key, version ->
+      if (currentVersions[key] == version){
+        return 0
+      }
+      return (Math.signum(comparator.compare(version, currentVersions[key]))) as int
     }
-    def downgradeVersions = latestVersions.findAll { key, version ->
-      comparator.compare(version, currentVersions[key]) < 0
-    }
+    def upToDateVersions = versionInfo[0] ?: []
+    def upgradeVersions = versionInfo[1] ?: []
+    def downgradeVersions = versionInfo[-1] ?: []
     [currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions]
   }
 
