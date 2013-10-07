@@ -28,7 +28,6 @@ public class VersionsPlugin implements Plugin<Project> {
 
   @Override
   public void apply(Project project) {
-    // project.tasks.create('dependencyAnalyze', DependencyAnalyzeTask)
     project.tasks.create('dependencyUpdates', DependencyUpdatesTask)
   }
 }

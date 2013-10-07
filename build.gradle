@@ -22,9 +22,6 @@ dependencies {
   compile gradleApi()
   compile localGroovy()
 
-  compile 'org.apache.maven.shared:maven-dependency-analyzer:1.4'
-  compile 'org.codehaus.plexus:plexus-container-default:1.5.5'
-
   testCompile 'org.spockframework:spock-core:0.7-groovy-1.8'
 }
 
