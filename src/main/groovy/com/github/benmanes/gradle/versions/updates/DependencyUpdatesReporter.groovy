@@ -19,7 +19,6 @@ import groovy.transform.TupleConstructor
 
 import static com.github.benmanes.gradle.versions.updates.DependencyUpdates.keyOf
 
-
 /**
  * A reporter for the dependency updates results.
  *
