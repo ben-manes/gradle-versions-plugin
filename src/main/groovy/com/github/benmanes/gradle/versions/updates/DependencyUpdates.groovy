@@ -128,7 +128,8 @@ class DependencyUpdates {
   /** Retrieves the internal version comparator compatible with the Gradle version. */
   def getVersionComparator() {
     def classLoader = Thread.currentThread().getContextClassLoader()
-    if (project.gradle.gradleVersion < '1.8') {
+
+    if (project.gradle.gradleVersion =~ /^1\.[0-7](?:[^\d]|$)/) {
       classLoader.loadClass(COMPARATOR_17).newInstance()
     } else {
       classLoader.loadClass(COMPARATOR_18).newInstance().getVersionMatcher()
@@ -137,4 +138,5 @@ class DependencyUpdates {
 
   /** Returns a key based on the dependency's group and name. */
   def static keyOf(dependency) { [group: dependency.group, name: dependency.name] }
+
 }
