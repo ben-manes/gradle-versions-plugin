@@ -45,6 +45,8 @@ class DependencyUpdatesReporter {
   /** The dependencies that could not be resolved. */
   def unresolved
 
+  private static Object mutex = new Object();
+
   /** Writes the report to the console. */
   def writeToConsole() {
     writeTo(System.out)
@@ -62,11 +64,13 @@ class DependencyUpdatesReporter {
 
   /** Writes the report to the print stream. The stream is not automatically closed. */
   def writeTo(printStream) {
-    writeHeader(printStream)
-    writeUpToDate(printStream)
-    writeExceedLatestFound(printStream)
-    writeUpgrades(printStream)
-    writeUnresolved(printStream)
+    synchronized (mutex) {
+      writeHeader(printStream)
+      writeUpToDate(printStream)
+      writeExceedLatestFound(printStream)
+      writeUpgrades(printStream)
+      writeUnresolved(printStream)
+    }
   }
 
   private def writeHeader(printStream) {
