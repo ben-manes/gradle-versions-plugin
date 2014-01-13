@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>com.google.guava</groupId>
+  <artifactId>guava-tests</artifactId>
+  <versioning>
+    <latest>16.0-rc1</latest>
+    <release>16.0-rc1</release>
+    <versions>
+      <version>10.0-rc1</version>
+      <version>10.0-rc2</version>
+      <version>10.0-rc3</version>
+      <version>10.0</version>
+      <version>10.0.1</version>
+      <version>11.0-rc1</version>
+      <version>11.0</version>
+      <version>11.0.1</version>
+      <version>11.0.2</version>
+      <version>12.0-rc1</version>
+      <version>12.0-rc2</version>
+      <version>12.0</version>
+      <version>12.0.1</version>
+      <version>13.0-rc1</version>
+      <version>13.0-rc2</version>
+      <version>13.0-final</version>
+      <version>13.0.1</version>
+      <version>14.0-rc1</version>
+      <version>14.0-rc2</version>
+      <version>14.0-rc3</version>
+      <version>14.0</version>
+      <version>14.0.1</version>
+      <version>15.0-rc1</version>
+      <version>15.0</version>
+      <version>16.0-rc1</version>
+    </versions>
+    <lastUpdated>20131219233837</lastUpdated>
+  </versioning>
+</metadata>

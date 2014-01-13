@@ -153,8 +153,11 @@ class DependencyUpdatesSpec extends Specification {
   }
 
   def addRepositoryTo(project) {
+    def localMavenRepo = getClass().getResource('/maven/')
     project.repositories {
-      mavenCentral()
+      maven {
+        url localMavenRepo.toURI()
+      }
     }
   }
 
