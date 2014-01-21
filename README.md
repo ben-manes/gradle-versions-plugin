@@ -13,11 +13,12 @@ apply plugin: 'versions'
 
 buildscript {
   repositories {
+    maven { url "https://github.com/ben-manes/gradle-versions-plugin/raw/mvnrepo" }
     mavenCentral()
   }
   
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.4'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.5-beta-1'
   }
 }
 ```
