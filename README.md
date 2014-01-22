@@ -5,7 +5,7 @@ this plugin provides a task to determine which dependencies have updates.
 
 ## Usage
 
-This plugin is hosted on the Maven Central Repository. You can add it to your build script using
+This plugin is available from a Maven repository hosted on GitHub. You can add it to your build script using
 the following configuration:
 
 ```groovy
@@ -22,6 +22,7 @@ buildscript {
   }
 }
 ```
+The current version is known to work with Gradle versions up to 1.10.
 
 ## Tasks
 
