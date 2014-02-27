@@ -5,7 +5,7 @@ this plugin provides a task to determine which dependencies have updates.
 
 ## Usage
 
-This plugin is available from a Maven repository hosted on GitHub. You can add it to your build script using
+This plugin is available from Bintray's JCenter repository. You can add it to your build script using
 the following configuration:
 
 ```groovy
@@ -13,12 +13,11 @@ apply plugin: 'versions'
 
 buildscript {
   repositories {
-    maven { url "https://github.com/ben-manes/gradle-versions-plugin/raw/mvnrepo" }
-    mavenCentral()
+    jcenter()
   }
   
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.5-beta-1'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.4'
   }
 }
 ```
