@@ -101,11 +101,23 @@ class DependencyUpdates {
       project.repositories.removeAll(repositories)
     }
   }
+  
+  /**
+   * Returns the version that is used for the given dependency. Resolves dynamic versions (e.g. '1.+') to actual version numbers
+   */
+  private def resolveActualDependencyVersion(Dependency dependency) {
+    def version = dependency.version
+    resolveWithAllRepositories{
+      project.configurations.detachedConfiguration(dependency).resolvedConfiguration.lenientConfiguration
+      .getFirstLevelModuleDependencies(SATISFIES_ALL).find()?.moduleVersion ?: version
+    }
+  }
+
 
   /** Organizes the dependencies into version mappings. */
   private def composeVersionMapping(current, resolved) {
     def currentVersions = current.collectEntries { dependency ->
-       [keyOf(dependency), dependency.version]
+       [keyOf(dependency), resolveActualDependencyVersion(dependency)]
     }
     def latestVersions = resolved.collectEntries { dependency ->
       [keyOf(dependency.module.id), dependency.moduleVersion]

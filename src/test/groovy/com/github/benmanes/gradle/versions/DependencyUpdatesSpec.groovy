@@ -137,6 +137,27 @@ class DependencyUpdatesSpec extends Specification {
       revision << ['release', 'milestone', 'integration']
   }
 
+  def "Version ranges are correctly evaluated"(){
+    given:
+    def project = singleProject()
+    addRepositoryTo(project)
+    project.configurations {
+      upToDate
+    }
+    project.dependencies.upToDate 'backport-util-concurrent:backport-util-concurrent:3.+'
+  when:
+    def reporter = evaluate(project)
+    reporter.writeToConsole()
+  then:
+    with(reporter) {
+      unresolved.isEmpty()
+      upgradeVersions.isEmpty()
+      upToDateVersions.size() == 1
+      downgradeVersions.isEmpty()
+    }
+    
+  }
+  
   def singleProject() {
     new ProjectBuilder().withName('single').build()
   }
