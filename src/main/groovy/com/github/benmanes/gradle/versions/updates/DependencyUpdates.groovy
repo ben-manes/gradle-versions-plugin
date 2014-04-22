@@ -46,7 +46,9 @@ class DependencyUpdates {
   /** Evaluates the dependencies and returns a reporter. */
   def run() {
     def current = getProjectAndBuildscriptDependencies()
+    project.logger.info('Found dependencies {}', current)
     def (resolved, unresolved) = resolveLatestDepedencies(current)
+    project.logger.info('Resolved dependencies: {}', resolved)
     def (currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions) =
       composeVersionMapping(current, resolved)
     new DependencyUpdatesReporter(project, revision, currentVersions, latestVersions,
@@ -107,10 +109,18 @@ class DependencyUpdates {
    */
   private def resolveActualDependencyVersion(Dependency dependency) {
     def version = dependency.version
-    resolveWithAllRepositories{
+    boolean mightBeDynamicVersion = version.endsWith('+') || version.endsWith(']') || version.endsWith(')') || version.startsWith('latest.')
+    if (!mightBeDynamicVersion){
+      project.logger.info("Dependency {} does not use a dynamic version", dependency)
+      return version
+    }
+    
+    def actualVersion = resolveWithAllRepositories{
       project.configurations.detachedConfiguration(dependency).resolvedConfiguration.lenientConfiguration
       .getFirstLevelModuleDependencies(SATISFIES_ALL).find()?.moduleVersion ?: version
     }
+    project.logger.info("Resolved actual version of dependency {} to {}", dependency, actualVersion)
+    return actualVersion
   }
 
 
@@ -122,9 +132,12 @@ class DependencyUpdates {
     def latestVersions = resolved.collectEntries { dependency ->
       [keyOf(dependency.module.id), dependency.moduleVersion]
     }
+    project.logger.info('Comparing current with latest dependencies. current: {}, latest: {}', currentVersions.collect{ key, value -> "${key.group}:${key.name}:$value" }, latestVersions.collect{ key, value -> "${key.group}:${key.name}:$value" })
+    
     def comparator = getVersionComparator()
 
     def versionInfo = latestVersions.groupBy { key, version ->
+      project.logger.info('Checking dependency {}:{}', key.group, key.name)
       if (currentVersions[key] == version) {
         0
       } else {
