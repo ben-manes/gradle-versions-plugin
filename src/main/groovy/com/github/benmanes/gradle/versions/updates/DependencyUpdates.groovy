@@ -47,10 +47,22 @@ class DependencyUpdates {
   def run() {
     def current = getProjectAndBuildscriptDependencies()
     project.logger.info('Found dependencies {}', current)
-    def (resolved, unresolved) = resolveLatestDepedencies(current)
-    project.logger.info('Resolved dependencies: {}', resolved)
-    def (currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions) =
-      composeVersionMapping(current, resolved)
+    def (resolvedLatest, unresolved) = resolveLatestDepedencies(current)
+    project.logger.info('Resolved latest dependencies: {}', resolvedLatest)
+    project.logger.info('Unresolved dependencies: {}', unresolved)
+    
+    def currentVersions = [:]
+    current.each { dependency ->
+      if (unresolved.find{keyOf(it.selector) == keyOf(dependency)}){
+        project.logger.info('Could not determine current version for dependency: {}', dependency)
+        return
+      }else{
+        def actualVersion = resolveActualDependencyVersion(dependency)
+        currentVersions.put(keyOf(dependency), actualVersion)
+      }
+    }
+    def (latestVersions, upToDateVersions, downgradeVersions, upgradeVersions) =
+      composeVersionMapping(currentVersions, resolvedLatest)
     new DependencyUpdatesReporter(project, revision, currentVersions, latestVersions,
       upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
   }
@@ -70,7 +82,7 @@ class DependencyUpdates {
   private def resolveLatestDepedencies(current) {
     def latest = current.collect { dependency ->
       project.dependencies.create(group: dependency.group, name: dependency.name,
-          version: "latest.${revision}") {
+          version: (dependency.version == null ? null : "latest.${revision}")) {
         transitive = false
       }
     }
@@ -109,7 +121,7 @@ class DependencyUpdates {
    */
   private def resolveActualDependencyVersion(Dependency dependency) {
     def version = dependency.version
-    boolean mightBeDynamicVersion = version.endsWith('+') || version.endsWith(']') || version.endsWith(')') || version.startsWith('latest.')
+    boolean mightBeDynamicVersion = version != null && (version.endsWith('+') || version.endsWith(']') || version.endsWith(')') || version.startsWith('latest.'))
     if (!mightBeDynamicVersion){
       project.logger.info("Dependency {} does not use a dynamic version", dependency)
       return version
@@ -125,11 +137,9 @@ class DependencyUpdates {
 
 
   /** Organizes the dependencies into version mappings. */
-  private def composeVersionMapping(current, resolved) {
-    def currentVersions = current.collectEntries { dependency ->
-       [keyOf(dependency), resolveActualDependencyVersion(dependency)]
-    }
-    def latestVersions = resolved.collectEntries { dependency ->
+  private def composeVersionMapping(currentVersions, resolvedLatest) {
+    
+    def latestVersions = resolvedLatest.collectEntries { dependency ->
       [keyOf(dependency.module.id), dependency.moduleVersion]
     }
     project.logger.info('Comparing current with latest dependencies. current: {}, latest: {}', currentVersions.collect{ key, value -> "${key.group}:${key.name}:$value" }, latestVersions.collect{ key, value -> "${key.group}:${key.name}:$value" })
@@ -147,7 +157,7 @@ class DependencyUpdates {
     def upToDateVersions = versionInfo[0] ?: []
     def upgradeVersions = versionInfo[1] ?: []
     def downgradeVersions = versionInfo[-1] ?: []
-    [currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions]
+    [latestVersions, upToDateVersions, downgradeVersions, upgradeVersions]
   }
 
   /** Retrieves the internal version comparator compatible with the Gradle version. */
