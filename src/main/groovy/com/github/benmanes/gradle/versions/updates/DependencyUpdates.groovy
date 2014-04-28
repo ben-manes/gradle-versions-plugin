@@ -120,13 +120,18 @@ class DependencyUpdates {
    * Returns the version that is used for the given dependency. Resolves dynamic versions (e.g. '1.+') to actual version numbers
    */
   private def resolveActualDependencyVersion(Dependency dependency) {
+
+    if (!dependency.version) {
+      return ""
+    }
+
     def version = dependency.version
     boolean mightBeDynamicVersion = version != null && (version.endsWith('+') || version.endsWith(']') || version.endsWith(')') || version.startsWith('latest.'))
     if (!mightBeDynamicVersion){
       project.logger.info("Dependency {} does not use a dynamic version", dependency)
       return version
     }
-    
+
     def actualVersion = resolveWithAllRepositories{
       project.configurations.detachedConfiguration(dependency).resolvedConfiguration.lenientConfiguration
       .getFirstLevelModuleDependencies(SATISFIES_ALL).find()?.moduleVersion ?: version
