@@ -2,7 +2,7 @@ apply plugin: 'groovy'
 apply plugin: 'nexus'
 
 group = 'com.github.ben-manes'
-version = '0.5-beta-2'
+version = '0.5-beta-5'
 
 buildscript {
   repositories {
@@ -22,6 +22,7 @@ dependencies {
   compile gradleApi()
   compile localGroovy()
 
+  compile group: 'com.thoughtworks.xstream', name: 'xstream', version:'1.4.7'
   testCompile 'org.spockframework:spock-core:0.7-groovy-1.8'
 }
 
@@ -51,13 +52,13 @@ modifyPom {
     description 'Gradle plugin that provides tasks for discovering dependency updates.'
     url 'https://github.com/ben-manes/gradle-versions-plugin'
     inceptionYear '2012'
-  
+
     scm {
       url 'https://github.com/ben-manes/gradle-versions-plugin'
       connection 'scm:https://ben-manes@github.com/ben-manes/gradle-versions-plugin.git'
       developerConnection 'scm:git://github.com/ben-manes/gradle-versions-plugin.git'
     }
-  
+
     licenses {
       license {
         name 'The Apache Software License, Version 2.0'
@@ -65,7 +66,7 @@ modifyPom {
         distribution 'repo'
       }
     }
-  
+
     developers {
       developer {
         id 'ben-manes'

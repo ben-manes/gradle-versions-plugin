@@ -28,11 +28,12 @@ import spock.lang.Unroll
  */
 class DependencyUpdatesSpec extends Specification {
 
+  @Unroll('Single project with no dependencies (#formatter)')
   def 'Single project with no dependencies'() {
     given:
       def project = singleProject()
     when:
-      def reporter = evaluate(project)
+      def reporter = evaluate(project, 'mielstone', formatter)
       reporter.writeToConsole()
     then:
       with(reporter) {
@@ -41,6 +42,8 @@ class DependencyUpdatesSpec extends Specification {
         upToDateVersions.isEmpty()
         downgradeVersions.isEmpty()
       }
+    where:
+      formatter << ['plain', 'json']
   }
 
   def 'Single project with no repositories'() {
@@ -77,14 +80,14 @@ class DependencyUpdatesSpec extends Specification {
       }
   }
 
-  @Unroll('Single project (#revision)')
+  @Unroll('Single project (#revision, #formatter)')
   def 'Single project'() {
     given:
       def project = singleProject()
       addRepositoryTo(project)
       addDependenciesTo(project)
     when:
-      def reporter = evaluate(project, revision)
+      def reporter = evaluate(project, revision, formatter)
       reporter.writeToConsole()
     then:
       with(reporter) {
@@ -94,7 +97,10 @@ class DependencyUpdatesSpec extends Specification {
         downgradeVersions.size() == 2
       }
     where:
-      revision << ['release', 'milestone', 'integration']
+//      revision << ['release', 'milestone', 'integration']
+//      formatter << ['plain', 'json']
+      revision << ['release']
+      formatter << ['xml']
   }
 
   @Unroll('Multi-project with repository on parent (#revision)')
@@ -191,8 +197,8 @@ class DependencyUpdatesSpec extends Specification {
     [rootProject, childProject, leafProject]
   }
 
-  def evaluate(project, revision = 'milestone') {
-    new DependencyUpdates(project, revision).run()
+  def evaluate(project, revision = 'milestone', formatter = 'plain', output = 'stdout') {
+    new DependencyUpdates(project, revision, formatter, output).run()
   }
 
   def addRepositoryTo(project) {

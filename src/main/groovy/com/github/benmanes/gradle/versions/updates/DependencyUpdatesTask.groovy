@@ -29,6 +29,12 @@ class DependencyUpdatesTask extends DefaultTask {
   @Input
   String revision = 'milestone'
 
+  @Input
+  String formatter = 'plain'
+
+  @Input
+  String output = 'stdout'
+
   DependencyUpdatesTask() {
     description = 'Displays the dependency updates for the project.'
     group = 'Help'
@@ -36,11 +42,17 @@ class DependencyUpdatesTask extends DefaultTask {
 
   @TaskAction
   def dependencyUpdates() {
-    def evaluator = new DependencyUpdates(project, revisionLevel())
+    def evaluator = new DependencyUpdates(project, revisionLevel(), outputFormatter(), outputDestination())
     def reporter = evaluator.run()
     reporter.writeToConsole()
   }
 
   /** Returns the resolution revision level. */
   def revisionLevel() { System.properties.get('revision', revision) }
+
+  /** Returns the output format. */
+  def outputFormatter() { System.properties.get('formatter', formatter) }
+
+  /** Returns the output destination. */
+  def outputDestination() { System.properties.get('output', output) }
 }

@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 package com.github.benmanes.gradle.versions.updates
-
+import com.github.benmanes.gradle.versions.reporter.JsonReporter
+import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
+import com.github.benmanes.gradle.versions.reporter.XmlReporter
 import groovy.transform.TupleConstructor
-
-import static com.github.benmanes.gradle.versions.updates.DependencyUpdates.keyOf
-
 /**
  * A reporter for the dependency updates results.
  *
@@ -30,6 +29,10 @@ class DependencyUpdatesReporter {
   def project
   /** The revision strategy evaluated with. */
   def revision
+  /** The formatter strategy evaluated with. */
+  def formatter
+  /** The output strategy evaluated with. */
+  def output
 
   /** The current versions of each dependency declared in the project(s). */
   def currentVersions
@@ -49,7 +52,9 @@ class DependencyUpdatesReporter {
 
   /** Writes the report to the console. */
   def writeToConsole() {
-    writeTo(System.out)
+    synchronized (mutex) {
+      writeTo(System.out)
+    }
   }
 
   /** Writes the report to the file. */
@@ -64,80 +69,22 @@ class DependencyUpdatesReporter {
 
   /** Writes the report to the print stream. The stream is not automatically closed. */
   def writeTo(printStream) {
-    synchronized (mutex) {
-      writeHeader(printStream)
-      writeUpToDate(printStream)
-      writeExceedLatestFound(printStream)
-      writeUpgrades(printStream)
-      writeUnresolved(printStream)
+    def reporter
+
+    switch (formatter) {
+      case 'json':
+        reporter = new JsonReporter(project, revision, currentVersions, latestVersions,
+            upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
+        break;
+      case 'xml':
+        reporter = new XmlReporter(project, revision, currentVersions, latestVersions,
+            upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
+        break;
+      default:
+        reporter = new PlainTextReporter(project, revision, currentVersions, latestVersions,
+            upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
     }
+    reporter.writeTo(printStream)
   }
 
-  private def writeHeader(printStream) {
-    printStream.println """
-      |------------------------------------------------------------
-      |${project.path} Project Dependency Updates
-      |------------------------------------------------------------""".stripMargin()
-  }
-
-  private def writeUpToDate(printStream) {
-    if (upToDateVersions.isEmpty()) {
-      printStream.println "\nAll dependencies have later versions."
-    } else {
-      printStream.println(
-        "\nThe following dependencies are using the latest ${revision} version:")
-      upToDateVersions
-        .sort { a, b -> compareKeys(a.key, b.key) }
-        .each { printStream.println " - ${label(it.key)}:${it.value}" }
-    }
-  }
-
-  private def writeExceedLatestFound(printStream) {
-    if (!downgradeVersions.isEmpty()) {
-      printStream.println("\nThe following dependencies exceed the version found at the "
-        + revision + " revision level:")
-      downgradeVersions
-        .sort { a, b -> compareKeys(a.key, b.key) }
-        .each { key, version ->
-          def currentVersion = currentVersions[key]
-          printStream.println " - ${label(key)} [${currentVersion} <- ${version}]"
-        }
-    }
-  }
-
-  private def writeUpgrades(printStream) {
-    if (upgradeVersions.isEmpty()) {
-      printStream.println "\nAll dependencies are using the latest ${revision} versions."
-    } else {
-      printStream.println "\nThe following dependencies have later ${revision} versions:"
-      upgradeVersions
-        .sort { a, b -> compareKeys(a.key, b.key) }
-        .each { key, version ->
-          def currentVersion = currentVersions[key]
-          printStream.println " - ${label(key)} [${currentVersion} -> ${version}]"
-        }
-    }
-  }
-
-  private def writeUnresolved(printStream) {
-    if (!unresolved.isEmpty()) {
-      printStream.println(
-        "\nFailed to determine the latest version for the following dependencies "
-        + "(use --info for details):")
-      unresolved
-        .sort { a, b -> compareKeys(keyOf(a.selector), keyOf(b.selector)) }
-        .each {
-          printStream.println " - " + label(keyOf(it.selector))
-          project.logger.info "The exception that is the cause of unresolved state:", it.problem
-        }
-    }
-  }
-
-  /** Compares the dependency keys. */
-  private def compareKeys(a, b) {
-    (a['group'] == b['group']) ? a['name'] <=> b['name'] : a['group'] <=> b['group']
-  }
-
-  /** Returns the dependency key as a stringified label. */
-  private def label(key) { key.group + ':' + key.name }
 }
