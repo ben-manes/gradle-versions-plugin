@@ -46,7 +46,7 @@ class DependencyUpdatesSpec extends Specification {
       outputFormatter << ['plain', 'json', "xml"]
   }
 
-  def 'Single project with no dependencies in not existing dir'() {
+  def 'Single project with no dependencies in invalid dir name'() {
     given:
       def project = singleProject()
     when:
@@ -77,7 +77,7 @@ class DependencyUpdatesSpec extends Specification {
         downgradeVersions.isEmpty()
       }
     where:
-      outputFormatter << ['plain', 'json', "xml"]
+      outputFormatter << ['plain', 'json', 'xml']
   }
 
   def 'Single project with a good and bad repository'() {

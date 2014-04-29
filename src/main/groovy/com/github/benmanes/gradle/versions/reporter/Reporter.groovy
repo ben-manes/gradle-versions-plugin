@@ -6,9 +6,7 @@ package com.github.benmanes.gradle.versions.reporter
  * @author Zenedith (zenedith@wp.pl)
  */
 public interface Reporter {
-  def writeToConsole(printStream);
-
-  def writeToFile(printStream);
+  def write(printStream);
 
   def getFileName();
 }

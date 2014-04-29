@@ -58,15 +58,17 @@ class DependencyUpdatesReporter {
       def plainTextReporter = new PlainTextReporter(project, revision, currentVersions, latestVersions,
           upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
 
-      plainTextReporter.writeToConsole(System.out)
+      plainTextReporter.write(System.out)
 
       def reporter = getOutputReporter()
       def filename = outputDir + '/' + reporter.getFileName()
       def reporterFileStream
 
       try {
+        new File(outputDir).mkdirs()
         reporterFileStream = new PrintStream(filename)
-        reporter.writeToFile(reporterFileStream)
+        reporter.write(reporterFileStream)
+        reporter.write(System.out)
         project.logger.lifecycle "\nGenerated report file "+ filename
       }
       catch (FileNotFoundException e) {

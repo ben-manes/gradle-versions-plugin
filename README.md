@@ -45,26 +45,198 @@ The strategy can be specified either on the task or as a system property for ad 
 gradle dependencyUpdates -Drevision=release
 ```
 
+Another one task property `outputFormatter` controls the report output format. The following values are supported:
+
+  * plain: format output file as plain text (default)
+  * json: format output file as json text
+  * xml: format output file as xml text, can be used by another plugins (eg. sonar)
+
+```groovy
+gradle dependencyUpdates -Drevision=release -DoutputFormatter=json
+```
+
+Last one task property `outputDir` controls the output directory for report file. Directory will be created of not exists.
+Default value is set to `build/dependencyUpdates`
+
+```groovy
+gradle dependencyUpdates -Drevision=release -DoutputFormatter=json -DoutputDir=/any/path/with/permission
+```
+
 This displays a report to the console, e.g.
 
 ```
 ------------------------------------------------------------
-: Project Dependency Updates
+: Project Dependency Updates (report to plain text file)
 ------------------------------------------------------------
 
-The following dependencies are using the latest release version:
- - com.google.code.findbugs:jsr305:2.0.1
- - com.google.inject:guice:3.0
- - com.google.inject.extensions:guice-multibindings:3.0
- - com.google.inject.extensions:guice-servlet:3.0
+The following dependencies are using the latest integration version:
+ - backport-util-concurrent:backport-util-concurrent:3.1
+ - backport-util-concurrent:backport-util-concurrent-java12:3.1
 
-The following dependencies exceed the version found at the release revision level:
- - org.scalatra:scalatra [2.3.0-SNAPSHOT <- 2.2.0-RC1]
- - org.scalatra:scalatra-auth [2.3.0-SNAPSHOT <- 2.2.0-RC1]
- - org.scalatra:scalatra-specs2 [2.3.0-SNAPSHOT <- 2.2.0-RC1]
+The following dependencies exceed the version found at the integration revision level:
+ - com.google.guava:guava [99.0-SNAPSHOT <- 16.0-rc1]
+ - com.google.guava:guava-tests [99.0-SNAPSHOT <- 16.0-rc1]
 
-The following dependencies have later release versions:
- - com.amazonaws:aws-java-sdk [1.3.21.1 -> 1.3.26]
- - com.beust:jcommander [1.27 -> 1.30]
+The following dependencies have later integration versions:
+ - com.google.inject:guice [2.0 -> 3.0]
+ - com.google.inject.extensions:guice-multibindings [2.0 -> 3.0]
+```
+
+Json report
+```json
+{
+    "current": {
+        "dependencies": [
+            {
+                "group": "backport-util-concurrent",
+                "version": "3.1",
+                "name": "backport-util-concurrent"
+            },
+            {
+                "group": "backport-util-concurrent",
+                "version": "3.1",
+                "name": "backport-util-concurrent-java12"
+            }
+        ],
+        "count": 2
+    },
+    "exceeded": {
+        "dependencies": [
+            {
+                "group": "com.google.guava",
+                "latest": "16.0-rc1",
+                "version": "99.0-SNAPSHOT",
+                "name": "guava"
+            },
+            {
+                "group": "com.google.guava",
+                "latest": "16.0-rc1",
+                "version": "99.0-SNAPSHOT",
+                "name": "guava-tests"
+            }
+        ],
+        "count": 2
+    },
+    "outdated": {
+        "dependencies": [
+            {
+                "group": "com.google.inject",
+                "available": {
+                    "release": null,
+                    "milestone": "2.0",
+                    "integration": null
+                },
+                "version": "3.0",
+                "name": "guice"
+            },
+            {
+                "group": "com.google.inject.extensions",
+                "available": {
+                    "release": null,
+                    "milestone": "2.0",
+                    "integration": null
+                },
+                "version": "3.0",
+                "name": "guice-multibindings"
+            }
+        ],
+        "count": 2
+    },
+    "unresolved": {
+        "dependencies": [
+            {
+                "group": "com.github.ben-manes",
+                "version": "1.0",
+                "reason": "Could not find any version that matches com.github.ben-manes:unresolvable:latest.milestone.",
+                "name": "unresolvable"
+            },
+            {
+                "group": "com.github.ben-manes",
+                "version": "1.0",
+                "reason": "Could not find any version that matches com.github.ben-manes:unresolvable2:latest.milestone.",
+                "name": "unresolvable2"
+            }
+        ],
+        "count": 2
+    },
+    "count": 8
+}
+```
+
+XML report
+```xml
+<response>
+  <count>8</count>
+  <current>
+    <count>2</count>
+    <dependencies>
+      <dependency>
+        <name>backport-util-concurrent</name>
+        <group>backport-util-concurrent</group>
+        <version>3.1</version>
+      </dependency>
+      <dependency>
+        <name>backport-util-concurrent-java12</name>
+        <group>backport-util-concurrent</group>
+        <version>3.1</version>
+      </dependency>
+    </dependencies>
+  </current>
+  <outdated>
+    <count>2</count>
+    <dependencies>
+      <outdatedDependency>
+        <name>guice</name>
+        <group>com.google.inject</group>
+        <version>3.0</version>
+        <available>
+          <release>2.0</release>
+        </available>
+      </outdatedDependency>
+      <outdatedDependency>
+        <name>guice-multibindings</name>
+        <group>com.google.inject.extensions</group>
+        <version>3.0</version>
+        <available>
+          <release>2.0</release>
+        </available>
+      </outdatedDependency>
+    </dependencies>
+  </outdated>
+  <exceeded>
+    <count>2</count>
+    <dependencies>
+      <exceededDependency>
+        <name>guava</name>
+        <group>com.google.guava</group>
+        <version>99.0-SNAPSHOT</version>
+        <latest>16.0-rc1</latest>
+      </exceededDependency>
+      <exceededDependency>
+        <name>guava-tests</name>
+        <group>com.google.guava</group>
+        <version>99.0-SNAPSHOT</version>
+        <latest>16.0-rc1</latest>
+      </exceededDependency>
+    </dependencies>
+  </exceeded>
+  <unresolved>
+    <count>2</count>
+    <dependencies>
+      <unresolvedDependency>
+        <name>unresolvable</name>
+        <group>com.github.ben-manes</group>
+        <version>1.0</version>
+        <reason>Could not find any version that matches com.github.ben-manes:unresolvable:latest.release.</reason>
+      </unresolvedDependency>
+      <unresolvedDependency>
+        <name>unresolvable2</name>
+        <group>com.github.ben-manes</group>
+        <version>1.0</version>
+        <reason>Could not find any version that matches com.github.ben-manes:unresolvable2:latest.release.</reason>
+      </unresolvedDependency>
+    </dependencies>
+  </unresolved>
+</response>
 ```
 

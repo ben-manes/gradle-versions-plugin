@@ -11,16 +11,10 @@ import groovy.transform.TupleConstructor
 @TupleConstructor(callSuper = true, includeSuperProperties = true, includeSuperFields = true)
 class JsonReporter extends ObjectReporter implements Reporter {
 
-  def writeToConsole(printStream) {
+  def write(printStream) {
     def responseObject = buildBaseObject()
 
     writeHeader(printStream)
-    printStream.println new JsonBuilder(responseObject).toPrettyString().stripMargin()
-  }
-
-  @Override
-  def writeToFile(printStream) {
-    def responseObject = buildBaseObject()
     printStream.println new JsonBuilder(responseObject).toPrettyString().stripMargin()
   }
 
@@ -32,7 +26,7 @@ class JsonReporter extends ObjectReporter implements Reporter {
   protected def writeHeader(printStream) {
     printStream.println """
       |------------------------------------------------------------
-      |${project.path} Project Dependency Updates (json)
+      |${project.path} Project Dependency Updates (report to json file)
       |------------------------------------------------------------""".stripMargin()
   }
 }

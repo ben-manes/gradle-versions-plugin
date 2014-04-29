@@ -46,17 +46,12 @@ class PlainTextReporter implements Reporter {
   def unresolved
 
   /** Writes the report to the print stream. The stream is not automatically closed. */
-  def writeToConsole(printStream) {
+  def write(printStream) {
     writeHeader(printStream)
     writeUpToDate(printStream)
     writeExceedLatestFound(printStream)
     writeUpgrades(printStream)
     writeUnresolved(printStream)
-  }
-
-  @Override
-  def writeToFile(printStream) {
-    return writeToConsole(printStream)
   }
 
   @Override
@@ -67,7 +62,7 @@ class PlainTextReporter implements Reporter {
   private def writeHeader(printStream) {
     printStream.println """
       |------------------------------------------------------------
-      |${project.path} Project Dependency Updates (plain)
+      |${project.path} Project Dependency Updates (report to plain text file)
       |------------------------------------------------------------""".stripMargin()
   }
 
