@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 package com.github.benmanes.gradle.versions.updates
-
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
-
 /**
  * A task that reports which dependencies have later versions.
  *
@@ -30,10 +28,10 @@ class DependencyUpdatesTask extends DefaultTask {
   String revision = 'milestone'
 
   @Input
-  String formatter = 'plain'
+  String outputFormatter = 'plain'
 
   @Input
-  String output = 'stdout'
+  String outputDir = 'build/dependencyUpdates'
 
   DependencyUpdatesTask() {
     description = 'Displays the dependency updates for the project.'
@@ -42,17 +40,17 @@ class DependencyUpdatesTask extends DefaultTask {
 
   @TaskAction
   def dependencyUpdates() {
-    def evaluator = new DependencyUpdates(project, revisionLevel(), outputFormatter(), outputDestination())
+    def evaluator = new DependencyUpdates(project, revisionLevel(), outputFormatter(), outputDirectory())
     def reporter = evaluator.run()
-    reporter.writeToConsole()
+    reporter.write()
   }
 
   /** Returns the resolution revision level. */
   def revisionLevel() { System.properties.get('revision', revision) }
 
-  /** Returns the output format. */
-  def outputFormatter() { System.properties.get('formatter', formatter) }
+  /** Returns the outputDir format. */
+  def outputFormatter() { System.properties.get('outputFormatter', outputFormatter) }
 
-  /** Returns the output destination. */
-  def outputDestination() { System.properties.get('output', output) }
+  /** Returns the outputDir destination. */
+  def outputDirectory() { System.properties.get('outputDir', outputDir) }
 }

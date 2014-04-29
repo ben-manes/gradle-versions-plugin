@@ -42,8 +42,8 @@ class DependencyUpdates {
 
   def project
   def revision
-  def formatter
-  def output
+  def outputFormatter
+  def outputDir
 
   /** Evaluates the dependencies and returns a reporter. */
   def run() {
@@ -67,7 +67,7 @@ class DependencyUpdates {
     }
     def (latestVersions, upToDateVersions, downgradeVersions, upgradeVersions) =
       composeVersionMapping(currentVersions, resolvedLatest)
-    new DependencyUpdatesReporter(project, revision, formatter, output, currentVersions, latestVersions,
+    new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir, currentVersions, latestVersions,
       upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
   }
 

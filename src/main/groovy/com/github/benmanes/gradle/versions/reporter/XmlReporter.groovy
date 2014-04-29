@@ -1,9 +1,7 @@
 package com.github.benmanes.gradle.versions.reporter
-
 import com.github.benmanes.gradle.versions.reporter.result.*
 import com.thoughtworks.xstream.XStream
 import groovy.transform.TupleConstructor
-
 /**
  * A xml reporter for the dependency updates results.
  *
@@ -12,7 +10,28 @@ import groovy.transform.TupleConstructor
 @TupleConstructor(callSuper = true, includeSuperProperties = true, includeSuperFields = true)
 class XmlReporter extends ObjectReporter implements Reporter {
 
-  def writeTo(printStream) {
+  @Override
+  def writeToFile(printStream) {
+    def responseObject = buildBaseObject()
+
+    XStream xstream = new XStream()
+    xstream.alias("response", Result.class)
+    xstream.alias("available", VersionAvailable.class)
+    xstream.alias("exceededDependency", DependencyLatest.class)
+    xstream.alias("outdatedDependency", DependencyOutdated.class)
+    xstream.alias("unresolvedDependency", DependencyUnresolved.class)
+    xstream.alias("dependency", Dependency.class)
+    xstream.alias("group", DependenciesGroup.class)
+
+    printStream.println xstream.toXML(responseObject).stripMargin()
+  }
+
+  @Override
+  def getFileName() {
+    return 'report.xml'
+  }
+
+  def writeToConsole(printStream) {
     def responseObject = buildBaseObject()
 
     XStream xstream = new XStream()

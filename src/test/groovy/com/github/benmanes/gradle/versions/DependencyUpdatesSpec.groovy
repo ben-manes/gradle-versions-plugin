@@ -28,13 +28,13 @@ import spock.lang.Unroll
  */
 class DependencyUpdatesSpec extends Specification {
 
-  @Unroll('Single project with no dependencies (#formatter)')
+  @Unroll('Single project with no dependencies (#outputFormatter)')
   def 'Single project with no dependencies'() {
     given:
       def project = singleProject()
     when:
-      def reporter = evaluate(project, 'mielstone', formatter)
-      reporter.writeToConsole()
+      def reporter = evaluate(project, 'milestone', outputFormatter)
+      reporter.write()
     then:
       with(reporter) {
         unresolved.isEmpty()
@@ -43,16 +43,32 @@ class DependencyUpdatesSpec extends Specification {
         downgradeVersions.isEmpty()
       }
     where:
-      formatter << ['plain', 'json']
+      outputFormatter << ['plain', 'json', "xml"]
   }
 
+  def 'Single project with no dependencies in not existing dir'() {
+    given:
+      def project = singleProject()
+    when:
+      def reporter = evaluate(project, 'milestone', 'json', 'invalid dir')
+      reporter.write()
+    then:
+      with(reporter) {
+        unresolved.isEmpty()
+        upgradeVersions.isEmpty()
+        upToDateVersions.isEmpty()
+        downgradeVersions.isEmpty()
+      }
+  }
+
+  @Unroll('Single project with no repositories (#outputFormatter)')
   def 'Single project with no repositories'() {
     given:
       def project = singleProject()
       addDependenciesTo(project)
     when:
-      def reporter = evaluate(project)
-      reporter.writeToConsole()
+      def reporter = evaluate(project, 'milestone', outputFormatter)
+      reporter.write()
     then:
       with(reporter) {
         unresolved.size() == 8
@@ -60,6 +76,8 @@ class DependencyUpdatesSpec extends Specification {
         upToDateVersions.isEmpty()
         downgradeVersions.isEmpty()
       }
+    where:
+      outputFormatter << ['plain', 'json', "xml"]
   }
 
   def 'Single project with a good and bad repository'() {
@@ -70,7 +88,7 @@ class DependencyUpdatesSpec extends Specification {
       addDependenciesTo(project)
     when:
       def reporter = evaluate(project)
-      reporter.writeToConsole()
+      reporter.write()
     then:
       with(reporter) {
         unresolved.size() == 2
@@ -80,15 +98,15 @@ class DependencyUpdatesSpec extends Specification {
       }
   }
 
-  @Unroll('Single project (#revision, #formatter)')
+  @Unroll('Single project (#revision, #outputFormatter)')
   def 'Single project'() {
     given:
       def project = singleProject()
       addRepositoryTo(project)
       addDependenciesTo(project)
     when:
-      def reporter = evaluate(project, revision, formatter)
-      reporter.writeToConsole()
+      def reporter = evaluate(project, revision, outputFormatter)
+      reporter.write()
     then:
       with(reporter) {
         unresolved.size() == 2
@@ -97,21 +115,19 @@ class DependencyUpdatesSpec extends Specification {
         downgradeVersions.size() == 2
       }
     where:
-//      revision << ['release', 'milestone', 'integration']
-//      formatter << ['plain', 'json']
-      revision << ['release']
-      formatter << ['xml']
+      revision << ['release', 'milestone', 'integration']
+      outputFormatter << ['plain', 'json', 'xml']
   }
 
-  @Unroll('Multi-project with repository on parent (#revision)')
+  @Unroll('Multi-project with repository on parent (#revision, #outputFormatter)')
   def 'Multi-project with repository on parent'() {
     given:
       def (rootProject, childProject) = multiProject()
       addRepositoryTo(rootProject)
       addDependenciesTo(childProject)
     when:
-      def reporter = evaluate(rootProject, revision)
-      reporter.writeToConsole()
+      def reporter = evaluate(rootProject, revision, outputFormatter)
+      reporter.write()
     then:
       with(reporter) {
         unresolved.size() == 2
@@ -121,17 +137,18 @@ class DependencyUpdatesSpec extends Specification {
       }
     where:
       revision << ['release', 'milestone', 'integration']
+      outputFormatter << ['plain', 'json', 'xml']
   }
 
-  @Unroll('Multi-project with repository on child (#revision)')
+  @Unroll('Multi-project with repository on child (#revision, #outputFormatter)')
   def 'Multi-project with repository on child'() {
     given:
       def (rootProject, childProject, leafProject) = multiProject()
       addRepositoryTo(childProject)
       addDependenciesTo(rootProject)
     when:
-      def reporter = evaluate(rootProject, revision)
-      reporter.writeToConsole()
+      def reporter = evaluate(rootProject, revision, outputFormatter)
+      reporter.write()
     then:
       with(reporter) {
         unresolved.size() == 2
@@ -141,6 +158,7 @@ class DependencyUpdatesSpec extends Specification {
       }
     where:
       revision << ['release', 'milestone', 'integration']
+      outputFormatter << ['plain', 'json', 'xml']
   }
 
   def "Version ranges are correctly evaluated"(){
@@ -153,7 +171,7 @@ class DependencyUpdatesSpec extends Specification {
     project.dependencies.upToDate 'backport-util-concurrent:backport-util-concurrent:3.+'
   when:
     def reporter = evaluate(project)
-    reporter.writeToConsole()
+    reporter.write()
   then:
     with(reporter) {
       unresolved.isEmpty()
@@ -175,7 +193,7 @@ class DependencyUpdatesSpec extends Specification {
     project.dependencies.upgradesFound 'backport-util-concurrent:backport-util-concurrent'
   when:
     def reporter = evaluate(project)
-    reporter.writeToConsole()
+    reporter.write()
   then:
     with(reporter) {
       unresolved.size() == 1
@@ -197,8 +215,8 @@ class DependencyUpdatesSpec extends Specification {
     [rootProject, childProject, leafProject]
   }
 
-  def evaluate(project, revision = 'milestone', formatter = 'plain', output = 'stdout') {
-    new DependencyUpdates(project, revision, formatter, output).run()
+  def evaluate(project, revision = 'milestone', outputFormatter = 'plain', outputDir = 'build') {
+    new DependencyUpdates(project, revision, outputFormatter, outputDir).run()
   }
 
   def addRepositoryTo(project) {

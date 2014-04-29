@@ -14,10 +14,13 @@
  * limitations under the License.
  */
 package com.github.benmanes.gradle.versions.updates
+
 import com.github.benmanes.gradle.versions.reporter.JsonReporter
 import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
+import com.github.benmanes.gradle.versions.reporter.Reporter
 import com.github.benmanes.gradle.versions.reporter.XmlReporter
 import groovy.transform.TupleConstructor
+
 /**
  * A reporter for the dependency updates results.
  *
@@ -31,8 +34,8 @@ class DependencyUpdatesReporter {
   def revision
   /** The formatter strategy evaluated with. */
   def formatter
-  /** The output strategy evaluated with. */
-  def output
+  /** The outputDir for report. */
+  def outputDir
 
   /** The current versions of each dependency declared in the project(s). */
   def currentVersions
@@ -50,25 +53,34 @@ class DependencyUpdatesReporter {
 
   private static Object mutex = new Object();
 
-  /** Writes the report to the console. */
-  def writeToConsole() {
+  def write() {
     synchronized (mutex) {
-      writeTo(System.out)
+      def plainTextReporter = new PlainTextReporter(project, revision, currentVersions, latestVersions,
+          upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
+
+      plainTextReporter.writeToConsole(System.out)
+
+      def reporter = getOutputReporter()
+      def filename = outputDir + '/' + reporter.getFileName()
+      def reporterFileStream
+
+      try {
+        reporterFileStream = new PrintStream(filename)
+        reporter.writeToFile(reporterFileStream)
+        project.logger.lifecycle "\nGenerated report file "+ filename
+      }
+      catch (FileNotFoundException e) {
+        project.logger.error "Invalid outputDir path "+ filename
+      }
+      finally {
+        if (reporterFileStream != null) {
+          reporterFileStream.close()
+        }
+      }
     }
   }
 
-  /** Writes the report to the file. */
-  def writeToFile(fileName) {
-    def printStream = new PrintStream(fileName)
-    try {
-      writeTo(printStream)
-    } finally {
-      printStream.close()
-    }
-  }
-
-  /** Writes the report to the print stream. The stream is not automatically closed. */
-  def writeTo(printStream) {
+  def Reporter getOutputReporter() {
     def reporter
 
     switch (formatter) {
@@ -84,7 +96,8 @@ class DependencyUpdatesReporter {
         reporter = new PlainTextReporter(project, revision, currentVersions, latestVersions,
             upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
     }
-    reporter.writeTo(printStream)
+
+    return reporter;
   }
 
 }
