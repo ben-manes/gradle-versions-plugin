@@ -13,20 +13,11 @@ class JsonReporter extends ObjectReporter implements Reporter {
 
   def write(printStream) {
     def responseObject = buildBaseObject()
-
-    writeHeader(printStream)
     printStream.println new JsonBuilder(responseObject).toPrettyString().stripMargin()
   }
 
   @Override
   def getFileName() {
     return 'report.json'
-  }
-
-  protected def writeHeader(printStream) {
-    printStream.println """
-      |------------------------------------------------------------
-      |${project.path} Project Dependency Updates (report to json file)
-      |------------------------------------------------------------""".stripMargin()
   }
 }

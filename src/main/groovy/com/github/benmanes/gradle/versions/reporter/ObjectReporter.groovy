@@ -29,8 +29,6 @@ abstract class ObjectReporter {
   /** The dependencies that could not be resolved. */
   def unresolved
 
-  abstract protected def writeHeader(printStream)
-
   def buildBaseObject() {
     def current = buildCurrentGroup()
     def outdated = buildOutdatedGroup()

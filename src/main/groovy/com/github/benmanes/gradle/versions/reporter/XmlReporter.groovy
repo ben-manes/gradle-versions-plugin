@@ -1,7 +1,9 @@
 package com.github.benmanes.gradle.versions.reporter
+
 import com.github.benmanes.gradle.versions.reporter.result.*
 import com.thoughtworks.xstream.XStream
 import groovy.transform.TupleConstructor
+
 /**
  * A xml reporter for the dependency updates results.
  *
@@ -29,12 +31,5 @@ class XmlReporter extends ObjectReporter implements Reporter {
   @Override
   def getFileName() {
     return 'report.xml'
-  }
-
-  protected def writeHeader(printStream) {
-    printStream.println """
-      |------------------------------------------------------------
-      |${project.path} Project Dependency Updates (report to xml file)
-      |------------------------------------------------------------""".stripMargin()
   }
 }
