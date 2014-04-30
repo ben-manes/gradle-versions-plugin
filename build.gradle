@@ -73,6 +73,11 @@ modifyPom {
         name 'Ben Manes'
         email 'ben.manes@gmail.com'
       }
+      developer {
+        id 'zenedith'
+        name 'Zenedith'
+        email 'zenedith@wp.pl'
+      }
     }
   }
 }
