@@ -51,8 +51,10 @@ Another one task property `outputFormatter` controls the report output format. T
   * json: format output file as json text
   * xml: format output file as xml text, can be used by another plugins (eg. sonar)
 
+You can also set more values by using separator `|`
+
 ```groovy
-gradle dependencyUpdates -Drevision=release -DoutputFormatter=json
+gradle dependencyUpdates -Drevision=release -DoutputFormatter=json|xml
 ```
 
 Last one task property `outputDir` controls the output directory for report file. Directory will be created of not exists.
