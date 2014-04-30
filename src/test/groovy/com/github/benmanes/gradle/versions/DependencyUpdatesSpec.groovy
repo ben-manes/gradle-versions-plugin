@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Ben Manes. All Rights Reserved.
+ * Copyright 2012-2014 Ben Manes. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,24 @@ import spock.lang.Unroll
  * A specification for the dependency updates task.
  *
  * @author Ben Manes (ben@addepar.com)
+ * @author Zenedith (zenedith@wp.pl)
  */
 class DependencyUpdatesSpec extends Specification {
+
+  def 'Single project with no dependencies for many formatters'() {
+    given:
+      def project = singleProject()
+    when:
+      def reporter = evaluate(project, 'milestone', 'json|xml')
+      reporter.write()
+    then:
+      with(reporter) {
+        unresolved.isEmpty()
+        upgradeVersions.isEmpty()
+        upToDateVersions.isEmpty()
+        downgradeVersions.isEmpty()
+      }
+  }
 
   @Unroll('Single project with no dependencies (#outputFormatter)')
   def 'Single project with no dependencies'() {

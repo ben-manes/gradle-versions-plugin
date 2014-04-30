@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Ben Manes. All Rights Reserved.
+ * Copyright 2012-2014 Ben Manes. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import groovy.transform.TupleConstructor
  * A reporter for the dependency updates results.
  *
  * @author Ben Manes (ben.manes@gmail.com)
+ * @author Zenedith (zenedith@wp.pl)
  */
 @TupleConstructor
 class DependencyUpdatesReporter {
@@ -32,8 +33,8 @@ class DependencyUpdatesReporter {
   def project
   /** The revision strategy evaluated with. */
   def revision
-  /** The formatter strategy evaluated with. */
-  def formatter
+  /** The output formatter strategy evaluated with. */
+  def outputFormatter
   /** The outputDir for report. */
   def outputDir
 
@@ -60,29 +61,39 @@ class DependencyUpdatesReporter {
 
       plainTextReporter.write(System.out)
 
-      def reporter = getOutputReporter()
-      def filename = outputDir + '/' + reporter.getFileName()
-      def reporterFileStream
+      if (outputFormatter == null || outputFormatter.isEmpty()) {
+        project.logger.lifecycle("Skip generating report to file (outputFormatter is empty)")
+        return
+      }
 
-      try {
-        new File(outputDir).mkdirs()
-        reporterFileStream = new PrintStream(filename)
-        reporter.write(reporterFileStream)
-        reporter.write(System.out)
-        project.logger.lifecycle "\nGenerated report file "+ filename
-      }
-      catch (FileNotFoundException e) {
-        project.logger.error "Invalid outputDir path "+ filename
-      }
-      finally {
-        if (reporterFileStream != null) {
-          reporterFileStream.close()
-        }
+      outputFormatter.split("\\|").each{
+        generateFileReport(it)
       }
     }
   }
 
-  def Reporter getOutputReporter() {
+  def generateFileReport(def formatter) {
+    def reporter = getOutputReporter(formatter)
+    def filename = outputDir + '/' + reporter.getFileName()
+    def reporterFileStream
+
+    try {
+      new File(outputDir).mkdirs()
+      reporterFileStream = new PrintStream(filename)
+      reporter.write(reporterFileStream)
+      project.logger.lifecycle "\nGenerated report file "+ filename
+    }
+    catch (FileNotFoundException e) {
+      project.logger.error "Invalid outputDir path "+ filename
+    }
+    finally {
+      if (reporterFileStream != null) {
+        reporterFileStream.close()
+      }
+    }
+  }
+
+  def Reporter getOutputReporter(def formatter) {
     def reporter
 
     switch (formatter) {
