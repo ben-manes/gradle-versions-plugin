@@ -51,7 +51,7 @@ abstract class ObjectReporter {
   }
 
   protected def eachOutdatedDep(dependencies, dep) {
-    dependencies.add(buildOutdatedDependency(dep.key['name'], dep.key['group'], dep.value, currentVersions[dep.key]))
+    dependencies.add(buildOutdatedDependency(dep.key['name'], dep.key['group'], currentVersions[dep.key], dep.value))
   }
 
   protected def eachExceededDep(dependencies, dep) {
