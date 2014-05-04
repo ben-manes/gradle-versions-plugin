@@ -33,7 +33,7 @@ class DependencyUpdatesSpec extends Specification {
     given:
       def project = singleProject()
     when:
-      def reporter = evaluate(project, 'milestone', 'json|xml')
+      def reporter = evaluate(project, 'milestone', 'json,xml')
       reporter.write()
     then:
       with(reporter) {
@@ -66,7 +66,7 @@ class DependencyUpdatesSpec extends Specification {
     given:
       def project = singleProject()
     when:
-      def reporter = evaluate(project, 'milestone', 'json', 'invalid dir')
+      def reporter = evaluate(project, 'milestone', 'json', 'build/invalid dir')
       reporter.write()
     then:
       with(reporter) {

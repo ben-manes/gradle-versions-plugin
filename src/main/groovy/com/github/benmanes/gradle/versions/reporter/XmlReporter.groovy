@@ -10,7 +10,7 @@ import groovy.transform.TupleConstructor
  * @author Zenedith (zenedith@wp.pl)
  */
 @TupleConstructor(callSuper = true, includeSuperProperties = true, includeSuperFields = true)
-class XmlReporter extends ObjectReporter implements Reporter {
+class XmlReporter extends AbstractReporter implements Reporter {
 
   @Override
   def write(printStream) {
@@ -25,6 +25,7 @@ class XmlReporter extends ObjectReporter implements Reporter {
     xstream.alias("dependency", Dependency.class)
     xstream.alias("group", DependenciesGroup.class)
 
+    printStream.println '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     printStream.println xstream.toXML(responseObject).stripMargin()
   }
 

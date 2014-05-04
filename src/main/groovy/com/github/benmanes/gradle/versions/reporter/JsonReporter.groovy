@@ -9,7 +9,7 @@ import groovy.transform.TupleConstructor
  * @author Zenedith (zenedith@wp.pl)
  */
 @TupleConstructor(callSuper = true, includeSuperProperties = true, includeSuperFields = true)
-class JsonReporter extends ObjectReporter implements Reporter {
+class JsonReporter extends AbstractReporter implements Reporter {
 
   def write(printStream) {
     def responseObject = buildBaseObject()

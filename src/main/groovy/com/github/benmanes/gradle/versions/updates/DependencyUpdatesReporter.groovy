@@ -66,7 +66,7 @@ class DependencyUpdatesReporter {
         return
       }
 
-      outputFormatter.split("\\|").each{
+      outputFormatter.split(",").each{
         generateFileReport(it)
       }
     }

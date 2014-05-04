@@ -9,7 +9,7 @@ import groovy.transform.TupleConstructor
  * @author Zenedith (zenedith@wp.pl)
  */
 @TupleConstructor(includeFields = true)
-abstract class ObjectReporter {
+abstract class AbstractReporter {
   /** The project evaluated against. */
   def project
   /** The revision strategy evaluated with. */

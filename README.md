@@ -51,10 +51,10 @@ Another one task property `outputFormatter` controls the report output format. T
   * json: format output file as json text
   * xml: format output file as xml text, can be used by another plugins (eg. sonar)
 
-You can also set more values by using separator `|`
+You can also set more values by using coma separator `,`
 
 ```groovy
-gradle dependencyUpdates -Drevision=release -DoutputFormatter=json|xml
+gradle dependencyUpdates -Drevision=release -DoutputFormatter=json,xml
 ```
 
 Last one task property `outputDir` controls the output directory for report file. Directory will be created of not exists.
@@ -124,21 +124,21 @@ Json report
             {
                 "group": "com.google.inject",
                 "available": {
-                    "release": null,
-                    "milestone": "2.0",
+                    "release": "3.0",
+                    "milestone": null,
                     "integration": null
                 },
-                "version": "3.0",
+                "version": "2.0",
                 "name": "guice"
             },
             {
                 "group": "com.google.inject.extensions",
                 "available": {
-                    "release": null,
-                    "milestone": "2.0",
+                    "release": "3.0",
+                    "milestone": null,
                     "integration": null
                 },
-                "version": "3.0",
+                "version": "2.0",
                 "name": "guice-multibindings"
             }
         ],
@@ -190,17 +190,17 @@ XML report
       <outdatedDependency>
         <name>guice</name>
         <group>com.google.inject</group>
-        <version>3.0</version>
+        <version>2.0</version>
         <available>
-          <release>2.0</release>
+          <release>3.0</release>
         </available>
       </outdatedDependency>
       <outdatedDependency>
         <name>guice-multibindings</name>
         <group>com.google.inject.extensions</group>
-        <version>3.0</version>
+        <version>2.0</version>
         <available>
-          <release>2.0</release>
+          <release>3.0</release>
         </available>
       </outdatedDependency>
     </dependencies>
