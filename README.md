@@ -18,11 +18,11 @@ buildscript {
   }
   
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.5-beta-2'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.5-beta-3'
   }
 }
 ```
-The current version is known to work with Gradle versions up to 1.11.
+The current version is known to work with Gradle versions up to 1.12.
 
 ## Tasks
 
