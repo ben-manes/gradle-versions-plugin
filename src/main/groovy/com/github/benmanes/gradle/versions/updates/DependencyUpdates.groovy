@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Ben Manes. All Rights Reserved.
+ * Copyright 2012-2014 Ben Manes. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +42,8 @@ class DependencyUpdates {
 
   def project
   def revision
+  def outputFormatter
+  def outputDir
 
   /** Evaluates the dependencies and returns a reporter. */
   def run() {
@@ -50,11 +52,13 @@ class DependencyUpdates {
     def (resolvedLatest, unresolved) = resolveLatestDepedencies(current)
     project.logger.info('Resolved latest dependencies: {}', resolvedLatest)
     project.logger.info('Unresolved dependencies: {}', unresolved)
-    
+
     def currentVersions = [:]
     current.each { dependency ->
       if (unresolved.find{keyOf(it.selector) == keyOf(dependency)}){
         project.logger.info('Could not determine current version for dependency: {}', dependency)
+        //add current version info based on info from dependency
+        currentVersions.put(keyOf(dependency), dependency['version'])
         return
       }else{
         def actualVersion = resolveActualDependencyVersion(dependency)
@@ -63,7 +67,7 @@ class DependencyUpdates {
     }
     def (latestVersions, upToDateVersions, downgradeVersions, upgradeVersions) =
       composeVersionMapping(currentVersions, resolvedLatest)
-    new DependencyUpdatesReporter(project, revision, currentVersions, latestVersions,
+    new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir, currentVersions, latestVersions,
       upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
   }
 
@@ -115,7 +119,7 @@ class DependencyUpdates {
       project.repositories.removeAll(repositories)
     }
   }
-  
+
   /**
    * Returns the version that is used for the given dependency. Resolves dynamic versions (e.g. '1.+') to actual version numbers
    */
@@ -138,12 +142,12 @@ class DependencyUpdates {
 
   /** Organizes the dependencies into version mappings. */
   private def composeVersionMapping(currentVersions, resolvedLatest) {
-    
+
     def latestVersions = resolvedLatest.collectEntries { dependency ->
       [keyOf(dependency.module.id), dependency.moduleVersion]
     }
     project.logger.info('Comparing current with latest dependencies. current: {}, latest: {}', currentVersions.collect{ key, value -> "${key.group}:${key.name}:$value" }, latestVersions.collect{ key, value -> "${key.group}:${key.name}:$value" })
-    
+
     def comparator = getVersionComparator()
 
     def versionInfo = latestVersions.groupBy { key, version ->

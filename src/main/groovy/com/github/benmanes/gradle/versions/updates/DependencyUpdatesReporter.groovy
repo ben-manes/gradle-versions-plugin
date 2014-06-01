@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Ben Manes. All Rights Reserved.
+ * Copyright 2012-2014 Ben Manes. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,17 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
+import com.github.benmanes.gradle.versions.reporter.JsonReporter
+import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
+import com.github.benmanes.gradle.versions.reporter.Reporter
+import com.github.benmanes.gradle.versions.reporter.XmlReporter
 import groovy.transform.TupleConstructor
-
-import static com.github.benmanes.gradle.versions.updates.DependencyUpdates.keyOf
 
 /**
  * A reporter for the dependency updates results.
  *
  * @author Ben Manes (ben.manes@gmail.com)
+ * @author Zenedith (zenedith@wp.pl)
  */
 @TupleConstructor
 class DependencyUpdatesReporter {
@@ -30,6 +33,10 @@ class DependencyUpdatesReporter {
   def project
   /** The revision strategy evaluated with. */
   def revision
+  /** The output formatter strategy evaluated with. */
+  def outputFormatter
+  /** The outputDir for report. */
+  def outputDir
 
   /** The current versions of each dependency declared in the project(s). */
   def currentVersions
@@ -47,97 +54,63 @@ class DependencyUpdatesReporter {
 
   private static Object mutex = new Object();
 
-  /** Writes the report to the console. */
-  def writeToConsole() {
-    writeTo(System.out)
-  }
-
-  /** Writes the report to the file. */
-  def writeToFile(fileName) {
-    def printStream = new PrintStream(fileName)
-    try {
-      writeTo(printStream)
-    } finally {
-      printStream.close()
-    }
-  }
-
-  /** Writes the report to the print stream. The stream is not automatically closed. */
-  def writeTo(printStream) {
+  def write() {
     synchronized (mutex) {
-      writeHeader(printStream)
-      writeUpToDate(printStream)
-      writeExceedLatestFound(printStream)
-      writeUpgrades(printStream)
-      writeUnresolved(printStream)
+      def plainTextReporter = new PlainTextReporter(project, revision, currentVersions, latestVersions,
+          upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
+
+      plainTextReporter.write(System.out)
+
+      if (outputFormatter == null || outputFormatter.isEmpty()) {
+        project.logger.lifecycle("Skip generating report to file (outputFormatter is empty)")
+        return
+      }
+
+      outputFormatter.split(",").each{
+        generateFileReport(it)
+      }
     }
   }
 
-  private def writeHeader(printStream) {
-    printStream.println """
-      |------------------------------------------------------------
-      |${project.path} Project Dependency Updates
-      |------------------------------------------------------------""".stripMargin()
-  }
+  def generateFileReport(def formatter) {
+    def reporter = getOutputReporter(formatter)
+    def filename = outputDir + '/' + reporter.getFileName()
+    def reporterFileStream
 
-  private def writeUpToDate(printStream) {
-    if (upToDateVersions.isEmpty()) {
-      printStream.println "\nAll dependencies have later versions."
-    } else {
-      printStream.println(
-        "\nThe following dependencies are using the latest ${revision} version:")
-      upToDateVersions
-        .sort { a, b -> compareKeys(a.key, b.key) }
-        .each { printStream.println " - ${label(it.key)}:${it.value}" }
+    try {
+      new File(outputDir).mkdirs()
+      reporterFileStream = new PrintStream(filename)
+      reporter.write(reporterFileStream)
+      project.logger.lifecycle "\nGenerated report file "+ filename
+    }
+    catch (FileNotFoundException e) {
+      project.logger.error "Invalid outputDir path "+ filename
+    }
+    finally {
+      if (reporterFileStream != null) {
+        reporterFileStream.close()
+      }
     }
   }
 
-  private def writeExceedLatestFound(printStream) {
-    if (!downgradeVersions.isEmpty()) {
-      printStream.println("\nThe following dependencies exceed the version found at the "
-        + revision + " revision level:")
-      downgradeVersions
-        .sort { a, b -> compareKeys(a.key, b.key) }
-        .each { key, version ->
-          def currentVersion = currentVersions[key]
-          printStream.println " - ${label(key)} [${currentVersion} <- ${version}]"
-        }
+  def Reporter getOutputReporter(def formatter) {
+    def reporter
+
+    switch (formatter) {
+      case 'json':
+        reporter = new JsonReporter(project, revision, currentVersions, latestVersions,
+            upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
+        break;
+      case 'xml':
+        reporter = new XmlReporter(project, revision, currentVersions, latestVersions,
+            upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
+        break;
+      default:
+        reporter = new PlainTextReporter(project, revision, currentVersions, latestVersions,
+            upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
     }
+
+    return reporter;
   }
 
-  private def writeUpgrades(printStream) {
-    if (upgradeVersions.isEmpty()) {
-      printStream.println "\nAll dependencies are using the latest ${revision} versions."
-    } else {
-      printStream.println "\nThe following dependencies have later ${revision} versions:"
-      upgradeVersions
-        .sort { a, b -> compareKeys(a.key, b.key) }
-        .each { key, version ->
-          def currentVersion = currentVersions[key]
-          printStream.println " - ${label(key)} [${currentVersion} -> ${version}]"
-        }
-    }
-  }
-
-  private def writeUnresolved(printStream) {
-    if (!unresolved.isEmpty()) {
-      printStream.println(
-        "\nFailed to determine the latest version for the following dependencies "
-        + "(use --info for details):")
-      unresolved
-        .sort { a, b -> compareKeys(keyOf(a.selector), keyOf(b.selector)) }
-        .each {
-          printStream.println " - " + label(keyOf(it.selector))
-          project.logger.info "The exception that is the cause of unresolved state:", it.problem
-        }
-    }
-  }
-
-  /** Compares the dependency keys. */
-  private def compareKeys(a, b) {
-    (a['group'] == b['group']) ? a['name'] <=> b['name'] : a['group'] <=> b['group']
-  }
-
-  /** Returns the dependency key as a stringified label. */
-  private def label(key) { key.group + ':' + key.name }
 }

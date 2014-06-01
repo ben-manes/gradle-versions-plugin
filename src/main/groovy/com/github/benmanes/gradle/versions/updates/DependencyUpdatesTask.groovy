@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Ben Manes. All Rights Reserved.
+ * Copyright 2012-2014 Ben Manes. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 package com.github.benmanes.gradle.versions.updates
-
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
-
 /**
  * A task that reports which dependencies have later versions.
  *
@@ -29,6 +27,12 @@ class DependencyUpdatesTask extends DefaultTask {
   @Input
   String revision = 'milestone'
 
+  @Input
+  String outputFormatter = 'plain'
+
+  @Input
+  String outputDir = 'build/dependencyUpdates'
+
   DependencyUpdatesTask() {
     description = 'Displays the dependency updates for the project.'
     group = 'Help'
@@ -36,11 +40,17 @@ class DependencyUpdatesTask extends DefaultTask {
 
   @TaskAction
   def dependencyUpdates() {
-    def evaluator = new DependencyUpdates(project, revisionLevel())
+    def evaluator = new DependencyUpdates(project, revisionLevel(), outputFormatter(), outputDirectory())
     def reporter = evaluator.run()
-    reporter.writeToConsole()
+    reporter.write()
   }
 
   /** Returns the resolution revision level. */
   def revisionLevel() { System.properties.get('revision', revision) }
+
+  /** Returns the outputDir format. */
+  def outputFormatter() { System.properties.get('outputFormatter', outputFormatter) }
+
+  /** Returns the outputDir destination. */
+  def outputDirectory() { System.properties.get('outputDir', outputDir) }
 }
