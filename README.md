@@ -45,20 +45,20 @@ The strategy can be specified either on the task or as a system property for ad 
 gradle dependencyUpdates -Drevision=release
 ```
 
-Another one task property `outputFormatter` controls the report output format. The following values are supported:
+Another task property `outputFormatter` controls the report output format. The following values are supported:
 
   * plain: format output file as plain text (default)
   * json: format output file as json text
-  * xml: format output file as xml text, can be used by another plugins (eg. sonar)
+  * xml: format output file as xml text, can be used by other plugins (e.g. sonar)
 
-You can also set more values by using coma separator `,`
+You can also set multiple output formats using comma as the separator:
 
 ```groovy
 gradle dependencyUpdates -Drevision=release -DoutputFormatter=json,xml
 ```
 
-Last one task property `outputDir` controls the output directory for report file. Directory will be created of not exists.
-Default value is set to `build/dependencyUpdates`
+Last, the task property `outputDir` controls the output directory for the report  file(s). The directory will be created if it does not exist.
+The default value is set to `build/dependencyUpdates`
 
 ```groovy
 gradle dependencyUpdates -Drevision=release -DoutputFormatter=json -DoutputDir=/any/path/with/permission
