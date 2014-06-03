@@ -18,7 +18,7 @@ buildscript {
   }
   
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.5-beta-3'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.5-beta-4'
   }
 }
 ```
