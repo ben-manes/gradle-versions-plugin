@@ -1,5 +1,7 @@
 package com.github.benmanes.gradle.versions.reporter
 
+import com.github.benmanes.gradle.versions.reporter.result.Result;
+
 import groovy.json.JsonBuilder
 import groovy.transform.TupleConstructor
 
@@ -9,11 +11,10 @@ import groovy.transform.TupleConstructor
  * @author Zenedith (zenedith@wp.pl)
  */
 @TupleConstructor(callSuper = true, includeSuperProperties = true, includeSuperFields = true)
-class JsonReporter extends AbstractReporter implements Reporter {
+class JsonReporter extends AbstractReporter {
 
-  def write(printStream) {
-    def responseObject = buildBaseObject()
-    printStream.println new JsonBuilder(responseObject).toPrettyString().stripMargin()
+  def write(printStream, Result result) {
+    printStream.println new JsonBuilder(result).toPrettyString().stripMargin()
   }
 
   @Override

@@ -15,11 +15,19 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
+import groovy.transform.TupleConstructor
+
 import com.github.benmanes.gradle.versions.reporter.JsonReporter
 import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
 import com.github.benmanes.gradle.versions.reporter.Reporter
 import com.github.benmanes.gradle.versions.reporter.XmlReporter
-import groovy.transform.TupleConstructor
+import com.github.benmanes.gradle.versions.reporter.result.DependenciesGroup
+import com.github.benmanes.gradle.versions.reporter.result.Dependency
+import com.github.benmanes.gradle.versions.reporter.result.DependencyLatest
+import com.github.benmanes.gradle.versions.reporter.result.DependencyOutdated
+import com.github.benmanes.gradle.versions.reporter.result.DependencyUnresolved
+import com.github.benmanes.gradle.versions.reporter.result.Result
+import com.github.benmanes.gradle.versions.reporter.result.VersionAvailable
 
 /**
  * A reporter for the dependency updates results.
@@ -56,10 +64,9 @@ class DependencyUpdatesReporter {
 
   def write() {
     synchronized (mutex) {
-      def plainTextReporter = new PlainTextReporter(project, revision, currentVersions, latestVersions,
-          upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
+      def plainTextReporter = new PlainTextReporter(project, revision)
 
-      plainTextReporter.write(System.out)
+      plainTextReporter.write(System.out, buildBaseObject())
 
       if (outputFormatter == null || outputFormatter.isEmpty()) {
         project.logger.lifecycle("Skip generating report to file (outputFormatter is empty)")
@@ -80,7 +87,8 @@ class DependencyUpdatesReporter {
     try {
       new File(outputDir).mkdirs()
       reporterFileStream = new PrintStream(filename)
-      reporter.write(reporterFileStream)
+	  def result = buildBaseObject()
+      reporter.write(reporterFileStream, result)
       project.logger.lifecycle "\nGenerated report file "+ filename
     }
     catch (FileNotFoundException e) {
@@ -98,19 +106,114 @@ class DependencyUpdatesReporter {
 
     switch (formatter) {
       case 'json':
-        reporter = new JsonReporter(project, revision, currentVersions, latestVersions,
-            upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
+        reporter = new JsonReporter(project, revision)
         break;
       case 'xml':
-        reporter = new XmlReporter(project, revision, currentVersions, latestVersions,
-            upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
+        reporter = new XmlReporter(project, revision)
         break;
       default:
-        reporter = new PlainTextReporter(project, revision, currentVersions, latestVersions,
-            upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
+        reporter = new PlainTextReporter(project, revision)
     }
 
     return reporter;
   }
 
+   def buildBaseObject() {
+    def current = buildCurrentGroup()
+    def outdated = buildOutdatedGroup()
+    def exceeded = buildExceededGroup()
+    def unresolved = buildUnresolvedGroup()
+
+    def count = current.size() + outdated.size() + exceeded.size() + unresolved.size();
+
+    buildObject(
+        count,
+        buildDependenciesGroup(current),
+        buildDependenciesGroup(outdated),
+        buildDependenciesGroup(exceeded),
+        buildDependenciesGroup(unresolved)
+    )
+  }
+
+  protected def buildCurrentGroup() {
+	sortByGroupAndName(upToDateVersions).collect { dep->
+		buildDependency(dep.key['name'], dep.key['group'], dep.value)
+	}
+  }
+
+  protected def buildOutdatedGroup() {
+	sortByGroupAndName(upgradeVersions).collect { dep->
+		buildOutdatedDependency(dep.key['name'], dep.key['group'], currentVersions[dep.key], dep.value)
+	}
+  }
+
+  protected def buildExceededGroup() {
+	sortByGroupAndName(downgradeVersions).collect { dep->
+		buildExceededDependency(dep.key['name'], dep.key['group'], currentVersions[dep.key], dep.value)
+	}
+  }
+
+  protected def buildUnresolvedGroup() {
+	unresolved.sort { a, b -> 
+		compareKeys(keyOf(a.selector), keyOf(b.selector)) 
+	}.collect { dep->
+		def message = dep.problem.getMessage()
+		def split = message.split('Required by');
+
+		if (split.length > 0) {
+			message = split[0].trim();
+		}
+		buildUnresolvedDependency(dep.selector['name'], dep.selector['group'], currentVersions[keyOf(dep.selector)], message)
+    }
+  }
+
+  protected Result buildObject(count, current, outdated, exceeded, unresolved) {
+    new Result(count, current, outdated, exceeded, unresolved)
+  }
+
+  protected def buildDependenciesGroup(dependencies) {
+    new DependenciesGroup(dependencies.size(), dependencies)
+  }
+
+  protected def buildDependency(name, group, version) {
+    new Dependency(name, group, version)
+  }
+
+  protected def buildExceededDependency(name, group, version, latestVersion) {
+    new DependencyLatest(name, group, version, latestVersion)
+  }
+
+  protected def buildUnresolvedDependency(name, group, version, reason) {
+    new DependencyUnresolved(name, group, version, reason)
+  }
+
+  protected def buildOutdatedDependency(name, group, version, laterVersion) {
+    def available
+
+    switch (revision) {
+      case 'milestone':
+        available = new VersionAvailable(null, laterVersion)
+        break;
+      case 'integration':
+        available = new VersionAvailable(null, null, laterVersion)
+        break;
+      default:
+        available = new VersionAvailable(laterVersion)
+    }
+
+    new DependencyOutdated(name, group, version, available)
+  }
+  
+  def sortByGroupAndName(dependencies){
+    dependencies.sort { a, b -> compareKeys(a.key, b.key) }
+  }
+
+/** Compares the dependency keys. */
+  protected def compareKeys(a, b) {
+    (a['group'] == b['group']) ? a['name'] <=> b['name'] : a['group'] <=> b['group']
+  }
+
+  def static keyOf(dependency) { [group: dependency.group, name: dependency.name] }
+
+  
 }

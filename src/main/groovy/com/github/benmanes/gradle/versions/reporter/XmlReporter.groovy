@@ -2,6 +2,7 @@ package com.github.benmanes.gradle.versions.reporter
 
 import com.github.benmanes.gradle.versions.reporter.result.*
 import com.thoughtworks.xstream.XStream
+
 import groovy.transform.TupleConstructor
 
 /**
@@ -10,11 +11,10 @@ import groovy.transform.TupleConstructor
  * @author Zenedith (zenedith@wp.pl)
  */
 @TupleConstructor(callSuper = true, includeSuperProperties = true, includeSuperFields = true)
-class XmlReporter extends AbstractReporter implements Reporter {
+class XmlReporter extends AbstractReporter {
 
   @Override
-  def write(printStream) {
-    def responseObject = buildBaseObject()
+  def write(printStream, Result result) {
 
     XStream xstream = new XStream()
     xstream.alias("response", Result.class)
@@ -26,7 +26,7 @@ class XmlReporter extends AbstractReporter implements Reporter {
     xstream.alias("group", DependenciesGroup.class)
 
     printStream.println '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-    printStream.println xstream.toXML(responseObject).stripMargin()
+    printStream.println xstream.toXML(result).stripMargin()
   }
 
   @Override

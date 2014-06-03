@@ -15,8 +15,11 @@
  */
 package com.github.benmanes.gradle.versions.reporter
 
-import groovy.transform.TupleConstructor
+import com.github.benmanes.gradle.versions.reporter.result.DependencyLatest;
+import com.github.benmanes.gradle.versions.reporter.result.DependencyOutdated;
+import com.github.benmanes.gradle.versions.reporter.result.Result;
 
+import groovy.transform.TupleConstructor
 import static com.github.benmanes.gradle.versions.updates.DependencyUpdates.keyOf
 
 /**
@@ -24,34 +27,16 @@ import static com.github.benmanes.gradle.versions.updates.DependencyUpdates.keyO
  *
  * @author Ben Manes (ben.manes@gmail.com)
  */
-@TupleConstructor
-class PlainTextReporter implements Reporter {
-  /** The project evaluated against. */
-  def project
-  /** The revision strategy evaluated with. */
-  def revision
-
-  /** The current versions of each dependency declared in the project(s). */
-  def currentVersions
-  /** The latest versions of each dependency (as scoped by the revision level). */
-  def latestVersions
-
-  /** The dependencies that are up to date (same as latest found). */
-  def upToDateVersions
-  /** The dependencies that exceed the latest found (e.g. may not want SNAPSHOTs). */
-  def downgradeVersions
-  /** The dependencies where upgrades were found (below latest found). */
-  def upgradeVersions
-  /** The dependencies that could not be resolved. */
-  def unresolved
+@TupleConstructor(callSuper = true, includeSuperProperties = true, includeSuperFields = true)
+class PlainTextReporter extends AbstractReporter {
 
   /** Writes the report to the print stream. The stream is not automatically closed. */
-  def write(printStream) {
+  def write(printStream, Result result) {
     writeHeader(printStream)
-    writeUpToDate(printStream)
-    writeExceedLatestFound(printStream)
-    writeUpgrades(printStream)
-    writeUnresolved(printStream)
+    writeUpToDate(printStream, result)
+    writeExceedLatestFound(printStream, result)
+    writeUpgrades(printStream, result)
+    writeUnresolved(printStream, result)
   }
 
   @Override
@@ -66,64 +51,55 @@ class PlainTextReporter implements Reporter {
       |------------------------------------------------------------""".stripMargin()
   }
 
-  private def writeUpToDate(printStream) {
+  private def writeUpToDate(printStream, Result result) {
+	def upToDateVersions = result.current.dependencies
     if (upToDateVersions.isEmpty()) {
       printStream.println "\nAll dependencies have later versions."
     } else {
       printStream.println(
           "\nThe following dependencies are using the latest ${revision} version:")
-      upToDateVersions
-          .sort { a, b -> compareKeys(a.key, b.key) }
-          .each { printStream.println " - ${label(it.key)}:${it.value}" }
+      upToDateVersions.each { printStream.println " - ${label(it)}:${it}" }
     }
   }
 
-  private def writeExceedLatestFound(printStream) {
+  private def writeExceedLatestFound(printStream, Result result) {
+	def downgradeVersions = result.exceeded.dependencies
     if (!downgradeVersions.isEmpty()) {
       printStream.println("\nThe following dependencies exceed the version found at the "
           + revision + " revision level:")
-      downgradeVersions
-          .sort { a, b -> compareKeys(a.key, b.key) }
-          .each { key, version ->
-        def currentVersion = currentVersions[key]
-        printStream.println " - ${label(key)} [${currentVersion} <- ${version}]"
+      downgradeVersions.each { DependencyLatest dep ->
+        def currentVersion = dep.version
+        printStream.println " - ${label(dep)} [${currentVersion} <- ${dep.latest}]"
       }
     }
   }
 
-  private def writeUpgrades(printStream) {
+  private def writeUpgrades(printStream, Result result) {
+	def upgradeVersions = result.outdated.dependencies
     if (upgradeVersions.isEmpty()) {
       printStream.println "\nAll dependencies are using the latest ${revision} versions."
     } else {
       printStream.println "\nThe following dependencies have later ${revision} versions:"
-      upgradeVersions
-          .sort { a, b -> compareKeys(a.key, b.key) }
-          .each { key, version ->
-        def currentVersion = currentVersions[key]
-        printStream.println " - ${label(key)} [${currentVersion} -> ${version}]"
+      upgradeVersions.each { DependencyOutdated dep ->
+        def currentVersion = dep.version
+        printStream.println " - ${label(dep)} [${currentVersion} -> ${dep.available[revision]}]"
       }
     }
   }
 
-  private def writeUnresolved(printStream) {
+  private def writeUnresolved(printStream, Result result) {
+	def unresolved = result.unresolved.dependencies
     if (!unresolved.isEmpty()) {
       printStream.println(
           "\nFailed to determine the latest version for the following dependencies "
               + "(use --info for details):")
-      unresolved
-          .sort { a, b -> compareKeys(keyOf(a.selector), keyOf(b.selector)) }
-          .each {
-        printStream.println " - " + label(keyOf(it.selector))
-        project.logger.info "The exception that is the cause of unresolved state:", it.problem
+      unresolved.each {
+        printStream.println " - " + label(keyOf(it))
+        project.logger.info "The exception that is the cause of unresolved state:", it.reason
       }
     }
   }
 
-  /** Compares the dependency keys. */
-  private def compareKeys(a, b) {
-    (a['group'] == b['group']) ? a['name'] <=> b['name'] : a['group'] <=> b['group']
-  }
-
   /** Returns the dependency key as a stringified label. */
-  private def label(key) { key.group + ':' + key.name }
+  private def label(dependency) { dependency.group + ':' + dependency.name }
 }
