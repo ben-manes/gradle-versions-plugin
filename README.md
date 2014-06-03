@@ -47,9 +47,10 @@ gradle dependencyUpdates -Drevision=release
 
 Another task property `outputFormatter` controls the report output format. The following values are supported:
 
-  * plain: format output file as plain text (default)
-  * json: format output file as json text
-  * xml: format output file as xml text, can be used by other plugins (e.g. sonar)
+  * `"plain"`: format output file as plain text (default)
+  * `"json"`: format output file as json text
+  * `"xml"`: format output file as xml text, can be used by other plugins (e.g. sonar)
+  * a Closure: will be called with the result of the dependency update analysis
 
 You can also set multiple output formats using comma as the separator:
 

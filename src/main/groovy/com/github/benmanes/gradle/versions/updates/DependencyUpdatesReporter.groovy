@@ -68,19 +68,26 @@ class DependencyUpdatesReporter {
 
       plainTextReporter.write(System.out, buildBaseObject())
 
-      if (outputFormatter == null || outputFormatter.isEmpty()) {
+      if (outputFormatter == null || (outputFormatter instanceof String && outputFormatter.isEmpty())) {
         project.logger.lifecycle("Skip generating report to file (outputFormatter is empty)")
         return
       }
-
-      outputFormatter.split(",").each{
-        generateFileReport(it)
+      if (outputFormatter instanceof String){
+	      outputFormatter.split(",").each{
+	        generateFileReport(getOutputReporter(it))
+	      }
+      } else if (outputFormatter instanceof Reporter){
+	  	generateFileReport(outputFormatter)
+      } else if (outputFormatter instanceof Closure) {
+	    Result result = buildBaseObject()
+	  	outputFormatter.call(result)
+      } else {
+	  	throw new IllegalArgumentException("Cannot handle output formatter $outputFormatter, unsupported type")
       }
     }
   }
 
-  def generateFileReport(def formatter) {
-    def reporter = getOutputReporter(formatter)
+  def generateFileReport(Reporter reporter) {
     def filename = outputDir + '/' + reporter.getFileName()
     def reporterFileStream
 
