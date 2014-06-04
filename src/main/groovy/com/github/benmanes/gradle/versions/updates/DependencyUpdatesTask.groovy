@@ -28,7 +28,7 @@ class DependencyUpdatesTask extends DefaultTask {
   String revision = 'milestone'
 
   @Input
-  String outputFormatter = 'plain'
+  def outputFormatter = 'plain'
 
   @Input
   String outputDir = 'build/dependencyUpdates'
