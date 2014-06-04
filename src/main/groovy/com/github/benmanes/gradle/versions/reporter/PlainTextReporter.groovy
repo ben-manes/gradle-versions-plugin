@@ -15,12 +15,12 @@
  */
 package com.github.benmanes.gradle.versions.reporter
 
-import com.github.benmanes.gradle.versions.reporter.result.DependencyLatest;
-import com.github.benmanes.gradle.versions.reporter.result.DependencyOutdated;
-import com.github.benmanes.gradle.versions.reporter.result.Result;
-
-import groovy.transform.TupleConstructor
 import static com.github.benmanes.gradle.versions.updates.DependencyUpdates.keyOf
+import groovy.transform.TupleConstructor
+
+import com.github.benmanes.gradle.versions.reporter.result.DependencyLatest
+import com.github.benmanes.gradle.versions.reporter.result.DependencyOutdated
+import com.github.benmanes.gradle.versions.reporter.result.Result
 
 /**
  * A plain text reporter for the dependency updates results.
@@ -52,18 +52,18 @@ class PlainTextReporter extends AbstractReporter {
   }
 
   private def writeUpToDate(printStream, Result result) {
-	def upToDateVersions = result.current.dependencies
+    def upToDateVersions = result.current.dependencies
     if (upToDateVersions.isEmpty()) {
       printStream.println "\nAll dependencies have later versions."
     } else {
       printStream.println(
           "\nThe following dependencies are using the latest ${revision} version:")
-      upToDateVersions.each { printStream.println " - ${label(it)}:${it}" }
+      upToDateVersions.each { printStream.println " - ${label(it)}:${it.version}" }
     }
   }
 
   private def writeExceedLatestFound(printStream, Result result) {
-	def downgradeVersions = result.exceeded.dependencies
+    def downgradeVersions = result.exceeded.dependencies
     if (!downgradeVersions.isEmpty()) {
       printStream.println("\nThe following dependencies exceed the version found at the "
           + revision + " revision level:")
@@ -75,7 +75,7 @@ class PlainTextReporter extends AbstractReporter {
   }
 
   private def writeUpgrades(printStream, Result result) {
-	def upgradeVersions = result.outdated.dependencies
+    def upgradeVersions = result.outdated.dependencies
     if (upgradeVersions.isEmpty()) {
       printStream.println "\nAll dependencies are using the latest ${revision} versions."
     } else {
@@ -88,11 +88,11 @@ class PlainTextReporter extends AbstractReporter {
   }
 
   private def writeUnresolved(printStream, Result result) {
-	def unresolved = result.unresolved.dependencies
+    def unresolved = result.unresolved.dependencies
     if (!unresolved.isEmpty()) {
       printStream.println(
           "\nFailed to determine the latest version for the following dependencies "
-              + "(use --info for details):")
+          + "(use --info for details):")
       unresolved.each {
         printStream.println " - " + label(keyOf(it))
         project.logger.info "The exception that is the cause of unresolved state:", it.reason
@@ -101,5 +101,7 @@ class PlainTextReporter extends AbstractReporter {
   }
 
   /** Returns the dependency key as a stringified label. */
-  private def label(dependency) { dependency.group + ':' + dependency.name }
+  private def label(dependency) {
+    dependency.group + ':' + dependency.name
+  }
 }
