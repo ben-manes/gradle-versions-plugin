@@ -2,7 +2,7 @@ apply plugin: 'groovy'
 apply plugin: 'nexus'
 
 group = 'com.github.ben-manes'
-version = '0.5-beta-4'
+version = '0.5-beta-5'
 
 buildscript {
   repositories {
