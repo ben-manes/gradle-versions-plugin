@@ -13,7 +13,7 @@ apply plugin: 'versions'
 
 buildscript {
   repositories {
-    maven { url "https://raw.githubusercontent.com/ben-manes/gradle-versions-plugin/mvnrepo/ }
+    maven { url "https://raw.githubusercontent.com/ben-manes/gradle-versions-plugin/mvnrepo/" }
     mavenCentral()
   }
   
