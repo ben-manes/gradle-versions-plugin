@@ -9,7 +9,7 @@ This plugin is available from a Maven repository hosted on GitHub. You can add i
 the following configuration:
 
 ```groovy
-apply plugin: 'versions'
+apply plugin: 'com.github.ben-manes.versions'
 
 buildscript {
   repositories {
@@ -18,7 +18,7 @@ buildscript {
   }
   
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.5-beta-5'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.5-beta-6'
   }
 }
 ```
