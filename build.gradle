@@ -24,7 +24,9 @@ dependencies {
   compile localGroovy()
 
   compile group: 'com.thoughtworks.xstream', name: 'xstream', version:'1.4.7'
-  testCompile 'org.spockframework:spock-core:0.7-groovy-1.8'
+  testCompile('org.spockframework:spock-core:0.7-groovy-2.0'){
+    exclude(module: 'groovy-all')
+  }
 }
 
 jar {
