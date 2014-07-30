@@ -5,7 +5,7 @@ this plugin provides a task to determine which dependencies have updates.
 
 ## Usage
 
-This plugin is available from a Maven repository hosted on GitHub. You can add it to your build script using
+This plugin is available from [Bintray's JCenter repository])(http://jcenter.bintray.com/). You can add it to your build script using
 the following configuration:
 
 ```groovy
@@ -13,8 +13,7 @@ apply plugin: 'com.github.ben-manes.versions'
 
 buildscript {
   repositories {
-    maven { url "http://dl.bintray.com/fooberger/maven/" }
-    mavenCentral()
+    jcenter()
   }
   
   dependencies {
