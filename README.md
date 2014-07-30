@@ -18,6 +18,7 @@ buildscript {
   
   dependencies {
     classpath 'com.github.ben-manes:gradle-versions-plugin:0.5-beta-6'
+    // classpath 'org.codehaus.groovy:groovy-backports-compat23:2.3.5' // uncomment if you're using Gradle 1.x
   }
 }
 ```
