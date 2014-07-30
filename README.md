@@ -5,7 +5,7 @@ this plugin provides a task to determine which dependencies have updates.
 
 ## Usage
 
-This plugin is available from [Bintray's JCenter repository])(http://jcenter.bintray.com/). You can add it to your build script using
+This plugin is available from [Bintray's JCenter repository](http://jcenter.bintray.com/). You can add it to your build script using
 the following configuration:
 
 ```groovy
