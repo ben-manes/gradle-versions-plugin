@@ -22,7 +22,7 @@ buildscript {
   }
 }
 ```
-The current version is known to work with Gradle versions up to 2.0.
+The current version is known to work with Gradle versions up to 2.1.
 
 ## Tasks
 
