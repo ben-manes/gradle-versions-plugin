@@ -53,15 +53,15 @@ class DependencyUpdates {
   DependencyUpdatesReporter run() {
     def current = getProjectAndBuildscriptDependencies()
     project.logger.info('Found dependencies {}', current)
-    def dependencies = resolveLatestDepedencies(current)
+    List<Set> dependencies = resolveLatestDepedencies(current)
     Set<ResolvedDependency> resolvedLatest = dependencies[0]
     Set<UnresolvedDependency> unresolved = dependencies[1]
     project.logger.info('Resolved latest dependencies: {}', resolvedLatest)
     project.logger.info('Unresolved dependencies: {}', unresolved)
 
     Map<Map<String, String>, String> currentVersions = [:]
-    current.each { dependency ->
-      if (unresolved.find { it -> keyOf(it.selector) == keyOf(dependency) }) {
+    current.each { ExternalDependency dependency ->
+      if (unresolved.find { UnresolvedDependency it -> keyOf(it.selector) == keyOf(dependency) }) {
         project.logger.info('Could not determine current version for dependency: {}', dependency)
         //add current version info based on info from dependency
         currentVersions.put(keyOf(dependency), dependency.version)
@@ -71,11 +71,11 @@ class DependencyUpdates {
       currentVersions.put(keyOf(dependency), actualVersion)
 
     }
-    def versions = composeVersionMapping(currentVersions, resolvedLatest)
-    def latestVersions = versions[0]
-    def upToDateVersions = versions[1]
-    def downgradeVersions = versions[2]
-    def upgradeVersions = versions[3]
+    List<Map<Map<String, String>, String>> versions = composeVersionMapping(currentVersions, resolvedLatest)
+    Map<Map<String, String>, String> latestVersions = versions[0]
+    Map<Map<String, String>, String> upToDateVersions = versions[1]
+    Map<Map<String, String>, String> downgradeVersions = versions[2]
+    Map<Map<String, String>, String> upgradeVersions = versions[3]
     new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir, currentVersions, latestVersions,
       upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
   }
@@ -93,7 +93,7 @@ class DependencyUpdates {
    * the latest dependencies to determine the newest versions.
    */
   private List<Set> resolveLatestDepedencies(Collection<ExternalDependency> current) {
-    def latest = current.collect { ExternalDependency dependency ->
+    Collection<Dependency> latest = current.collect { ExternalDependency dependency ->
       project.dependencies.create(group: dependency.group, name: dependency.name,
           version: (dependency.version == null ? null : "latest.${revision}")) { ModuleDependency dep ->
         dep.transitive = false
@@ -113,12 +113,12 @@ class DependencyUpdates {
    */
   @TypeChecked(SKIP)
   private <T> T resolveWithAllRepositories(Closure<T> closure) {
-    def repositories = project.allprojects.collectMany { proj ->
+    def repositories = project.allprojects.collectMany { Project proj ->
       (proj.repositories + proj.buildscript.repositories)
     }.findAll { project.repositories.add(it) }
 
     project.logger.info 'Resolving with repositories:'
-    project.repositories.each { repository ->
+    project.repositories.each { ArtifactRepository repository ->
       def hasUrl = repository.metaClass.respondsTo(repository, 'url')
       project.logger.info ' - ' + repository.name + (hasUrl ? ": ${repository.url}" : '')
     }
@@ -165,10 +165,10 @@ class DependencyUpdates {
             currentVersions.collect { key, value -> "${key.group}:${key.name}:$value" },
             latestVersions.collect { key, value -> "${key.group}:${key.name}:$value" })
 
-    def comparator = getVersionComparator()
+    Comparator comparator = getVersionComparator()
 
-    def versionInfo = latestVersions.groupBy {
-        key, version ->
+    Map<Integer, Map<Map<String, String>, String>> versionInfo = latestVersions.groupBy {
+        Map<String, String> key, version ->
       project.logger.info('Checking dependency {}:{}', key.group, key.name)
       if (currentVersions[key] == version) {
         0
@@ -176,9 +176,9 @@ class DependencyUpdates {
         (Math.signum(comparator.compare(version, currentVersions[key]))) as int
       }
     }
-    def upToDateVersions = versionInfo[0] ?: [:] as Map<Map<String, String>, String>
-    def upgradeVersions = versionInfo[1] ?: [:] as Map<Map<String, String>, String>
-    def downgradeVersions = versionInfo[-1] ?: [:] as Map<Map<String, String>, String>
+    Map<Map<String, String>, String> upToDateVersions = versionInfo[0] ?: [:] as Map<Map<String, String>, String>
+    Map<Map<String, String>, String> upgradeVersions = versionInfo[1] ?: [:] as Map<Map<String, String>, String>
+    Map<Map<String, String>, String> downgradeVersions = versionInfo[-1] ?: [:] as Map<Map<String, String>, String>
     [latestVersions, upToDateVersions, downgradeVersions, upgradeVersions]
   }
 
@@ -196,5 +196,5 @@ class DependencyUpdates {
 
   /** Returns a key based on the dependency's group and name. */
   @TypeChecked(SKIP)
-  static Map<String, String> keyOf(dependency) { [group: dependency.group, name: dependency.name] }
+  static Map<String, String> keyOf(identifier) { [group: identifier.group, name: identifier.name] }
 }

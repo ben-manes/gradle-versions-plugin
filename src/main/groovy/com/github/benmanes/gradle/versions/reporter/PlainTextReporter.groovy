@@ -52,7 +52,7 @@ class PlainTextReporter extends AbstractReporter {
   }
 
   private def writeUpToDate(printStream, Result result) {
-    def upToDateVersions = result.current.dependencies
+    List<Dependency> upToDateVersions = result.current.dependencies
     if (upToDateVersions.isEmpty()) {
       printStream.println '\nAll dependencies have later versions.'
     } else {

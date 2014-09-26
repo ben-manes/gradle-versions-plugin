@@ -62,7 +62,7 @@ class DependencyUpdatesReporter {
 
   def write() {
     synchronized (MUTEX) {
-      def plainTextReporter = new PlainTextReporter(project, revision)
+      PlainTextReporter plainTextReporter = new PlainTextReporter(project, revision)
 
       plainTextReporter.write(System.out, buildBaseObject())
 
@@ -86,7 +86,7 @@ class DependencyUpdatesReporter {
   }
 
   def generateFileReport(Reporter reporter) {
-    def filename = outputDir + '/' + reporter.getFileName()
+    String filename = outputDir + '/' + reporter.getFileName()
     def reporterFileStream
 
     try {
@@ -124,10 +124,10 @@ class DependencyUpdatesReporter {
   }
 
    Result buildBaseObject() {
-    def current = buildCurrentGroup()
-    def outdated = buildOutdatedGroup()
-    def exceeded = buildExceededGroup()
-    def unresolved = buildUnresolvedGroup()
+    List current = buildCurrentGroup()
+    List outdated = buildOutdatedGroup()
+    List exceeded = buildExceededGroup()
+    List unresolved = buildUnresolvedGroup()
 
     def count = current.size() + outdated.size() + exceeded.size() + unresolved.size()
 

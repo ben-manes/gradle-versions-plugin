@@ -45,7 +45,7 @@ class DependencyUpdatesTask extends DefaultTask {
   @TaskAction
   def dependencyUpdates() {
     def evaluator = new DependencyUpdates(project, revisionLevel(), outputFormatterProp(), outputDirectory())
-    def reporter = evaluator.run()
+    DependencyUpdatesReporter reporter = evaluator.run()
     reporter?.write()
   }
 
