@@ -59,6 +59,7 @@ ruleset {
         UnnecessaryDefInMethodDeclaration(enabled: false)
         UnnecessaryGetter(enabled: false)
         UnnecessaryReturnKeyword(enabled: false)
+        UnnecessaryCast(enabled: false) // buggy
     }
     ruleset('rulesets/unused.xml')
 }

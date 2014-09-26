@@ -16,17 +16,19 @@
 package com.github.benmanes.gradle.versions.reporter
 
 import static com.github.benmanes.gradle.versions.updates.DependencyUpdates.keyOf
-import groovy.transform.TupleConstructor
+import static groovy.transform.TypeCheckingMode.SKIP
 
-import com.github.benmanes.gradle.versions.reporter.result.DependencyLatest
-import com.github.benmanes.gradle.versions.reporter.result.DependencyOutdated
-import com.github.benmanes.gradle.versions.reporter.result.Result
+
+import com.github.benmanes.gradle.versions.reporter.result.*
+import groovy.transform.TupleConstructor
+import groovy.transform.TypeChecked
 
 /**
  * A plain text reporter for the dependency updates results.
  *
  * @author Ben Manes (ben.manes@gmail.com)
  */
+@TypeChecked
 @TupleConstructor(callSuper = true, includeSuperProperties = true, includeSuperFields = true)
 class PlainTextReporter extends AbstractReporter {
 
@@ -74,6 +76,7 @@ class PlainTextReporter extends AbstractReporter {
     }
   }
 
+  @TypeChecked(SKIP)
   private def writeUpgrades(printStream, Result result) {
     def upgradeVersions = result.outdated.dependencies
     if (upgradeVersions.isEmpty()) {
@@ -93,14 +96,15 @@ class PlainTextReporter extends AbstractReporter {
       printStream.println(
           '\nFailed to determine the latest version for the following dependencies '
           + '(use --info for details):')
-      unresolved.each {
-        printStream.println ' - ' + label(keyOf(it))
-        project.logger.info 'The exception that is the cause of unresolved state:', it.reason
+      unresolved.each { DependencyUnresolved dep ->
+        printStream.println ' - ' + label(keyOf(dep))
+        project.logger.info 'The exception that is the cause of unresolved state:', dep.reason
       }
     }
   }
 
   /** Returns the dependency key as a stringified label. */
+  @TypeChecked(SKIP)
   private def label(dependency) {
     dependency.group + ':' + dependency.name
   }

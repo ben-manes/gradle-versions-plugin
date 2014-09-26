@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
+import groovy.transform.TypeChecked
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
@@ -24,6 +25,7 @@ import org.gradle.api.tasks.TaskAction
  *
  * @author Ben Manes (ben.manes@gmail.com)
  */
+@TypeChecked
 class DependencyUpdatesTask extends DefaultTask {
 
   @Input
@@ -44,15 +46,15 @@ class DependencyUpdatesTask extends DefaultTask {
   def dependencyUpdates() {
     def evaluator = new DependencyUpdates(project, revisionLevel(), outputFormatterProp(), outputDirectory())
     def reporter = evaluator.run()
-    reporter.write()
+    reporter?.write()
   }
 
   /** Returns the resolution revision level. */
-  def revisionLevel() { System.properties.get('revision', revision) }
+  String revisionLevel() { System.properties.get('revision', revision) }
 
   /** Returns the outputDir format. */
-  def outputFormatterProp() { System.properties.get('outputFormatter', outputFormatter) }
+  String outputFormatterProp() { System.properties.get('outputFormatter', outputFormatter) }
 
   /** Returns the outputDir destination. */
-  def outputDirectory() { System.properties.get('outputDir', outputDir) }
+  String outputDirectory() { System.properties.get('outputDir', outputDir) }
 }

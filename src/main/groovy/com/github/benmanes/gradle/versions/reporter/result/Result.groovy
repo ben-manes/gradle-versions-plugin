@@ -15,17 +15,17 @@ class Result {
 	/**
 	 * The up-to-date dependencies
 	 */
-	DependenciesGroup current
+	DependenciesGroup<Dependency> current
 	/**
 	 * The dependencies that can be updated
 	 */
-	DependenciesGroup outdated
+	DependenciesGroup<DependencyOutdated> outdated
 	/**
 	 * The dependencies whose versions are newer than the ones that are available from the repositories
 	 */
-	DependenciesGroup exceeded
+	DependenciesGroup<DependencyLatest> exceeded
 	/**
 	 * The unresolvable dependencies
 	 */
-	DependenciesGroup unresolved
+	DependenciesGroup<DependencyUnresolved> unresolved
 }

@@ -3,12 +3,14 @@ package com.github.benmanes.gradle.versions.reporter
 import com.github.benmanes.gradle.versions.reporter.result.*
 import com.thoughtworks.xstream.XStream
 import groovy.transform.TupleConstructor
+import groovy.transform.TypeChecked
 
 /**
  * A xml reporter for the dependency updates results.
  *
  * @author Zenedith (zenedith@wp.pl)
  */
+@TypeChecked
 @TupleConstructor(callSuper = true, includeSuperProperties = true, includeSuperFields = true)
 class XmlReporter extends AbstractReporter {
 

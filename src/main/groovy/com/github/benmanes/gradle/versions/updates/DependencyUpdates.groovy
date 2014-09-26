@@ -15,11 +15,14 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
+import static groovy.transform.TypeCheckingMode.SKIP
 import static org.gradle.api.specs.Specs.SATISFIES_ALL
 
 import groovy.transform.TupleConstructor
-import org.gradle.api.artifacts.Dependency
-import org.gradle.api.artifacts.ExternalDependency
+import groovy.transform.TypeChecked
+import org.gradle.api.Project
+import org.gradle.api.artifacts.*
+import org.gradle.api.artifacts.repositories.ArtifactRepository
 
 /**
  * An evaluator for reporting of which dependencies have later versions.
@@ -33,6 +36,7 @@ import org.gradle.api.artifacts.ExternalDependency
  *
  * @author Ben Manes (ben.manes@gmail.com)
  */
+@TypeChecked
 @TupleConstructor
 class DependencyUpdates {
   static final String COMPARATOR_17 =
@@ -40,55 +44,59 @@ class DependencyUpdates {
   static final String COMPARATOR_18 =
     'org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.ResolverStrategy'
 
-  def project
-  def revision
+  Project project
+  String revision
   def outputFormatter
-  def outputDir
+  String outputDir
 
   /** Evaluates the dependencies and returns a reporter. */
-  def run() {
+  DependencyUpdatesReporter run() {
     def current = getProjectAndBuildscriptDependencies()
     project.logger.info('Found dependencies {}', current)
-    def (resolvedLatest, unresolved) = resolveLatestDepedencies(current)
+    def dependencies = resolveLatestDepedencies(current)
+    Set<ResolvedDependency> resolvedLatest = dependencies[0]
+    Set<UnresolvedDependency> unresolved = dependencies[1]
     project.logger.info('Resolved latest dependencies: {}', resolvedLatest)
     project.logger.info('Unresolved dependencies: {}', unresolved)
 
-    def currentVersions = [:]
+    Map<Map<String, String>, String> currentVersions = [:]
     current.each { dependency ->
-      if (unresolved.find { keyOf(it.selector) == keyOf(dependency) }) {
+      if (unresolved.find { it -> keyOf(it.selector) == keyOf(dependency) }) {
         project.logger.info('Could not determine current version for dependency: {}', dependency)
         //add current version info based on info from dependency
-        currentVersions.put(keyOf(dependency), dependency['version'])
-        return
+        currentVersions.put(keyOf(dependency), dependency.version)
+        return null
       }
       def actualVersion = resolveActualDependencyVersion(dependency)
       currentVersions.put(keyOf(dependency), actualVersion)
 
     }
-
-    def (latestVersions, upToDateVersions, downgradeVersions, upgradeVersions) =
-      composeVersionMapping(currentVersions, resolvedLatest)
+    def versions = composeVersionMapping(currentVersions, resolvedLatest)
+    def latestVersions = versions[0]
+    def upToDateVersions = versions[1]
+    def downgradeVersions = versions[2]
+    def upgradeVersions = versions[3]
     new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir, currentVersions, latestVersions,
       upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
   }
 
   /** Returns {@link ExternalDependency} collected from all projects and buildscripts. */
-  private def getProjectAndBuildscriptDependencies() {
-    project.allprojects.collectMany { proj ->
-      def configurations = (proj.configurations + proj.buildscript.configurations)
-      configurations.collectMany { it.allDependencies }
+  private Collection<ExternalDependency> getProjectAndBuildscriptDependencies() {
+    project.allprojects.collectMany { Project proj ->
+      Collection<Configuration> configurations = proj.configurations + proj.buildscript.configurations
+      configurations.collectMany { (Collection<Dependency>) it.allDependencies }
     }.findAll { it instanceof ExternalDependency }
   }
 
   /**
-   * Returns {@link ResolvedDependency} and {@link UnresolvedDependency} collected after evaluating
+   * Returns {@link Set<ResolvedDependency>} and {@link Set<UnresolvedDependency>} collected after evaluating
    * the latest dependencies to determine the newest versions.
    */
-  private def resolveLatestDepedencies(current) {
-    def latest = current.collect { dependency ->
+  private List<Set> resolveLatestDepedencies(Collection<ExternalDependency> current) {
+    def latest = current.collect { ExternalDependency dependency ->
       project.dependencies.create(group: dependency.group, name: dependency.name,
-          version: (dependency.version == null ? null : "latest.${revision}")) {
-        transitive = false
+          version: (dependency.version == null ? null : "latest.${revision}")) { ModuleDependency dep ->
+        dep.transitive = false
       }
     }
     resolveWithAllRepositories {
@@ -103,7 +111,8 @@ class DependencyUpdates {
    * across all projects. The additional repositories added are removed after the operation
    * completes.
    */
-  private def resolveWithAllRepositories(closure) {
+  @TypeChecked(SKIP)
+  private <T> T resolveWithAllRepositories(Closure<T> closure) {
     def repositories = project.allprojects.collectMany { proj ->
       (proj.repositories + proj.buildscript.repositories)
     }.findAll { project.repositories.add(it) }
@@ -125,7 +134,7 @@ class DependencyUpdates {
    * Returns the version that is used for the given dependency.
    * Resolves dynamic versions (e.g. '1.+') to actual version numbers
    */
-  private def resolveActualDependencyVersion(Dependency dependency) {
+  private String resolveActualDependencyVersion(Dependency dependency) {
     def version = dependency.version
     boolean mightBeDynamicVersion = ((version != null)
             && (version.endsWith('+') || version.endsWith(']')
@@ -144,9 +153,11 @@ class DependencyUpdates {
   }
 
   /** Organizes the dependencies into version mappings. */
-  private def composeVersionMapping(currentVersions, resolvedLatest) {
+  private List<Map<Map<String, String>, String>> composeVersionMapping(
+          Map<Map<String, String>, String> currentVersions,
+          Set<ResolvedDependency> resolvedLatest) {
 
-    def latestVersions = resolvedLatest.collectEntries { dependency ->
+    Map<Map<String, String>, String> latestVersions = resolvedLatest.collectEntries { ResolvedDependency dependency ->
       [keyOf(dependency.module.id), dependency.moduleVersion]
     }
 
@@ -156,7 +167,8 @@ class DependencyUpdates {
 
     def comparator = getVersionComparator()
 
-    def versionInfo = latestVersions.groupBy { key, version ->
+    def versionInfo = latestVersions.groupBy {
+        key, version ->
       project.logger.info('Checking dependency {}:{}', key.group, key.name)
       if (currentVersions[key] == version) {
         0
@@ -164,14 +176,15 @@ class DependencyUpdates {
         (Math.signum(comparator.compare(version, currentVersions[key]))) as int
       }
     }
-    def upToDateVersions = versionInfo[0] ?: []
-    def upgradeVersions = versionInfo[1] ?: []
-    def downgradeVersions = versionInfo[-1] ?: []
+    def upToDateVersions = versionInfo[0] ?: [:] as Map<Map<String, String>, String>
+    def upgradeVersions = versionInfo[1] ?: [:] as Map<Map<String, String>, String>
+    def downgradeVersions = versionInfo[-1] ?: [:] as Map<Map<String, String>, String>
     [latestVersions, upToDateVersions, downgradeVersions, upgradeVersions]
   }
 
   /** Retrieves the internal version comparator compatible with the Gradle version. */
-  def getVersionComparator() {
+  @TypeChecked(SKIP)
+  Comparator getVersionComparator() {
     def classLoader = Thread.currentThread().getContextClassLoader()
 
     if (project.gradle.gradleVersion =~ /^1\.[0-7](?:[^\d]|$)/) {
@@ -182,6 +195,6 @@ class DependencyUpdates {
   }
 
   /** Returns a key based on the dependency's group and name. */
-  def static keyOf(dependency) { [group: dependency.group, name: dependency.name] }
-
+  @TypeChecked(SKIP)
+  static Map<String, String> keyOf(dependency) { [group: dependency.group, name: dependency.name] }
 }

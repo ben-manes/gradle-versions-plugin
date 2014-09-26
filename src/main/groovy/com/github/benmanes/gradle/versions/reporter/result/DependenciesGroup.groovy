@@ -7,7 +7,7 @@ import groovy.transform.TupleConstructor
  *
  */
 @TupleConstructor
-class DependenciesGroup {
+class DependenciesGroup<T extends Dependency> {
 
 	/**
 	 * The number of dependencies in this group
@@ -17,5 +17,5 @@ class DependenciesGroup {
 	/**
 	 * The dependencies that belong to this group
 	 */
-	List<Dependency> dependencies = []
+	List<T> dependencies = []
 }
