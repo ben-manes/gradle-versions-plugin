@@ -15,9 +15,7 @@
  */
 package com.github.benmanes.gradle.versions.reporter
 
-import static com.github.benmanes.gradle.versions.updates.DependencyUpdates.keyOf
 import static groovy.transform.TypeCheckingMode.SKIP
-
 
 import com.github.benmanes.gradle.versions.reporter.result.*
 import groovy.transform.TupleConstructor
@@ -97,15 +95,14 @@ class PlainTextReporter extends AbstractReporter {
           '\nFailed to determine the latest version for the following dependencies '
           + '(use --info for details):')
       unresolved.each { DependencyUnresolved dep ->
-        printStream.println ' - ' + label(keyOf(dep))
+        printStream.println ' - ' + label(dep)
         project.logger.info 'The exception that is the cause of unresolved state:', dep.reason
       }
     }
   }
 
   /** Returns the dependency key as a stringified label. */
-  @TypeChecked(SKIP)
-  private def label(dependency) {
+  private def label(Dependency dependency) {
     dependency.group + ':' + dependency.name
   }
 }
