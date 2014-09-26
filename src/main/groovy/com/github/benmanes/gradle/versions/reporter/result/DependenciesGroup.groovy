@@ -17,5 +17,5 @@ class DependenciesGroup {
 	/**
 	 * The dependencies that belong to this group
 	 */
-	List<Dependency> dependencies = [];
+	List<Dependency> dependencies = []
 }

@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 package com.github.benmanes.gradle.versions.updates
+
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
+
 /**
  * A task that reports which dependencies have later versions.
  *
@@ -40,7 +42,7 @@ class DependencyUpdatesTask extends DefaultTask {
 
   @TaskAction
   def dependencyUpdates() {
-    def evaluator = new DependencyUpdates(project, revisionLevel(), outputFormatter(), outputDirectory())
+    def evaluator = new DependencyUpdates(project, revisionLevel(), outputFormatterProp(), outputDirectory())
     def reporter = evaluator.run()
     reporter.write()
   }
@@ -49,7 +51,7 @@ class DependencyUpdatesTask extends DefaultTask {
   def revisionLevel() { System.properties.get('revision', revision) }
 
   /** Returns the outputDir format. */
-  def outputFormatter() { System.properties.get('outputFormatter', outputFormatter) }
+  def outputFormatterProp() { System.properties.get('outputFormatter', outputFormatter) }
 
   /** Returns the outputDir destination. */
   def outputDirectory() { System.properties.get('outputDir', outputDir) }

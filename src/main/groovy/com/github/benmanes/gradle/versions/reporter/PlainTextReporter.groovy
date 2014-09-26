@@ -54,7 +54,7 @@ class PlainTextReporter extends AbstractReporter {
   private def writeUpToDate(printStream, Result result) {
     def upToDateVersions = result.current.dependencies
     if (upToDateVersions.isEmpty()) {
-      printStream.println "\nAll dependencies have later versions."
+      printStream.println '\nAll dependencies have later versions.'
     } else {
       printStream.println(
           "\nThe following dependencies are using the latest ${revision} version:")
@@ -65,8 +65,8 @@ class PlainTextReporter extends AbstractReporter {
   private def writeExceedLatestFound(printStream, Result result) {
     def downgradeVersions = result.exceeded.dependencies
     if (!downgradeVersions.isEmpty()) {
-      printStream.println("\nThe following dependencies exceed the version found at the "
-          + revision + " revision level:")
+      printStream.println('\nThe following dependencies exceed the version found at the '
+          + revision + ' revision level:')
       downgradeVersions.each { DependencyLatest dep ->
         def currentVersion = dep.version
         printStream.println " - ${label(dep)} [${currentVersion} <- ${dep.latest}]"
@@ -91,11 +91,11 @@ class PlainTextReporter extends AbstractReporter {
     def unresolved = result.unresolved.dependencies
     if (!unresolved.isEmpty()) {
       printStream.println(
-          "\nFailed to determine the latest version for the following dependencies "
-          + "(use --info for details):")
+          '\nFailed to determine the latest version for the following dependencies '
+          + '(use --info for details):')
       unresolved.each {
-        printStream.println " - " + label(keyOf(it))
-        project.logger.info "The exception that is the cause of unresolved state:", it.reason
+        printStream.println ' - ' + label(keyOf(it))
+        project.logger.info 'The exception that is the cause of unresolved state:', it.reason
       }
     }
   }

@@ -1,6 +1,5 @@
 package com.github.benmanes.gradle.versions.reporter
 
-import com.github.benmanes.gradle.versions.reporter.result.*
 import groovy.transform.TupleConstructor
 
 /**

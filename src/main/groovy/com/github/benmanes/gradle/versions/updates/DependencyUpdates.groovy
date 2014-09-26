@@ -15,11 +15,11 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
+import static org.gradle.api.specs.Specs.SATISFIES_ALL
+
 import groovy.transform.TupleConstructor
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalDependency
-
-import static org.gradle.api.specs.Specs.SATISFIES_ALL
 
 /**
  * An evaluator for reporting of which dependencies have later versions.
@@ -55,16 +55,17 @@ class DependencyUpdates {
 
     def currentVersions = [:]
     current.each { dependency ->
-      if (unresolved.find{keyOf(it.selector) == keyOf(dependency)}){
+      if (unresolved.find { keyOf(it.selector) == keyOf(dependency) }) {
         project.logger.info('Could not determine current version for dependency: {}', dependency)
         //add current version info based on info from dependency
         currentVersions.put(keyOf(dependency), dependency['version'])
         return
-      }else{
-        def actualVersion = resolveActualDependencyVersion(dependency)
-        currentVersions.put(keyOf(dependency), actualVersion)
       }
+      def actualVersion = resolveActualDependencyVersion(dependency)
+      currentVersions.put(keyOf(dependency), actualVersion)
+
     }
+
     def (latestVersions, upToDateVersions, downgradeVersions, upgradeVersions) =
       composeVersionMapping(currentVersions, resolvedLatest)
     new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir, currentVersions, latestVersions,
@@ -73,7 +74,7 @@ class DependencyUpdates {
 
   /** Returns {@link ExternalDependency} collected from all projects and buildscripts. */
   private def getProjectAndBuildscriptDependencies() {
-    project.allprojects.collectMany{ proj ->
+    project.allprojects.collectMany { proj ->
       def configurations = (proj.configurations + proj.buildscript.configurations)
       configurations.collectMany { it.allDependencies }
     }.findAll { it instanceof ExternalDependency }
@@ -103,7 +104,7 @@ class DependencyUpdates {
    * completes.
    */
   private def resolveWithAllRepositories(closure) {
-    def repositories = project.allprojects.collectMany{ proj ->
+    def repositories = project.allprojects.collectMany { proj ->
       (proj.repositories + proj.buildscript.repositories)
     }.findAll { project.repositories.add(it) }
 
@@ -121,24 +122,26 @@ class DependencyUpdates {
   }
 
   /**
-   * Returns the version that is used for the given dependency. Resolves dynamic versions (e.g. '1.+') to actual version numbers
+   * Returns the version that is used for the given dependency.
+   * Resolves dynamic versions (e.g. '1.+') to actual version numbers
    */
   private def resolveActualDependencyVersion(Dependency dependency) {
     def version = dependency.version
-    boolean mightBeDynamicVersion = version != null && (version.endsWith('+') || version.endsWith(']') || version.endsWith(')') || version.startsWith('latest.'))
-    if (!mightBeDynamicVersion){
-      project.logger.info("Dependency {} does not use a dynamic version", dependency)
+    boolean mightBeDynamicVersion = ((version != null)
+            && (version.endsWith('+') || version.endsWith(']')
+            || version.endsWith(')') || version.startsWith('latest.')))
+    if (!mightBeDynamicVersion) {
+      project.logger.info('Dependency {} does not use a dynamic version', dependency)
       return version
     }
-    
-    def actualVersion = resolveWithAllRepositories{
+
+    def actualVersion = resolveWithAllRepositories {
       project.configurations.detachedConfiguration(dependency).resolvedConfiguration.lenientConfiguration
       .getFirstLevelModuleDependencies(SATISFIES_ALL).find()?.moduleVersion ?: version
     }
-    project.logger.info("Resolved actual version of dependency {} to {}", dependency, actualVersion)
+    project.logger.info('Resolved actual version of dependency {} to {}', dependency, actualVersion)
     return actualVersion
   }
-
 
   /** Organizes the dependencies into version mappings. */
   private def composeVersionMapping(currentVersions, resolvedLatest) {
@@ -146,7 +149,10 @@ class DependencyUpdates {
     def latestVersions = resolvedLatest.collectEntries { dependency ->
       [keyOf(dependency.module.id), dependency.moduleVersion]
     }
-    project.logger.info('Comparing current with latest dependencies. current: {}, latest: {}', currentVersions.collect{ key, value -> "${key.group}:${key.name}:$value" }, latestVersions.collect{ key, value -> "${key.group}:${key.name}:$value" })
+
+    project.logger.info('Comparing current with latest dependencies. current: {}, latest: {}',
+            currentVersions.collect { key, value -> "${key.group}:${key.name}:$value" },
+            latestVersions.collect { key, value -> "${key.group}:${key.name}:$value" })
 
     def comparator = getVersionComparator()
 

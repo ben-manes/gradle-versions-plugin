@@ -60,23 +60,23 @@ class DependencyUpdatesReporter {
   /** The dependencies that could not be resolved. */
   def unresolved
 
-  private static Object mutex = new Object();
+  private static final Object MUTEX = new Object()
 
   def write() {
-    synchronized (mutex) {
+    synchronized (MUTEX) {
       def plainTextReporter = new PlainTextReporter(project, revision)
 
       plainTextReporter.write(System.out, buildBaseObject())
 
       if (outputFormatter == null || (outputFormatter instanceof String && outputFormatter.isEmpty())) {
-        project.logger.lifecycle("Skip generating report to file (outputFormatter is empty)")
+        project.logger.lifecycle('Skip generating report to file (outputFormatter is empty)')
         return
       }
-      if (outputFormatter instanceof String){
-	      outputFormatter.split(",").each{
+      if (outputFormatter instanceof String) {
+	      outputFormatter.split(',').each {
 	        generateFileReport(getOutputReporter(it))
 	      }
-      } else if (outputFormatter instanceof Reporter){
+      } else if (outputFormatter instanceof Reporter) {
 	  	generateFileReport(outputFormatter)
       } else if (outputFormatter instanceof Closure) {
 	    Result result = buildBaseObject()
@@ -96,10 +96,10 @@ class DependencyUpdatesReporter {
       reporterFileStream = new PrintStream(filename)
 	  def result = buildBaseObject()
       reporter.write(reporterFileStream, result)
-      project.logger.lifecycle "\nGenerated report file "+ filename
+      project.logger.lifecycle '\nGenerated report file ' + filename
     }
     catch (FileNotFoundException e) {
-      project.logger.error "Invalid outputDir path "+ filename
+      project.logger.error 'Invalid outputDir path ' + filename
     }
     finally {
       if (reporterFileStream != null) {
@@ -114,15 +114,15 @@ class DependencyUpdatesReporter {
     switch (formatter) {
       case 'json':
         reporter = new JsonReporter(project, revision)
-        break;
+        break
       case 'xml':
         reporter = new XmlReporter(project, revision)
-        break;
+        break
       default:
         reporter = new PlainTextReporter(project, revision)
     }
 
-    return reporter;
+    return reporter
   }
 
    def buildBaseObject() {
@@ -131,7 +131,7 @@ class DependencyUpdatesReporter {
     def exceeded = buildExceededGroup()
     def unresolved = buildUnresolvedGroup()
 
-    def count = current.size() + outdated.size() + exceeded.size() + unresolved.size();
+    def count = current.size() + outdated.size() + exceeded.size() + unresolved.size()
 
     buildObject(
         count,
@@ -143,32 +143,32 @@ class DependencyUpdatesReporter {
   }
 
   protected def buildCurrentGroup() {
-	sortByGroupAndName(upToDateVersions).collect { dep->
+	sortByGroupAndName(upToDateVersions).collect { dep ->
 		buildDependency(dep.key['name'], dep.key['group'], dep.value)
 	}
   }
 
   protected def buildOutdatedGroup() {
-	sortByGroupAndName(upgradeVersions).collect { dep->
+	sortByGroupAndName(upgradeVersions).collect { dep ->
 		buildOutdatedDependency(dep.key['name'], dep.key['group'], currentVersions[dep.key], dep.value)
 	}
   }
 
   protected def buildExceededGroup() {
-	sortByGroupAndName(downgradeVersions).collect { dep->
+	sortByGroupAndName(downgradeVersions).collect { dep ->
 		buildExceededDependency(dep.key['name'], dep.key['group'], currentVersions[dep.key], dep.value)
 	}
   }
 
   protected def buildUnresolvedGroup() {
-	unresolved.sort { a, b -> 
-		compareKeys(keyOf(a.selector), keyOf(b.selector)) 
-	}.collect { dep->
+	unresolved.sort { a, b ->
+		compareKeys(keyOf(a.selector), keyOf(b.selector))
+	}.collect { dep ->
 		def message = dep.problem.getMessage()
-		def split = message.split('Required by');
+		def split = message.split('Required by')
 
 		if (split.length > 0) {
-			message = split[0].trim();
+			message = split[0].trim()
 		}
 		buildUnresolvedDependency(dep.selector['name'], dep.selector['group'], currentVersions[keyOf(dep.selector)], message)
     }
@@ -200,18 +200,18 @@ class DependencyUpdatesReporter {
     switch (revision) {
       case 'milestone':
         available = new VersionAvailable(null, laterVersion)
-        break;
+        break
       case 'integration':
         available = new VersionAvailable(null, null, laterVersion)
-        break;
+        break
       default:
         available = new VersionAvailable(laterVersion)
     }
 
     new DependencyOutdated(name, group, version, available)
   }
-  
-  def sortByGroupAndName(dependencies){
+
+  def sortByGroupAndName(dependencies) {
     dependencies.sort { a, b -> compareKeys(a.key, b.key) }
   }
 
@@ -222,5 +222,4 @@ class DependencyUpdatesReporter {
 
   def static keyOf(dependency) { [group: dependency.group, name: dependency.name] }
 
-  
 }
