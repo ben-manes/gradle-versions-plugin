@@ -24,10 +24,10 @@ import org.gradle.api.Project
  *
  * @author Ben Manes (ben.manes@gmail.com)
  */
-public class VersionsPlugin implements Plugin<Project> {
+class VersionsPlugin implements Plugin<Project> {
 
   @Override
-  public void apply(Project project) {
+  void apply(Project project) {
     project.tasks.create('dependencyUpdates', DependencyUpdatesTask)
   }
 }

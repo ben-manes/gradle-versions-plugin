@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.gradle.versions;
+package com.github.benmanes.gradle.versions
 
 import com.github.benmanes.gradle.versions.reporter.Reporter
 import com.github.benmanes.gradle.versions.reporter.result.Result
-import com.github.benmanes.gradle.versions.updates.DependencyUpdates;
+import com.github.benmanes.gradle.versions.updates.DependencyUpdates
 
 import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Specification
@@ -61,7 +61,7 @@ class DependencyUpdatesSpec extends Specification {
         downgradeVersions.isEmpty()
       }
     where:
-      outputFormatter << ['plain', 'json', "xml"]
+      outputFormatter << ['plain', 'json', 'xml']
   }
 
   def 'Single project with no dependencies in invalid dir name'() {
@@ -161,7 +161,7 @@ class DependencyUpdatesSpec extends Specification {
   @Unroll('Multi-project with repository on child (#revision, #outputFormatter)')
   def 'Multi-project with repository on child'() {
     given:
-      def (rootProject, childProject, leafProject) = multiProject()
+      def (rootProject, childProject) = multiProject()
       addRepositoryTo(childProject)
       addDependenciesTo(rootProject)
     when:
@@ -179,7 +179,7 @@ class DependencyUpdatesSpec extends Specification {
       outputFormatter << ['plain', 'json', 'xml']
   }
 
-  def "Version ranges are correctly evaluated"(){
+  def 'Version ranges are correctly evaluated'() {
     given:
     def project = singleProject()
     addRepositoryTo(project)
@@ -197,11 +197,11 @@ class DependencyUpdatesSpec extends Specification {
       upToDateVersions.size() == 1
       downgradeVersions.isEmpty()
     }
-    
+
   }
-  
+
   // see https://github.com/ben-manes/gradle-versions-plugin/issues/26
-  def "Dependencies without versions do not cause a NPE"(){
+  def 'Dependencies without versions do not cause a NPE'() {
     given:
     def project = singleProject()
     addRepositoryTo(project)
@@ -219,9 +219,9 @@ class DependencyUpdatesSpec extends Specification {
       upToDateVersions.isEmpty()
       downgradeVersions.isEmpty()
     }
-    
+
   }
-  
+
   def 'Single project with a custom Reporter'() {
 	given:
 	  def project = singleProject()
@@ -232,14 +232,14 @@ class DependencyUpdatesSpec extends Specification {
 	  def reporter = evaluate(project, 'release', customReporter)
 	  reporter.write()
 	then:
-	  1 * customReporter.write(_, {Result result->
+	  1 * customReporter.write(_) { Result result ->
 		  result.current.count == 2
 		  result.outdated.count == 2
 		  result.exceeded.count == 2
 		  result.unresolved.count == 2
-	  })
+	  }
   }
-  
+
   def 'Single project with a Closure as Reporter'() {
 	  given:
 		def project = singleProject()
@@ -249,13 +249,13 @@ class DependencyUpdatesSpec extends Specification {
 		int outdated = -1
 		int exceeded = -1
 		int unresolved = -1
-		
-		def customReporter = {result ->
+
+		def customReporter = { result ->
 			current = result.current.count
 			outdated = result.outdated.count
 			exceeded = result.exceeded.count
 			unresolved = result.unresolved.count
-			
+
 		}
 	  when:
 		def reporter = evaluate(project, 'release', customReporter)
@@ -266,7 +266,7 @@ class DependencyUpdatesSpec extends Specification {
 	    exceeded == 2
 	    unresolved == 2
 	}
-  
+
   def singleProject() {
     new ProjectBuilder().withName('single').build()
   }

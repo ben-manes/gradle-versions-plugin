@@ -1,5 +1,6 @@
 apply plugin: 'groovy'
 apply plugin: 'nexus'
+apply plugin: 'codenarc'
 
 group = 'com.github.ben-manes'
 version = '0.5.1-SNAPSHOT'
@@ -21,12 +22,28 @@ repositories {
   mavenCentral()
 }
 
+codenarcMain {
+    configFile = file('config/codenarc/rules.groovy')
+}
+
+codenarcTest {
+    configFile = file('config/codenarc/testrules.groovy')
+}
+
+codenarc {
+    toolVersion = 0.21
+}
+
+tasks.withType(CodeNarc) { codeNarcTask ->
+    codeNarcTask.ignoreFailures = true
+}
+
 dependencies {
   compile gradleApi()
   compile localGroovy()
 
-  compile group: 'com.thoughtworks.xstream', name: 'xstream', version:'1.4.7'
-  testCompile('org.spockframework:spock-core:0.7-groovy-2.0'){
+  compile group: 'com.thoughtworks.xstream', name: 'xstream', version: '1.4.7'
+  testCompile('org.spockframework:spock-core:0.7-groovy-2.0') {
     exclude(module: 'groovy-all')
   }
 }

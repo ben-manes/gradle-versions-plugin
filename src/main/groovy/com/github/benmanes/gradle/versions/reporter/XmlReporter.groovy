@@ -2,14 +2,15 @@ package com.github.benmanes.gradle.versions.reporter
 
 import com.github.benmanes.gradle.versions.reporter.result.*
 import com.thoughtworks.xstream.XStream
-
 import groovy.transform.TupleConstructor
+import groovy.transform.TypeChecked
 
 /**
  * A xml reporter for the dependency updates results.
  *
  * @author Zenedith (zenedith@wp.pl)
  */
+@TypeChecked
 @TupleConstructor(callSuper = true, includeSuperProperties = true, includeSuperFields = true)
 class XmlReporter extends AbstractReporter {
 
@@ -17,13 +18,15 @@ class XmlReporter extends AbstractReporter {
   def write(printStream, Result result) {
 
     XStream xstream = new XStream()
-    xstream.alias("response", Result.class)
-    xstream.alias("available", VersionAvailable.class)
-    xstream.alias("exceededDependency", DependencyLatest.class)
-    xstream.alias("outdatedDependency", DependencyOutdated.class)
-    xstream.alias("unresolvedDependency", DependencyUnresolved.class)
-    xstream.alias("dependency", Dependency.class)
-    xstream.alias("group", DependenciesGroup.class)
+    xstream.with {
+      alias('response', Result)
+      alias('available', VersionAvailable)
+      alias('exceededDependency', DependencyLatest)
+      alias('outdatedDependency', DependencyOutdated)
+      alias('unresolvedDependency', DependencyUnresolved)
+      alias('dependency', Dependency)
+      alias('group', DependenciesGroup)
+    }
 
     printStream.println '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     printStream.println xstream.toXML(result).stripMargin()

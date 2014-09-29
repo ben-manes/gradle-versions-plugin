@@ -1,7 +1,7 @@
 package com.github.benmanes.gradle.versions.reporter
 
-import com.github.benmanes.gradle.versions.reporter.result.*
 import groovy.transform.TupleConstructor
+import org.gradle.api.Project
 
 /**
  * A base result object reporter for the dependency updates results.
@@ -11,8 +11,7 @@ import groovy.transform.TupleConstructor
 @TupleConstructor(includeFields = true)
 abstract class AbstractReporter implements Reporter {
   /** The project evaluated against. */
-  def project
+  Project project
   /** The revision strategy evaluated with. */
-  def revision
-
+  String revision
 }
