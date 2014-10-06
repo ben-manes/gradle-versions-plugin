@@ -18,7 +18,7 @@ package com.github.benmanes.gradle.versions
 import com.github.benmanes.gradle.versions.reporter.Reporter
 import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.updates.DependencyUpdates
-
+import org.gradle.api.artifacts.Dependency
 import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -131,6 +131,25 @@ class DependencyUpdatesSpec extends Specification {
         upgradeVersions.size() == 2
         upToDateVersions.size() == 2
         downgradeVersions.size() == 2
+      }
+    where:
+      revision << ['release', 'milestone', 'integration']
+      outputFormatter << ['plain', 'json', 'xml']
+  }
+
+  @Unroll('Single project with Beta Updates (#revision, #outputFormatter)')
+  def 'Single project with Beta Updates'() {
+    given:
+      def project = singleProject()
+      project.versionsConfig.lookupRevisionMapper = { Dependency dep -> '(,16[' }
+      addRepositoryTo(project)
+      addDependenciesWithBetaTo(project)
+    when:
+      def reporter = evaluate(project, revision, outputFormatter)
+      reporter.write()
+    then:
+      with(reporter) {
+          upToDateVersions.size() == 2
       }
     where:
       revision << ['release', 'milestone', 'integration']
@@ -268,13 +287,16 @@ class DependencyUpdatesSpec extends Specification {
 	}
 
   def singleProject() {
-    new ProjectBuilder().withName('single').build()
+    def project = new ProjectBuilder().withName('single').build()
+    new VersionsPlugin().apply(project)
+    project
   }
 
   def multiProject() {
     def rootProject = new ProjectBuilder().withName('root').build()
     def childProject = new ProjectBuilder().withName('child').withParent(rootProject).build()
     def leafProject = new ProjectBuilder().withName('leaf').withParent(childProject).build()
+    new VersionsPlugin().apply(rootProject)
     [rootProject, childProject, leafProject]
   }
 
@@ -314,5 +336,15 @@ class DependencyUpdatesSpec extends Specification {
       unresolvable 'com.github.ben-manes:unresolvable:1.0',
                    'com.github.ben-manes:unresolvable2:1.0'
     }
+  }
+
+  def addDependenciesWithBetaTo(project) {
+    project.configurations {
+      betaUpgradesFound
+    }
+    project.dependencies {
+      betaUpgradesFound 'com.google.guava:guava:15.0',
+        'com.google.guava:guava-tests:15.0'
+      }
   }
 }

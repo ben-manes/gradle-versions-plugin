@@ -15,22 +15,13 @@
  */
 package com.github.benmanes.gradle.versions
 
-import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
-import org.gradle.api.Plugin
-import org.gradle.api.Project
+import com.github.benmanes.gradle.versions.reporter.result.Dependency
 
 /**
- * Registers the plugin's tasks.
- *
- * @author Ben Manes (ben.manes@gmail.com)
+ * Allows Configurations of the Versions Plugin tasks.
  */
-class VersionsPlugin implements Plugin<Project> {
+class VersionsPluginExtension {
 
-  public static final String NAME = 'versionsConfig'
-
-  @Override
-  void apply(Project project) {
-    project.extensions.create(NAME, VersionsPluginExtension)
-    project.tasks.create('dependencyUpdates', DependencyUpdatesTask)
-  }
+    // can define for each dependency to look up for specific (ivy-wildcarded) revision, rather than 'latest.release'
+    Closure<Dependency> lookupRevisionMapper
 }

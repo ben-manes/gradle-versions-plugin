@@ -23,6 +23,7 @@ import groovy.transform.TypeChecked
 import org.gradle.api.Project
 import org.gradle.api.artifacts.*
 import org.gradle.api.artifacts.repositories.ArtifactRepository
+import com.github.benmanes.gradle.versions.VersionsPlugin
 
 /**
  * An evaluator for reporting of which dependencies have later versions.
@@ -45,13 +46,13 @@ class DependencyUpdates {
     'org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.ResolverStrategy'
 
   Project project
-  String revision
+  String revision // one of 'release', 'milestone', 'integration'
   def outputFormatter
   String outputDir
 
   /** Evaluates the dependencies and returns a reporter. */
   DependencyUpdatesReporter run() {
-    def current = getProjectAndBuildscriptDependencies()
+    Collection<? extends ExternalDependency> current = getProjectAndBuildscriptDependencies()
     project.logger.info('Found dependencies {}', current)
     List<Set> dependencies = resolveLatestDepedencies(current)
     Set<ResolvedDependency> resolvedLatest = dependencies[0]
@@ -89,13 +90,38 @@ class DependencyUpdates {
   }
 
   /**
+   * determines which query version should be used, depending on customizations and configurations of the user.
+   * @param dependency
+   * @return
+   */
+  @TypeChecked(SKIP)
+  private String getQueryVersion(Dependency dependency) {
+    String actualRevision = revision
+      // check if user has configured a map closure
+    def extension = project.getExtensions().getByName(VersionsPlugin.NAME)
+    if (extension?.lookupRevisionMapper != null) {
+        // check whether map closure defines an override revision for this dependency
+      actualRevision = extension.lookupRevisionMapper(dependency) ?: revision
+    }
+    switch (actualRevision) {
+      case 'release':
+      case 'integration':
+      case 'milestone':
+        return "latest.${actualRevision}"
+      default:
+        project.logger.info("Using revision '$actualRevision' instead of default '$revision' for $dependency")
+        return actualRevision
+    }
+  }
+
+  /**
    * Returns {@link Set<ResolvedDependency>} and {@link Set<UnresolvedDependency>} collected after evaluating
    * the latest dependencies to determine the newest versions.
    */
   private List<Set> resolveLatestDepedencies(Collection<ExternalDependency> current) {
     Collection<Dependency> latest = current.collect { ExternalDependency dependency ->
       project.dependencies.create(group: dependency.group, name: dependency.name,
-          version: (dependency.version == null ? null : "latest.${revision}")) { ModuleDependency dep ->
+          version: (dependency.version == null ? null : getQueryVersion(dependency))) { ModuleDependency dep ->
         dep.transitive = false
       }
     }
