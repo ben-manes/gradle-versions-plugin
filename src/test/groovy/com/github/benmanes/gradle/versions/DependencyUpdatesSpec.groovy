@@ -20,6 +20,7 @@ import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.updates.DependencyUpdates
 
 import org.gradle.testfixtures.ProjectBuilder
+import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -200,7 +201,7 @@ class DependencyUpdatesSpec extends Specification {
 
   }
 
-  // see https://github.com/ben-manes/gradle-versions-plugin/issues/26
+  @Issue("https://github.com/ben-manes/gradle-versions-plugin/issues/26")
   def 'Dependencies without versions do not cause a NPE'() {
     given:
     def project = singleProject()
