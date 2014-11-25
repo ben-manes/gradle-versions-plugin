@@ -201,7 +201,7 @@ class DependencyUpdatesSpec extends Specification {
 
   }
 
-  @Issue("https://github.com/ben-manes/gradle-versions-plugin/issues/26")
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/26')
   def 'Dependencies without versions do not cause a NPE'() {
     given:
     def project = singleProject()
