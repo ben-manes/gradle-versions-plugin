@@ -1,6 +1,6 @@
 # Gradle Versions Plugin
 
-In the spirit of the [Maven Versions Plugin](http://mojo.codehaus.org/versions-maven-plugin/), 
+In the spirit of the [Maven Versions Plugin](http://mojo.codehaus.org/versions-maven-plugin/),
 this plugin provides a task to determine which dependencies have updates.
 
 ## Usage
@@ -15,7 +15,7 @@ buildscript {
   repositories {
     jcenter()
   }
-  
+
   dependencies {
     classpath 'com.github.ben-manes:gradle-versions-plugin:0.6'
     // classpath 'org.codehaus.groovy:groovy-backports-compat23:2.3.5' // uncomment if you're using Gradle 1.x
@@ -23,6 +23,34 @@ buildscript {
 }
 ```
 The current version is known to work with Gradle versions up to 2.2.
+
+## Configuration
+
+Available since 0.6.
+
+Sometimes a project will have to be kept at a lower major version than what is available.
+In such cases, the output of the ```dependencyUpdates``` task can degrade in value, because it will
+notify you on the most recent version of the newest major version, but not about patches to the
+used major version.
+
+In order to manually optimize this, it is possible to configure a different lookup query
+for each dependency:
+```
+versionsConfig {
+  lookupRevisionMapper = { Dependency dep ->
+    if (dep.group == 'org.apache.wicket') {
+      return '(,6.17[' // only consider versions lower than 6.17
+    }
+    if (dep.group == 'org.springframework') {
+      return '4.1.+' // only consider versions starting with 4.1
+    }
+    if (dep.group == 'junit') {
+      return '4.12' // report exactly this version, not 4.12-beta-3
+    }
+  }
+}
+```
+See http://ant.apache.org/ivy/history/latest-milestone/ivyfile/dependency.html for what String will produce results.
 
 ## Tasks
 
