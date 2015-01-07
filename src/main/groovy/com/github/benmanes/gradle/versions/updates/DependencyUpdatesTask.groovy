@@ -32,7 +32,7 @@ class DependencyUpdatesTask extends DefaultTask {
   String revision = 'milestone'
 
   @Input
-  def outputFormatter = 'plain'
+  Object outputFormatter = 'plain'
 
   @Input
   String outputDir = 'build/dependencyUpdates'
@@ -53,7 +53,7 @@ class DependencyUpdatesTask extends DefaultTask {
   String revisionLevel() { System.properties.get('revision', revision) }
 
   /** Returns the outputDir format. */
-  String outputFormatterProp() { System.properties.get('outputFormatter', outputFormatter) }
+  Object outputFormatterProp() { System.properties.get('outputFormatter', outputFormatter) }
 
   /** Returns the outputDir destination. */
   String outputDirectory() { System.properties.get('outputDir', outputDir) }

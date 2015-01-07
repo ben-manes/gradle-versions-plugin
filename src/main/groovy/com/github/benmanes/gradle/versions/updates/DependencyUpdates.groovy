@@ -46,7 +46,7 @@ class DependencyUpdates {
 
   Project project
   String revision
-  def outputFormatter
+  Object outputFormatter
   String outputDir
 
   /** Evaluates the dependencies and returns a reporter. */
