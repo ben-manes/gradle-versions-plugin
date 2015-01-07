@@ -40,7 +40,7 @@ class DependencyUpdatesReporter {
   /** The revision strategy evaluated with. */
   String revision
   /** The output formatter strategy evaluated with. */
-  def outputFormatter
+  Object outputFormatter
   /** The outputDir for report. */
   String outputDir
 
@@ -87,22 +87,20 @@ class DependencyUpdatesReporter {
 
   def generateFileReport(Reporter reporter) {
     String filename = outputDir + '/' + reporter.getFileName()
-    def reporterFileStream
-
     try {
-      new File(outputDir).mkdirs()
-      reporterFileStream = new PrintStream(filename)
-	  def result = buildBaseObject()
-      reporter.write(reporterFileStream, result)
+      project.file(outputDir).mkdirs()
+      File outputFile = project.file(filename)
+      outputFile.newOutputStream().with { OutputStream os ->
+        new PrintStream(new FileOutputStream(outputFile)).with { PrintStream ps ->
+          def result = buildBaseObject()
+          reporter.write(ps, result)
+        }
+      }
+
       project.logger.lifecycle '\nGenerated report file ' + filename
     }
     catch (FileNotFoundException e) {
       project.logger.error 'Invalid outputDir path ' + filename
-    }
-    finally {
-      if (reporterFileStream != null) {
-        reporterFileStream.close()
-      }
     }
   }
 
