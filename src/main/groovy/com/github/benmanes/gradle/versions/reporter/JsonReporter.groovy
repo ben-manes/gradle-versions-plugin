@@ -20,7 +20,7 @@ class JsonReporter extends AbstractReporter {
   }
 
   @Override
-  def getFileName() {
-    return 'report.json'
+  def getFileExtension() {
+    return 'json'
   }
 }

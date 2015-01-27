@@ -40,8 +40,8 @@ class PlainTextReporter extends AbstractReporter {
   }
 
   @Override
-  def getFileName() {
-    return 'report.txt'
+  def getFileExtension() {
+    return 'txt'
   }
 
   private def writeHeader(printStream) {
