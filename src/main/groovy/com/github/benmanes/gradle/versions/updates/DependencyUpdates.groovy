@@ -48,6 +48,7 @@ class DependencyUpdates {
   String revision
   Object outputFormatter
   String outputDir
+  Boolean useProjectAsFilename
 
   /** Evaluates the dependencies and returns a reporter. */
   DependencyUpdatesReporter run() {
@@ -76,8 +77,8 @@ class DependencyUpdates {
     Map<Map<String, String>, String> upToDateVersions = versions[1]
     Map<Map<String, String>, String> downgradeVersions = versions[2]
     Map<Map<String, String>, String> upgradeVersions = versions[3]
-    new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir, currentVersions, latestVersions,
-      upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
+    new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir, useProjectAsFilename, currentVersions,
+      latestVersions, upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
   }
 
   /** Returns {@link ExternalDependency} collected from all projects and buildscripts. */

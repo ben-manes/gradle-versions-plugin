@@ -37,6 +37,9 @@ class DependencyUpdatesTask extends DefaultTask {
   @Input
   String outputDir = 'build/dependencyUpdates'
 
+  @Input
+  Boolean useProjectAsFilename = false
+
   DependencyUpdatesTask() {
     description = 'Displays the dependency updates for the project.'
     group = 'Help'
@@ -44,7 +47,8 @@ class DependencyUpdatesTask extends DefaultTask {
 
   @TaskAction
   def dependencyUpdates() {
-    def evaluator = new DependencyUpdates(project, revisionLevel(), outputFormatterProp(), outputDirectory())
+    def evaluator = new DependencyUpdates(project, revisionLevel(), outputFormatterProp(), outputDirectory(),
+      useProjectNameAsFilename())
     DependencyUpdatesReporter reporter = evaluator.run()
     reporter?.write()
   }
@@ -57,4 +61,7 @@ class DependencyUpdatesTask extends DefaultTask {
 
   /** Returns the outputDir destination. */
   String outputDirectory() { System.properties.get('outputDir', outputDir) }
+
+  /** Returns the useProjectAsFilename boolean. */
+  Boolean useProjectNameAsFilename() { System.properties.get('useProjectAsFilename', useProjectAsFilename) }
 }

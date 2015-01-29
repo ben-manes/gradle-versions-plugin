@@ -43,6 +43,8 @@ class DependencyUpdatesReporter {
   Object outputFormatter
   /** The outputDir for report. */
   String outputDir
+  /** Boolean value on whether to use the project name as file name **/
+  Boolean useProjectAsFilename
 
   /** The current versions of each dependency declared in the project(s). */
   Map<Map<String, String>, String> currentVersions
@@ -86,7 +88,12 @@ class DependencyUpdatesReporter {
   }
 
   def generateFileReport(Reporter reporter) {
-    String filename = outputDir + '/' + project.name + '.' + reporter.getFileExtension()
+    def filename
+    if (useProjectAsFilename) {
+      filename = outputDir + '/' + project.name + '.' + reporter.getFileExtension()
+    } else {
+      filename = outputDir + '/report.' + reporter.getFileExtension()
+    }
     try {
       project.file(outputDir).mkdirs()
       File outputFile = project.file(filename)
