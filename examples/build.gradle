@@ -1,11 +1,11 @@
-apply plugin: 'versions'
+apply plugin: 'com.github.ben-manes.versions'
 
 defaultTasks 'dependencyUpdates'
 
 buildscript {
   repositories {
     // Use 'gradle install' to install latest
-    mavenCentral()
+    jcenter()
     mavenLocal()
   }
 

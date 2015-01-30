@@ -43,6 +43,8 @@ class DependencyUpdates {
     'org.gradle.api.internal.artifacts.version.LatestVersionSemanticComparator'
   static final String COMPARATOR_18 =
     'org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.ResolverStrategy'
+  static final String COMPARATOR_23 =
+    'org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.StaticVersionComparator'
 
   Project project
   String revision
@@ -186,11 +188,15 @@ class DependencyUpdates {
   @TypeChecked(SKIP)
   Comparator getVersionComparator() {
     def classLoader = Thread.currentThread().getContextClassLoader()
+    def gradleVersion = project.gradle.gradleVersion
 
-    if (project.gradle.gradleVersion =~ /^1\.[0-7](?:[^\d]|$)/) {
+    if (gradleVersion =~ /^1\.[0-7](?:[^\d]|$)/) {
       classLoader.loadClass(COMPARATOR_17).newInstance()
-    } else {
+    } else if ( (gradleVersion =~ /^1\.[8-9](?:[^\d]|$)/) || 
+        gradleVersion =~ /^2\.[0-2](?:[^\d]|$)/) {
       classLoader.loadClass(COMPARATOR_18).newInstance().getVersionMatcher()
+    } else {
+      classLoader.loadClass(COMPARATOR_23).newInstance()
     }
   }
 

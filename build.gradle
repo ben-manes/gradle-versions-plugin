@@ -3,13 +3,12 @@ apply plugin: 'nexus'
 apply plugin: 'codenarc'
 
 group = 'com.github.ben-manes'
-version = '0.7'
+version = '0.8'
 
-sourceCompatibility = "1.6"
+sourceCompatibility = '1.6'
 
 buildscript {
   repositories {
-    mavenCentral()
     jcenter()
   }
 
@@ -23,19 +22,19 @@ repositories {
 }
 
 codenarcMain {
-    configFile = file('config/codenarc/rules.groovy')
+  configFile = file('config/codenarc/rules.groovy')
 }
 
 codenarcTest {
-    configFile = file('config/codenarc/testrules.groovy')
+  configFile = file('config/codenarc/testrules.groovy')
 }
 
 codenarc {
-    toolVersion = 0.21
+  toolVersion = 0.21
 }
 
 tasks.withType(CodeNarc) { codeNarcTask ->
-    codeNarcTask.ignoreFailures = true
+  codeNarcTask.ignoreFailures = true
 }
 
 dependencies {
@@ -99,6 +98,10 @@ modifyPom {
         id 'zenedith'
         name 'Zenedith'
         email 'zenedith@wp.pl'
+      }
+      developer {
+        id 'jochenberger'
+        name 'Jochen Berger'
       }
     }
   }

@@ -182,85 +182,83 @@ class DependencyUpdatesSpec extends Specification {
 
   def 'Version ranges are correctly evaluated'() {
     given:
-    def project = singleProject()
-    addRepositoryTo(project)
-    project.configurations {
-      upToDate
-    }
-    project.dependencies.upToDate 'backport-util-concurrent:backport-util-concurrent:3.+'
-  when:
-    def reporter = evaluate(project)
-    reporter.write()
-  then:
-    with(reporter) {
-      unresolved.isEmpty()
-      upgradeVersions.isEmpty()
-      upToDateVersions.size() == 1
-      downgradeVersions.isEmpty()
-    }
-
+      def project = singleProject()
+      addRepositoryTo(project)
+      project.configurations {
+        upToDate
+      }
+      project.dependencies.upToDate 'backport-util-concurrent:backport-util-concurrent:3.+'
+    when:
+      def reporter = evaluate(project)
+      reporter.write()
+    then:
+      with(reporter) {
+        unresolved.isEmpty()
+        upgradeVersions.isEmpty()
+        upToDateVersions.size() == 1
+        downgradeVersions.isEmpty()
+      }
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/26')
   def 'Dependencies without versions do not cause a NPE'() {
     given:
-    def project = singleProject()
-    addRepositoryTo(project)
-    project.configurations {
-      upgradesFound
-    }
-    project.dependencies.upgradesFound 'backport-util-concurrent:backport-util-concurrent'
-  when:
-    def reporter = evaluate(project)
-    reporter.write()
-  then:
-    with(reporter) {
-      unresolved.size() == 1
-      upgradeVersions.isEmpty()
-      upToDateVersions.isEmpty()
-      downgradeVersions.isEmpty()
-    }
-
+      def project = singleProject()
+      addRepositoryTo(project)
+      project.configurations {
+        upgradesFound
+      }
+      project.dependencies.upgradesFound 'backport-util-concurrent:backport-util-concurrent'
+    when:
+      def reporter = evaluate(project)
+      reporter.write()
+    then:
+      with(reporter) {
+        unresolved.size() == 1
+        upgradeVersions.isEmpty()
+        upToDateVersions.isEmpty()
+        downgradeVersions.isEmpty()
+      }
   }
 
   def 'Single project with a custom Reporter'() {
-	given:
-	  def project = singleProject()
-	  addRepositoryTo(project)
-	  addDependenciesTo(project)
-	  Reporter customReporter = Mock()
-	when:
-	  def reporter = evaluate(project, 'release', customReporter)
-	  reporter.write()
-	then:
-	  1 * customReporter.write(_) { Result result ->
-		  result.current.count == 2
-		  result.outdated.count == 2
-		  result.exceeded.count == 2
-		  result.unresolved.count == 2
-	  }
+  	given:
+  	  def project = singleProject()
+  	  addRepositoryTo(project)
+  	  addDependenciesTo(project)
+  	  Reporter customReporter = Mock()
+  	when:
+  	  def reporter = evaluate(project, 'release', customReporter)
+  	  reporter.write()
+  	then:
+  	  1 * customReporter.write(_) { Result result ->
+  		  result.current.count == 2
+  		  result.outdated.count == 2
+  		  result.exceeded.count == 2
+  		  result.unresolved.count == 2
+  	  }
   }
 
   def 'Single project with a Closure as Reporter'() {
 	  given:
-		def project = singleProject()
-		addRepositoryTo(project)
-		addDependenciesTo(project)
-		int current = -1
-		int outdated = -1
-		int exceeded = -1
-		int unresolved = -1
-
-		def customReporter = { result ->
-			current = result.current.count
-			outdated = result.outdated.count
-			exceeded = result.exceeded.count
-			unresolved = result.unresolved.count
-
-		}
+  		def project = singleProject()
+  		addRepositoryTo(project)
+  		addDependenciesTo(project)
+  		int current = -1
+  		int outdated = -1
+  		int exceeded = -1
+  		int unresolved = -1
+  
+  		def customReporter = { result ->
+  			current = result.current.count
+  			outdated = result.outdated.count
+  			exceeded = result.exceeded.count
+  			unresolved = result.unresolved.count
+  
+  		}
 	  when:
-		def reporter = evaluate(project, 'release', customReporter)
-		reporter.write()
+  		def reporter = evaluate(project, 'release', customReporter)
+  		reporter.write()
 	  then:
 	    current == 2
 	    outdated == 2
