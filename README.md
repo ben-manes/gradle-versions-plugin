@@ -17,12 +17,12 @@ buildscript {
   }
   
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.7'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.8'
     // classpath 'org.codehaus.groovy:groovy-backports-compat23:2.3.5' // uncomment if you're using Gradle 1.x
   }
 }
 ```
-The current version is known to work with Gradle versions up to 2.2.
+The current version is known to work with Gradle versions up to 2.3.
 
 ## Tasks
 
