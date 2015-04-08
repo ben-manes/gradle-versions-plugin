@@ -39,7 +39,7 @@ import org.gradle.api.artifacts.repositories.ArtifactRepository
 @TypeChecked
 @TupleConstructor
 class DependencyUpdates {
-  static final String COMPARATOR_17 =
+  static final String COMPARATOR_10 =
     'org.gradle.api.internal.artifacts.version.LatestVersionSemanticComparator'
   static final String COMPARATOR_18 =
     'org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.ResolverStrategy'
@@ -190,14 +190,23 @@ class DependencyUpdates {
     def classLoader = Thread.currentThread().getContextClassLoader()
     def gradleVersion = project.gradle.gradleVersion
 
-    if (gradleVersion =~ /^1\.[0-7](?:[^\d]|$)/) {
-      classLoader.loadClass(COMPARATOR_17).newInstance()
-    } else if ( (gradleVersion =~ /^1\.[8-9](?:[^\d]|$)/) || 
-        gradleVersion =~ /^2\.[0-2](?:[^\d]|$)/) {
+    if (useComparator10(gradleVersion)) {
+      classLoader.loadClass(COMPARATOR_10).newInstance()
+    } else if (useComparator18(gradleVersion)) {
       classLoader.loadClass(COMPARATOR_18).newInstance().getVersionMatcher()
     } else {
       classLoader.loadClass(COMPARATOR_23).newInstance()
     }
+  }
+
+  @TypeChecked(SKIP)
+  static boolean useComparator10(String gradleVersion) {
+    gradleVersion ==~ /^1\.[0-7](?:[^\d]|$)/
+  }
+  
+  @TypeChecked(SKIP)
+  static boolean useComparator18(String gradleVersion) {
+    gradleVersion ==~ /^1\.([8-9]|1\d)(?:[^\d]|$)/ || gradleVersion ==~ /^2\.[0-2](?:[^\d]|$)/
   }
 
   /** Returns a key based on the dependency's group and name. */
