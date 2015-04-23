@@ -17,9 +17,9 @@ package com.github.benmanes.gradle.versions.updates
 
 import static groovy.transform.TypeCheckingMode.SKIP
 import static org.gradle.api.specs.Specs.SATISFIES_ALL
-
 import groovy.transform.TupleConstructor
 import groovy.transform.TypeChecked
+
 import org.gradle.api.Project
 import org.gradle.api.artifacts.*
 import org.gradle.api.artifacts.repositories.ArtifactRepository
@@ -39,12 +39,6 @@ import org.gradle.api.artifacts.repositories.ArtifactRepository
 @TypeChecked
 @TupleConstructor
 class DependencyUpdates {
-  static final String COMPARATOR_10 =
-    'org.gradle.api.internal.artifacts.version.LatestVersionSemanticComparator'
-  static final String COMPARATOR_18 =
-    'org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.ResolverStrategy'
-  static final String COMPARATOR_23 =
-    'org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.StaticVersionComparator'
 
   Project project
   String revision
@@ -188,27 +182,41 @@ class DependencyUpdates {
   @TypeChecked(SKIP)
   Comparator getVersionComparator() {
     def classLoader = Thread.currentThread().getContextClassLoader()
-    def gradleVersion = project.gradle.gradleVersion
 
-    if (useComparator10(gradleVersion)) {
-      classLoader.loadClass(COMPARATOR_10).newInstance()
-    } else if (useComparator18(gradleVersion)) {
-      classLoader.loadClass(COMPARATOR_18).newInstance().getVersionMatcher()
-    } else {
-      classLoader.loadClass(COMPARATOR_23).newInstance()
+    def createInstance = { String className->
+      classLoader.loadClass(className).newInstance()
     }
-  }
 
-  @TypeChecked(SKIP)
-  static boolean useComparator10(String gradleVersion) {
-    gradleVersion ==~ /^1\.[0-7](?:[^\d]|$)/
-  }
-  
-  @TypeChecked(SKIP)
-  static boolean useComparator18(String gradleVersion) {
-    gradleVersion ==~ /^1\.([8-9]|1\d)(?:[^\d]|$)/ || gradleVersion ==~ /^2\.[0-2](?:[^\d]|$)/
-  }
+    def comparatorCreatorCandidates = [
+      // 2.4
+      {
+        createInstance('org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionComparator').asStringComparator()
+      },
+      // 2.3
+      {
+        createInstance('org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.StaticVersionComparator')
+      },
+      // 1.8
+      {
+        createInstance('org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.ResolverStrategy').getVersionMatcher()
+      },
+      // 1.0
+      {
+        createInstance('org.gradle.api.internal.artifacts.version.LatestVersionSemanticComparator')
+      }
+    ]
 
+    def comparator = comparatorCreatorCandidates.findResult {
+      try{
+        it.call()
+      } catch (Exception e){
+        null
+      }
+    }
+    assert comparator != null, "Could not create a version comparator for Gradle version ${project.gradle.gradleVersion}"
+    comparator
+  }
+ 
   /** Returns a key based on the dependency's group and name. */
   @TypeChecked(SKIP)
   static Map<String, String> keyOf(identifier) { [group: identifier.group, name: identifier.name] }

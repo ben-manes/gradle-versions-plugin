@@ -266,32 +266,6 @@ class DependencyUpdatesSpec extends Specification {
 	    unresolved == 2
 	}
 
-  @Unroll('1.0 <= Gradle <= 1.7 (#version, #supported)')
-  def '1.0 <= Gradle <= 1.7'() {
-    given:
-      // gradle version
-    when:
-      def compatible = DependencyUpdates.useComparator10(version)
-    then:
-      compatible == supported
-    where:
-      [version, supported] << [['1.0', true], ['1.7', true],
-        ['1.8', false], ['1.10', false], ['2.0', false]]
-  }
-
-  @Unroll('1.7 < Gradle < 2.3 (#version, #supported)')
-  def '1.7 < Gradle < 2.3'() {
-    given:
-      // gradle version
-    when:
-      def compatible = DependencyUpdates.useComparator18(version)
-    then:
-      compatible == supported
-    where:
-      [version, supported] << [['1.0', false], ['1.7', false],
-        ['1.8', true], ['1.10', true], ['2.0', true], ['2.2', true], ['2.3', false]]
-  }
-
   def singleProject() {
     new ProjectBuilder().withName('single').build()
   }
