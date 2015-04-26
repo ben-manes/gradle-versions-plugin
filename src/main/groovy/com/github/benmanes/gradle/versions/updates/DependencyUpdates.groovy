@@ -23,6 +23,7 @@ import groovy.transform.TypeChecked
 import org.gradle.api.Project
 import org.gradle.api.artifacts.*
 import org.gradle.api.artifacts.repositories.ArtifactRepository
+import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
 
 /**
  * An evaluator for reporting of which dependencies have later versions.
@@ -109,11 +110,18 @@ class DependencyUpdates {
    */
   @TypeChecked(SKIP)
   private <T> T resolveWithAllRepositories(Closure<T> closure) {
+    project.logger.info 'Resolving with repositories:'
+
     def repositories = project.allprojects.collectMany { Project proj ->
       (proj.repositories + proj.buildscript.repositories)
+    }.findAll { repository ->
+      boolean flatDir = (repository instanceof FlatDirectoryArtifactRepository)
+      if (flatDir) {
+        project.logger.info(" - {}: {} (ignored)", repository.name, repository.dirs)
+      }
+      !flatDir
     }.findAll { project.repositories.add(it) }
 
-    project.logger.info 'Resolving with repositories:'
     project.repositories.each { ArtifactRepository repository ->
       def hasUrl = repository.metaClass.respondsTo(repository, 'url')
       project.logger.info ' - ' + repository.name + (hasUrl ? ": ${repository.url}" : '')
