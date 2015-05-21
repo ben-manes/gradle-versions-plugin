@@ -15,11 +15,11 @@
  */
 package com.github.benmanes.gradle.versions.reporter
 
-import static groovy.transform.TypeCheckingMode.SKIP
-
 import com.github.benmanes.gradle.versions.reporter.result.*
 import groovy.transform.TupleConstructor
 import groovy.transform.TypeChecked
+
+import static groovy.transform.TypeCheckingMode.SKIP
 
 /**
  * A plain text reporter for the dependency updates results.
@@ -96,7 +96,7 @@ class PlainTextReporter extends AbstractReporter {
           + '(use --info for details):')
       unresolved.each { DependencyUnresolved dep ->
         printStream.println ' - ' + label(dep)
-        project.logger.info 'The exception that is the cause of unresolved state:', dep.reason
+        project.logger.info 'The exception that is the cause of unresolved state: {}', dep.reason
       }
     }
   }

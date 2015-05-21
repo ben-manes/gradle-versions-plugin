@@ -15,15 +15,16 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
-import static groovy.transform.TypeCheckingMode.SKIP
-import static org.gradle.api.specs.Specs.SATISFIES_ALL
 import groovy.transform.TupleConstructor
 import groovy.transform.TypeChecked
-
 import org.gradle.api.Project
 import org.gradle.api.artifacts.*
-import org.gradle.api.artifacts.repositories.ArtifactRepository
 import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
+import org.gradle.api.artifacts.repositories.IvyArtifactRepository
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+
+import static groovy.transform.TypeCheckingMode.SKIP
+import static org.gradle.api.specs.Specs.SATISFIES_ALL
 
 /**
  * An evaluator for reporting of which dependencies have later versions.
@@ -50,23 +51,23 @@ class DependencyUpdates {
   DependencyUpdatesReporter run() {
     def current = getProjectAndBuildscriptDependencies()
     project.logger.info('Found dependencies {}', current)
-    List<Set> dependencies = resolveLatestDepedencies(current)
+    List<Set> dependencies = resolveLatestDependencies(current)
     Set<ResolvedDependency> resolvedLatest = dependencies[0]
     Set<UnresolvedDependency> unresolved = dependencies[1]
     project.logger.info('Resolved latest dependencies: {}', resolvedLatest)
     project.logger.info('Unresolved dependencies: {}', unresolved)
 
     Map<Map<String, String>, String> currentVersions = [:]
-    current.each { ExternalDependency dependency ->
+    current.each { Dependency dependency ->
+
       if (unresolved.find { UnresolvedDependency it -> keyOf(it.selector) == keyOf(dependency) }) {
         project.logger.info('Could not determine current version for dependency: {}', dependency)
         //add current version info based on info from dependency
-        currentVersions.put(keyOf(dependency), dependency.version)
-        return null
+        currentVersions.put(keyOf(dependency), dependency.version ?: "none")
+      } else {
+        def actualVersion = resolveActualDependencyVersion(dependency)
+        currentVersions.put(keyOf(dependency), actualVersion ?: "none")
       }
-      def actualVersion = resolveActualDependencyVersion(dependency)
-      currentVersions.put(keyOf(dependency), actualVersion)
-
     }
     List<Map<Map<String, String>, String>> versions = composeVersionMapping(currentVersions, resolvedLatest)
     Map<Map<String, String>, String> latestVersions = versions[0]
@@ -78,27 +79,31 @@ class DependencyUpdates {
   }
 
   /** Returns {@link ExternalDependency} collected from all projects and buildscripts. */
-  private Collection<ExternalDependency> getProjectAndBuildscriptDependencies() {
-    project.allprojects.collectMany { Project proj ->
-      Collection<Configuration> configurations = proj.configurations + proj.buildscript.configurations
-      configurations.collectMany { (Collection<Dependency>) it.allDependencies }
-    }.findAll { it instanceof ExternalDependency }
+  @TypeChecked(SKIP)
+  private Collection<Dependency> getProjectAndBuildscriptDependencies() {
+    return project.allprojects
+        // get all dependency configuration for the build and the build script
+        .collectMany { it.configurations + it.buildscript.configurations }
+        // flatten out the dependencies from each config
+        .collectMany { it.allDependencies}.unique()
+        // exclude any submodule deps
+        .findAll { it instanceof ExternalDependency } as Collection<Dependency>
   }
 
   /**
    * Returns {@link Set<ResolvedDependency>} and {@link Set<UnresolvedDependency>} collected after evaluating
    * the latest dependencies to determine the newest versions.
    */
-  private List<Set> resolveLatestDepedencies(Collection<ExternalDependency> current) {
-    Collection<Dependency> latest = current.collect { ExternalDependency dependency ->
-      project.dependencies.create(group: dependency.group, name: dependency.name,
-          version: (dependency.version == null ? null : "latest.${revision}")) { ModuleDependency dep ->
-        dep.transitive = false
-      }
+  private List<Set> resolveLatestDependencies(Collection<Dependency> current) {
+    // try to resolve each of the dependencies
+    Collection<Dependency> latest = current.collect { Dependency dependency ->
+      def newDep = [name:     dependency.name,
+                    group:    dependency.group,
+                    version:  dependency.version ? "latest.${revision}" : "none"]
+      project.dependencies.create(newDep) { ModuleDependency dep -> dep.transitive = false }
     }
     resolveWithAllRepositories {
-      def conf = project.configurations.detachedConfiguration(latest as Dependency[])
-        .resolvedConfiguration.lenientConfiguration
+      def conf = project.configurations.detachedConfiguration(latest as Dependency[]).resolvedConfiguration.lenientConfiguration
       [conf.getFirstLevelModuleDependencies(SATISFIES_ALL), conf.unresolvedModuleDependencies]
     }
   }
@@ -112,25 +117,32 @@ class DependencyUpdates {
   private <T> T resolveWithAllRepositories(Closure<T> closure) {
     project.logger.info 'Resolving with repositories:'
 
-    def repositories = project.allprojects.collectMany { Project proj ->
-      (proj.repositories + proj.buildscript.repositories)
-    }.findAll { repository ->
-      boolean flatDir = (repository instanceof FlatDirectoryArtifactRepository)
-      if (flatDir) {
-        project.logger.info(" - {}: {} (ignored)", repository.name, repository.dirs)
-      }
-      !flatDir
-    }.findAll { project.repositories.add(it) }
+    // save the original repos so we can restore them later
+    def orig = project.repositories.asImmutable()
 
-    project.repositories.each { ArtifactRepository repository ->
-      def hasUrl = repository.metaClass.respondsTo(repository, 'url')
-      project.logger.info ' - ' + repository.name + (hasUrl ? ": ${repository.url}" : '')
+    // add all the repos for the top level project and all sub projects
+    project.repositories.addAll(project.allprojects.collectMany { Project proj -> (proj.repositories + proj.buildscript.repositories) })
+
+    // remove duplicates
+    project.repositories.unique(true)
+
+    // log the repos we are using
+    project.repositories.each {
+      if(it instanceof FlatDirectoryArtifactRepository) {
+        project.logger.info " - $it.name: ${it.dirs}"
+      } else if(it instanceof MavenArtifactRepository || it instanceof IvyArtifactRepository){
+        project.logger.info " - $it.name: $it.url";
+      } else {
+        project.logger.info " - $it.name: ${it.getClass().simpleName}"
+      }
     }
 
     try {
+      // do the work
       closure.call()
     } finally {
-      project.repositories.removeAll(repositories)
+      // restore original set of repos
+      project.repositories.retainAll(orig)
     }
   }
 
@@ -162,7 +174,7 @@ class DependencyUpdates {
           Set<ResolvedDependency> resolvedLatest) {
 
     Map<Map<String, String>, String> latestVersions = resolvedLatest.collectEntries { ResolvedDependency dependency ->
-      [keyOf(dependency.module.id), dependency.moduleVersion]
+      [keyOf(dependency.module.id), dependency.moduleVersion ?: "none"]
     }
 
     project.logger.info('Comparing current with latest dependencies. current: {}, latest: {}',
@@ -174,10 +186,12 @@ class DependencyUpdates {
     Map<Integer, Map<Map<String, String>, String>> versionInfo = latestVersions.groupBy {
         Map<String, String> key, version ->
       project.logger.info('Checking dependency {}:{}', key.group, key.name)
-      if (currentVersions[key] == version) {
+
+      def currentVersion = currentVersions[key]
+      if (currentVersion == version) {
         0
       } else {
-        (Math.signum(comparator.compare(version, currentVersions[key]))) as int
+        (Math.signum(comparator.compare(version, currentVersion))) as int
       }
     }
     Map<Map<String, String>, String> upToDateVersions = versionInfo[0] ?: [:] as Map<Map<String, String>, String>
@@ -214,10 +228,10 @@ class DependencyUpdates {
       }
     ]
 
-    def comparator = comparatorCreatorCandidates.findResult {
+    Comparator comparator = comparatorCreatorCandidates.findResult {
       try{
-        it.call()
-      } catch (Exception e){
+        (Comparator)it.call()
+      } catch (Exception ignored){
         null
       }
     }
@@ -227,5 +241,5 @@ class DependencyUpdates {
  
   /** Returns a key based on the dependency's group and name. */
   @TypeChecked(SKIP)
-  static Map<String, String> keyOf(identifier) { [group: identifier.group, name: identifier.name] }
+  static Map<String,String> keyOf(identifier) { [group: identifier.group ?: "none", name: identifier.name] }
 }
