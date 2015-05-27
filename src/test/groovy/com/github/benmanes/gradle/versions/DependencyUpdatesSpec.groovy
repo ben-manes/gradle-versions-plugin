@@ -266,6 +266,33 @@ class DependencyUpdatesSpec extends Specification {
 	    unresolved == 2
 	}
 
+  def 'Single project with flatDir repository'() {
+    given:
+      def project = singleProject()
+      project.repositories {
+        flatDir {
+          dirs getClass().getResource('/libs/')
+        }
+      }
+      project.configurations {
+        flat
+      }
+      project.dependencies {
+        flat(name: 'guice-4.0', ext: 'jar')
+        flat(name: 'guava-18.0', ext: 'jar')
+      }
+    when:
+      def reporter = evaluate(project)
+      reporter.write()
+    then:
+      with(reporter) {
+        unresolved.size() == 1
+        upgradeVersions.isEmpty()
+        upToDateVersions.size() == 1
+        downgradeVersions.isEmpty()
+      }
+  }
+
   def singleProject() {
     new ProjectBuilder().withName('single').build()
   }

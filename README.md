@@ -1,6 +1,6 @@
 # Gradle Versions Plugin
 
-In the spirit of the [Maven Versions Plugin](http://mojo.codehaus.org/versions-maven-plugin/), 
+In the spirit of the [Maven Versions Plugin](http://mojo.codehaus.org/versions-maven-plugin/),
 this plugin provides a task to determine which dependencies have updates.
 
 ## Usage
@@ -15,14 +15,14 @@ buildscript {
   repositories {
     jcenter()
   }
-  
+
   dependencies {
     classpath 'com.github.ben-manes:gradle-versions-plugin:0.9'
     // classpath 'org.codehaus.groovy:groovy-backports-compat23:2.3.5' // uncomment if you're using Gradle 1.x
   }
 }
 ```
-The current version is known to work with Gradle versions up to 2.4-rc-1.
+The current version is known to work with Gradle versions up to 2.4.
 
 ## Tasks
 
