@@ -3,7 +3,7 @@ apply plugin: 'nexus'
 apply plugin: 'codenarc'
 
 group = 'com.github.ben-manes'
-version = '0.10-SNAPSHOT'
+version = '0.10.1'
 
 sourceCompatibility = '1.6'
 
