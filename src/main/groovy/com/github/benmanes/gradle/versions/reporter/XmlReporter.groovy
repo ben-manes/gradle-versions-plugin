@@ -33,7 +33,7 @@ class XmlReporter extends AbstractReporter {
   }
 
   @Override
-  def getFileName() {
-    return 'report.xml'
+  def getFileExtension() {
+    return 'xml'
   }
 }

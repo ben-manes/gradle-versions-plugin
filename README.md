@@ -58,11 +58,19 @@ You can also set multiple output formats using comma as the separator:
 gradle dependencyUpdates -Drevision=release -DoutputFormatter=json,xml
 ```
 
-Last, the task property `outputDir` controls the output directory for the report  file(s). The directory will be created if it does not exist.
+The task property `outputDir` controls the output directory for the report  file(s). The directory will be created if it does not exist.
 The default value is set to `build/dependencyUpdates`
 
 ```groovy
 gradle dependencyUpdates -Drevision=release -DoutputFormatter=json -DoutputDir=/any/path/with/permission
+```
+
+Last, the task property 'useProjectAsFilename' controls the filename of the report.  This is a boolean value that defaults to false.
+If the value is false, the output files will all be named 'report' e.g. 'report.xml' or 'report.json'.
+If the value is set to true, the value will be set to the project name. e.g. 'exampleProject.txt'
+
+```groovy
+gradle dependencyUpdates -Drevision=release -DoutputDir=/any/path/with/permission -DuseProjectAsFilename=true
 ```
 
 This displays a report to the console, e.g.
