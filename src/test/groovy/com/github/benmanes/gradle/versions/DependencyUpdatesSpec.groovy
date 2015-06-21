@@ -18,7 +18,7 @@ package com.github.benmanes.gradle.versions
 import com.github.benmanes.gradle.versions.reporter.Reporter
 import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.updates.DependencyUpdates
-
+import org.gradle.api.artifacts.ComponentSelection
 import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Issue
 import spock.lang.Specification
@@ -240,31 +240,31 @@ class DependencyUpdatesSpec extends Specification {
   }
 
   def 'Single project with a Closure as Reporter'() {
-	  given:
-  		def project = singleProject()
-  		addRepositoryTo(project)
-  		addDependenciesTo(project)
-  		int current = -1
-  		int outdated = -1
-  		int exceeded = -1
-  		int unresolved = -1
-  
-  		def customReporter = { result ->
-  			current = result.current.count
-  			outdated = result.outdated.count
-  			exceeded = result.exceeded.count
-  			unresolved = result.unresolved.count
-  
-  		}
-	  when:
-  		def reporter = evaluate(project, 'release', customReporter)
-  		reporter.write()
-	  then:
-	    current == 2
-	    outdated == 2
-	    exceeded == 2
-	    unresolved == 2
-	}
+    given:
+      def project = singleProject()
+      addRepositoryTo(project)
+      addDependenciesTo(project)
+      int current = -1
+      int outdated = -1
+      int exceeded = -1
+      int unresolved = -1
+
+      def customReporter = { result ->
+          current = result.current.count
+          outdated = result.outdated.count
+          exceeded = result.exceeded.count
+          unresolved = result.unresolved.count
+
+      }
+    when:
+      def reporter = evaluate(project, 'release', customReporter)
+      reporter.write()
+    then:
+      current == 2
+      outdated == 2
+      exceeded == 2
+      unresolved == 2
+  }
 
   def 'Single project with flatDir repository'() {
     given:
@@ -287,6 +287,63 @@ class DependencyUpdatesSpec extends Specification {
     then:
       with(reporter) {
         unresolved.size() == 1
+        upgradeVersions.isEmpty()
+        upToDateVersions.size() == 1
+        downgradeVersions.isEmpty()
+      }
+  }
+
+  def 'Single project with configurations scoped dependency versions'() {
+    given:
+      def project = singleProject()
+      addRepositoryTo(project)
+      project.configurations {
+        upToDate
+        exceedLatest
+      }
+      project.dependencies {
+        upToDate 'com.google.guava:guava:16.0-rc1'
+        exceedLatest 'com.google.guava:guava:99.0-SNAPSHOT'
+      }
+    when:
+      def reporter = evaluate(project)
+      reporter.write()
+    then:
+      with(reporter) {
+        unresolved.isEmpty()
+        upgradeVersions.isEmpty()
+        upToDateVersions.size() == 1
+        downgradeVersions.size() == 1
+      }
+  }
+
+  def 'Single project with component selection rule'() {
+    given:
+      def project = new ProjectBuilder().withName('single').build()
+      addRepositoryTo(project)
+      project.configurations {
+        release
+        all {
+          resolutionStrategy {
+            componentSelection {
+              all { ComponentSelection selection ->
+                if (selection.candidate.version.contains('rc')) {
+                  selection.reject("Release candidate")
+                }
+              }
+            }
+          }
+        }
+      }
+      project.dependencies {
+        release 'com.google.guava:guava:15.0'
+      }
+    when:
+      def reporter = evaluate(project)
+      reporter.write()
+    then:
+      with(reporter) {
+        unresolved.isEmpty()
         upgradeVersions.isEmpty()
         upToDateVersions.size() == 1
         downgradeVersions.isEmpty()

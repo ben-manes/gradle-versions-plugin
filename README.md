@@ -5,8 +5,8 @@ this plugin provides a task to determine which dependencies have updates.
 
 ## Usage
 
-This plugin is available from [Bintray's JCenter repository](http://jcenter.bintray.com/). You can add it to your build script using
-the following configuration:
+This plugin is available from [Bintray's JCenter repository](http://jcenter.bintray.com). You can
+add it to your build script using the following configuration:
 
 ```groovy
 apply plugin: 'com.github.ben-manes.versions'
@@ -17,12 +17,12 @@ buildscript {
   }
 
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.10.1'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.11'
     // classpath 'org.codehaus.groovy:groovy-backports-compat23:2.3.5' // uncomment if you're using Gradle 1.x
   }
 }
 ```
-The current version is known to work with Gradle versions up to 2.4.
+The current version is known to work with Gradle versions up to 2.5-rc-1.
 
 ## Tasks
 
@@ -31,6 +31,8 @@ The current version is known to work with Gradle versions up to 2.4.
 Displays a report of the project dependencies that are up-to-date, exceed the latest version found,
 have upgrades, or failed to be resolved. When a dependency cannot be resolved the exception is
 logged at the `info` level.
+
+#### Revisions
 
 The `revision` task property controls the resolution strategy of determining what constitutes the
 latest version of a dependency. The following strategies are supported:
@@ -45,7 +47,31 @@ The strategy can be specified either on the task or as a system property for ad 
 gradle dependencyUpdates -Drevision=release
 ```
 
-Another task property `outputFormatter` controls the report output format. The following values are supported:
+The latest versions can be further filtered using [Component Selection Rules][component_selection_rules].
+For example to disallow release candidates as upgradable versions a selection rule could be defined as:
+
+```groovy
+configurations {
+  all {
+    resolutionStrategy {
+      componentSelection {
+        all { ComponentSelection selection ->
+          boolean rejected = ['alpha', 'beta', 'rc'].any { qualifier ->
+            selection.candidate.version.contains(qualifier)
+          }
+          if (rejected) {
+            selection.reject("Release candidate")
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+#### Report format
+
+The task property `outputFormatter` controls the report output format. The following values are supported:
 
   * `"plain"`: format output file as plain text (default)
   * `"json"`: format output file as json text
@@ -243,3 +269,4 @@ XML report
 </response>
 ```
 
+[component_selection_rules]: https://docs.gradle.org/current/userguide/dependency_management.html#component_selection_rules

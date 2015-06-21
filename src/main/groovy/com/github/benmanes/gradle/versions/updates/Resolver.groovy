@@ -1,0 +1,190 @@
+/*
+ * Copyright 2012-2015 Ben Manes. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.github.benmanes.gradle.versions.updates
+
+import groovy.transform.TypeChecked
+import org.gradle.api.Project
+import org.gradle.api.artifacts.ComponentMetadata
+import org.gradle.api.artifacts.ComponentSelection
+import org.gradle.api.artifacts.ComponentSelectionRules
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.LenientConfiguration
+import org.gradle.api.artifacts.ResolutionStrategy
+import org.gradle.api.artifacts.ResolvedDependency
+import org.gradle.api.artifacts.UnresolvedDependency
+import org.gradle.api.artifacts.repositories.ArtifactRepository
+import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
+import org.gradle.api.artifacts.repositories.IvyArtifactRepository
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.initialization.dsl.ScriptHandler
+import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.DefaultComponentSelectionRules
+
+import static groovy.transform.TypeCheckingMode.SKIP
+import static org.gradle.api.specs.Specs.SATISFIES_ALL
+
+/**
+ * Resolves the configuration to determine the version status of its dependencies.
+ *
+ * @author Ben Manes (ben.manes@gmail.com)
+ */
+@TypeChecked
+class Resolver {
+  final Project project
+
+  Resolver(Project project) {
+    this.project = project
+  }
+
+  /** Returns the version status of the configuration's dependencies at the given revision. */
+  public Set<DependencyStatus> resolve(Configuration configuration, String revision) {
+    Map<Coordinate.Key, Coordinate> coordinates = getCurrentCoordinates(configuration)
+    Configuration latestConfiguration = createLatestConfiguration(configuration, revision)
+
+    resolveWithAllRepositories {
+      LenientConfiguration lenient = latestConfiguration.resolvedConfiguration.lenientConfiguration
+      Set<ResolvedDependency> resolved = lenient.getFirstLevelModuleDependencies(SATISFIES_ALL)
+      Set<UnresolvedDependency> unresolved = lenient.getUnresolvedModuleDependencies()
+      return getStatus(coordinates, resolved, unresolved)
+    }
+  }
+
+  /** Returns the version status of the configuration's dependencies. */
+  private Set<DependencyStatus> getStatus(Map<Coordinate.Key, Coordinate> coordinates,
+      Set<ResolvedDependency> resolved,Set<UnresolvedDependency> unresolved) {
+    Set<DependencyStatus> result = []
+    for (ResolvedDependency dependency : resolved) {
+      Coordinate resolvedCoordinate = Coordinate.from(dependency.module.id)
+      Coordinate originalCoordinate = coordinates.get(resolvedCoordinate.key)
+      Coordinate coord = originalCoordinate ?: resolvedCoordinate
+      result.add(new DependencyStatus(coord, resolvedCoordinate.version))
+    }
+    for (UnresolvedDependency dependency : unresolved) {
+      Coordinate resolvedCoordinate = Coordinate.from(dependency.selector)
+      Coordinate originalCoordinate = coordinates.get(resolvedCoordinate.key)
+      Coordinate coord = originalCoordinate ?: resolvedCoordinate
+      result.add(new DependencyStatus(coord, dependency))
+    }
+    return result
+  }
+
+  /** Returns a copy of the configuration where dependencies will be resolved up to the revision. */
+  private Configuration createLatestConfiguration(Configuration configuration, String revision) {
+    List<Dependency> latest = configuration.dependencies.collect { depenency ->
+      String version = (depenency.version == null) ? 'none' : '+'
+      project.dependencies.create("${depenency.group}:${depenency.name}:${version}")
+    }
+    Configuration copy = configuration.copyRecursive().setTransitive(false)
+    copy.dependencies.clear()
+    copy.dependencies.addAll(latest)
+    addRevisionFilter(copy, revision)
+    return copy
+  }
+
+  /** Add a revision filter by rejecting candidates using a component selection rule. */
+  @TypeChecked(SKIP)
+  private void addRevisionFilter(Configuration configuration, String revision) {
+    configuration.resolutionStrategy { ResolutionStrategy componentSelection ->
+      componentSelection.componentSelection { rules ->
+        rules.all { ComponentSelection selection, ComponentMetadata metadata ->
+          boolean accepted =
+            ((revision == 'release') && (metadata.status == 'release')) ||
+            ((revision == 'milestone') && (metadata.status != 'integration')) ||
+            (revision == 'integration') || (selection.candidate.version == 'none')
+          if (!accepted) {
+            selection.reject("Component status ${metadata.status} rejected by revision ${revision}")
+          }
+        }
+      }
+    }
+  }
+
+  /** Returns the coordinates for the current (declared) dependency versions. */
+  private Map<Coordinate.Key, Coordinate> getCurrentCoordinates(Configuration configuration) {
+    Map<Coordinate.Key, Coordinate> declared = configuration.dependencies.collectEntries {
+      Coordinate coordinate = Coordinate.from(it)
+      return [coordinate.key, coordinate]
+    }
+
+    return resolveWithAllRepositories {
+      Map<Coordinate.Key, Coordinate> coordinates = [:]
+      Configuration copy = configuration.copyRecursive().setTransitive(false)
+      LenientConfiguration lenient = copy.resolvedConfiguration.lenientConfiguration
+
+      Set<ResolvedDependency> resolved = lenient.getFirstLevelModuleDependencies(SATISFIES_ALL)
+      for (ResolvedDependency dependency : resolved) {
+        Coordinate coordinate = Coordinate.from(dependency.module.id)
+        coordinates.put(coordinate.key, coordinate)
+      }
+
+      Set<UnresolvedDependency> unresolved = lenient.getUnresolvedModuleDependencies()
+      for (UnresolvedDependency dependency : unresolved) {
+        Coordinate coordinate = Coordinate.from(dependency.selector)
+        coordinates.put(coordinate.key, declared.get(coordinate.key))
+      }
+
+      return coordinates
+    }
+  }
+
+  /**
+   * Performs the closure with the project temporarily using all of the repositories collected
+   * across all projects. The additional repositories added are removed after the operation
+   * completes.
+   */
+  private <T> T resolveWithAllRepositories(Closure<T> closure) {
+    Map<Project, List<ArtifactRepository>> repositoriesForProject =
+      project.allprojects.collectEntries { proj -> [proj, proj.repositories.asImmutable()]}
+    Map<ScriptHandler, List<ArtifactRepository>> repositoriesForBuildscript =
+      project.allprojects.collectEntries { proj -> [proj, proj.buildscript.repositories.asImmutable()]}
+    List<ArtifactRepository> allRepositories = project.allprojects.collectMany { Project proj ->
+      (proj.repositories + proj.buildscript.repositories)
+    }
+
+    project.allprojects.each { proj ->
+      proj.buildscript.repositories.addAll(allRepositories)
+      proj.buildscript.repositories.unique(true)
+
+      proj.repositories.addAll(allRepositories)
+      proj.repositories.unique(true)
+    }
+    logRepositories()
+    try {
+      closure.call()
+    } finally {
+      repositoriesForProject.each { proj, original ->
+        proj.repositories.retainAll(original)
+      }
+      repositoriesForBuildscript.each { buildscript, original ->
+        buildscript.repositories.retainAll(original)
+      }
+    }
+  }
+
+  @TypeChecked(SKIP)
+  private void logRepositories() {
+    project.logger.info('Resolving with repositories:')
+    project.repositories.each {
+      if (it instanceof FlatDirectoryArtifactRepository) {
+        project.logger.info(" - $it.name: ${it.dirs}")
+      } else if (it instanceof MavenArtifactRepository || it instanceof IvyArtifactRepository) {
+        project.logger.info(" - $it.name: $it.url");
+      } else {
+        project.logger.info(" - $it.name: ${it.getClass().simpleName}")
+      }
+    }
+  }
+}
