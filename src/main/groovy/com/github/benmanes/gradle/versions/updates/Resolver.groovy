@@ -106,8 +106,7 @@ class Resolver {
     List<Dependency> latest = configuration.dependencies.findAll { dependency ->
       dependency instanceof ExternalDependency
     }.collect { dependency ->
-      String version = (dependency.version == null) ? 'none' : '+'
-      project.dependencies.create("${dependency.group}:${dependency.name}:${version}")
+      createQueryDependency(dependency)
     }
 
     Configuration copy = configuration.copyRecursive().setTransitive(false)
@@ -115,6 +114,15 @@ class Resolver {
     copy.dependencies.addAll(latest)
     addRevisionFilter(copy, revision)
     return copy
+  }
+
+  /** Returns a variant of the provided dependency used for querying the latest version. */
+  @TypeChecked(SKIP)
+  private Dependency createQueryDependency(Dependency dependency) {
+    String version = (dependency.version == null) ? 'none' : '+'
+    return project.dependencies.create("${dependency.group}:${dependency.name}:${version}") {
+      transitive = false
+    }
   }
 
   /** Add a revision filter by rejecting candidates using a component selection rule. */
