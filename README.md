@@ -60,7 +60,7 @@ configurations {
             selection.candidate.version.contains(qualifier)
           }
           if (rejected) {
-            selection.reject("Release candidate")
+            selection.reject('Release candidate')
           }
         }
       }
