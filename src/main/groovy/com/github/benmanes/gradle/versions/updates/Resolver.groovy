@@ -44,10 +44,23 @@ import static org.gradle.api.specs.Specs.SATISFIES_ALL
  */
 @TypeChecked
 class Resolver {
+  final Map<ScriptHandler, List<ArtifactRepository>> repositoriesForBuildscript;
+  final Map<Project, List<ArtifactRepository>> repositoriesForProject;
+  final Set<ArtifactRepository> allRepositories;
   final Project project
 
   Resolver(Project project) {
     this.project = project
+    this.repositoriesForBuildscript = project.allprojects.collectEntries { proj ->
+      [proj, proj.buildscript.repositories.asImmutable()]
+    }
+    this.repositoriesForProject = project.allprojects.collectEntries { proj ->
+      [proj, proj.repositories.asImmutable()]
+    }
+    this.allRepositories = project.allprojects.collectMany { Project proj ->
+      (proj.repositories + proj.buildscript.repositories)
+    } as Set
+    logRepositories()
   }
 
   /** Returns the version status of the configuration's dependencies at the given revision. */
@@ -150,30 +163,23 @@ class Resolver {
    * completes.
    */
   private <T> T resolveWithAllRepositories(Closure<T> closure) {
-    Map<Project, List<ArtifactRepository>> repositoriesForProject =
-      project.allprojects.collectEntries { proj -> [proj, proj.repositories.asImmutable()]}
-    Map<ScriptHandler, List<ArtifactRepository>> repositoriesForBuildscript =
-      project.allprojects.collectEntries { proj -> [proj, proj.buildscript.repositories.asImmutable()]}
-    List<ArtifactRepository> allRepositories = project.allprojects.collectMany { Project proj ->
-      (proj.repositories + proj.buildscript.repositories)
-    }
-
     project.allprojects.each { proj ->
+      proj.buildscript.repositories.clear()
       proj.buildscript.repositories.addAll(allRepositories)
-      proj.buildscript.repositories.unique(true)
 
+      proj.repositories.clear()
       proj.repositories.addAll(allRepositories)
-      proj.repositories.unique(true)
     }
-    logRepositories()
     try {
       closure.call()
     } finally {
       repositoriesForProject.each { proj, original ->
-        proj.repositories.retainAll(original)
+        proj.repositories.clear()
+        proj.repositories.addAll(original)
       }
       repositoriesForBuildscript.each { buildscript, original ->
-        buildscript.repositories.retainAll(original)
+        buildscript.repositories.clear()
+        buildscript.repositories.addAll(original)
       }
     }
   }
@@ -181,7 +187,7 @@ class Resolver {
   @TypeChecked(SKIP)
   private void logRepositories() {
     project.logger.info('Resolving with repositories:')
-    project.repositories.each {
+    allRepositories.each {
       if (it instanceof FlatDirectoryArtifactRepository) {
         project.logger.info(" - $it.name: ${it.dirs}")
       } else if (it instanceof MavenArtifactRepository || it instanceof IvyArtifactRepository) {
