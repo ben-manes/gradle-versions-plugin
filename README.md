@@ -17,7 +17,7 @@ buildscript {
   }
 
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.11.1'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.11.2'
     // classpath 'org.codehaus.groovy:groovy-backports-compat23:2.3.5' // uncomment if you're using Gradle 1.x
   }
 }
