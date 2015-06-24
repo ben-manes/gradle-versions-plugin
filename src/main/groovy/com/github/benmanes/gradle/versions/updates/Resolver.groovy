@@ -22,6 +22,7 @@ import org.gradle.api.artifacts.ComponentSelection
 import org.gradle.api.artifacts.ComponentSelectionRules
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.LenientConfiguration
 import org.gradle.api.artifacts.ResolutionStrategy
 import org.gradle.api.artifacts.ResolvedDependency
@@ -83,10 +84,13 @@ class Resolver {
 
   /** Returns a copy of the configuration where dependencies will be resolved up to the revision. */
   private Configuration createLatestConfiguration(Configuration configuration, String revision) {
-    List<Dependency> latest = configuration.dependencies.collect { depenency ->
-      String version = (depenency.version == null) ? 'none' : '+'
-      project.dependencies.create("${depenency.group}:${depenency.name}:${version}")
+    List<Dependency> latest = configuration.dependencies.findAll { dependency ->
+      dependency instanceof ExternalDependency
+    }.collect { dependency ->
+      String version = (dependency.version == null) ? 'none' : '+'
+      project.dependencies.create("${dependency.group}:${dependency.name}:${version}")
     }
+
     Configuration copy = configuration.copyRecursive().setTransitive(false)
     copy.dependencies.clear()
     copy.dependencies.addAll(latest)
