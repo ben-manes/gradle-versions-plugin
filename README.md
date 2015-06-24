@@ -51,16 +51,18 @@ The latest versions can be further filtered using [Component Selection Rules][co
 For example to disallow release candidates as upgradable versions a selection rule could be defined as:
 
 ```groovy
-configurations {
-  all {
-    resolutionStrategy {
-      componentSelection {
-        all { ComponentSelection selection ->
-          boolean rejected = ['alpha', 'beta', 'rc'].any { qualifier ->
-            selection.candidate.version.contains(qualifier)
-          }
-          if (rejected) {
-            selection.reject('Release candidate')
+allprojects {
+  configurations {
+    all {
+      resolutionStrategy {
+        componentSelection {
+          all { ComponentSelection selection ->
+            boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm'].any { qualifier ->
+              selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
+            }
+            if (rejected) {
+              selection.reject('Release candidate')
+            }
           }
         }
       }

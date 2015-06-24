@@ -51,20 +51,21 @@ class Resolver {
 
   Resolver(Project project) {
     this.project = project
-    this.repositoriesForBuildscript = project.allprojects.collectEntries { proj ->
+
+    Set<ArtifactRepository> all = []
+    repositoriesForBuildscript = project.allprojects.collectEntries { proj ->
+      all.addAll(proj.buildscript.repositories)
       [proj, new HashSet(proj.buildscript.repositories)]
     }
-    this.repositoriesForProject = project.allprojects.collectEntries { proj ->
+    repositoriesForProject = project.allprojects.collectEntries { proj ->
+      all.addAll(proj.repositories)
       [proj, new HashSet(proj.repositories)]
     }
 
+    // Only RepositoryHandler knows how to determine equivalence
     project.repositories.clear()
-    this.allRepositories = project.allprojects.collectMany { Project proj ->
-      proj.repositories + proj.buildscript.repositories
-    }.findAll {
-      // Only RepositoryHandler knows how to determine equivalence
-      project.repositories.add(it)
-    } as Set
+    allRepositories = all.findAll { project.repositories.add(it) } as Set
+
     logRepositories()
   }
 
