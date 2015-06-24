@@ -52,13 +52,18 @@ class Resolver {
   Resolver(Project project) {
     this.project = project
     this.repositoriesForBuildscript = project.allprojects.collectEntries { proj ->
-      [proj, proj.buildscript.repositories.asImmutable()]
+      [proj, new HashSet(proj.buildscript.repositories)]
     }
     this.repositoriesForProject = project.allprojects.collectEntries { proj ->
-      [proj, proj.repositories.asImmutable()]
+      [proj, new HashSet(proj.repositories)]
     }
+
+    project.repositories.clear()
     this.allRepositories = project.allprojects.collectMany { Project proj ->
-      (proj.repositories + proj.buildscript.repositories)
+      proj.repositories + proj.buildscript.repositories
+    }.findAll {
+      // Only RepositoryHandler knows how to determine equivalence
+      project.repositories.add(it)
     } as Set
     logRepositories()
   }
