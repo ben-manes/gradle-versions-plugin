@@ -109,12 +109,24 @@ class DependencyUpdatesSpec extends Specification {
       def reporter = evaluate(project)
       reporter.write()
     then:
-      with(reporter) {
-        unresolved.size() == 2
-        upgradeVersions.size() == 2
-        upToDateVersions.size() == 2
-        downgradeVersions.size() == 2
-      }
+      reporter.unresolved.collect { it.selector }.collectEntries { dependency ->
+        [['group': dependency.group, 'name': dependency.name]: dependency.version]
+      } == [
+        ['group': 'com.github.ben-manes', 'name': 'unresolvable']: '+',
+        ['group': 'com.github.ben-manes', 'name': 'unresolvable2']: '+',
+      ]
+      reporter.upgradeVersions == [
+        ['group': 'com.google.inject', 'name': 'guice']: '2.0',
+        ['group': 'com.google.inject.extensions', 'name': 'guice-multibindings']: '2.0',
+      ]
+      reporter.upToDateVersions == [
+        ['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent']: '3.1',
+        ['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent-java12']: '3.1',
+      ]
+      reporter.downgradeVersions == [
+        ['group': 'com.google.guava', 'name': 'guava']: '99.0-SNAPSHOT',
+        ['group': 'com.google.guava', 'name': 'guava-tests']: '99.0-SNAPSHOT',
+      ]
   }
 
   @Unroll('Single project (#revision, #outputFormatter)')
@@ -127,12 +139,24 @@ class DependencyUpdatesSpec extends Specification {
       def reporter = evaluate(project, revision, outputFormatter)
       reporter.write()
     then:
-      with(reporter) {
-        unresolved.size() == 2
-        upgradeVersions.size() == 2
-        upToDateVersions.size() == 2
-        downgradeVersions.size() == 2
-      }
+      reporter.unresolved.collect { it.selector }.collectEntries { dependency ->
+        [['group': dependency.group, 'name': dependency.name]: dependency.version]
+      } == [
+        ['group': 'com.github.ben-manes', 'name': 'unresolvable']: '+',
+        ['group': 'com.github.ben-manes', 'name': 'unresolvable2']: '+',
+      ]
+      reporter.upgradeVersions == [
+        ['group': 'com.google.inject', 'name': 'guice']: '2.0',
+        ['group': 'com.google.inject.extensions', 'name': 'guice-multibindings']: '2.0',
+      ]
+      reporter.upToDateVersions == [
+        ['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent']: '3.1',
+        ['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent-java12']: '3.1',
+      ]
+      reporter.downgradeVersions == [
+        ['group': 'com.google.guava', 'name': 'guava']: '99.0-SNAPSHOT',
+        ['group': 'com.google.guava', 'name': 'guava-tests']: '99.0-SNAPSHOT',
+      ]
     where:
       revision << ['release', 'milestone', 'integration']
       outputFormatter << ['plain', 'json', 'xml']
@@ -148,12 +172,24 @@ class DependencyUpdatesSpec extends Specification {
       def reporter = evaluate(rootProject, revision, outputFormatter)
       reporter.write()
     then:
-      with(reporter) {
-        unresolved.size() == 2
-        upgradeVersions.size() == 2
-        upToDateVersions.size() == 2
-        downgradeVersions.size() == 2
-      }
+      reporter.unresolved.collect { it.selector }.collectEntries { dependency ->
+        [['group': dependency.group, 'name': dependency.name]: dependency.version]
+      } == [
+        ['group': 'com.github.ben-manes', 'name': 'unresolvable']: '+',
+        ['group': 'com.github.ben-manes', 'name': 'unresolvable2']: '+',
+      ]
+      reporter.upgradeVersions == [
+        ['group': 'com.google.inject', 'name': 'guice']: '2.0',
+        ['group': 'com.google.inject.extensions', 'name': 'guice-multibindings']: '2.0',
+      ]
+      reporter.upToDateVersions == [
+        ['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent']: '3.1',
+        ['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent-java12']: '3.1',
+      ]
+      reporter.downgradeVersions == [
+        ['group': 'com.google.guava', 'name': 'guava']: '99.0-SNAPSHOT',
+        ['group': 'com.google.guava', 'name': 'guava-tests']: '99.0-SNAPSHOT',
+      ]
     where:
       revision << ['release', 'milestone', 'integration']
       outputFormatter << ['plain', 'json', 'xml']
@@ -169,12 +205,24 @@ class DependencyUpdatesSpec extends Specification {
       def reporter = evaluate(rootProject, revision, outputFormatter)
       reporter.write()
     then:
-      with(reporter) {
-        unresolved.size() == 2
-        upgradeVersions.size() == 2
-        upToDateVersions.size() == 2
-        downgradeVersions.size() == 2
-      }
+      reporter.unresolved.collect { it.selector }.collectEntries { dependency ->
+        [['group': dependency.group, 'name': dependency.name]: dependency.version]
+      } == [
+        ['group': 'com.github.ben-manes', 'name': 'unresolvable']: '+',
+        ['group': 'com.github.ben-manes', 'name': 'unresolvable2']: '+',
+      ]
+      reporter.upgradeVersions == [
+        ['group': 'com.google.inject', 'name': 'guice']: '2.0',
+        ['group': 'com.google.inject.extensions', 'name': 'guice-multibindings']: '2.0',
+      ]
+      reporter.upToDateVersions == [
+        ['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent']: '3.1',
+        ['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent-java12']: '3.1',
+      ]
+      reporter.downgradeVersions == [
+        ['group': 'com.google.guava', 'name': 'guava']: '99.0-SNAPSHOT',
+        ['group': 'com.google.guava', 'name': 'guava-tests']: '99.0-SNAPSHOT',
+      ]
     where:
       revision << ['release', 'milestone', 'integration']
       outputFormatter << ['plain', 'json', 'xml']
@@ -195,7 +243,9 @@ class DependencyUpdatesSpec extends Specification {
       with(reporter) {
         unresolved.isEmpty()
         upgradeVersions.isEmpty()
-        upToDateVersions.size() == 1
+        upToDateVersions == [
+          ['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent']: '3.1',
+        ]
         downgradeVersions.isEmpty()
       }
   }
@@ -214,7 +264,9 @@ class DependencyUpdatesSpec extends Specification {
       reporter.write()
     then:
       with(reporter) {
-        unresolved.size() == 1
+        unresolved.collect { it.selector }.collectEntries { dependency ->
+          [['group': dependency.group, 'name': dependency.name]: dependency.version]
+        } == [['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent']: 'none']
         upgradeVersions.isEmpty()
         upToDateVersions.isEmpty()
         downgradeVersions.isEmpty()
@@ -250,11 +302,10 @@ class DependencyUpdatesSpec extends Specification {
       int unresolved = -1
 
       def customReporter = { result ->
-          current = result.current.count
-          outdated = result.outdated.count
-          exceeded = result.exceeded.count
-          unresolved = result.unresolved.count
-
+        current = result.current.count
+        outdated = result.outdated.count
+        exceeded = result.exceeded.count
+        unresolved = result.unresolved.count
       }
     when:
       def reporter = evaluate(project, 'release', customReporter)
@@ -286,9 +337,11 @@ class DependencyUpdatesSpec extends Specification {
       reporter.write()
     then:
       with(reporter) {
-        unresolved.size() == 1
+        unresolved.collect { it.selector }.collectEntries { dependency ->
+          [['group': dependency.group, 'name': dependency.name]: dependency.version]
+        } == [['group': 'null', 'name': 'guava-18.0']: 'none']
         upgradeVersions.isEmpty()
-        upToDateVersions.size() == 1
+        upToDateVersions == [['group': 'null', 'name': 'guice-4.0']: 'none']
         downgradeVersions.isEmpty()
       }
   }
@@ -312,8 +365,8 @@ class DependencyUpdatesSpec extends Specification {
       with(reporter) {
         unresolved.isEmpty()
         upgradeVersions.isEmpty()
-        upToDateVersions.size() == 1
-        downgradeVersions.size() == 1
+        upToDateVersions == [['group': 'com.google.guava', 'name': 'guava']: '16.0-rc1']
+        downgradeVersions == [['group': 'com.google.guava', 'name': 'guava']: '99.0-SNAPSHOT']
       }
   }
 
@@ -345,7 +398,7 @@ class DependencyUpdatesSpec extends Specification {
       with(reporter) {
         unresolved.isEmpty()
         upgradeVersions.isEmpty()
-        upToDateVersions.size() == 1
+        upToDateVersions == [['group': 'com.google.guava', 'name': 'guava']: '15.0']
         downgradeVersions.isEmpty()
       }
   }

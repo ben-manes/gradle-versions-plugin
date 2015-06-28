@@ -68,11 +68,11 @@ class VersionMapping {
       }
       int result = comparator.compare(coordinate.version, latestCoordinate.version)
       if (result <= -1) {
-        upgrade.add(latestCoordinate)
+        upgrade.add(coordinate)
       } else if (result == 0) {
-        upToDate.add(latestCoordinate)
+        upToDate.add(coordinate)
       } else {
-        downgrade.add(latestCoordinate)
+        downgrade.add(coordinate)
       }
     }
   }
