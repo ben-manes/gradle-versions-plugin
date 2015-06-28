@@ -143,9 +143,14 @@ class Resolver {
 
   /** Returns the coordinates for the current (declared) dependency versions. */
   private Map<Coordinate.Key, Coordinate> getCurrentCoordinates(Configuration configuration) {
-    Map<Coordinate.Key, Coordinate> declared = configuration.dependencies.collectEntries {
+    Map<Coordinate.Key, Coordinate> declared = configuration.dependencies.findAll { dependency ->
+      dependency instanceof ExternalDependency
+    }.collectEntries {
       Coordinate coordinate = Coordinate.from(it)
       return [coordinate.key, coordinate]
+    }
+    if (declared.isEmpty()) {
+      return Collections.emptyMap()
     }
 
     return resolveWithAllRepositories {
@@ -164,6 +169,9 @@ class Resolver {
         Coordinate coordinate = Coordinate.from(dependency.selector)
         coordinates.put(coordinate.key, declared.get(coordinate.key))
       }
+
+      // Ignore undeclared (hidden) dependencies that appear when resolving a configuration
+      coordinates.keySet().retainAll(declared.keySet())
 
       return coordinates
     }
