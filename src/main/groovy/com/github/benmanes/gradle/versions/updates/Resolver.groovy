@@ -45,10 +45,14 @@ class Resolver {
   final Map<ScriptHandler, List<ArtifactRepository>> repositoriesForBuildscript;
   final Map<Project, List<ArtifactRepository>> repositoriesForProject;
   final Set<ArtifactRepository> allRepositories;
+  final boolean useSelectionRules
   final Project project
 
   Resolver(Project project) {
     this.project = project
+
+    useSelectionRules = new VersionComparator(project)
+      .compare(project.gradle.gradleVersion, '2.2') >= 0
 
     Set<ArtifactRepository> all = []
     repositoriesForBuildscript = project.allprojects.collectEntries { proj ->
@@ -104,20 +108,24 @@ class Resolver {
     List<Dependency> latest = configuration.dependencies.findAll { dependency ->
       dependency instanceof ExternalDependency
     }.collect { dependency ->
-      createQueryDependency(dependency)
+      createQueryDependency(dependency, revision)
     }
 
     Configuration copy = configuration.copyRecursive().setTransitive(false)
     copy.dependencies.clear()
     copy.dependencies.addAll(latest)
-    addRevisionFilter(copy, revision)
+
+    if (useSelectionRules) {
+      addRevisionFilter(copy, revision)
+    }
     return copy
   }
 
   /** Returns a variant of the provided dependency used for querying the latest version. */
   @TypeChecked(SKIP)
-  private Dependency createQueryDependency(Dependency dependency) {
-    String version = (dependency.version == null) ? 'none' : '+'
+  private Dependency createQueryDependency(Dependency dependency, String revision) {
+    String versionQuery = useSelectionRules ? '+' : "latest.${revision}"
+    String version = (dependency.version == null) ? 'none' : versionQuery
     return project.dependencies.create("${dependency.group}:${dependency.name}:${version}") {
       transitive = false
     }
