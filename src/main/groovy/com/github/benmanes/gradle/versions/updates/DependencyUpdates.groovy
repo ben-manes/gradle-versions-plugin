@@ -50,11 +50,19 @@ class DependencyUpdates {
   /** Evaluates the dependencies and returns a reporter. */
   DependencyUpdatesReporter run() {
     Resolver resolver = new Resolver(project)
-    List<Configuration> configurations = project.allprojects.collectMany { proj ->
-      proj.configurations.plus(proj.buildscript.configurations)
+    Map<Project, Set<Configuration>> projectConfigs = project.allprojects.collectEntries { proj ->
+      [proj, proj.configurations.plus(proj.buildscript.configurations) as Set]
     }
-    Set<DependencyStatus> status = configurations.collectMany { configuration ->
-      resolver.resolve(configuration, revision)
+    Set<DependencyStatus> status = projectConfigs.collectMany { proj, configurations ->
+      return configurations.collectMany { config ->
+        try {
+          return resolver.resolve(config, revision)
+        } catch (Exception e) {
+          String msg = "Failed to resolve ${proj.path}:${config.name}"
+          project.logger.error(msg, project.logger.isInfoEnabled() ? e : null)
+          return []
+        }
+      }
     } as Set
 
     VersionMapping versions = new VersionMapping(project, status)
