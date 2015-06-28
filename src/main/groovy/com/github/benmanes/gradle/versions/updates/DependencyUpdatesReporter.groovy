@@ -146,13 +146,13 @@ class DependencyUpdatesReporter {
 
   protected List buildOutdatedGroup() {
 	sortByGroupAndName(upgradeVersions).collect { Map.Entry<Map<String, String>, String> dep ->
-		buildOutdatedDependency(dep.key['name'], dep.key['group'], currentVersions[dep.key], dep.value)
+		buildOutdatedDependency(dep.key['name'], dep.key['group'], dep.value, latestVersions[dep.key])
 	}
   }
 
   protected List buildExceededGroup() {
 	sortByGroupAndName(downgradeVersions).collect { Map.Entry<Map<String, String>, String> dep ->
-		buildExceededDependency(dep.key['name'], dep.key['group'], currentVersions[dep.key], dep.value)
+		buildExceededDependency(dep.key['name'], dep.key['group'], dep.value, latestVersions[dep.key])
 	}
   }
 
