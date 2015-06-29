@@ -1,5 +1,5 @@
 apply plugin: 'com.github.ben-manes.versions'
-
+apply plugin: 'jacoco'
 defaultTasks 'dependencyUpdates'
 
 buildscript {
@@ -10,7 +10,7 @@ buildscript {
   }
 
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:latest.integration'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:+'
   }
 }
 

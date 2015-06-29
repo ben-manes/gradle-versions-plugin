@@ -92,6 +92,10 @@ class Resolver {
       Coordinate resolvedCoordinate = Coordinate.from(dependency.module.id)
       Coordinate originalCoordinate = coordinates.get(resolvedCoordinate.key)
       Coordinate coord = originalCoordinate ?: resolvedCoordinate
+      if ((originalCoordinate == null) && (resolvedCoordinate.groupId != 'null')) {
+        project.logger.info("Skipping hidden dependency: ${resolvedCoordinate}")
+        continue
+      }
       result.add(new DependencyStatus(coord, resolvedCoordinate.version))
     }
     for (UnresolvedDependency dependency : unresolved) {
