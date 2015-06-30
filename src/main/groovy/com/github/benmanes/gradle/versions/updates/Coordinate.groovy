@@ -31,7 +31,7 @@ import org.gradle.api.artifacts.ResolvedDependency
  */
 @TypeChecked
 @EqualsAndHashCode
-class Coordinate {
+class Coordinate implements Comparable<Coordinate> {
   final String groupId
   final String artifactId
   final String version
@@ -51,6 +51,12 @@ class Coordinate {
     return groupId + ':' + artifactId + ':' + version
   }
 
+  @Override
+  int compareTo(Coordinate coordinate) {
+    int result = key.compareTo(coordinate.key)
+    return (result == 0) ? version.compareTo(coordinate.version) : result
+  }
+
   static Coordinate from(ModuleVersionSelector selector) {
     return new Coordinate(selector.group, selector.name, selector.version)
   }
@@ -64,7 +70,7 @@ class Coordinate {
   }
 
   @EqualsAndHashCode
-  static class Key {
+  static class Key implements Comparable<Key> {
     final String groupId
     final String artifactId
 
@@ -76,6 +82,12 @@ class Coordinate {
     @Override
     public String toString() {
       return groupId + ':' + artifactId
+    }
+
+    @Override
+    int compareTo(Key key) {
+      int result = groupId.compareTo(key.groupId)
+      return (result == 0) ? artifactId.compareTo(key.artifactId) : result
     }
   }
 }

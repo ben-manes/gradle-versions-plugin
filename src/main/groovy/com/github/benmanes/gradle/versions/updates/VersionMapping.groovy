@@ -26,13 +26,13 @@ import org.gradle.api.artifacts.UnresolvedDependency
  */
 @TypeChecked
 class VersionMapping {
-  final Set<Coordinate> downgrade = []
-  final Set<Coordinate> upToDate = []
-  final Set<Coordinate> upgrade = []
+  final SortedSet<Coordinate> downgrade = new TreeSet<>()
+  final SortedSet<Coordinate> upToDate = new TreeSet<>()
+  final SortedSet<Coordinate> upgrade = new TreeSet<>()
 
-  final Set<Coordinate> unresolved = []
-  final Set<Coordinate> current = []
-  final Set<Coordinate> latest = []
+  final SortedSet<Coordinate> unresolved = new TreeSet<>()
+  final SortedSet<Coordinate> current = new TreeSet<>()
+  final SortedSet<Coordinate> latest = new TreeSet<>()
 
   final VersionComparator comparator;
   final Project project

@@ -79,11 +79,25 @@ class DependencyUpdates {
       versions.latest.collectEntries { [[group: it.groupId, name: it.artifactId]: it.version] }
     Map<Map<String, String>, String> upToDateVersions =
       versions.upToDate.collectEntries { [[group: it.groupId, name: it.artifactId]: it.version] }
-    Map<Map<String, String>, String> downgradeVersions =
-      versions.downgrade.collectEntries { [[group: it.groupId, name: it.artifactId]: it.version] }
-    Map<Map<String, String>, String> upgradeVersions =
-      versions.upgrade.collectEntries { [[group: it.groupId, name: it.artifactId]: it.version] }
+    Map<Map<String, String>, String> downgradeVersions = toMap(versions.downgrade)
+    Map<Map<String, String>, String> upgradeVersions = toMap(versions.upgrade)
+
     return new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir,
       currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
+  }
+
+  private Map<Map<String, String>, String> toMap(Set<Coordinate> coordinates) {
+    Map<Map<String, String>, String> map = [:]
+    for (Coordinate coordinate : coordinates) {
+      for (int i = 0; ; i++) {
+        String artifactId = coordinate.artifactId + ((i == 0) ? '' : "[${i + 1}]")
+        def key = [group: coordinate.groupId, name: artifactId]
+        if (!map.containsKey(key)) {
+          map.put(key, coordinate.version)
+          break
+        }
+      }
+    }
+    return map
   }
 }

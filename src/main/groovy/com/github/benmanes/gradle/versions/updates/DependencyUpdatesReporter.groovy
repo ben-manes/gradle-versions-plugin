@@ -146,12 +146,16 @@ class DependencyUpdatesReporter {
 
   protected List buildOutdatedGroup() {
 	sortByGroupAndName(upgradeVersions).collect { Map.Entry<Map<String, String>, String> dep ->
+    int index = dep.key['name'].lastIndexOf('[')
+    dep.key['name'] = (index == -1) ? dep.key['name'] : dep.key['name'].substring(0, index)
 		buildOutdatedDependency(dep.key['name'], dep.key['group'], dep.value, latestVersions[dep.key])
 	}
   }
 
   protected List buildExceededGroup() {
 	sortByGroupAndName(downgradeVersions).collect { Map.Entry<Map<String, String>, String> dep ->
+    int index = dep.key['name'].lastIndexOf('[')
+    dep.key['name'] = (index == -1) ? dep.key['name'] : dep.key['name'].substring(0, index)
 		buildExceededDependency(dep.key['name'], dep.key['group'], dep.value, latestVersions[dep.key])
 	}
   }
