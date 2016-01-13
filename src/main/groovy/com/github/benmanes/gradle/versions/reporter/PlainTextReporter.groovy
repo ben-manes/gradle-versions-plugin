@@ -33,10 +33,15 @@ class PlainTextReporter extends AbstractReporter {
   /** Writes the report to the print stream. The stream is not automatically closed. */
   def write(printStream, Result result) {
     writeHeader(printStream)
-    writeUpToDate(printStream, result)
-    writeExceedLatestFound(printStream, result)
-    writeUpgrades(printStream, result)
-    writeUnresolved(printStream, result)
+
+    if (result.count == 0) {
+      printStream.println '\nNo dependencies found.'
+    } else {
+      writeUpToDate(printStream, result)
+      writeExceedLatestFound(printStream, result)
+      writeUpgrades(printStream, result)
+      writeUnresolved(printStream, result)
+    }
   }
 
   @Override
@@ -53,9 +58,7 @@ class PlainTextReporter extends AbstractReporter {
 
   private def writeUpToDate(printStream, Result result) {
     List<Dependency> upToDateVersions = result.current.dependencies
-    if (upToDateVersions.isEmpty()) {
-      printStream.println '\nAll dependencies have later versions.'
-    } else {
+    if (!upToDateVersions.isEmpty()) {
       printStream.println(
           "\nThe following dependencies are using the latest ${revision} version:")
       upToDateVersions.each { printStream.println " - ${label(it)}:${it.version}" }
@@ -77,9 +80,7 @@ class PlainTextReporter extends AbstractReporter {
   @TypeChecked(SKIP)
   private def writeUpgrades(printStream, Result result) {
     def upgradeVersions = result.outdated.dependencies
-    if (upgradeVersions.isEmpty()) {
-      printStream.println "\nAll dependencies are using the latest ${revision} versions."
-    } else {
+    if (!upgradeVersions.isEmpty()) {
       printStream.println "\nThe following dependencies have later ${revision} versions:"
       upgradeVersions.each { DependencyOutdated dep ->
         def currentVersion = dep.version

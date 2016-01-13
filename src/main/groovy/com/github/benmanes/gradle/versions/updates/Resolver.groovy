@@ -169,14 +169,15 @@ class Resolver {
   }
 
   private void logRepositories() {
-    boolean isRootProject = (project.rootProject == project);
+    boolean root = (project.rootProject == project)
+    String label = "${root ? project.name : project.path} project${root ? ' (root)' : ''}"
     if (!project.buildscript.configurations*.dependencies.isEmpty()) {
-      project.logger.info("Resolving ${project.name} project buildscript with repositories:")
+      project.logger.info("Resolving ${label} buildscript with repositories:")
       for (ArtifactRepository repository : project.buildscript.repositories) {
         logRepository(repository)
       }
     }
-    project.logger.info("Resolving ${project.name} project configurations with repositories:")
+    project.logger.info("Resolving ${label} configurations with repositories:")
     for (ArtifactRepository repository : project.repositories) {
       logRepository(repository)
     }
