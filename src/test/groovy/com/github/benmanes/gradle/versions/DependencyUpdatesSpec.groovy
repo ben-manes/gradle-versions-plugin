@@ -162,12 +162,12 @@ class DependencyUpdatesSpec extends Specification {
       outputFormatter << ['plain', 'json', 'xml']
   }
 
-  @Unroll('Multi-project with repository on parent (#revision, #outputFormatter)')
+  @Unroll('Multi-project with dependencies on parent (#revision, #outputFormatter)')
   def 'Multi-project with repository on parent'() {
     given:
       def (rootProject, childProject) = multiProject()
       addRepositoryTo(rootProject)
-      addDependenciesTo(childProject)
+      addDependenciesTo(rootProject)
     when:
       def reporter = evaluate(rootProject, revision, outputFormatter)
       reporter.write()
@@ -195,12 +195,12 @@ class DependencyUpdatesSpec extends Specification {
       outputFormatter << ['plain', 'json', 'xml']
   }
 
-  @Unroll('Multi-project with repository on child (#revision, #outputFormatter)')
+  @Unroll('Multi-project with dependencies on child (#revision, #outputFormatter)')
   def 'Multi-project with repository on child'() {
     given:
       def (rootProject, childProject) = multiProject()
       addRepositoryTo(childProject)
-      addDependenciesTo(rootProject)
+      addDependenciesTo(childProject)
     when:
       def reporter = evaluate(rootProject, revision, outputFormatter)
       reporter.write()

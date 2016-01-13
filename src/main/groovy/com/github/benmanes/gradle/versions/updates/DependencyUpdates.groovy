@@ -49,11 +49,11 @@ class DependencyUpdates {
 
   /** Evaluates the dependencies and returns a reporter. */
   DependencyUpdatesReporter run() {
-    Resolver resolver = new Resolver(project)
     Map<Project, Set<Configuration>> projectConfigs = project.allprojects.collectEntries { proj ->
       [proj, proj.configurations.plus(proj.buildscript.configurations) as Set]
     }
     Set<DependencyStatus> status = projectConfigs.collectMany { proj, configurations ->
+      Resolver resolver = new Resolver(proj)
       return configurations.collectMany { config ->
         try {
           return resolver.resolve(config, revision)
