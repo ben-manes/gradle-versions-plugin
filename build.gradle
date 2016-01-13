@@ -1,12 +1,3 @@
-apply plugin: 'groovy'
-apply plugin: 'nexus'
-apply plugin: 'codenarc'
-
-group = 'com.github.ben-manes'
-version = '0.12.0'
-
-sourceCompatibility = '1.6'
-
 buildscript {
   repositories {
     jcenter()
@@ -16,6 +7,21 @@ buildscript {
     classpath 'org.gradle.api.plugins:gradle-nexus-plugin:0.7.1'
   }
 }
+
+plugins {
+    id "com.jfrog.bintray" version "1.5"
+}
+
+apply plugin: 'groovy'
+apply plugin: 'nexus'
+apply plugin: 'codenarc'
+
+group = 'com.github.ben-manes'
+version = '0.12.0'
+
+sourceCompatibility = '1.6'
+
+
 
 repositories {
   mavenCentral()
@@ -106,3 +112,18 @@ modifyPom {
     }
   }
 }
+
+bintray {
+    user = project.properties.bintrayUser
+    key = project.properties.bintrayAPIKey
+    configurations = ['archives']
+    publish = true
+    pkg {
+        repo = 'maven'
+        name = 'com.github.ben-manes:gradle-versions-plugin'
+        version {
+          attributes = ['gradle-plugin' : 'com.github.ben-manes.versions:com.github.ben-manes:gradle-versions-plugin']
+        }
+    }
+}
+
