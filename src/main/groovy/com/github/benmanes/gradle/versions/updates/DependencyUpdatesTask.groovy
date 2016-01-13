@@ -35,7 +35,8 @@ class DependencyUpdatesTask extends DefaultTask {
   Object outputFormatter = 'plain'
 
   @Input
-  String outputDir = 'build/dependencyUpdates'
+  String outputDir =
+    "${project.buildDir.path.replace(project.projectDir.path + '/', '')}/dependencyUpdates"
 
   DependencyUpdatesTask() {
     description = 'Displays the dependency updates for the project.'
@@ -46,7 +47,8 @@ class DependencyUpdatesTask extends DefaultTask {
   def dependencyUpdates() {
     project.evaluationDependsOnChildren()
 
-    def evaluator = new DependencyUpdates(project, revisionLevel(), outputFormatterProp(), outputDirectory())
+    def evaluator = new DependencyUpdates(project,
+      revisionLevel(), outputFormatterProp(), outputDirectory())
     DependencyUpdatesReporter reporter = evaluator.run()
     reporter?.write()
   }
