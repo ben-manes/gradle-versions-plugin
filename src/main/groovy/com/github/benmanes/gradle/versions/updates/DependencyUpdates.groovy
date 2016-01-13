@@ -43,6 +43,7 @@ import static org.gradle.api.specs.Specs.SATISFIES_ALL
 @TupleConstructor
 class DependencyUpdates {
   Project project
+  Closure resolutionStrategy
   String revision
   Object outputFormatter
   String outputDir
@@ -53,7 +54,7 @@ class DependencyUpdates {
       [proj, proj.configurations.plus(proj.buildscript.configurations) as Set]
     }
     Set<DependencyStatus> status = projectConfigs.collectMany { proj, configurations ->
-      Resolver resolver = new Resolver(proj)
+      Resolver resolver = new Resolver(proj, resolutionStrategy)
       return configurations.collectMany { config ->
         try {
           return resolver.resolve(config, revision)

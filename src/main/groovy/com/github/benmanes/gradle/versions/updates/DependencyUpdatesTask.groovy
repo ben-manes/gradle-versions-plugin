@@ -38,6 +38,8 @@ class DependencyUpdatesTask extends DefaultTask {
   String outputDir =
     "${project.buildDir.path.replace(project.projectDir.path + '/', '')}/dependencyUpdates"
 
+  Closure resolutionStrategy = null;
+
   DependencyUpdatesTask() {
     description = 'Displays the dependency updates for the project.'
     group = 'Help'
@@ -47,7 +49,7 @@ class DependencyUpdatesTask extends DefaultTask {
   def dependencyUpdates() {
     project.evaluationDependsOnChildren()
 
-    def evaluator = new DependencyUpdates(project,
+    def evaluator = new DependencyUpdates(project, resolutionStrategy,
       revisionLevel(), outputFormatterProp(), outputDirectory())
     DependencyUpdatesReporter reporter = evaluator.run()
     reporter?.write()

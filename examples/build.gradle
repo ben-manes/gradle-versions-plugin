@@ -1,5 +1,6 @@
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'jacoco'
+apply plugin: 'java'
 defaultTasks 'dependencyUpdates'
 
 buildscript {
@@ -24,6 +25,19 @@ configurations {
   upgradesFound
   upgradesFound2
   unresolvable
+}
+
+dependencyUpdates.resolutionStrategy = {
+  componentSelection { rules ->
+    rules.all { ComponentSelection selection ->
+      boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm'].any { qualifier ->
+        selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
+      }
+      if (rejected) {
+        selection.reject('Release candidate')
+      }
+    }
+  }
 }
 
 dependencies {

@@ -43,10 +43,12 @@ import static org.gradle.api.specs.Specs.SATISFIES_ALL
 @TypeChecked
 class Resolver {
   final Project project
+  final Closure resolutionStrategy
   final boolean useSelectionRules
 
-  Resolver(Project project) {
+  Resolver(Project project, Closure resolutionStrategy) {
     this.project = project
+    this.resolutionStrategy = resolutionStrategy
 
     useSelectionRules = new VersionComparator(project)
       .compare(project.gradle.gradleVersion, '2.2') >= 0
@@ -102,6 +104,7 @@ class Resolver {
 
     if (useSelectionRules) {
       addRevisionFilter(copy, revision)
+      addCustomResolutionStrategy(copy)
     }
     return copy
   }
@@ -116,7 +119,7 @@ class Resolver {
     }
   }
 
-  /** Add a revision filter by rejecting candidates using a component selection rule. */
+  /** Adds a revision filter by rejecting candidates using a component selection rule. */
   @TypeChecked(SKIP)
   private void addRevisionFilter(Configuration configuration, String revision) {
     configuration.resolutionStrategy { ResolutionStrategy componentSelection ->
@@ -131,6 +134,13 @@ class Resolver {
           }
         }
       }
+    }
+  }
+
+  /** Adds a custom resolution strategy only applicable for the dependency updates task. */
+  private void addCustomResolutionStrategy(Configuration configuration) {
+    if (resolutionStrategy != null) {
+      configuration.resolutionStrategy(resolutionStrategy)
     }
   }
 
