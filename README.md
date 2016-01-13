@@ -3,9 +3,6 @@
 In the spirit of the [Maven Versions Plugin](http://mojo.codehaus.org/versions-maven-plugin/),
 this plugin provides a task to determine which dependencies have updates.
 
-**The latest release (0.12.x) is a major refactoring. Please try it out, let us know of any bugs,
-and downgrade to 0.10.1 if any block you. Thanks!**
-
 ## Usage
 
 This plugin is available from [Bintray's JCenter repository](http://jcenter.bintray.com). You can
@@ -54,20 +51,14 @@ The latest versions can be further filtered using [Component Selection Rules][co
 For example to disallow release candidates as upgradable versions a selection rule could be defined as:
 
 ```groovy
-allprojects {
-  configurations {
-    all {
-      resolutionStrategy {
-        componentSelection {
-          all { ComponentSelection selection ->
-            boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm'].any { qualifier ->
-              selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
-            }
-            if (rejected) {
-              selection.reject('Release candidate')
-            }
-          }
-        }
+dependencyUpdates.resolutionStrategy = {
+  componentSelection { rules ->
+    rules.all { ComponentSelection selection ->
+      boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm'].any { qualifier ->
+        selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
+      }
+      if (rejected) {
+        selection.reject('Release candidate')
       }
     }
   }
