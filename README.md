@@ -3,7 +3,7 @@
 In the spirit of the [Maven Versions Plugin](http://mojo.codehaus.org/versions-maven-plugin/),
 this plugin provides a task to determine which dependencies have updates.
 
-**The latest release (0.11.x) is a major refactoring. Please try it out, let us know of any bugs,
+**The latest release (0.12.x) is a major refactoring. Please try it out, let us know of any bugs,
 and downgrade to 0.10.1 if any block you. Thanks!**
 
 ## Usage
@@ -20,7 +20,7 @@ buildscript {
   }
 
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.11.3'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.12.0'
     // classpath 'org.codehaus.groovy:groovy-backports-compat23:2.3.5' // uncomment if you're using Gradle 1.x
   }
 }
