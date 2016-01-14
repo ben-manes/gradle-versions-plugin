@@ -57,7 +57,7 @@ class PlainTextReporter extends AbstractReporter {
   }
 
   private def writeUpToDate(printStream, Result result) {
-    List<Dependency> upToDateVersions = result.current.dependencies
+    SortedSet<Dependency> upToDateVersions = result.current.dependencies
     if (!upToDateVersions.isEmpty()) {
       printStream.println(
           "\nThe following dependencies are using the latest ${revision} version:")

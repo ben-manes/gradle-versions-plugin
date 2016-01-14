@@ -122,10 +122,10 @@ class DependencyUpdatesReporter {
   }
 
    Result buildBaseObject() {
-    List current = buildCurrentGroup()
-    List outdated = buildOutdatedGroup()
-    List exceeded = buildExceededGroup()
-    List unresolved = buildUnresolvedGroup()
+    SortedSet current = buildCurrentGroup()
+    SortedSet outdated = buildOutdatedGroup()
+    SortedSet exceeded = buildExceededGroup()
+    SortedSet unresolved = buildUnresolvedGroup()
 
     def count = current.size() + outdated.size() + exceeded.size() + unresolved.size()
 
@@ -138,40 +138,40 @@ class DependencyUpdatesReporter {
     )
   }
 
-  protected List buildCurrentGroup() {
-	sortByGroupAndName(upToDateVersions).collect { Map.Entry<Map<String, String>, String> dep ->
-		buildDependency(dep.key['name'], dep.key['group'], dep.value)
-	}
+  protected SortedSet buildCurrentGroup() {
+    sortByGroupAndName(upToDateVersions).collect { Map.Entry<Map<String, String>, String> dep ->
+    	buildDependency(dep.key['name'], dep.key['group'], dep.value)
+    } as SortedSet
   }
 
-  protected List buildOutdatedGroup() {
-	sortByGroupAndName(upgradeVersions).collect { Map.Entry<Map<String, String>, String> dep ->
-    int index = dep.key['name'].lastIndexOf('[')
-    dep.key['name'] = (index == -1) ? dep.key['name'] : dep.key['name'].substring(0, index)
-		buildOutdatedDependency(dep.key['name'], dep.key['group'], dep.value, latestVersions[dep.key])
-	}
+  protected SortedSet buildOutdatedGroup() {
+  	sortByGroupAndName(upgradeVersions).collect { Map.Entry<Map<String, String>, String> dep ->
+      int index = dep.key['name'].lastIndexOf('[')
+      dep.key['name'] = (index == -1) ? dep.key['name'] : dep.key['name'].substring(0, index)
+  		buildOutdatedDependency(dep.key['name'], dep.key['group'], dep.value, latestVersions[dep.key])
+  	}  as SortedSet
   }
 
-  protected List buildExceededGroup() {
-	sortByGroupAndName(downgradeVersions).collect { Map.Entry<Map<String, String>, String> dep ->
-    int index = dep.key['name'].lastIndexOf('[')
-    dep.key['name'] = (index == -1) ? dep.key['name'] : dep.key['name'].substring(0, index)
-		buildExceededDependency(dep.key['name'], dep.key['group'], dep.value, latestVersions[dep.key])
-	}
+  protected SortedSet buildExceededGroup() {
+  	sortByGroupAndName(downgradeVersions).collect { Map.Entry<Map<String, String>, String> dep ->
+      int index = dep.key['name'].lastIndexOf('[')
+      dep.key['name'] = (index == -1) ? dep.key['name'] : dep.key['name'].substring(0, index)
+  		buildExceededDependency(dep.key['name'], dep.key['group'], dep.value, latestVersions[dep.key])
+  	} as SortedSet
   }
 
-  protected List<DependencyUnresolved> buildUnresolvedGroup() {
-      unresolved.sort { UnresolvedDependency a, UnresolvedDependency b ->
-		compareKeys(keyOf(a.selector), keyOf(b.selector))
-	}.collect { UnresolvedDependency dep ->
-		def message = dep.problem.getMessage()
-		def split = message.split('Required by')
-
-		if (split.length > 0) {
-			message = split[0].trim()
-		}
-		buildUnresolvedDependency(dep.selector.name, dep.selector.group, currentVersions[keyOf(dep.selector)], message)
-    }
+  protected SortedSet<DependencyUnresolved> buildUnresolvedGroup() {
+    unresolved.sort { UnresolvedDependency a, UnresolvedDependency b ->
+  		compareKeys(keyOf(a.selector), keyOf(b.selector))
+	  }.collect { UnresolvedDependency dep ->
+  		def message = dep.problem.getMessage()
+  		def split = message.split('Required by')
+  
+  		if (split.length > 0) {
+  			message = split[0].trim()
+  		}
+  		buildUnresolvedDependency(dep.selector.name, dep.selector.group, currentVersions[keyOf(dep.selector)], message)
+    } as SortedSet
   }
 
   protected Result buildObject(int count,
@@ -182,7 +182,8 @@ class DependencyUpdatesReporter {
     new Result(count, current, outdated, exceeded, unresolved)
   }
 
-  protected <T extends Dependency> DependenciesGroup<T> buildDependenciesGroup(List<T> dependencies) {
+  protected <T extends Dependency> DependenciesGroup<T> buildDependenciesGroup(
+      SortedSet<T> dependencies) {
     new DependenciesGroup<T>(dependencies.size(), dependencies)
   }
 

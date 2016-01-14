@@ -52,7 +52,7 @@ class Coordinate implements Comparable<Coordinate> {
   }
 
   @Override
-  int compareTo(Coordinate coordinate) {
+  public int compareTo(Coordinate coordinate) {
     int result = key.compareTo(coordinate.key)
     return (result == 0) ? version.compareTo(coordinate.version) : result
   }
@@ -85,7 +85,7 @@ class Coordinate implements Comparable<Coordinate> {
     }
 
     @Override
-    int compareTo(Key key) {
+    public int compareTo(Key key) {
       int result = groupId.compareTo(key.groupId)
       return (result == 0) ? artifactId.compareTo(key.artifactId) : result
     }

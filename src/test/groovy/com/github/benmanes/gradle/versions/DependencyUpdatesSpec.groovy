@@ -414,8 +414,9 @@ class DependencyUpdatesSpec extends Specification {
     [rootProject, childProject, leafProject]
   }
 
-  def evaluate(project, revision = 'milestone', outputFormatter = 'plain', outputDir = 'build') {
-    new DependencyUpdates(project, revision, outputFormatter, outputDir).run()
+  def evaluate(project, revision = 'milestone', outputFormatter = 'plain',
+      outputDir = 'build', resolutionStrategy = null) {
+    new DependencyUpdates(project, resolutionStrategy, revision, outputFormatter, outputDir).run()
   }
 
   def addRepositoryTo(project) {

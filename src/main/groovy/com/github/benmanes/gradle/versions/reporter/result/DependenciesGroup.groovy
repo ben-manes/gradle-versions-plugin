@@ -4,7 +4,6 @@ import groovy.transform.TupleConstructor
 
 /**
  * A group of dependencies
- *
  */
 @TupleConstructor
 class DependenciesGroup<T extends Dependency> {
@@ -17,5 +16,5 @@ class DependenciesGroup<T extends Dependency> {
 	/**
 	 * The dependencies that belong to this group
 	 */
-	List<T> dependencies = []
+	SortedSet<T> dependencies = [] as SortedSet<T>
 }

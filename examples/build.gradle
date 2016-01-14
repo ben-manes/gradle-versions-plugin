@@ -25,6 +25,7 @@ configurations {
   upgradesFound
   upgradesFound2
   unresolvable
+  unresolvable2
 }
 
 dependencyUpdates.resolutionStrategy = {
@@ -51,4 +52,6 @@ dependencies {
   upgradesFound2 'com.google.guava:guava:16.0-rc1'
   unresolvable 'com.github.ben-manes:unresolvable:1.0',
                'com.github.ben-manes:unresolvable2:1.0'
+  unresolvable2 'com.github.ben-manes:unresolvable:1.0',
+                'com.github.ben-manes:unresolvable2:1.0'
 }
