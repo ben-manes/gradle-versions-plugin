@@ -23,6 +23,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.LenientConfiguration
+import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ResolutionStrategy
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.artifacts.UnresolvedDependency
@@ -30,6 +31,14 @@ import org.gradle.api.artifacts.repositories.ArtifactRepository
 import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
 import org.gradle.api.artifacts.repositories.IvyArtifactRepository
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.artifacts.result.ArtifactResolutionResult
+import org.gradle.api.artifacts.result.ArtifactResult
+import org.gradle.api.artifacts.result.ComponentArtifactsResult
+import org.gradle.api.artifacts.result.ResolvedArtifactResult
+import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
+import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier
+import org.gradle.maven.MavenModule
+import org.gradle.maven.MavenPomArtifact
 
 import static groovy.transform.TypeCheckingMode.SKIP
 import static org.gradle.api.specs.Specs.SATISFIES_ALL
@@ -76,7 +85,8 @@ class Resolver {
         project.logger.info("Skipping hidden dependency: ${resolvedCoordinate}")
         continue
       }
-      result.add(new DependencyStatus(coord, resolvedCoordinate.version))
+      String projectUrl = getProjectUrl(dependency.module.id)
+      result.add(new DependencyStatus(coord, resolvedCoordinate.version, projectUrl))
     }
     for (UnresolvedDependency dependency : unresolved) {
       Coordinate resolvedCoordinate = Coordinate.from(dependency.selector)
@@ -215,5 +225,64 @@ class Resolver {
     } else {
       project.logger.info(" - ${repository.name}: ${repository.getClass().simpleName}")
     }
+  }
+
+  private String getProjectUrl(ModuleVersionIdentifier id) {
+    ArtifactResolutionResult resolutionResult = project.dependencies.createArtifactResolutionQuery()
+            .forComponents(DefaultModuleComponentIdentifier.newId(id))
+            .withArtifacts(MavenModule, MavenPomArtifact)
+            .execute()
+
+    // size is 0 for gradle plugins, 1 for normal dependencies
+    for (ComponentArtifactsResult result : resolutionResult.resolvedComponents) {
+      Set<ArtifactResult> artifacts = result.getArtifacts(MavenPomArtifact)
+      // size should always be 1
+      for (ArtifactResult artifact : result.getArtifacts(MavenPomArtifact)) {
+        if (artifact instanceof ResolvedArtifactResult) {
+          File file = ((ResolvedArtifactResult) artifact).file
+          project.logger.info("Pom file for ${id} is ${file}")
+
+          String url = getUrlFromPom(file)
+          if (url) {
+            project.logger.info("Found url for ${id}: ${url}")
+            return url;
+          } else {
+            ModuleVersionIdentifier parent = getParentFromPom(file)
+            if (parent) {
+              url = getProjectUrl(parent)
+              if (url) {
+                return url
+              }
+            }
+          }
+        }
+      }
+    }
+    project.logger.info("Did not find url for ${id}")
+    return null;
+  }
+
+  @TypeChecked(SKIP)
+  private static String getUrlFromPom(File file) {
+    def pom = new XmlSlurper().parse(file)
+    if (pom.url) {
+      return pom.url
+    }
+    return pom.scm.url
+  }
+
+  @TypeChecked(SKIP)
+  private static ModuleVersionIdentifier getParentFromPom(File file) {
+    def pom = new XmlSlurper().parse(file)
+    def parent = pom.children().find { child -> child.name() == 'parent' }
+    if (parent) {
+      String groupId = parent.groupId
+      String artifactId = parent.artifactId
+      String version = parent.version
+      if (groupId && artifactId && version) {
+        return DefaultModuleVersionIdentifier.newId(groupId, artifactId, version);
+      }
+    }
+    return null
   }
 }
