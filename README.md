@@ -8,6 +8,16 @@ this plugin provides a task to determine which dependencies have updates.
 This plugin is available from [Bintray's JCenter repository](http://jcenter.bintray.com). You can
 add it to your build script using the following configuration:
 
+### `plugins` block:
+
+```groovy
+plugins {
+    id 'com.github.ben-manes.versions' version '0.12.0'
+}
+```
+or via the
+
+### `buildscript` block:
 ```groovy
 apply plugin: 'com.github.ben-manes.versions'
 
@@ -18,10 +28,10 @@ buildscript {
 
   dependencies {
     classpath 'com.github.ben-manes:gradle-versions-plugin:0.12.0'
-    // classpath 'org.codehaus.groovy:groovy-backports-compat23:2.3.5' // uncomment if you're using Gradle 1.x
   }
 }
 ```
+
 The current version is known to work with Gradle versions up to 2.10.
 
 ## Tasks
