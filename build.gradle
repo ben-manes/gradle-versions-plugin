@@ -17,7 +17,7 @@ apply plugin: 'nexus'
 apply plugin: 'codenarc'
 
 group = 'com.github.ben-manes'
-version = '0.12.0'
+version = '0.13.0'
 
 sourceCompatibility = '1.6'
 
@@ -126,4 +126,3 @@ bintray {
         }
     }
 }
-

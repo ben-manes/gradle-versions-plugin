@@ -1,6 +1,6 @@
 # Gradle Versions Plugin
 
-In the spirit of the [Maven Versions Plugin](http://mojo.codehaus.org/versions-maven-plugin/),
+In the spirit of the [Maven Versions Plugin](http://www.mojohaus.org/versions-maven-plugin/),
 this plugin provides a task to determine which dependencies have updates.
 
 ## Usage
@@ -32,7 +32,7 @@ buildscript {
 }
 ```
 
-The current version is known to work with Gradle versions up to 2.10.
+The current version is known to work with Gradle versions up to 2.14.
 
 ## Tasks
 

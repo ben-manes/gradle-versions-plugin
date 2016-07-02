@@ -113,7 +113,15 @@ class Resolver {
   @TypeChecked(SKIP)
   private Dependency createQueryDependency(Dependency dependency, String revision) {
     String versionQuery = useSelectionRules ? '+' : "latest.${revision}"
-    String version = (dependency.version == null) ? 'none' : versionQuery
+
+    // If no version was specified then it may be intended to be resolved by another plugin
+    // (e.g. the dependency-management-plugin for BOMs) or is an explicit file (e.g. libs/*.jar).
+    // In the case of another plugin we use '+' in the hope that the plugin will not restrict the
+    // query (see issue #97). Otherwise if its a file then use 'none' to pass it through.
+    String version = (dependency.version == null)
+        ? (dependency.artifacts.empty ? '+' : 'none')
+        : versionQuery
+
     return project.dependencies.create("${dependency.group}:${dependency.name}:${version}") {
       transitive = false
     }

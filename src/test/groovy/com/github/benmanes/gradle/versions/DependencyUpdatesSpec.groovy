@@ -264,11 +264,11 @@ class DependencyUpdatesSpec extends Specification {
       reporter.write()
     then:
       with(reporter) {
-        unresolved.collect { it.selector }.collectEntries { dependency ->
-          [['group': dependency.group, 'name': dependency.name]: dependency.version]
-        } == [['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent']: 'none']
+        unresolved.isEmpty()
         upgradeVersions.isEmpty()
-        upToDateVersions.isEmpty()
+        upToDateVersions.collectEntries { entry ->
+          [['group': entry.key.group, 'name': entry.key.name]: entry.value]
+        } == [['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent']: 'none']
         downgradeVersions.isEmpty()
       }
   }
