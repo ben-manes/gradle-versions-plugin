@@ -48,28 +48,9 @@ dependencies {
   compile localGroovy()
 
   compile group: 'com.thoughtworks.xstream', name: 'xstream', version: '1.4.7'
-  testCompile gradleTestKit()
   testCompile('org.spockframework:spock-core:0.7-groovy-2.0') {
     exclude(module: 'groovy-all')
   }
-}
-
-// Write the plugin's classpath to a file to share with the tests
-task createClasspathManifest {
-    def outputDir = file("$buildDir/$name")
-
-    inputs.files sourceSets.main.runtimeClasspath
-    outputs.dir outputDir
-
-    doLast {
-        outputDir.mkdirs()
-        file("$outputDir/plugin-classpath.txt").text = sourceSets.main.runtimeClasspath.join("\n")
-    }
-}
-
-// Add the classpath file to the test runtime classpath
-dependencies {
-    testRuntime files(createClasspathManifest)
 }
 
 jar {
