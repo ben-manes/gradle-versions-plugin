@@ -2,3 +2,10 @@ language: java
 cache:
   directories:
   - $HOME/.gradle
+deploy:
+  provider: script
+  script: ./gradlew bintrayUpload
+  skip_cleanup: true
+  on:
+    branch: master
+    tags: true
