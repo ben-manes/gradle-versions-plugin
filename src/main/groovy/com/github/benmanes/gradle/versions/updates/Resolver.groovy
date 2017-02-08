@@ -99,6 +99,11 @@ class Resolver {
     }
 
     Configuration copy = configuration.copyRecursive().setTransitive(false)
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/127
+    if (copy.metaClass.respondsTo(copy, "setCanBeResolved", Boolean)) {
+      copy.setCanBeResolved(true)
+    }
+
     copy.dependencies.clear()
     copy.dependencies.addAll(latest)
 
@@ -166,6 +171,10 @@ class Resolver {
 
     Map<Coordinate.Key, Coordinate> coordinates = [:]
     Configuration copy = configuration.copyRecursive().setTransitive(false)
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/127
+    if (copy.metaClass.respondsTo(copy, "setCanBeResolved", Boolean)) {
+      copy.setCanBeResolved(true)
+    }
     LenientConfiguration lenient = copy.resolvedConfiguration.lenientConfiguration
 
     Set<ResolvedDependency> resolved = lenient.getFirstLevelModuleDependencies(SATISFIES_ALL)

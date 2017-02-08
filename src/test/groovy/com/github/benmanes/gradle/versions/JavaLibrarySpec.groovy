@@ -5,9 +5,8 @@ import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 
 import spock.lang.Specification
-import spock.lang.Unroll
 
-public class DifferentGradleVersionsSpec extends Specification {
+public class JavaLibrarySpec extends Specification {
 
   @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
   File buildFile
@@ -17,7 +16,6 @@ public class DifferentGradleVersionsSpec extends Specification {
   def setup() {
     buildFile = testProjectDir.newFile('build.gradle')
 
-
     def pluginClasspathResource = getClass().classLoader.findResource("plugin-classpath.txt")
     if (pluginClasspathResource == null) {
       throw new IllegalStateException("Did not find plugin classpath resource, run `testClasses` build task.")
@@ -26,26 +24,16 @@ public class DifferentGradleVersionsSpec extends Specification {
     pluginClasspath = pluginClasspathResource.readLines().collect { new File(it) }
   }
 
-
-  @Unroll
-  def "dependencyUpdates task completes without errors with Gradle #gradleVersion"() {
+  def "Show updates for an api dependency in a java-library project"() {
     given:
-    def classpathString = pluginClasspath
-        .collect { it.absolutePath.replace('\\', '\\\\') } // escape backslashes in Windows paths
-        .collect { "'$it'" }
-        .join(", ")
     def mavenRepoUrl = getClass().getResource('/maven/').toURI()
     def srdErrWriter = new StringWriter()
 
     buildFile << """
-        buildscript {
-          dependencies {
-            classpath files($classpathString)
-          }
+        plugins {
+          id 'com.github.ben-manes.versions'
         }
-
-        apply plugin: 'java'
-        apply plugin: "com.github.ben-manes.versions"
+        apply plugin: 'java-library'
 
         repositories {
           maven {
@@ -54,7 +42,7 @@ public class DifferentGradleVersionsSpec extends Specification {
         }
 
         dependencies {
-          compile 'com.google.inject:guice:2.0'
+          api 'com.google.inject:guice:2.0'
         }
 
 
@@ -62,23 +50,15 @@ public class DifferentGradleVersionsSpec extends Specification {
 
     when:
     def result = GradleRunner.create()
-        .withGradleVersion(gradleVersion)
+        .withGradleVersion('3.4-rc-1')
         .withProjectDir(testProjectDir.root)
         .withArguments('dependencyUpdates')
+        .withPluginClasspath(pluginClasspath)
         .forwardStdError(srdErrWriter)
         .build()
 
     then:
     result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
     srdErrWriter.toString().empty
-
-    where:
-    gradleVersion << [
-      '1.5',
-      '1.12',
-      '2.0',
-      '3.3',
-      '3.4-rc-2'
-    ]
   }
 }
