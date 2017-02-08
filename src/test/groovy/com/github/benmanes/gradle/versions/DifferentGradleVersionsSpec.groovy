@@ -73,6 +73,6 @@ public class DifferentGradleVersionsSpec extends Specification {
     srdErrWriter.toString().empty
 
     where:
-    gradleVersion << ['2.0', '3.3']
+    gradleVersion << ['1.12', '2.0', '3.3']
   }
 }
