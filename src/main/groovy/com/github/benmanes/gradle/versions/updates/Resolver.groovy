@@ -99,14 +99,15 @@ class Resolver {
     }
 
     Configuration copy = configuration.copyRecursive().setTransitive(false)
-    copy.dependencies.clear()
-    copy.dependencies.addAll(latest)
+    Configuration detached = project.configurations.detachedConfiguration().extendsFrom(copy)
+    detached.dependencies.clear()
+    detached.dependencies.addAll(latest)
 
     if (useSelectionRules) {
-      addRevisionFilter(copy, revision)
-      addCustomResolutionStrategy(copy)
+      addRevisionFilter(detached, revision)
+      addCustomResolutionStrategy(detached)
     }
-    return copy
+    return detached
   }
 
   /** Returns a variant of the provided dependency used for querying the latest version. */
@@ -166,7 +167,10 @@ class Resolver {
 
     Map<Coordinate.Key, Coordinate> coordinates = [:]
     Configuration copy = configuration.copyRecursive().setTransitive(false)
-    LenientConfiguration lenient = copy.resolvedConfiguration.lenientConfiguration
+    Configuration detached = project.configurations.detachedConfiguration().extendsFrom(copy)
+    detached.dependencies.addAll(configuration.dependencies)
+
+    LenientConfiguration lenient = detached.resolvedConfiguration.lenientConfiguration
 
     Set<ResolvedDependency> resolved = lenient.getFirstLevelModuleDependencies(SATISFIES_ALL)
     for (ResolvedDependency dependency : resolved) {
