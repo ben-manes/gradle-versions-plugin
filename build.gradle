@@ -49,7 +49,7 @@ dependencies {
 
   compile group: 'com.thoughtworks.xstream', name: 'xstream', version: '1.4.7'
   testCompile gradleTestKit()
-  testCompile('org.spockframework:spock-core:0.7-groovy-2.0') {
+  testCompile('org.spockframework:spock-core:1.0-groovy-2.4') {
     exclude(module: 'groovy-all')
   }
 }
