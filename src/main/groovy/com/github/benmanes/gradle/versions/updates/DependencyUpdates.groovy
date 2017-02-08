@@ -53,7 +53,7 @@ class DependencyUpdates {
     Map<Project, Set<Configuration>> projectConfigs = project.allprojects.collectEntries { proj ->
       [proj, proj.configurations.plus(proj.buildscript.configurations) as Set]
     }
-    Set<DependencyStatus> status = projectConfigs.collectMany { proj, configurations ->
+    Set<DependencyStatus> status = projectConfigs.collect { proj, configurations ->
       Resolver resolver = new Resolver(proj, resolutionStrategy)
       return configurations.collectMany { config ->
         try {
@@ -64,7 +64,7 @@ class DependencyUpdates {
           return []
         }
       }
-    } as Set
+    }.flatten() as Set
 
     VersionMapping versions = new VersionMapping(project, status)
     Set<UnresolvedDependency> unresolved =
