@@ -15,9 +15,10 @@
  */
 package com.github.benmanes.gradle.versions
 
-import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
 /**
  * Registers the plugin's tasks.
@@ -28,6 +29,11 @@ class VersionsPlugin implements Plugin<Project> {
 
   @Override
   void apply(Project project) {
-    project.tasks.create('dependencyUpdates', DependencyUpdatesTask)
+    try {
+      project.tasks.create('dependencyUpdates', DependencyUpdatesTask)
+    } catch (MissingMethodException e){
+      // Maybe we're running with an old Gradle version, let's try tasks.add
+      project.tasks.add('dependencyUpdates', DependencyUpdatesTask)
+    }
   }
 }
