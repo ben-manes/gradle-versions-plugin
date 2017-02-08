@@ -139,8 +139,8 @@ modifyPom {
 }
 
 bintray {
-    user = project.properties.bintrayUser
-    key = project.properties.bintrayAPIKey
+    user = 'fooberger'
+    key = System.env.bintrayAPIKey
     configurations = ['archives']
     publish = true
     pkg {
