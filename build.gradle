@@ -92,6 +92,12 @@ artifacts {
   archives groovydocJar
 }
 
+tasks.withType(Test){
+  testLogging {
+    exceptionFormat "full"
+  }
+}
+
 modifyPom {
   project {
     name 'Gradle Versions plugin'
