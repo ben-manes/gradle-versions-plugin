@@ -32,7 +32,7 @@ buildscript {
 }
 ```
 
-The current version is known to work with Gradle versions up to 3.3.
+The current version is known to work with Gradle versions up to 3.4.
 
 ## Tasks
 
