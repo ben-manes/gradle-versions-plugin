@@ -90,10 +90,12 @@ class DependencyUpdatesReporter {
     try {
       project.file(outputDir).mkdirs()
       File outputFile = project.file(filename)
-      outputFile.newOutputStream().with { OutputStream os ->
-        new PrintStream(new FileOutputStream(outputFile)).with { PrintStream ps ->
-          def result = buildBaseObject()
-          reporter.write(ps, result)
+      outputFile.newOutputStream().withStream { OutputStream os ->
+        new FileOutputStream(outputFile).withStream { FileOutputStream fos ->
+          new PrintStream(fos).withStream { PrintStream ps ->
+            def result = buildBaseObject()
+            reporter.write(ps, result)
+          }
         }
       }
 
