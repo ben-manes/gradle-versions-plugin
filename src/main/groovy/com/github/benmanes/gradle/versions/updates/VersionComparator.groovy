@@ -29,12 +29,10 @@ import static groovy.transform.TypeCheckingMode.SKIP
  */
 @TypeChecked
 class VersionComparator implements Comparator<String> {
-  static final String GRADLE_24 =
-    'org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionComparator'
-  static final String GRADLE_23 =
-    'org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.StaticVersionComparator'
-  static final String GRADLE_18 =
-    'org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.ResolverStrategy'
+  static final String BASE_PKG = 'org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy'
+  static final String GRADLE_24 = BASE_PKG + '.DefaultVersionComparator'
+  static final String GRADLE_23 = BASE_PKG + '.StaticVersionComparator'
+  static final String GRADLE_18 = BASE_PKG + '.ResolverStrategy'
   static final String GRADLE_10 =
     'org.gradle.api.internal.artifacts.version.LatestVersionSemanticComparator'
 
@@ -64,7 +62,7 @@ class VersionComparator implements Comparator<String> {
   @TypeChecked(SKIP)
   private List<Closure<Comparator<String>>> candidates() {
     return [
-      { createInstance(GRADLE_24).asStringComparator() },
+      { createInstance(GRADLE_24); makeStringComparator() },
       { createInstance(GRADLE_23) },
       { createInstance(GRADLE_18).getVersionMatcher() },
       { createInstance(GRADLE_10) }
@@ -75,5 +73,18 @@ class VersionComparator implements Comparator<String> {
   Closure<Object> createInstance = { String className ->
     def classLoader = Thread.currentThread().getContextClassLoader()
     return classLoader.loadClass(className).newInstance()
+  }
+
+  @TypeChecked(SKIP)
+  private Comparator<String> makeStringComparator() {
+    def baseComparator = createInstance(BASE_PKG + '.StaticVersionComparator')
+    def versionParser = createInstance(BASE_PKG + '.VersionParser')
+    return new Comparator<String>() {
+      public int compare(String string1, String string2) {
+        return baseComparator.compare(
+          versionParser.transform(string1),
+          versionParser.transform(string2));
+      }
+    }
   }
 }
