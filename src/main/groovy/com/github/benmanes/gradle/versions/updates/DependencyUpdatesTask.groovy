@@ -56,11 +56,11 @@ class DependencyUpdatesTask extends DefaultTask {
   }
 
   /** Returns the resolution revision level. */
-  String revisionLevel() { System.properties.get('revision', revision) }
+  String revisionLevel() { System.properties['revision'] ?: revision }
 
   /** Returns the outputDir format. */
-  Object outputFormatterProp() { System.properties.get('outputFormatter', outputFormatter) }
+  Object outputFormatterProp() { System.properties['outputFormatter'] ?: outputFormatter }
 
   /** Returns the outputDir destination. */
-  String outputDirectory() { System.properties.get('outputDir', outputDir) }
+  String outputDirectory() { System.properties['outputDir'] ?: outputDir }
 }
