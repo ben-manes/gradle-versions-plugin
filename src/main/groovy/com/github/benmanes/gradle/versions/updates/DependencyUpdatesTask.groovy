@@ -19,6 +19,7 @@ import groovy.transform.TypeChecked
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.Optional
 
 /**
  * A task that reports which dependencies have later versions.
@@ -32,17 +33,24 @@ class DependencyUpdatesTask extends DefaultTask {
   String revision = 'milestone'
 
   @Input
-  Object outputFormatter = 'plain'
-
-  @Input
   String outputDir =
     "${project.buildDir.path.replace(project.projectDir.path + '/', '')}/dependencyUpdates"
 
+  @Input @Optional
+  String getOutputFormatterName() {
+    return (outputFormatter instanceof String) ? ((String) outputFormatter) : null
+  }
+
+  Object outputFormatter = 'plain';
   Closure resolutionStrategy = null;
 
   DependencyUpdatesTask() {
     description = 'Displays the dependency updates for the project.'
     group = 'Help'
+
+    outputs.upToDateWhen {
+      !(outputFormatter instanceof Closure)
+    }
   }
 
   @TaskAction
