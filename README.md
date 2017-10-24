@@ -82,7 +82,7 @@ The task property `outputFormatter` controls the report output format. The follo
   * `"plain"`: format output file as plain text (default)
   * `"json"`: format output file as json text
   * `"xml"`: format output file as xml text, can be used by other plugins (e.g. sonar)
-  * a Closure: will be called with the result of the dependency update analysis
+  * a `Closure`: will be called with the result of the dependency update analysis (see example below)
 
 You can also set multiple output formats using comma as the separator:
 
@@ -276,3 +276,48 @@ XML report
 ```
 
 [component_selection_rules]: https://docs.gradle.org/current/userguide/dependency_management.html#component_selection_rules
+
+#### Custom report format
+If you need to create a report in a custom format, you can set the `dependencyUpdates` tasks's `outputFormatter` property to a Closure.
+
+For example, if you wanted to create an html table for the upgradable dependencies, you could use:
+
+```groovy
+...
+dependencyUpdates {
+  outputFormatter = { result ->
+    def updatable = result.outdated.dependencies
+    if (!updatable.isEmpty()){
+      def writer = new StringWriter()
+      def html = new groovy.xml.MarkupBuilder(writer)
+
+      html.html {
+        body {
+          table {
+            thead {
+              tr {
+                td("Group")
+                td("Module")
+                td("Current version")
+                td("Latest version")
+              }
+            }
+            tbody {
+              updatable.each { dependency->
+                tr {
+                  td(dependency.group)
+                  td(dependency.name)
+                  td(dependency.version)
+                  td(dependency.available.release ?: dependency.available.milestone)
+                }
+              }
+            }
+          }
+        }
+      }
+      println writer.toString()
+    }
+  }
+}
+
+``` 
