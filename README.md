@@ -278,7 +278,7 @@ XML report
 [component_selection_rules]: https://docs.gradle.org/current/userguide/dependency_management.html#component_selection_rules
 
 #### <a name="custom_report_format"></a>Custom report format
-If you need to create a report in a custom format, you can set the `dependencyUpdates` tasks's `outputFormatter` property to a Closure.
+If you need to create a report in a custom format, you can set the `dependencyUpdates` tasks's `outputFormatter` property to a Closure. The closure will be called with a single argument that is an instance of [com.github.benmanes.gradle.versions.reporter.result.Result](src/main/groovy/com/github/benmanes/gradle/versions/reporter/result/Result.groovy).
 
 For example, if you wanted to create an html table for the upgradable dependencies, you could use:
 
