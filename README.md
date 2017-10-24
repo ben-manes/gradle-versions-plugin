@@ -82,7 +82,7 @@ The task property `outputFormatter` controls the report output format. The follo
   * `"plain"`: format output file as plain text (default)
   * `"json"`: format output file as json text
   * `"xml"`: format output file as xml text, can be used by other plugins (e.g. sonar)
-  * a `Closure`: will be called with the result of the dependency update analysis (see example below)
+  * a `Closure`: will be called with the result of the dependency update analysis (see [example below](#custom_report_format))
 
 You can also set multiple output formats using comma as the separator:
 
@@ -277,7 +277,7 @@ XML report
 
 [component_selection_rules]: https://docs.gradle.org/current/userguide/dependency_management.html#component_selection_rules
 
-#### Custom report format
+#### <a name="custom_report_format"></a>Custom report format
 If you need to create a report in a custom format, you can set the `dependencyUpdates` tasks's `outputFormatter` property to a Closure.
 
 For example, if you wanted to create an html table for the upgradable dependencies, you could use:
