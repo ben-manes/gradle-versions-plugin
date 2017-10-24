@@ -12,7 +12,7 @@ add it to your top-level build script using the following configuration:
 
 ```groovy
 plugins {
-  id 'com.github.ben-manes.versions' version '0.15.0'
+  id 'com.github.ben-manes.versions' version '0.16.0'
 }
 ```
 or via the
@@ -27,7 +27,7 @@ buildscript {
   }
 
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.15.0'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.16.0'
   }
 }
 ```
