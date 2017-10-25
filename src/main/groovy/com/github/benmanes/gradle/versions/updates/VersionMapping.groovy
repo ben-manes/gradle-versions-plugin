@@ -17,7 +17,6 @@ package com.github.benmanes.gradle.versions.updates
 
 import groovy.transform.TypeChecked
 import org.gradle.api.Project
-import org.gradle.api.artifacts.UnresolvedDependency
 
 /**
  * A mapping of which versions are out of date, up to date, or exceed the latest found.

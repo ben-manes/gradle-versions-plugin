@@ -16,13 +16,10 @@
 package com.github.benmanes.gradle.versions.updates
 
 import groovy.transform.EqualsAndHashCode
-import groovy.transform.ToString
-import groovy.transform.TupleConstructor
 import groovy.transform.TypeChecked
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ModuleVersionSelector
-import org.gradle.api.artifacts.ResolvedDependency
 
 /**
  * The dependency's coordinate.

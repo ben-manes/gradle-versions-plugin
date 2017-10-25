@@ -17,15 +17,8 @@ package com.github.benmanes.gradle.versions.updates
 
 import groovy.transform.TupleConstructor
 import groovy.transform.TypeChecked
-import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.*
-import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
-import org.gradle.api.artifacts.repositories.IvyArtifactRepository
-import org.gradle.api.artifacts.repositories.MavenArtifactRepository
-
-import static groovy.transform.TypeCheckingMode.SKIP
-import static org.gradle.api.specs.Specs.SATISFIES_ALL
 
 /**
  * An evaluator for reporting of which dependencies have later versions.
@@ -64,7 +57,7 @@ class DependencyUpdates {
           return []
         }
       }
-    }.flatten() as Set
+    }.flatten() as Set<DependencyStatus>
 
     VersionMapping versions = new VersionMapping(project, status)
     Set<UnresolvedDependency> unresolved =
@@ -87,7 +80,7 @@ class DependencyUpdates {
       currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
   }
 
-  private Map<Map<String, String>, String> toMap(Set<Coordinate> coordinates) {
+  private static Map<Map<String, String>, String> toMap(Set<Coordinate> coordinates) {
     Map<Map<String, String>, String> map = [:]
     for (Coordinate coordinate : coordinates) {
       for (int i = 0; ; i++) {

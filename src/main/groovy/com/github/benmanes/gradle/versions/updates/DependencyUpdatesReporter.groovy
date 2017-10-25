@@ -66,21 +66,21 @@ class DependencyUpdatesReporter {
 
       plainTextReporter.write(System.out, buildBaseObject())
 
-      if (outputFormatter == null || (outputFormatter instanceof String && outputFormatter.isEmpty())) {
+      if (outputFormatter == null || (outputFormatter instanceof String && ((String) outputFormatter).isEmpty())) {
         project.logger.lifecycle('Skip generating report to file (outputFormatter is empty)')
         return
       }
       if (outputFormatter instanceof String) {
-	      outputFormatter.split(',').each {
-	        generateFileReport(getOutputReporter(it))
-	      }
+        ((String) outputFormatter).split(',').each {
+          generateFileReport(getOutputReporter(it))
+        }
       } else if (outputFormatter instanceof Reporter) {
-	  	generateFileReport(outputFormatter)
+        generateFileReport((Reporter) outputFormatter)
       } else if (outputFormatter instanceof Closure) {
-	    Result result = buildBaseObject()
-	  	outputFormatter.call(result)
+        Result result = buildBaseObject()
+        ((Closure) outputFormatter).call(result)
       } else {
-	  	throw new IllegalArgumentException("Cannot handle output formatter $outputFormatter, unsupported type")
+        throw new IllegalArgumentException("Cannot handle output formatter $outputFormatter, unsupported type")
       }
     }
   }
@@ -219,12 +219,12 @@ class DependencyUpdatesReporter {
   }
 
   def sortByGroupAndName(Map<Map<String, String>, String> dependencies) {
-    dependencies.sort { Map.Entry<Map<String, String>> a,
-                        Map.Entry<Map<String, String>> b -> compareKeys(a.key, b.key) }
+    dependencies.sort { Map.Entry<Map<String, String>, String> a,
+                        Map.Entry<Map<String, String>, String> b -> compareKeys(a.key, b.key) }
   }
 
 /** Compares the dependency keys. */
-  protected def compareKeys(Map<String, String> a, Map<String, String> b) {
+  protected static def compareKeys(Map<String, String> a, Map<String, String> b) {
     (a['group'] == b['group']) ? a['name'] <=> b['name'] : a['group'] <=> b['group']
   }
 

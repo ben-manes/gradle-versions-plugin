@@ -30,7 +30,6 @@ import org.gradle.api.artifacts.repositories.ArtifactRepository
 import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
 import org.gradle.api.artifacts.repositories.IvyArtifactRepository
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
-import org.gradle.api.initialization.dsl.ScriptHandler
 
 import static groovy.transform.TypeCheckingMode.SKIP
 import static org.gradle.api.specs.Specs.SATISFIES_ALL
@@ -70,7 +69,7 @@ class Resolver {
   /** Returns the version status of the configuration's dependencies. */
   private Set<DependencyStatus> getStatus(Map<Coordinate.Key, Coordinate> coordinates,
       Set<ResolvedDependency> resolved,Set<UnresolvedDependency> unresolved) {
-    Set<DependencyStatus> result = []
+    Set<DependencyStatus> result = new HashSet<>()
     for (ResolvedDependency dependency : resolved) {
       Coordinate resolvedCoordinate = Coordinate.from(dependency.module.id)
       Coordinate originalCoordinate = coordinates.get(resolvedCoordinate.key)
