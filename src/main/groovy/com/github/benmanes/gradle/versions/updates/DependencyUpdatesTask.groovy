@@ -48,9 +48,7 @@ class DependencyUpdatesTask extends DefaultTask {
     description = 'Displays the dependency updates for the project.'
     group = 'Help'
 
-    outputs.upToDateWhen {
-      !(outputFormatter instanceof Closure)
-    }
+    outputs.upToDateWhen { false }
   }
 
   @TaskAction

@@ -83,7 +83,7 @@ public class DifferentGradleVersionsSpec extends Specification {
       '4.0',
       '4.1',
       '4.2',
-      '4.3-rc-2',
+      '4.3-rc-3',
     ]
   }
 }
