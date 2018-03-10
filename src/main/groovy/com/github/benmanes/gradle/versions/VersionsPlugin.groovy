@@ -22,8 +22,6 @@ import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
 /**
  * Registers the plugin's tasks.
- *
- * @author Ben Manes (ben.manes@gmail.com)
  */
 class VersionsPlugin implements Plugin<Project> {
 

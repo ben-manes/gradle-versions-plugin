@@ -23,9 +23,6 @@ import static groovy.transform.TypeCheckingMode.SKIP
 
 /**
  * A comparator of the dependency's version to determine which is later.
- *
- * @author Jochen Berger
- * @author Ben Manes (ben.manes@gmail.com)
  */
 @TypeChecked
 class VersionComparator implements Comparator<String> {

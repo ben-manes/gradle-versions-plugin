@@ -26,9 +26,6 @@ import spock.lang.Unroll
 
 /**
  * A specification for the dependency updates task.
- *
- * @author Ben Manes (ben@addepar.com)
- * @author Zenedith (zenedith@wp.pl)
  */
 class DependencyUpdatesSpec extends Specification {
 

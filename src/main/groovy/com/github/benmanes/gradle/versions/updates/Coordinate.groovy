@@ -23,8 +23,6 @@ import org.gradle.api.artifacts.ModuleVersionSelector
 
 /**
  * The dependency's coordinate.
- *
- * @author Ben Manes (ben.manes@gmail.com)
  */
 @TypeChecked
 @EqualsAndHashCode

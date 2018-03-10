@@ -25,8 +25,6 @@ import org.gradle.api.artifacts.UnresolvedDependency
  * <p>
  * The <tt>latestVersion</tt> is set if the dependency was successfully resolved, otherwise the
  * <tt>unresolved</tt> contains the exception that caused the resolution to fail.
- *
- * @author Ben Manes (ben.manes@gmail.com)
  */
 @ToString
 @TypeChecked
