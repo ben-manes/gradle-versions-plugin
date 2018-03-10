@@ -27,14 +27,15 @@ import spock.lang.Unroll
 /**
  * A specification for the dependency updates task.
  */
-class DependencyUpdatesSpec extends Specification {
-
+final class DependencyUpdatesSpec extends Specification {
   def 'Single project with no dependencies for many formatters'() {
     given:
     def project = singleProject()
+
     when:
     def reporter = evaluate(project, 'milestone', 'json,xml')
     reporter.write()
+
     then:
     with(reporter) {
       unresolved.isEmpty()
@@ -48,9 +49,11 @@ class DependencyUpdatesSpec extends Specification {
   def 'Single project with no dependencies'() {
     given:
     def project = singleProject()
+
     when:
     def reporter = evaluate(project, 'milestone', outputFormatter)
     reporter.write()
+
     then:
     with(reporter) {
       unresolved.isEmpty()
@@ -58,6 +61,7 @@ class DependencyUpdatesSpec extends Specification {
       upToDateVersions.isEmpty()
       downgradeVersions.isEmpty()
     }
+
     where:
     outputFormatter << ['plain', 'json', 'xml']
   }
@@ -65,9 +69,11 @@ class DependencyUpdatesSpec extends Specification {
   def 'Single project with no dependencies in invalid dir name'() {
     given:
     def project = singleProject()
+
     when:
     def reporter = evaluate(project, 'milestone', 'json', 'build/invalid dir')
     reporter.write()
+
     then:
     with(reporter) {
       unresolved.isEmpty()
@@ -82,9 +88,11 @@ class DependencyUpdatesSpec extends Specification {
     given:
     def project = singleProject()
     addDependenciesTo(project)
+
     when:
     def reporter = evaluate(project, 'milestone', outputFormatter)
     reporter.write()
+
     then:
     with(reporter) {
       unresolved.size() == 8
@@ -92,6 +100,7 @@ class DependencyUpdatesSpec extends Specification {
       upToDateVersions.isEmpty()
       downgradeVersions.isEmpty()
     }
+
     where:
     outputFormatter << ['plain', 'json', 'xml']
   }
@@ -102,9 +111,11 @@ class DependencyUpdatesSpec extends Specification {
     addRepositoryTo(project)
     addBadRepositoryTo(project)
     addDependenciesTo(project)
+
     when:
     def reporter = evaluate(project)
     reporter.write()
+
     then:
     reporter.unresolved.collect { it.selector }.collectEntries { dependency ->
       [['group': dependency.group, 'name': dependency.name]: dependency.version]
@@ -132,9 +143,11 @@ class DependencyUpdatesSpec extends Specification {
     def project = singleProject()
     addRepositoryTo(project)
     addDependenciesTo(project)
+
     when:
     def reporter = evaluate(project, revision, outputFormatter)
     reporter.write()
+
     then:
     reporter.unresolved.collect { it.selector }.collectEntries { dependency ->
       [['group': dependency.group, 'name': dependency.name]: dependency.version]
@@ -154,6 +167,7 @@ class DependencyUpdatesSpec extends Specification {
       ['group': 'com.google.guava', 'name': 'guava']      : '99.0-SNAPSHOT',
       ['group': 'com.google.guava', 'name': 'guava-tests']: '99.0-SNAPSHOT',
     ]
+
     where:
     revision << ['release', 'milestone', 'integration']
     outputFormatter << ['plain', 'json', 'xml']
@@ -165,9 +179,11 @@ class DependencyUpdatesSpec extends Specification {
     def (rootProject, childProject) = multiProject()
     addRepositoryTo(rootProject)
     addDependenciesTo(rootProject)
+
     when:
     def reporter = evaluate(rootProject, revision, outputFormatter)
     reporter.write()
+
     then:
     reporter.unresolved.collect { it.selector }.collectEntries { dependency ->
       [['group': dependency.group, 'name': dependency.name]: dependency.version]
@@ -187,6 +203,7 @@ class DependencyUpdatesSpec extends Specification {
       ['group': 'com.google.guava', 'name': 'guava']      : '99.0-SNAPSHOT',
       ['group': 'com.google.guava', 'name': 'guava-tests']: '99.0-SNAPSHOT',
     ]
+
     where:
     revision << ['release', 'milestone', 'integration']
     outputFormatter << ['plain', 'json', 'xml']
@@ -198,9 +215,11 @@ class DependencyUpdatesSpec extends Specification {
     def (rootProject, childProject) = multiProject()
     addRepositoryTo(childProject)
     addDependenciesTo(childProject)
+
     when:
     def reporter = evaluate(rootProject, revision, outputFormatter)
     reporter.write()
+
     then:
     reporter.unresolved.collect { it.selector }.collectEntries { dependency ->
       [['group': dependency.group, 'name': dependency.name]: dependency.version]
@@ -220,6 +239,7 @@ class DependencyUpdatesSpec extends Specification {
       ['group': 'com.google.guava', 'name': 'guava']      : '99.0-SNAPSHOT',
       ['group': 'com.google.guava', 'name': 'guava-tests']: '99.0-SNAPSHOT',
     ]
+
     where:
     revision << ['release', 'milestone', 'integration']
     outputFormatter << ['plain', 'json', 'xml']
@@ -233,9 +253,11 @@ class DependencyUpdatesSpec extends Specification {
       upToDate
     }
     project.dependencies.upToDate 'backport-util-concurrent:backport-util-concurrent:3.+'
+
     when:
     def reporter = evaluate(project)
     reporter.write()
+
     then:
     with(reporter) {
       unresolved.isEmpty()
@@ -256,9 +278,11 @@ class DependencyUpdatesSpec extends Specification {
       upgradesFound
     }
     project.dependencies.upgradesFound 'backport-util-concurrent:backport-util-concurrent'
+
     when:
     def reporter = evaluate(project)
     reporter.write()
+
     then:
     with(reporter) {
       unresolved.isEmpty()
@@ -276,9 +300,11 @@ class DependencyUpdatesSpec extends Specification {
     addRepositoryTo(project)
     addDependenciesTo(project)
     Reporter customReporter = Mock()
+
     when:
     def reporter = evaluate(project, 'release', customReporter)
     reporter.write()
+
     then:
     1 * customReporter.write(_) { Result result ->
       result.current.count == 2
@@ -304,9 +330,11 @@ class DependencyUpdatesSpec extends Specification {
       exceeded = result.exceeded.count
       unresolved = result.unresolved.count
     }
+
     when:
     def reporter = evaluate(project, 'release', customReporter)
     reporter.write()
+
     then:
     current == 2
     outdated == 2
@@ -329,9 +357,11 @@ class DependencyUpdatesSpec extends Specification {
       flat(name: 'guice-4.0', ext: 'jar')
       flat(name: 'guava-18.0', ext: 'jar')
     }
+
     when:
     def reporter = evaluate(project)
     reporter.write()
+
     then:
     with(reporter) {
       unresolved.collect { it.selector }.collectEntries { dependency ->
@@ -355,9 +385,11 @@ class DependencyUpdatesSpec extends Specification {
       upToDate 'com.google.guava:guava:16.0-rc1'
       exceedLatest 'com.google.guava:guava:99.0-SNAPSHOT'
     }
+
     when:
     def reporter = evaluate(project)
     reporter.write()
+
     then:
     with(reporter) {
       unresolved.isEmpty()
@@ -388,9 +420,11 @@ class DependencyUpdatesSpec extends Specification {
     project.dependencies {
       release 'com.google.guava:guava:15.0'
     }
+
     when:
     def reporter = evaluate(project)
     reporter.write()
+
     then:
     with(reporter) {
       unresolved.isEmpty()
