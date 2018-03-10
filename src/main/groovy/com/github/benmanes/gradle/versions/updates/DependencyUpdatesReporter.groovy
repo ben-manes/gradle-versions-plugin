@@ -19,7 +19,13 @@ import com.github.benmanes.gradle.versions.reporter.JsonReporter
 import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
 import com.github.benmanes.gradle.versions.reporter.Reporter
 import com.github.benmanes.gradle.versions.reporter.XmlReporter
-import com.github.benmanes.gradle.versions.reporter.result.*
+import com.github.benmanes.gradle.versions.reporter.result.DependenciesGroup
+import com.github.benmanes.gradle.versions.reporter.result.Dependency
+import com.github.benmanes.gradle.versions.reporter.result.DependencyLatest
+import com.github.benmanes.gradle.versions.reporter.result.DependencyOutdated
+import com.github.benmanes.gradle.versions.reporter.result.DependencyUnresolved
+import com.github.benmanes.gradle.versions.reporter.result.Result
+import com.github.benmanes.gradle.versions.reporter.result.VersionAvailable
 import groovy.transform.TupleConstructor
 import groovy.transform.TypeChecked
 import org.gradle.api.Project
@@ -66,7 +72,8 @@ class DependencyUpdatesReporter {
 
       plainTextReporter.write(System.out, buildBaseObject())
 
-      if (outputFormatter == null || (outputFormatter instanceof String && ((String) outputFormatter).isEmpty())) {
+      if (outputFormatter == null ||
+        (outputFormatter instanceof String && ((String) outputFormatter).isEmpty())) {
         project.logger.lifecycle('Skip generating report to file (outputFormatter is empty)')
         return
       }
@@ -80,7 +87,8 @@ class DependencyUpdatesReporter {
         Result result = buildBaseObject()
         ((Closure) outputFormatter).call(result)
       } else {
-        throw new IllegalArgumentException("Cannot handle output formatter $outputFormatter, unsupported type")
+        throw new IllegalArgumentException(
+          "Cannot handle output formatter $outputFormatter, unsupported type")
       }
     }
   }
@@ -123,7 +131,7 @@ class DependencyUpdatesReporter {
     return reporter
   }
 
-   Result buildBaseObject() {
+  Result buildBaseObject() {
     SortedSet current = buildCurrentGroup()
     SortedSet outdated = buildOutdatedGroup()
     SortedSet exceeded = buildExceededGroup()
@@ -132,11 +140,11 @@ class DependencyUpdatesReporter {
     def count = current.size() + outdated.size() + exceeded.size() + unresolved.size()
 
     buildObject(
-        count,
-        buildDependenciesGroup(current),
-        buildDependenciesGroup(outdated),
-        buildDependenciesGroup(exceeded),
-        buildDependenciesGroup(unresolved)
+      count,
+      buildDependenciesGroup(current),
+      buildDependenciesGroup(outdated),
+      buildDependenciesGroup(exceeded),
+      buildDependenciesGroup(unresolved)
     )
   }
 
@@ -151,7 +159,7 @@ class DependencyUpdatesReporter {
       int index = dep.key['name'].lastIndexOf('[')
       dep.key['name'] = (index == -1) ? dep.key['name'] : dep.key['name'].substring(0, index)
       buildOutdatedDependency(dep.key['group'], dep.key['name'], dep.value, latestVersions[dep.key])
-    }  as SortedSet
+    } as SortedSet
   }
 
   protected SortedSet buildExceededGroup() {
@@ -172,20 +180,21 @@ class DependencyUpdatesReporter {
       if (split.length > 0) {
         message = split[0].trim()
       }
-      buildUnresolvedDependency(dep.selector.name, dep.selector.group, currentVersions[keyOf(dep.selector)], message)
+      buildUnresolvedDependency(dep.selector.name, dep.selector.group,
+        currentVersions[keyOf(dep.selector)], message)
     } as SortedSet
   }
 
   protected Result buildObject(int count,
-                               DependenciesGroup current,
-                               DependenciesGroup outdated,
-                               DependenciesGroup exceeded,
-                               DependenciesGroup unresolved) {
+    DependenciesGroup current,
+    DependenciesGroup outdated,
+    DependenciesGroup exceeded,
+    DependenciesGroup unresolved) {
     new Result(count, current, outdated, exceeded, unresolved)
   }
 
   protected <T extends Dependency> DependenciesGroup<T> buildDependenciesGroup(
-      SortedSet<T> dependencies) {
+    SortedSet<T> dependencies) {
     new DependenciesGroup<T>(dependencies.size(), dependencies)
   }
 
@@ -193,15 +202,18 @@ class DependencyUpdatesReporter {
     new Dependency(group, name, version)
   }
 
-  protected def buildExceededDependency(String group, String name, String version, String latestVersion) {
+  protected def buildExceededDependency(String group, String name, String version,
+    String latestVersion) {
     new DependencyLatest(group, name, version, latestVersion)
   }
 
-  protected def buildUnresolvedDependency(String group, String name, String version, String reason) {
+  protected def buildUnresolvedDependency(String group, String name, String version,
+    String reason) {
     new DependencyUnresolved(group, name, version, reason)
   }
 
-  protected def buildOutdatedDependency(String group, String name, String version, String laterVersion) {
+  protected def buildOutdatedDependency(String group, String name, String version,
+    String laterVersion) {
     def available
 
     switch (revision) {
@@ -220,7 +232,8 @@ class DependencyUpdatesReporter {
 
   def sortByGroupAndName(Map<Map<String, String>, String> dependencies) {
     dependencies.sort { Map.Entry<Map<String, String>, String> a,
-                        Map.Entry<Map<String, String>, String> b -> compareKeys(a.key, b.key) }
+      Map.Entry<Map<String, String>, String> b -> compareKeys(a.key, b.key)
+    }
   }
 
   /** Compares the dependency keys. */

@@ -15,7 +15,11 @@
  */
 package com.github.benmanes.gradle.versions.reporter
 
-import com.github.benmanes.gradle.versions.reporter.result.*
+import com.github.benmanes.gradle.versions.reporter.result.Dependency
+import com.github.benmanes.gradle.versions.reporter.result.DependencyLatest
+import com.github.benmanes.gradle.versions.reporter.result.DependencyOutdated
+import com.github.benmanes.gradle.versions.reporter.result.DependencyUnresolved
+import com.github.benmanes.gradle.versions.reporter.result.Result
 import groovy.transform.TupleConstructor
 import groovy.transform.TypeChecked
 
@@ -60,7 +64,7 @@ class PlainTextReporter extends AbstractReporter {
     SortedSet<Dependency> upToDateVersions = result.current.dependencies
     if (!upToDateVersions.isEmpty()) {
       printStream.println(
-          "\nThe following dependencies are using the latest ${revision} version:")
+        "\nThe following dependencies are using the latest ${revision} version:")
       upToDateVersions.each { printStream.println " - ${label(it)}:${it.version}" }
     }
   }
@@ -69,7 +73,7 @@ class PlainTextReporter extends AbstractReporter {
     def downgradeVersions = result.exceeded.dependencies
     if (!downgradeVersions.isEmpty()) {
       printStream.println('\nThe following dependencies exceed the version found at the '
-          + revision + ' revision level:')
+        + revision + ' revision level:')
       downgradeVersions.each { DependencyLatest dep ->
         def currentVersion = dep.version
         printStream.println " - ${label(dep)} [${currentVersion} <- ${dep.latest}]"
@@ -93,7 +97,7 @@ class PlainTextReporter extends AbstractReporter {
     def unresolved = result.unresolved.dependencies
     if (!unresolved.isEmpty()) {
       printStream.println(
-          '\nFailed to determine the latest version for the following dependencies '
+        '\nFailed to determine the latest version for the following dependencies '
           + '(use --info for details):')
       unresolved.each { DependencyUnresolved dep ->
         printStream.println ' - ' + label(dep)

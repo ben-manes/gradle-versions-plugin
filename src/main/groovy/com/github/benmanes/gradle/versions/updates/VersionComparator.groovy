@@ -52,7 +52,8 @@ class VersionComparator implements Comparator<String> {
     for (Closure<Comparator<String>> factory : candidates()) {
       try {
         return factory.call()
-      } catch (Exception ignored) {}
+      } catch (Exception ignored) {
+      }
     }
     String gradleVersion = project.gradle.gradleVersion
     throw new GradleException("Could not create a version comparator for Gradle ${gradleVersion}")

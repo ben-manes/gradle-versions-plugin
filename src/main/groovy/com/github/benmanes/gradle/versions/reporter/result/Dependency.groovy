@@ -1,7 +1,7 @@
 package com.github.benmanes.gradle.versions.reporter.result
 
-import groovy.transform.TupleConstructor
 import groovy.transform.Sortable
+import groovy.transform.TupleConstructor
 
 /**
  * A project's dependency

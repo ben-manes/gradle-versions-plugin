@@ -18,7 +18,8 @@ package com.github.benmanes.gradle.versions.updates
 import groovy.transform.TupleConstructor
 import groovy.transform.TypeChecked
 import org.gradle.api.Project
-import org.gradle.api.artifacts.*
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.UnresolvedDependency
 
 /**
  * An evaluator for reporting of which dependencies have later versions.
@@ -66,7 +67,7 @@ class DependencyUpdates {
   }
 
   private DependencyUpdatesReporter createReporter(
-      VersionMapping versions, Set<UnresolvedDependency> unresolved) {
+    VersionMapping versions, Set<UnresolvedDependency> unresolved) {
     Map<Map<String, String>, String> currentVersions =
       versions.current.collectEntries { [[group: it.groupId, name: it.artifactId]: it.version] }
     Map<Map<String, String>, String> latestVersions =
@@ -77,7 +78,8 @@ class DependencyUpdates {
     Map<Map<String, String>, String> upgradeVersions = toMap(versions.upgrade)
 
     return new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir,
-      currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions, unresolved)
+      currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions,
+      unresolved)
   }
 
   private static Map<Map<String, String>, String> toMap(Set<Coordinate> coordinates) {

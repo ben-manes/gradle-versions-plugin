@@ -1,9 +1,8 @@
-package com.github.benmanes.gradle.versions;
+package com.github.benmanes.gradle.versions
 
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
-
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -20,20 +19,20 @@ public class DifferentGradleVersionsSpec extends Specification {
 
     def pluginClasspathResource = getClass().classLoader.findResource("plugin-classpath.txt")
     if (pluginClasspathResource == null) {
-      throw new IllegalStateException("Did not find plugin classpath resource, run `testClasses` build task.")
+      throw new IllegalStateException(
+        "Did not find plugin classpath resource, run `testClasses` build task.")
     }
 
     pluginClasspath = pluginClasspathResource.readLines().collect { new File(it) }
   }
 
-
   @Unroll
   def "dependencyUpdates task completes without errors with Gradle #gradleVersion"() {
     given:
     def classpathString = pluginClasspath
-        .collect { it.absolutePath.replace('\\', '\\\\') } // escape backslashes in Windows paths
-        .collect { "'$it'" }
-        .join(", ")
+      .collect { it.absolutePath.replace('\\', '\\\\') } // escape backslashes in Windows paths
+      .collect { "'$it'" }
+      .join(", ")
     def mavenRepoUrl = getClass().getResource('/maven/').toURI()
     def srdErrWriter = new StringWriter()
 
@@ -62,11 +61,11 @@ public class DifferentGradleVersionsSpec extends Specification {
 
     when:
     def result = GradleRunner.create()
-        .withGradleVersion(gradleVersion)
-        .withProjectDir(testProjectDir.root)
-        .withArguments('dependencyUpdates')
-        .forwardStdError(srdErrWriter)
-        .build()
+      .withGradleVersion(gradleVersion)
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .forwardStdError(srdErrWriter)
+      .build()
 
     then:
     result.output.contains('com.google.inject:guice [2.0 -> 3.0]')

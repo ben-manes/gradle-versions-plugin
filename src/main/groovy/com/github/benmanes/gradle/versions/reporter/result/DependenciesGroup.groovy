@@ -8,13 +8,13 @@ import groovy.transform.TupleConstructor
 @TupleConstructor
 class DependenciesGroup<T extends Dependency> {
 
-	/**
-	 * The number of dependencies in this group
-	 */
-	int count
+  /**
+   * The number of dependencies in this group
+   */
+  int count
 
-	/**
-	 * The dependencies that belong to this group
-	 */
-	SortedSet<T> dependencies = [] as SortedSet<T>
+  /**
+   * The dependencies that belong to this group
+   */
+  SortedSet<T> dependencies = [] as SortedSet<T>
 }
