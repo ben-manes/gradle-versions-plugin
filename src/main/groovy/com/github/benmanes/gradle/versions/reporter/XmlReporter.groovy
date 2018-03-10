@@ -13,8 +13,6 @@ import groovy.transform.TypeChecked
 
 /**
  * A xml reporter for the dependency updates results.
- *
- * @author Zenedith (zenedith@wp.pl)
  */
 @TypeChecked
 @TupleConstructor(callSuper = true, includeSuperProperties = true, includeSuperFields = true)

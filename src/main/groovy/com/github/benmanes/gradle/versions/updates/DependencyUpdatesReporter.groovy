@@ -34,9 +34,6 @@ import org.gradle.api.artifacts.UnresolvedDependency
 
 /**
  * A reporter for the dependency updates results.
- *
- * @author Ben Manes (ben.manes@gmail.com)
- * @author Zenedith (zenedith@wp.pl)
  */
 @TypeChecked
 @TupleConstructor

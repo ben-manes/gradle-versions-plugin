@@ -30,8 +30,6 @@ import org.gradle.api.artifacts.UnresolvedDependency
  *   <li>milestone: select the latest version being either a milestone or a release (default)
  *   <li>integration: selects the latest revision of the dependency module (such as SNAPSHOT)
  * </ul>
- *
- * @author Ben Manes (ben.manes@gmail.com)
  */
 @TypeChecked
 @TupleConstructor

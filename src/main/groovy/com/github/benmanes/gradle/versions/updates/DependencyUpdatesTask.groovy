@@ -23,8 +23,6 @@ import org.gradle.api.tasks.TaskAction
 
 /**
  * A task that reports which dependencies have later versions.
- *
- * @author Ben Manes (ben.manes@gmail.com)
  */
 @TypeChecked
 class DependencyUpdatesTask extends DefaultTask {

@@ -36,8 +36,6 @@ import static org.gradle.api.specs.Specs.SATISFIES_ALL
 
 /**
  * Resolves the configuration to determine the version status of its dependencies.
- *
- * @author Ben Manes (ben.manes@gmail.com)
  */
 @TypeChecked
 class Resolver {

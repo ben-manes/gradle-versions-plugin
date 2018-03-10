@@ -5,8 +5,6 @@ import org.gradle.api.Project
 
 /**
  * A base result object reporter for the dependency updates results.
- *
- * @author Zenedith (zenedith@wp.pl)
  */
 @TupleConstructor(includeFields = true)
 abstract class AbstractReporter implements Reporter {

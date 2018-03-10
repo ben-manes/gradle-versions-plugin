@@ -21,8 +21,6 @@ import org.gradle.api.Project
 
 /**
  * Registers the plugin's tasks.
- *
- * @author Ben Manes (ben.manes@gmail.com)
  */
 class VersionsPlugin implements Plugin<Project> {
 

@@ -4,8 +4,6 @@ import com.github.benmanes.gradle.versions.reporter.result.Result
 
 /**
  * An interface for reporters.
- *
- * @author Zenedith (zenedith@wp.pl)
  */
 interface Reporter {
   /**

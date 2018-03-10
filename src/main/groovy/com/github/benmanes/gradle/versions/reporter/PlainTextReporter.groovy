@@ -27,8 +27,6 @@ import static groovy.transform.TypeCheckingMode.SKIP
 
 /**
  * A plain text reporter for the dependency updates results.
- *
- * @author Ben Manes (ben.manes@gmail.com)
  */
 @TypeChecked
 @TupleConstructor(callSuper = true, includeSuperProperties = true, includeSuperFields = true)

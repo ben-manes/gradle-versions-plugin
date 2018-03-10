@@ -20,8 +20,6 @@ import org.gradle.api.Project
 
 /**
  * A mapping of which versions are out of date, up to date, or exceed the latest found.
- *
- * @author Ben Manes (ben.manes@gmail.com)
  */
 @TypeChecked
 class VersionMapping {
