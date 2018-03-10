@@ -1,3 +1,5 @@
+[ ![Download](https://api.bintray.com/packages/fooberger/maven/com.github.ben-manes%3Agradle-versions-plugin/images/download.svg) ](https://bintray.com/fooberger/maven/com.github.ben-manes%3Agradle-versions-plugin/_latestVersion)
+
 # Gradle Versions Plugin
 
 In the spirit of the [Maven Versions Plugin](http://www.mojohaus.org/versions-maven-plugin/),
@@ -12,14 +14,14 @@ add it to your top-level build script using the following configuration:
 
 ```groovy
 plugins {
-  id 'com.github.ben-manes.versions' version '0.17.0'
+  id "com.github.ben-manes.versions" version "$version"
 }
 ```
 or via the
 
 ### `buildscript` block:
 ```groovy
-apply plugin: 'com.github.ben-manes.versions'
+apply plugin: "com.github.ben-manes.versions"
 
 buildscript {
   repositories {
@@ -27,7 +29,7 @@ buildscript {
   }
 
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.17.0'
+    classpath "com.github.ben-manes:gradle-versions-plugin:$version"
   }
 }
 ```
