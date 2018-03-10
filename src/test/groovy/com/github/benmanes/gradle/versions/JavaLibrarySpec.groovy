@@ -1,9 +1,8 @@
-package com.github.benmanes.gradle.versions;
+package com.github.benmanes.gradle.versions
 
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
-
 import spock.lang.Specification
 
 public class JavaLibrarySpec extends Specification {
@@ -18,7 +17,8 @@ public class JavaLibrarySpec extends Specification {
 
     def pluginClasspathResource = getClass().classLoader.findResource("plugin-classpath.txt")
     if (pluginClasspathResource == null) {
-      throw new IllegalStateException("Did not find plugin classpath resource, run `testClasses` build task.")
+      throw new IllegalStateException(
+        "Did not find plugin classpath resource, run `testClasses` build task.")
     }
 
     pluginClasspath = pluginClasspathResource.readLines().collect { new File(it) }
@@ -50,12 +50,12 @@ public class JavaLibrarySpec extends Specification {
 
     when:
     def result = GradleRunner.create()
-        .withGradleVersion('3.4-rc-1')
-        .withProjectDir(testProjectDir.root)
-        .withArguments('dependencyUpdates')
-        .withPluginClasspath(pluginClasspath)
-        .forwardStdError(srdErrWriter)
-        .build()
+      .withGradleVersion('3.4-rc-1')
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath(pluginClasspath)
+      .forwardStdError(srdErrWriter)
+      .build()
 
     then:
     result.output.contains('com.google.inject:guice [2.0 -> 3.0]')

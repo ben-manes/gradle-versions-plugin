@@ -68,7 +68,7 @@ class Resolver {
 
   /** Returns the version status of the configuration's dependencies. */
   private Set<DependencyStatus> getStatus(Map<Coordinate.Key, Coordinate> coordinates,
-      Set<ResolvedDependency> resolved,Set<UnresolvedDependency> unresolved) {
+    Set<ResolvedDependency> resolved, Set<UnresolvedDependency> unresolved) {
     Set<DependencyStatus> result = new HashSet<>()
     for (ResolvedDependency dependency : resolved) {
       Coordinate resolvedCoordinate = Coordinate.from(dependency.module.id)
@@ -122,9 +122,7 @@ class Resolver {
     // (e.g. the dependency-management-plugin for BOMs) or is an explicit file (e.g. libs/*.jar).
     // In the case of another plugin we use '+' in the hope that the plugin will not restrict the
     // query (see issue #97). Otherwise if its a file then use 'none' to pass it through.
-    String version = (dependency.version == null)
-        ? (dependency.artifacts.empty ? '+' : 'none')
-        : versionQuery
+    String version = (dependency.version == null) ? (dependency.artifacts.empty ? '+' : 'none') : versionQuery
 
     return project.dependencies.create("${dependency.group}:${dependency.name}:${version}") {
       transitive = false
@@ -139,8 +137,8 @@ class Resolver {
         rules.all { ComponentSelection selection, ComponentMetadata metadata ->
           boolean accepted =
             ((revision == 'release') && (metadata.status == 'release')) ||
-            ((revision == 'milestone') && (metadata.status != 'integration')) ||
-            (revision == 'integration') || (selection.candidate.version == 'none')
+              ((revision == 'milestone') && (metadata.status != 'integration')) ||
+              (revision == 'integration') || (selection.candidate.version == 'none')
           if (!accepted) {
             selection.reject("Component status ${metadata.status} rejected by revision ${revision}")
           }
@@ -214,7 +212,7 @@ class Resolver {
     if (repository instanceof FlatDirectoryArtifactRepository) {
       project.logger.info(" - ${repository.name}: ${repository.dirs}")
     } else if (repository instanceof MavenArtifactRepository ||
-        repository instanceof IvyArtifactRepository) {
+      repository instanceof IvyArtifactRepository) {
       project.logger.info(" - ${repository.name}: ${repository.url}");
     } else {
       project.logger.info(" - ${repository.name}: ${repository.getClass().simpleName}")

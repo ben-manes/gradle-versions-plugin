@@ -1,6 +1,12 @@
 package com.github.benmanes.gradle.versions.reporter
 
-import com.github.benmanes.gradle.versions.reporter.result.*
+import com.github.benmanes.gradle.versions.reporter.result.DependenciesGroup
+import com.github.benmanes.gradle.versions.reporter.result.Dependency
+import com.github.benmanes.gradle.versions.reporter.result.DependencyLatest
+import com.github.benmanes.gradle.versions.reporter.result.DependencyOutdated
+import com.github.benmanes.gradle.versions.reporter.result.DependencyUnresolved
+import com.github.benmanes.gradle.versions.reporter.result.Result
+import com.github.benmanes.gradle.versions.reporter.result.VersionAvailable
 import com.thoughtworks.xstream.XStream
 import groovy.transform.TupleConstructor
 import groovy.transform.TypeChecked

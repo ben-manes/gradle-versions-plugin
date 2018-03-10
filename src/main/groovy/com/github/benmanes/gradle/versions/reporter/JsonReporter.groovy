@@ -1,7 +1,6 @@
 package com.github.benmanes.gradle.versions.reporter
 
 import com.github.benmanes.gradle.versions.reporter.result.Result
-
 import groovy.json.JsonBuilder
 import groovy.transform.TupleConstructor
 import groovy.transform.TypeChecked

@@ -18,8 +18,8 @@ package com.github.benmanes.gradle.versions.updates
 import groovy.transform.TypeChecked
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.TaskAction
 
 /**
  * A task that reports which dependencies have later versions.
