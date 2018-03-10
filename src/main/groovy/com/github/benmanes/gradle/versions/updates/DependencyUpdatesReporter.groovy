@@ -142,37 +142,37 @@ class DependencyUpdatesReporter {
 
   protected SortedSet buildCurrentGroup() {
     sortByGroupAndName(upToDateVersions).collect { Map.Entry<Map<String, String>, String> dep ->
-    	buildDependency(dep.key['name'], dep.key['group'], dep.value)
+      buildDependency(dep.key['group'], dep.key['name'], dep.value)
     } as SortedSet
   }
 
   protected SortedSet buildOutdatedGroup() {
-  	sortByGroupAndName(upgradeVersions).collect { Map.Entry<Map<String, String>, String> dep ->
+    sortByGroupAndName(upgradeVersions).collect { Map.Entry<Map<String, String>, String> dep ->
       int index = dep.key['name'].lastIndexOf('[')
       dep.key['name'] = (index == -1) ? dep.key['name'] : dep.key['name'].substring(0, index)
-  		buildOutdatedDependency(dep.key['name'], dep.key['group'], dep.value, latestVersions[dep.key])
-  	}  as SortedSet
+      buildOutdatedDependency(dep.key['group'], dep.key['name'], dep.value, latestVersions[dep.key])
+    }  as SortedSet
   }
 
   protected SortedSet buildExceededGroup() {
-  	sortByGroupAndName(downgradeVersions).collect { Map.Entry<Map<String, String>, String> dep ->
+    sortByGroupAndName(downgradeVersions).collect { Map.Entry<Map<String, String>, String> dep ->
       int index = dep.key['name'].lastIndexOf('[')
       dep.key['name'] = (index == -1) ? dep.key['name'] : dep.key['name'].substring(0, index)
-  		buildExceededDependency(dep.key['name'], dep.key['group'], dep.value, latestVersions[dep.key])
-  	} as SortedSet
+      buildExceededDependency(dep.key['group'], dep.key['name'], dep.value, latestVersions[dep.key])
+    } as SortedSet
   }
 
   protected SortedSet<DependencyUnresolved> buildUnresolvedGroup() {
     unresolved.sort { UnresolvedDependency a, UnresolvedDependency b ->
-  		compareKeys(keyOf(a.selector), keyOf(b.selector))
-	  }.collect { UnresolvedDependency dep ->
-  		def message = dep.problem.getMessage()
-  		def split = message.split('Required by')
-  
-  		if (split.length > 0) {
-  			message = split[0].trim()
-  		}
-  		buildUnresolvedDependency(dep.selector.name, dep.selector.group, currentVersions[keyOf(dep.selector)], message)
+      compareKeys(keyOf(a.selector), keyOf(b.selector))
+    }.collect { UnresolvedDependency dep ->
+      def message = dep.problem.getMessage()
+      def split = message.split('Required by')
+
+      if (split.length > 0) {
+        message = split[0].trim()
+      }
+      buildUnresolvedDependency(dep.selector.name, dep.selector.group, currentVersions[keyOf(dep.selector)], message)
     } as SortedSet
   }
 
@@ -189,19 +189,19 @@ class DependencyUpdatesReporter {
     new DependenciesGroup<T>(dependencies.size(), dependencies)
   }
 
-  protected def buildDependency(String name, String group, String version) {
-    new Dependency(name, group, version)
+  protected def buildDependency(String group, String name, String version) {
+    new Dependency(group, name, version)
   }
 
-  protected def buildExceededDependency(String name, String group, String version, String latestVersion) {
-    new DependencyLatest(name, group, version, latestVersion)
+  protected def buildExceededDependency(String group, String name, String version, String latestVersion) {
+    new DependencyLatest(group, name, version, latestVersion)
   }
 
-  protected def buildUnresolvedDependency(String name, String group, String version, String reason) {
-    new DependencyUnresolved(name, group, version, reason)
+  protected def buildUnresolvedDependency(String group, String name, String version, String reason) {
+    new DependencyUnresolved(group, name, version, reason)
   }
 
-  protected def buildOutdatedDependency(String name, String group, String version, String laterVersion) {
+  protected def buildOutdatedDependency(String group, String name, String version, String laterVersion) {
     def available
 
     switch (revision) {
@@ -215,7 +215,7 @@ class DependencyUpdatesReporter {
         available = new VersionAvailable(laterVersion)
     }
 
-    new DependencyOutdated(name, group, version, available)
+    new DependencyOutdated(group, name, version, available)
   }
 
   def sortByGroupAndName(Map<Map<String, String>, String> dependencies) {
@@ -223,7 +223,7 @@ class DependencyUpdatesReporter {
                         Map.Entry<Map<String, String>, String> b -> compareKeys(a.key, b.key) }
   }
 
-/** Compares the dependency keys. */
+  /** Compares the dependency keys. */
   protected static def compareKeys(Map<String, String> a, Map<String, String> b) {
     (a['group'] == b['group']) ? a['name'] <=> b['name'] : a['group'] <=> b['group']
   }
@@ -231,5 +231,4 @@ class DependencyUpdatesReporter {
   static Map<String, String> keyOf(ModuleVersionSelector dependency) {
     [group: dependency.group, name: dependency.name]
   }
-
 }

@@ -6,10 +6,10 @@ import groovy.transform.Sortable
 /**
  * A project's dependency
  */
- @Sortable
+@Sortable
 @TupleConstructor(includeFields = true)
 class Dependency {
-  String name
   String group
+  String name
   String version
 }
