@@ -3,7 +3,7 @@ package com.github.benmanes.gradle.versions
 import org.gradle.testkit.runner.GradleRunner
 import spock.lang.Unroll
 
-class DifferentGradleVersionsSpec extends BaseSpecification {
+final class DifferentGradleVersionsSpec extends BaseSpecification {
   @Unroll
   def "dependencyUpdates task completes without errors with Gradle #gradleVersion"() {
     given:
@@ -14,7 +14,8 @@ class DifferentGradleVersionsSpec extends BaseSpecification {
     def mavenRepoUrl = getClass().getResource('/maven/').toURI()
     def srdErrWriter = new StringWriter()
 
-    buildFile << """
+    buildFile <<
+      """
         buildscript {
           dependencies {
             classpath files($classpathString)
@@ -33,9 +34,7 @@ class DifferentGradleVersionsSpec extends BaseSpecification {
         dependencies {
           compile 'com.google.inject:guice:2.0'
         }
-
-
-        """
+        """.stripIndent()
 
     when:
     def result = GradleRunner.create()
@@ -61,7 +60,6 @@ class DifferentGradleVersionsSpec extends BaseSpecification {
       '4.1',
       '4.2',
       '4.3',
-      '4.4-rc-3',
       '4.4',
       '4.5',
       '4.6',
