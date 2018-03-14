@@ -28,7 +28,7 @@ import spock.lang.Unroll
  * A specification for the dependency updates task.
  */
 final class DependencyUpdatesSpec extends Specification {
-  def 'Single project with no dependencies for many formatters'() {
+  def 'Single project with no dependencies for many formats'() {
     given:
     def project = singleProject()
 
@@ -45,13 +45,13 @@ final class DependencyUpdatesSpec extends Specification {
     }
   }
 
-  @Unroll('Single project with no dependencies (#outputFormatter)')
-  def 'Single project with no dependencies'() {
+  @Unroll
+  def 'Single project with no dependencies (#outputFormat)'() {
     given:
     def project = singleProject()
 
     when:
-    def reporter = evaluate(project, 'milestone', outputFormatter)
+    def reporter = evaluate(project, 'milestone', outputFormat)
     reporter.write()
 
     then:
@@ -63,7 +63,7 @@ final class DependencyUpdatesSpec extends Specification {
     }
 
     where:
-    outputFormatter << ['plain', 'json', 'xml']
+    outputFormat << ['plain', 'json', 'xml']
   }
 
   def 'Single project with no dependencies in invalid dir name'() {
@@ -83,14 +83,14 @@ final class DependencyUpdatesSpec extends Specification {
     }
   }
 
-  @Unroll('Single project with no repositories (#outputFormatter)')
-  def 'Single project with no repositories'() {
+  @Unroll
+  def 'Single project with no repositories (#outputFormat)'() {
     given:
     def project = singleProject()
     addDependenciesTo(project)
 
     when:
-    def reporter = evaluate(project, 'milestone', outputFormatter)
+    def reporter = evaluate(project, 'milestone', outputFormat)
     reporter.write()
 
     then:
@@ -102,7 +102,7 @@ final class DependencyUpdatesSpec extends Specification {
     }
 
     where:
-    outputFormatter << ['plain', 'json', 'xml']
+    outputFormat << ['plain', 'json', 'xml']
   }
 
   def 'Single project with a good and bad repository'() {
@@ -137,15 +137,15 @@ final class DependencyUpdatesSpec extends Specification {
     ]
   }
 
-  @Unroll('Single project (#revision, #outputFormatter)')
-  def 'Single project'() {
+  @Unroll
+  def 'Single project (#revision, #outputFormat)'() {
     given:
     def project = singleProject()
     addRepositoryTo(project)
     addDependenciesTo(project)
 
     when:
-    def reporter = evaluate(project, revision, outputFormatter)
+    def reporter = evaluate(project, revision, outputFormat)
     reporter.write()
 
     then:
@@ -170,18 +170,18 @@ final class DependencyUpdatesSpec extends Specification {
 
     where:
     revision << ['release', 'milestone', 'integration']
-    outputFormatter << ['plain', 'json', 'xml']
+    outputFormat << ['plain', 'json', 'xml']
   }
 
-  @Unroll('Multi-project with dependencies on parent (#revision, #outputFormatter)')
-  def 'Multi-project with repository on parent'() {
+  @Unroll
+  def 'Multi-project with dependencies on parent (#revision, #outputFormat)'() {
     given:
     def (rootProject, childProject) = multiProject()
     addRepositoryTo(rootProject)
     addDependenciesTo(rootProject)
 
     when:
-    def reporter = evaluate(rootProject, revision, outputFormatter)
+    def reporter = evaluate(rootProject, revision, outputFormat)
     reporter.write()
 
     then:
@@ -206,18 +206,18 @@ final class DependencyUpdatesSpec extends Specification {
 
     where:
     revision << ['release', 'milestone', 'integration']
-    outputFormatter << ['plain', 'json', 'xml']
+    outputFormat << ['plain', 'json', 'xml']
   }
 
-  @Unroll('Multi-project with dependencies on child (#revision, #outputFormatter)')
-  def 'Multi-project with repository on child'() {
+  @Unroll
+  def 'Multi-project with dependencies on child (#revision, #outputFormat)'() {
     given:
     def (rootProject, childProject) = multiProject()
     addRepositoryTo(childProject)
     addDependenciesTo(childProject)
 
     when:
-    def reporter = evaluate(rootProject, revision, outputFormatter)
+    def reporter = evaluate(rootProject, revision, outputFormat)
     reporter.write()
 
     then:
@@ -242,7 +242,7 @@ final class DependencyUpdatesSpec extends Specification {
 
     where:
     revision << ['release', 'milestone', 'integration']
-    outputFormatter << ['plain', 'json', 'xml']
+    outputFormat << ['plain', 'json', 'xml']
   }
 
   def 'Version ranges are correctly evaluated'() {
@@ -434,23 +434,23 @@ final class DependencyUpdatesSpec extends Specification {
     }
   }
 
-  def singleProject() {
+  private static def singleProject() {
     new ProjectBuilder().withName('single').build()
   }
 
-  def multiProject() {
+  private static def multiProject() {
     def rootProject = new ProjectBuilder().withName('root').build()
     def childProject = new ProjectBuilder().withName('child').withParent(rootProject).build()
     def leafProject = new ProjectBuilder().withName('leaf').withParent(childProject).build()
     [rootProject, childProject, leafProject]
   }
 
-  def evaluate(project, revision = 'milestone', outputFormatter = 'plain',
+  private static def evaluate(project, revision = 'milestone', outputFormatter = 'plain',
     outputDir = 'build', resolutionStrategy = null) {
     new DependencyUpdates(project, resolutionStrategy, revision, outputFormatter, outputDir).run()
   }
 
-  def addRepositoryTo(project) {
+  private def addRepositoryTo(project) {
     def localMavenRepo = getClass().getResource('/maven/')
     project.repositories {
       maven {
@@ -459,13 +459,13 @@ final class DependencyUpdatesSpec extends Specification {
     }
   }
 
-  def addBadRepositoryTo(project) {
+  private def addBadRepositoryTo(project) {
     project.repositories {
       maven { url = 'http://www.example.com' }
     }
   }
 
-  def addDependenciesTo(project) {
+  private def addDependenciesTo(project) {
     project.configurations {
       upToDate
       exceedLatest

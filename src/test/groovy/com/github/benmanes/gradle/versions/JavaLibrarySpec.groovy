@@ -2,18 +2,19 @@ package com.github.benmanes.gradle.versions
 
 import org.gradle.testkit.runner.GradleRunner
 
+import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
+
 final class JavaLibrarySpec extends BaseSpecification {
   def "Show updates for an api dependency in a java-library project"() {
     given:
     def mavenRepoUrl = getClass().getResource('/maven/').toURI()
-    def srdErrWriter = new StringWriter()
 
     buildFile <<
       """
         plugins {
+          id 'java-library'
           id 'com.github.ben-manes.versions'
         }
-        apply plugin: 'java-library'
 
         repositories {
           maven {
@@ -24,19 +25,17 @@ final class JavaLibrarySpec extends BaseSpecification {
         dependencies {
           api 'com.google.inject:guice:2.0'
         }
-        """.stripIndent()
+      """.stripIndent()
 
     when:
     def result = GradleRunner.create()
-      .withGradleVersion('4.6')
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
-      .withPluginClasspath(pluginClasspath)
-      .forwardStdError(srdErrWriter)
+      .withPluginClasspath()
       .build()
 
     then:
     result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
-    srdErrWriter.toString().empty
+    result.task(':dependencyUpdates').outcome == SUCCESS
   }
 }

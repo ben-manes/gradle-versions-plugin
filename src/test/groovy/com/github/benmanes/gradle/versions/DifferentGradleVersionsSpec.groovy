@@ -4,8 +4,18 @@ import org.gradle.testkit.runner.GradleRunner
 import spock.lang.Unroll
 
 final class DifferentGradleVersionsSpec extends BaseSpecification {
+  def 'setup'() {
+    def pluginClasspathResource = getClass().classLoader.findResource("plugin-classpath.txt")
+    if (pluginClasspathResource == null) {
+      throw new IllegalStateException(
+        "Did not find plugin classpath resource, run `testClasses` build task.")
+    }
+
+    pluginClasspath = pluginClasspathResource.readLines().collect { new File(it) }
+  }
+
   @Unroll
-  def "dependencyUpdates task completes without errors with Gradle #gradleVersion"() {
+  def 'dependencyUpdates task completes without errors with Gradle #gradleVersion'() {
     given:
     def classpathString = pluginClasspath
       .collect { it.absolutePath.replace('\\', '\\\\') } // escape backslashes in Windows paths

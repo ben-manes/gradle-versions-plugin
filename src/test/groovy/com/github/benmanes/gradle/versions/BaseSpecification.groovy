@@ -9,15 +9,7 @@ class BaseSpecification extends Specification {
   File buildFile
   List<File> pluginClasspath
 
-  def setup() {
+  def 'setup'() {
     buildFile = testProjectDir.newFile('build.gradle')
-
-    def pluginClasspathResource = getClass().classLoader.findResource("plugin-classpath.txt")
-    if (pluginClasspathResource == null) {
-      throw new IllegalStateException(
-        "Did not find plugin classpath resource, run `testClasses` build task.")
-    }
-
-    pluginClasspath = pluginClasspathResource.readLines().collect { new File(it) }
   }
 }

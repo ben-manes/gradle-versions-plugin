@@ -12,6 +12,7 @@ plugins {
     id "com.jfrog.bintray" version "1.7.3"
 }
 
+apply plugin: 'java-gradle-plugin'
 apply plugin: 'groovy'
 apply plugin: 'nexus'
 apply plugin: 'codenarc'
