@@ -61,11 +61,14 @@ class DependencyUpdates {
     VersionMapping versions = new VersionMapping(project, status)
     Set<UnresolvedDependency> unresolved =
       status.findAll { it.unresolved != null }.collect { it.unresolved } as Set
-    return createReporter(versions, unresolved)
+    Map<Map<String, String>, String> projectUrls = status.findAll{ it.projectUrl }.collectEntries {
+      [[group: it.coordinate.groupId, name: it.coordinate.artifactId]: it.projectUrl]
+    }
+    return createReporter(versions, unresolved, projectUrls)
   }
 
   private DependencyUpdatesReporter createReporter(
-    VersionMapping versions, Set<UnresolvedDependency> unresolved) {
+    VersionMapping versions, Set<UnresolvedDependency> unresolved, Map<Map<String, String>, String> projectUrls) {
     Map<Map<String, String>, String> currentVersions =
       versions.current.collectEntries { [[group: it.groupId, name: it.artifactId]: it.version] }
     Map<Map<String, String>, String> latestVersions =
@@ -77,7 +80,7 @@ class DependencyUpdates {
 
     return new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir,
       currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions,
-      unresolved)
+      unresolved, projectUrls)
   }
 
   private static Map<Map<String, String>, String> toMap(Set<Coordinate> coordinates) {
