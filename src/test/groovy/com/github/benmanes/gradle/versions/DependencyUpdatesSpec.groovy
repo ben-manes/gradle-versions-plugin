@@ -434,6 +434,117 @@ final class DependencyUpdatesSpec extends Specification {
     }
   }
 
+  def 'Read project url from pom'() {
+    given:
+    def project = new ProjectBuilder().withName('single').build()
+    addRepositoryTo(project)
+    project.configurations {
+      compile
+    }
+    project.dependencies {
+      compile 'backport-util-concurrent:backport-util-concurrent:3.1'
+    }
+
+    when:
+    def reporter = evaluate(project)
+    reporter.write()
+
+    then:
+    with(reporter) {
+      projectUrls == [['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent']:
+                        'http://backport-jsr166.sourceforge.net/']
+    }
+  }
+
+  def 'Read project url from direct parent pom'() {
+    given:
+    def project = new ProjectBuilder().withName('single').build()
+    addRepositoryTo(project)
+    project.configurations {
+      compile
+    }
+    project.dependencies {
+      compile 'com.google.inject:guice:3.0'
+    }
+
+    when:
+    def reporter = evaluate(project)
+    reporter.write()
+
+    then:
+    with(reporter) {
+      projectUrls == [['group': 'com.google.inject', 'name': 'guice']:
+                        'http://code.google.com/p/google-guice/']
+    }
+  }
+
+  def 'Read project url from indirect parent pom'() {
+    given:
+    def project = new ProjectBuilder().withName('single').build()
+    addRepositoryTo(project)
+    project.configurations {
+      compile
+    }
+    project.dependencies {
+      compile 'com.google.inject.extensions:guice-multibindings:3.0'
+    }
+
+    when:
+    def reporter = evaluate(project)
+    reporter.write()
+
+    then:
+    with(reporter) {
+      unresolved.isEmpty()
+      upgradeVersions.isEmpty()
+      projectUrls == [['group': 'com.google.inject.extensions', 'name': 'guice-multibindings']:
+                        'http://code.google.com/p/google-guice/']
+      downgradeVersions.isEmpty()
+    }
+  }
+
+  def 'Project url tag in pom does not exist'() {
+    given:
+    def project = new ProjectBuilder().withName('single').build()
+    addRepositoryTo(project)
+    project.configurations {
+      compile
+    }
+    project.dependencies {
+      compile 'backport-util-concurrent:backport-util-concurrent-java12:3.1'
+    }
+
+    when:
+    def reporter = evaluate(project)
+    reporter.write()
+
+    then:
+    with(reporter) {
+      projectUrls.isEmpty()
+    }
+  }
+
+  def 'Project url of sonatype oss-parent is ignored'() {
+    given:
+    def project = new ProjectBuilder().withName('single').build()
+    addRepositoryTo(project)
+    project.configurations {
+      compile
+    }
+    project.dependencies {
+      compile 'com.google.guava:guava:15.0'
+    }
+
+    when:
+    def reporter = evaluate(project)
+    reporter.write()
+
+    then:
+    with(reporter) {
+      projectUrls.isEmpty()
+    }
+  }
+
   private static def singleProject() {
     new ProjectBuilder().withName('single').build()
   }

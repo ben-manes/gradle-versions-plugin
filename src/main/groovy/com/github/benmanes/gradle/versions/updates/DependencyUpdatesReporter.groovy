@@ -61,6 +61,9 @@ class DependencyUpdatesReporter {
   /** The dependencies that could not be resolved. */
   Set<UnresolvedDependency> unresolved
 
+  /** Project urls of maven dependencies  */
+  Map<Map<String, String>, String> projectUrls
+
   private static final Object MUTEX = new Object()
 
   def write() {
@@ -147,7 +150,7 @@ class DependencyUpdatesReporter {
 
   protected SortedSet buildCurrentGroup() {
     sortByGroupAndName(upToDateVersions).collect { Map.Entry<Map<String, String>, String> dep ->
-      buildDependency(dep.key['group'], dep.key['name'], dep.value)
+      buildDependency(dep.key['group'], dep.key['name'], dep.value, projectUrls[dep.key])
     } as SortedSet
   }
 
@@ -155,7 +158,8 @@ class DependencyUpdatesReporter {
     sortByGroupAndName(upgradeVersions).collect { Map.Entry<Map<String, String>, String> dep ->
       int index = dep.key['name'].lastIndexOf('[')
       dep.key['name'] = (index == -1) ? dep.key['name'] : dep.key['name'].substring(0, index)
-      buildOutdatedDependency(dep.key['group'], dep.key['name'], dep.value, latestVersions[dep.key])
+      buildOutdatedDependency(
+        dep.key['group'], dep.key['name'], dep.value, latestVersions[dep.key], projectUrls[dep.key])
     } as SortedSet
   }
 
@@ -163,7 +167,8 @@ class DependencyUpdatesReporter {
     sortByGroupAndName(downgradeVersions).collect { Map.Entry<Map<String, String>, String> dep ->
       int index = dep.key['name'].lastIndexOf('[')
       dep.key['name'] = (index == -1) ? dep.key['name'] : dep.key['name'].substring(0, index)
-      buildExceededDependency(dep.key['group'], dep.key['name'], dep.value, latestVersions[dep.key])
+      buildExceededDependency(
+        dep.key['group'], dep.key['name'], dep.value, latestVersions[dep.key], projectUrls[dep.key])
     } as SortedSet
   }
 
@@ -178,7 +183,7 @@ class DependencyUpdatesReporter {
         message = split[0].trim()
       }
       buildUnresolvedDependency(dep.selector.name, dep.selector.group,
-        currentVersions[keyOf(dep.selector)], message)
+        currentVersions[keyOf(dep.selector)], message, latestVersions[keyOf(dep.selector)])
     } as SortedSet
   }
 
@@ -195,22 +200,22 @@ class DependencyUpdatesReporter {
     new DependenciesGroup<T>(dependencies.size(), dependencies)
   }
 
-  protected def buildDependency(String group, String name, String version) {
-    new Dependency(group, name, version)
+  protected def buildDependency(String group, String name, String version, String projectUrl) {
+    new Dependency(group, name, version, projectUrl)
   }
 
   protected def buildExceededDependency(String group, String name, String version,
-    String latestVersion) {
-    new DependencyLatest(group, name, version, latestVersion)
+    String latestVersion, String projectUrl) {
+    new DependencyLatest(group, name, version, projectUrl, latestVersion)
   }
 
   protected def buildUnresolvedDependency(String group, String name, String version,
-    String reason) {
-    new DependencyUnresolved(group, name, version, reason)
+    String reason, String projectUrl) {
+    new DependencyUnresolved(group, name, version, projectUrl, reason)
   }
 
   protected def buildOutdatedDependency(String group, String name, String version,
-    String laterVersion) {
+    String laterVersion, String projectUrl) {
     def available
 
     switch (revision) {
@@ -224,7 +229,7 @@ class DependencyUpdatesReporter {
         available = new VersionAvailable(laterVersion)
     }
 
-    new DependencyOutdated(group, name, version, available)
+    new DependencyOutdated(group, name, version, projectUrl, available)
   }
 
   def sortByGroupAndName(Map<Map<String, String>, String> dependencies) {

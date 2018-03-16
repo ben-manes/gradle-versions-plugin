@@ -33,16 +33,19 @@ class DependencyStatus {
   final UnresolvedDependency unresolved
   final Coordinate coordinate
   final String latestVersion
+  final String projectUrl
 
-  DependencyStatus(Coordinate coordinate, String latestVersion) {
+  DependencyStatus(Coordinate coordinate, String latestVersion, String projectUrl) {
     this.latestVersion = latestVersion
     this.coordinate = coordinate
+    this.projectUrl = projectUrl
   }
 
   DependencyStatus(Coordinate coordinate, UnresolvedDependency unresolved) {
     this.coordinate = coordinate
     this.unresolved = unresolved
     this.latestVersion = 'none'
+    this.projectUrl = null
   }
 
   Coordinate getLatestCoordinate() {

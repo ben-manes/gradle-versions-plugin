@@ -12,4 +12,5 @@ class Dependency {
   String group
   String name
   String version
+  String projectUrl
 }

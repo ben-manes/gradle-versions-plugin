@@ -75,6 +75,9 @@ class PlainTextReporter extends AbstractReporter {
       downgradeVersions.each { DependencyLatest dep ->
         def currentVersion = dep.version
         printStream.println " - ${label(dep)} [${currentVersion} <- ${dep.latest}]"
+        if (dep.projectUrl != null) {
+          printStream.println "   ${dep.projectUrl}"
+        }
       }
     }
   }
@@ -87,6 +90,9 @@ class PlainTextReporter extends AbstractReporter {
       upgradeVersions.each { DependencyOutdated dep ->
         def currentVersion = dep.version
         printStream.println " - ${label(dep)} [${currentVersion} -> ${dep.available[revision]}]"
+        if (dep.projectUrl != null) {
+          printStream.println "   ${dep.projectUrl}"
+        }
       }
     }
   }
@@ -99,6 +105,9 @@ class PlainTextReporter extends AbstractReporter {
           + '(use --info for details):')
       unresolved.each { DependencyUnresolved dep ->
         printStream.println ' - ' + label(dep)
+        if (dep.projectUrl != null) {
+          printStream.println "   ${dep.projectUrl}"
+        }
         project.logger.info 'The exception that is the cause of unresolved state: {}', dep.reason
       }
     }
