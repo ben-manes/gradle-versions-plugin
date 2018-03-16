@@ -524,6 +524,27 @@ final class DependencyUpdatesSpec extends Specification {
     }
   }
 
+  def 'Project url of sonatype oss-parent is ignored'() {
+    given:
+    def project = new ProjectBuilder().withName('single').build()
+    addRepositoryTo(project)
+    project.configurations {
+      compile
+    }
+    project.dependencies {
+      compile 'com.google.guava:guava:15.0'
+    }
+
+    when:
+    def reporter = evaluate(project)
+    reporter.write()
+
+    then:
+    with(reporter) {
+      projectUrls.isEmpty()
+    }
+  }
+
   private static def singleProject() {
     new ProjectBuilder().withName('single').build()
   }
