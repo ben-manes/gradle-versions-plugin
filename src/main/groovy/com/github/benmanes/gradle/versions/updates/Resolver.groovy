@@ -51,6 +51,7 @@ class Resolver {
   final Project project
   final Closure resolutionStrategy
   final boolean useSelectionRules
+  final boolean collectProjectUrls
 
   Resolver(Project project, Closure resolutionStrategy) {
     this.project = project
@@ -58,6 +59,8 @@ class Resolver {
 
     useSelectionRules = new VersionComparator(project)
       .compare(project.gradle.gradleVersion, '2.2') >= 0
+    collectProjectUrls = new VersionComparator(project)
+      .compare(project.gradle.gradleVersion, '2.0') >= 0
 
     logRepositories()
   }
@@ -85,7 +88,7 @@ class Resolver {
         project.logger.info("Skipping hidden dependency: ${resolvedCoordinate}")
         continue
       }
-      String projectUrl = getProjectUrl(dependency.module.id)
+      String projectUrl = collectProjectUrls ? getProjectUrl(dependency.module.id) : null
       result.add(new DependencyStatus(coord, resolvedCoordinate.version, projectUrl))
     }
     for (UnresolvedDependency dependency : unresolved) {
