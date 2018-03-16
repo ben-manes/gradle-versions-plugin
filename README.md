@@ -112,11 +112,15 @@ The following dependencies are using the latest integration version:
 
 The following dependencies exceed the version found at the integration revision level:
  - com.google.guava:guava [99.0-SNAPSHOT <- 16.0-rc1]
+   http://code.google.com/p/guava-libraries
  - com.google.guava:guava-tests [99.0-SNAPSHOT <- 16.0-rc1]
+   http://code.google.com/p/guava-libraries
 
 The following dependencies have later integration versions:
  - com.google.inject:guice [2.0 -> 3.0]
+   http://code.google.com/p/google-guice/
  - com.google.inject.extensions:guice-multibindings [2.0 -> 3.0]
+   http://code.google.com/p/google-guice/
 ```
 
 Json report
@@ -128,11 +132,13 @@ Json report
                 "group": "backport-util-concurrent",
                 "version": "3.1",
                 "name": "backport-util-concurrent"
+                "projectUrl": "http://backport-jsr166.sourceforge.net/"
             },
             {
                 "group": "backport-util-concurrent",
                 "version": "3.1",
                 "name": "backport-util-concurrent-java12"
+                "projectUrl": "http://backport-jsr166.sourceforge.net/"
             }
         ],
         "count": 2
@@ -144,12 +150,14 @@ Json report
                 "latest": "16.0-rc1",
                 "version": "99.0-SNAPSHOT",
                 "name": "guava"
+                "projectUrl": "http://code.google.com/p/guava-libraries"
             },
             {
                 "group": "com.google.guava",
                 "latest": "16.0-rc1",
                 "version": "99.0-SNAPSHOT",
                 "name": "guava-tests"
+                "projectUrl": "http://code.google.com/p/guava-libraries"
             }
         ],
         "count": 2
@@ -165,6 +173,7 @@ Json report
                 },
                 "version": "2.0",
                 "name": "guice"
+                "projectUrl": "http://code.google.com/p/google-guice/"
             },
             {
                 "group": "com.google.inject.extensions",
@@ -175,6 +184,7 @@ Json report
                 },
                 "version": "2.0",
                 "name": "guice-multibindings"
+                "projectUrl": "http://code.google.com/p/google-guice/"
             }
         ],
         "count": 2
@@ -211,11 +221,13 @@ XML report
         <name>backport-util-concurrent</name>
         <group>backport-util-concurrent</group>
         <version>3.1</version>
+        <projectUrl>http://backport-jsr166.sourceforge.net/</projectUrl>
       </dependency>
       <dependency>
         <name>backport-util-concurrent-java12</name>
         <group>backport-util-concurrent</group>
         <version>3.1</version>
+        <projectUrl>http://backport-jsr166.sourceforge.net/</projectUrl>
       </dependency>
     </dependencies>
   </current>
@@ -229,6 +241,7 @@ XML report
         <available>
           <release>3.0</release>
         </available>
+        <projectUrl>http://code.google.com/p/google-guice/</projectUrl>
       </outdatedDependency>
       <outdatedDependency>
         <name>guice-multibindings</name>
@@ -237,6 +250,7 @@ XML report
         <available>
           <release>3.0</release>
         </available>
+        <projectUrl>http://code.google.com/p/guava-libraries</projectUrl>
       </outdatedDependency>
     </dependencies>
   </outdated>
@@ -248,12 +262,14 @@ XML report
         <group>com.google.guava</group>
         <version>99.0-SNAPSHOT</version>
         <latest>16.0-rc1</latest>
+        <projectUrl>http://code.google.com/p/guava-libraries</projectUrl>
       </exceededDependency>
       <exceededDependency>
         <name>guava-tests</name>
         <group>com.google.guava</group>
         <version>99.0-SNAPSHOT</version>
         <latest>16.0-rc1</latest>
+        <projectUrl>http://code.google.com/p/guava-libraries</projectUrl>
       </exceededDependency>
     </dependencies>
   </exceeded>
