@@ -5,6 +5,11 @@
 In the spirit of the [Maven Versions Plugin](http://www.mojohaus.org/versions-maven-plugin/),
 this plugin provides a task to determine which dependencies have updates.
 
+You may also wish to explore additional functionality provided by,
+ - [gradle-use-latest-versions](https://github.com/patrikerdes/gradle-use-latest-versions-plugin)
+ - [gradle-libraries-plugin](https://github.com/fkorotkov/gradle-libraries-plugin)
+ - [gradle-update-notifier](https://github.com/y-yagi/gradle-update-notifier)
+
 ## Usage
 
 This plugin is available from [Bintray's JCenter repository](http://jcenter.bintray.com). You can
