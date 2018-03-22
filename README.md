@@ -131,87 +131,87 @@ The following dependencies have later integration versions:
 Json report
 ```json
 {
-    "current": {
-        "dependencies": [
-            {
-                "group": "backport-util-concurrent",
-                "version": "3.1",
-                "name": "backport-util-concurrent"
-                "projectUrl": "http://backport-jsr166.sourceforge.net/"
-            },
-            {
-                "group": "backport-util-concurrent",
-                "version": "3.1",
-                "name": "backport-util-concurrent-java12"
-                "projectUrl": "http://backport-jsr166.sourceforge.net/"
-            }
-        ],
-        "count": 2
-    },
-    "exceeded": {
-        "dependencies": [
-            {
-                "group": "com.google.guava",
-                "latest": "16.0-rc1",
-                "version": "99.0-SNAPSHOT",
-                "name": "guava"
-                "projectUrl": "http://code.google.com/p/guava-libraries"
-            },
-            {
-                "group": "com.google.guava",
-                "latest": "16.0-rc1",
-                "version": "99.0-SNAPSHOT",
-                "name": "guava-tests"
-                "projectUrl": "http://code.google.com/p/guava-libraries"
-            }
-        ],
-        "count": 2
-    },
-    "outdated": {
-        "dependencies": [
-            {
-                "group": "com.google.inject",
-                "available": {
-                    "release": "3.0",
-                    "milestone": null,
-                    "integration": null
-                },
-                "version": "2.0",
-                "name": "guice"
-                "projectUrl": "http://code.google.com/p/google-guice/"
-            },
-            {
-                "group": "com.google.inject.extensions",
-                "available": {
-                    "release": "3.0",
-                    "milestone": null,
-                    "integration": null
-                },
-                "version": "2.0",
-                "name": "guice-multibindings"
-                "projectUrl": "http://code.google.com/p/google-guice/"
-            }
-        ],
-        "count": 2
-    },
-    "unresolved": {
-        "dependencies": [
-            {
-                "group": "com.github.ben-manes",
-                "version": "1.0",
-                "reason": "Could not find any version that matches com.github.ben-manes:unresolvable:latest.milestone.",
-                "name": "unresolvable"
-            },
-            {
-                "group": "com.github.ben-manes",
-                "version": "1.0",
-                "reason": "Could not find any version that matches com.github.ben-manes:unresolvable2:latest.milestone.",
-                "name": "unresolvable2"
-            }
-        ],
-        "count": 2
-    },
-    "count": 8
+  "current": {
+    "dependencies": [
+      {
+        "group": "backport-util-concurrent",
+        "version": "3.1",
+        "name": "backport-util-concurrent",
+        "projectUrl": "http://backport-jsr166.sourceforge.net/"
+      },
+      {
+        "group": "backport-util-concurrent",
+        "version": "3.1",
+        "name": "backport-util-concurrent-java12",
+        "projectUrl": "http://backport-jsr166.sourceforge.net/"
+      }
+    ],
+    "count": 2
+  },
+  "exceeded": {
+    "dependencies": [
+      {
+        "group": "com.google.guava",
+        "latest": "16.0-rc1",
+        "version": "99.0-SNAPSHOT",
+        "name": "guava",
+        "projectUrl": "http://code.google.com/p/guava-libraries"
+      },
+      {
+        "group": "com.google.guava",
+        "latest": "16.0-rc1",
+        "version": "99.0-SNAPSHOT",
+        "name": "guava-tests",
+        "projectUrl": "http://code.google.com/p/guava-libraries"
+      }
+    ],
+    "count": 2
+  },
+  "outdated": {
+    "dependencies": [
+      {
+        "group": "com.google.inject",
+        "available": {
+          "release": "3.0",
+          "milestone": null,
+          "integration": null
+        },
+        "version": "2.0",
+        "name": "guice",
+        "projectUrl": "http://code.google.com/p/google-guice/"
+      },
+      {
+        "group": "com.google.inject.extensions",
+        "available": {
+          "release": "3.0",
+          "milestone": null,
+          "integration": null
+        },
+        "version": "2.0",
+        "name": "guice-multibindings",
+        "projectUrl": "http://code.google.com/p/google-guice/"
+      }
+    ],
+    "count": 2
+  },
+  "unresolved": {
+    "dependencies": [
+      {
+        "group": "com.github.ben-manes",
+        "version": "1.0",
+        "reason": "Could not find any version that matches com.github.ben-manes:unresolvable:latest.milestone.",
+        "name": "unresolvable"
+      },
+      {
+        "group": "com.github.ben-manes",
+        "version": "1.0",
+        "reason": "Could not find any version that matches com.github.ben-manes:unresolvable2:latest.milestone.",
+        "name": "unresolvable2"
+      }
+    ],
+    "count": 2
+  },
+  "count": 8
 }
 ```
 
