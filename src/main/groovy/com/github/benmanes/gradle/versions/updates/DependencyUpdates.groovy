@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
+import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
 import groovy.transform.TupleConstructor
 import groovy.transform.TypeChecked
 import org.gradle.api.Project
@@ -79,9 +80,12 @@ class DependencyUpdates {
     Map<Map<String, String>, String> downgradeVersions = toMap(versions.downgrade)
     Map<Map<String, String>, String> upgradeVersions = toMap(versions.upgrade)
 
+    // Check for Gradle updates.
+    GradleUpdateChecker gradleUpdateChecker = new GradleUpdateChecker()
+
     return new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir, reportfileName,
       currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions,
-      unresolved, projectUrls)
+      unresolved, projectUrls, gradleUpdateChecker)
   }
 
   private static Map<Map<String, String>, String> toMap(Set<Coordinate> coordinates) {

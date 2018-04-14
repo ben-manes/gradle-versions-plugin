@@ -26,6 +26,9 @@ import com.github.benmanes.gradle.versions.reporter.result.DependencyOutdated
 import com.github.benmanes.gradle.versions.reporter.result.DependencyUnresolved
 import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.reporter.result.VersionAvailable
+import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
+import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResult
+import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
 import groovy.transform.TupleConstructor
 import groovy.transform.TypeChecked
 import org.gradle.api.Project
@@ -65,6 +68,9 @@ class DependencyUpdatesReporter {
 
   /** Project urls of maven dependencies  */
   Map<Map<String, String>, String> projectUrls
+
+  /** facade object to access information about running gradle versions and gradle updates */
+  GradleUpdateChecker gradleUpdateChecker
 
   private static final Object MUTEX = new Object()
 
@@ -146,7 +152,21 @@ class DependencyUpdatesReporter {
       buildDependenciesGroup(current),
       buildDependenciesGroup(outdated),
       buildDependenciesGroup(exceeded),
-      buildDependenciesGroup(unresolved)
+      buildDependenciesGroup(unresolved),
+      buildGradleUpdateResults()
+    )
+  }
+
+  /**
+   * Create a {@link GradleUpdateResults} object from the information provided by the {@link GradleUpdateChecker}
+   * @return filled out object instance
+   */
+  private GradleUpdateResults buildGradleUpdateResults() {
+    return new GradleUpdateResults(
+      running: new GradleUpdateResult(gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.runningGradleVersion),
+      current: new GradleUpdateResult(gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.currentGradleVersion),
+      releaseCandidate: new GradleUpdateResult(gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.releaseCandidateGradleVersion),
+      nightly: new GradleUpdateResult(gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.nightlyGradleVersion)
     )
   }
 
@@ -190,11 +210,12 @@ class DependencyUpdatesReporter {
   }
 
   protected Result buildObject(int count,
-    DependenciesGroup current,
-    DependenciesGroup outdated,
-    DependenciesGroup exceeded,
-    DependenciesGroup unresolved) {
-    new Result(count, current, outdated, exceeded, unresolved)
+                               DependenciesGroup current,
+                               DependenciesGroup outdated,
+                               DependenciesGroup exceeded,
+                               DependenciesGroup unresolved,
+                               GradleUpdateResults gradleUpdateResults) {
+    new Result(count, current, outdated, exceeded, unresolved, gradleUpdateResults)
   }
 
   protected <T extends Dependency> DependenciesGroup<T> buildDependenciesGroup(

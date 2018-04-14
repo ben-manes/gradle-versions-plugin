@@ -60,8 +60,6 @@ final class DifferentGradleVersionsSpec extends BaseSpecification {
 
     where:
     gradleVersion << [
-      '1.5',
-      '1.12',
       '2.0',
       '3.3',
       '3.4',
