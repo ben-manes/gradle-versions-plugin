@@ -1,5 +1,6 @@
 package com.github.benmanes.gradle.versions.reporter.result
 
+import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
 import groovy.transform.TupleConstructor
 
 /**
@@ -28,4 +29,8 @@ class Result {
    * The unresolvable dependencies
    */
   DependenciesGroup<DependencyUnresolved> unresolved
+  /**
+   * Gradle release channels and respective update availability
+   */
+  GradleUpdateResults gradle
 }

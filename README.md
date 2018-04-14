@@ -4,6 +4,7 @@
 
 In the spirit of the [Maven Versions Plugin](http://www.mojohaus.org/versions-maven-plugin/),
 this plugin provides a task to determine which dependencies have updates.
+Additionally, the plugin checks for updates to Gradle itself.
 
 You may also wish to explore additional functionality provided by,
  - [gradle-use-latest-versions](https://github.com/patrikerdes/gradle-use-latest-versions-plugin)
@@ -47,7 +48,12 @@ The current version is known to work with Gradle versions up to 4.6.
 
 Displays a report of the project dependencies that are up-to-date, exceed the latest version found,
 have upgrades, or failed to be resolved. When a dependency cannot be resolved the exception is
-logged at the `info` level.
+logged at the `info` level.  
+Gradle updates are checked for on the `current`, `release-candidate` and `nightly` release channels.
+The plaintext report displays gradle updates as a separate category in breadcrumb style (excluding nightly builds).
+The xml and json reports include information about all three release channels, whether a release is considered an update
+with respect to the running (executing) gradle instance, whether an update check on on a release channel has failed, as
+well as a reason field explaining failures or missing information.
 
 #### Revisions
 
@@ -118,6 +124,9 @@ This displays a report to the console, e.g.
 : Project Dependency Updates (report to plain text file)
 ------------------------------------------------------------
 
+Gradle updates:
+- Gradle: [4.6 -> 4.7 -> 4.8-rc-2]
+
 The following dependencies are using the latest integration version:
  - backport-util-concurrent:backport-util-concurrent:3.1
  - backport-util-concurrent:backport-util-concurrent-java12:3.1
@@ -154,6 +163,32 @@ Json report
       }
     ],
     "count": 2
+  },
+  "gradle": {
+    "current": {
+      "version": "4.7",
+      "reason": "",
+      "isUpdateAvailable": true,
+      "isFailure": false
+    },
+    "nightly": {
+      "version": "4.9-20180526235939+0000",
+      "reason": "",
+      "isUpdateAvailable": true,
+      "isFailure": false
+    },
+    "releaseCandidate": {
+      "version": "4.8-rc-2",
+      "reason": "",
+      "isUpdateAvailable": true,
+      "isFailure": false
+    },
+    "running": {
+      "version": "4.6",
+      "reason": "",
+      "isUpdateAvailable": false,
+      "isFailure": false
+    }
   },
   "exceeded": {
     "dependencies": [
@@ -302,6 +337,32 @@ XML report
       </unresolvedDependency>
     </dependencies>
   </unresolved>
+  <gradle>
+    <running>
+      <version>4.6</version>
+      <isUpdateAvailable>false</isUpdateAvailable>
+      <isFailure>false</isFailure>
+      <reason></reason>
+    </running>
+    <current>
+      <version>4.7</version>
+      <isUpdateAvailable>true</isUpdateAvailable>
+      <isFailure>false</isFailure>
+      <reason></reason>
+    </current>
+    <releaseCandidate>
+      <version>4.8-rc-2</version>
+      <isUpdateAvailable>true</isUpdateAvailable>
+      <isFailure>false</isFailure>
+      <reason></reason>
+    </releaseCandidate>
+    <nightly>
+      <version>4.9-20180526235939+0000</version>
+      <isUpdateAvailable>true</isUpdateAvailable>
+      <isFailure>false</isFailure>
+      <reason></reason>
+    </nightly>
+  </gradle>
 </response>
 ```
 

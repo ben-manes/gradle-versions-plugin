@@ -20,6 +20,7 @@ import com.github.benmanes.gradle.versions.reporter.result.DependencyLatest
 import com.github.benmanes.gradle.versions.reporter.result.DependencyOutdated
 import com.github.benmanes.gradle.versions.reporter.result.DependencyUnresolved
 import com.github.benmanes.gradle.versions.reporter.result.Result
+import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel
 import groovy.transform.TupleConstructor
 import groovy.transform.TypeChecked
 
@@ -35,6 +36,8 @@ class PlainTextReporter extends AbstractReporter {
   /** Writes the report to the print stream. The stream is not automatically closed. */
   def write(printStream, Result result) {
     writeHeader(printStream)
+
+    writeGradleUpdates(printStream, result)
 
     if (result.count == 0) {
       printStream.println '\nNo dependencies found.'
@@ -56,6 +59,40 @@ class PlainTextReporter extends AbstractReporter {
       |------------------------------------------------------------
       |${project.path} Project Dependency Updates (report to plain text file)
       |------------------------------------------------------------""".stripMargin()
+  }
+
+  private def writeGradleUpdates(printStream, Result result) {
+    printStream.println('\nGradle updates:')
+
+    result.gradle.with {
+      // Log Gradle update checking failures.
+      if (current.isFailure) {
+        printStream.println("[ERROR] [release channel: ${GradleReleaseChannel.CURRENT.id}] " + current.reason)
+      }
+      if (releaseCandidate.isFailure) {
+        printStream.println("[ERROR] [release channel: ${GradleReleaseChannel.RELEASE_CANDIDATE.id}] " + releaseCandidate.reason)
+      }
+      if (nightly.isFailure) {
+        printStream.println("[ERROR] [release channel: ${GradleReleaseChannel.NIGHTLY.id}] " + nightly.reason)
+      }
+
+      // print Gradle updates in breadcrumb format
+      printStream.print(" - Gradle: [" + running.version)
+      boolean updatePrinted = false
+      if (current.isUpdateAvailable && current > running) {
+        updatePrinted = true
+        printStream.print(" -> " + current.version)
+      }
+      if (releaseCandidate.isUpdateAvailable && releaseCandidate > current) {
+        updatePrinted = true
+        printStream.print(" -> " + releaseCandidate.version)
+      }
+      // ignore nightly in textual output
+      if (!updatePrinted) {
+        printStream.print(" UP-TO-DATE")
+      }
+      printStream.println("]")
+    }
   }
 
   private def writeUpToDate(printStream, Result result) {
