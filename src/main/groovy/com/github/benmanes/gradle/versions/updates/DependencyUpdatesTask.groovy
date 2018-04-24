@@ -35,6 +35,9 @@ class DependencyUpdatesTask extends DefaultTask {
     "${project.buildDir.path.replace(project.projectDir.path + '/', '')}/dependencyUpdates"
 
   @Input @Optional
+  String reportfileName = 'report'
+
+  @Input @Optional
   String getOutputFormatterName() {
     return (outputFormatter instanceof String) ? ((String) outputFormatter) : null
   }
@@ -54,7 +57,7 @@ class DependencyUpdatesTask extends DefaultTask {
     project.evaluationDependsOnChildren()
 
     def evaluator = new DependencyUpdates(project, resolutionStrategy,
-      revisionLevel(), outputFormatterProp(), outputDirectory())
+      revisionLevel(), outputFormatterProp(), outputDirectory(), getReportfileName())
     DependencyUpdatesReporter reporter = evaluator.run()
     reporter?.write()
   }
@@ -67,4 +70,7 @@ class DependencyUpdatesTask extends DefaultTask {
 
   /** Returns the outputDir destination. */
   String outputDirectory() { System.properties['outputDir'] ?: outputDir }
+
+  /** Returns the filename of the report. */
+  String getReportfileName() { System.properties.get('reportfileName', reportfileName) }
 }
