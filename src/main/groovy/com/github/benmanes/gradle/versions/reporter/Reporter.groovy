@@ -15,5 +15,5 @@ interface Reporter {
    */
   def write(target, Result result)
 
-  def getFileName()
+  def getFileExtension()
 }

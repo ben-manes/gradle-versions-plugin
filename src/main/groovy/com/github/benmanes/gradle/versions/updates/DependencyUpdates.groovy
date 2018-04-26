@@ -39,6 +39,7 @@ class DependencyUpdates {
   String revision
   Object outputFormatter
   String outputDir
+  String reportfileName
 
   /** Evaluates the dependencies and returns a reporter. */
   DependencyUpdatesReporter run() {
@@ -78,7 +79,7 @@ class DependencyUpdates {
     Map<Map<String, String>, String> downgradeVersions = toMap(versions.downgrade)
     Map<Map<String, String>, String> upgradeVersions = toMap(versions.upgrade)
 
-    return new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir,
+    return new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir, reportfileName,
       currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions,
       unresolved, projectUrls)
   }

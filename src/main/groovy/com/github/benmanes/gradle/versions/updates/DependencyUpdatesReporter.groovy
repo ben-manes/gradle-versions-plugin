@@ -46,6 +46,8 @@ class DependencyUpdatesReporter {
   Object outputFormatter
   /** The outputDir for report. */
   String outputDir
+  /** The filename of the report file. */
+  String reportfileName
 
   /** The current versions of each dependency declared in the project(s). */
   Map<Map<String, String>, String> currentVersions
@@ -94,7 +96,7 @@ class DependencyUpdatesReporter {
   }
 
   def generateFileReport(Reporter reporter) {
-    String filename = outputDir + File.separator + reporter.getFileName()
+    String filename = outputDir + File.separator + reportfileName + '.' + reporter.getFileExtension()
     try {
       project.file(outputDir).mkdirs()
       File outputFile = project.file(filename)
