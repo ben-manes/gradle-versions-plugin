@@ -49,6 +49,12 @@ Displays a report of the project dependencies that are up-to-date, exceed the la
 have upgrades, or failed to be resolved. When a dependency cannot be resolved the exception is
 logged at the `info` level.
 
+#### Multi-project build
+
+In a multi-project build, running this task in the root project will generate a consolidated/merged
+report for dependency updates in all subprojects. Alternatively, you can run the task separately in
+each subproject to generate separate reports for each subproject.
+
 #### Revisions
 
 The `revision` task property controls the resolution strategy of determining what constitutes the
