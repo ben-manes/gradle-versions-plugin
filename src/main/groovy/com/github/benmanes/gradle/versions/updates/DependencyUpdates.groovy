@@ -18,6 +18,7 @@ package com.github.benmanes.gradle.versions.updates
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
 import groovy.transform.TupleConstructor
 import groovy.transform.TypeChecked
+import groovyx.gpars.GParsPool
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.UnresolvedDependency
@@ -32,7 +33,6 @@ import org.gradle.api.artifacts.UnresolvedDependency
  *   <li>integration: selects the latest revision of the dependency module (such as SNAPSHOT)
  * </ul>
  */
-@TypeChecked
 @TupleConstructor
 class DependencyUpdates {
   Project project
@@ -49,13 +49,15 @@ class DependencyUpdates {
     }
     Set<DependencyStatus> status = projectConfigs.collect { proj, configurations ->
       Resolver resolver = new Resolver(proj, resolutionStrategy)
-      return configurations.collectMany { config ->
-        try {
-          return resolver.resolve(config, revision)
-        } catch (Exception e) {
-          String msg = "Failed to resolve ${proj.path}:${config.name}"
-          project.logger.error(msg, project.logger.isInfoEnabled() ? e : null)
-          return []
+      return GParsPool.withPool(5) {
+        configurations.collectParallel { Configuration config ->
+          try {
+            return resolver.resolve(config, revision)
+          } catch (Exception e) {
+            String msg = "Failed to resolve ${proj.path}:${config.name}"
+            project.logger.error(msg, project.logger.isInfoEnabled() ? e : null)
+            return []
+          }
         }
       }
     }.flatten() as Set<DependencyStatus>
