@@ -23,6 +23,8 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.UnresolvedDependency
 
+import static groovy.transform.TypeCheckingMode.SKIP
+
 /**
  * An evaluator for reporting of which dependencies have later versions.
  * <p>
@@ -33,6 +35,7 @@ import org.gradle.api.artifacts.UnresolvedDependency
  *   <li>integration: selects the latest revision of the dependency module (such as SNAPSHOT)
  * </ul>
  */
+@TypeChecked
 @TupleConstructor
 class DependencyUpdates {
   Project project
@@ -49,17 +52,7 @@ class DependencyUpdates {
     }
     Set<DependencyStatus> status = projectConfigs.collect { proj, configurations ->
       Resolver resolver = new Resolver(proj, resolutionStrategy)
-      return GParsPool.withPool(5) {
-        configurations.collectParallel { Configuration config ->
-          try {
-            return resolver.resolve(config, revision)
-          } catch (Exception e) {
-            String msg = "Failed to resolve ${proj.path}:${config.name}"
-            project.logger.error(msg, project.logger.isInfoEnabled() ? e : null)
-            return []
-          }
-        }
-      }
+      return resolveInParallel(resolver, proj, configurations)
     }.flatten() as Set<DependencyStatus>
 
     VersionMapping versions = new VersionMapping(project, status)
@@ -69,6 +62,27 @@ class DependencyUpdates {
       [[group: it.coordinate.groupId, name: it.coordinate.artifactId]: it.projectUrl]
     }
     return createReporter(versions, unresolved, projectUrls)
+  }
+
+  @TypeChecked(SKIP)
+  private Set<DependencyStatus> resolveInParallel(
+      Resolver resolver, Project proj, Set<Configuration> configurations) {
+    int numberOfThreads = 1.5 * Runtime.getRuntime().availableProcessors()
+    return GParsPool.withPool(numberOfThreads) {
+      configurations.collectParallel { Configuration config ->
+        resolve(resolver, proj, config)
+      }
+    }
+  }
+
+  private Set<DependencyStatus> resolve(Resolver resolver, Project proj, Configuration config) {
+    try {
+      return resolver.resolve(config, revision)
+    } catch (Exception e) {
+      String msg = "Failed to resolve ${proj.path}:${config.name}"
+      project.logger.error(msg, project.logger.isInfoEnabled() ? e : null)
+      return Collections.emptySet()
+    }
   }
 
   private DependencyUpdatesReporter createReporter(
