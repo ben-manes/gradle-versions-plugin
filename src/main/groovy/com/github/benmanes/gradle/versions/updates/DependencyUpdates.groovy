@@ -67,7 +67,8 @@ class DependencyUpdates {
   @TypeChecked(SKIP)
   private Set<DependencyStatus> resolveInParallel(
       Resolver resolver, Project proj, Set<Configuration> configurations) {
-    int numberOfThreads = 1.5 * Runtime.getRuntime().availableProcessors()
+    int numberOfThreads = Math.min(configurations.size(),
+      (int) 1.5 * Runtime.getRuntime().availableProcessors())
     return GParsPool.withPool(numberOfThreads) {
       configurations.collectParallel { Configuration config ->
         resolve(resolver, proj, config)
