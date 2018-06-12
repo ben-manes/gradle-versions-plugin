@@ -4,11 +4,19 @@ import org.gradle.testkit.runner.GradleRunner
 
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
-final class JavaLibrarySpec extends BaseSpecification {
+import org.junit.Rule
+import org.junit.rules.TemporaryFolder
+import spock.lang.Specification
+
+final class JavaLibrarySpec extends Specification {
+
+  @Rule TemporaryFolder testProjectDir = new TemporaryFolder()
+  private File buildFile
+
   def "Show updates for an api dependency in a java-library project"() {
     given:
     def mavenRepoUrl = getClass().getResource('/maven/').toURI()
-
+    buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
       """
         plugins {

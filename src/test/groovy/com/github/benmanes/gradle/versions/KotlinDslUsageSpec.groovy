@@ -6,38 +6,20 @@ import org.junit.rules.TemporaryFolder
 import spock.lang.Specification
 import spock.lang.Unroll
 
-final class KotlinDslUsageSpec extends BaseSpecification {
+final class KotlinDslUsageSpec extends Specification {
 
   @Rule TemporaryFolder testProjectDir = new TemporaryFolder()
-  File buildFile
-  List<File> pluginClasspath
+  private File buildFile
 
   def 'setup'() {
-    def pluginClasspathResource = getClass().classLoader.findResource("plugin-classpath.txt")
-    if (pluginClasspathResource == null) {
-      throw new IllegalStateException(
-        "Did not find plugin classpath resource, run `testClasses` build task.")
-    }
-
-    pluginClasspath = pluginClasspathResource.readLines().collect { new File(it) }
-
-    def classpathString = pluginClasspath
-      .collect { it.absolutePath.replace('\\', '\\\\') } // escape backslashes in Windows paths
-      .collect { "\"$it\"" }
-      .join(", ")
     def mavenRepoUrl = getClass().getResource('/maven/').toURI()
 
     buildFile = testProjectDir.newFile('build.gradle.kts')
     buildFile <<
       """
-        buildscript {
-          dependencies {
-            classpath(files($classpathString))
-          }
-        }
-
         plugins {
           java
+          id("com.github.ben-manes.versions")
         }
         
         apply(plugin = "com.github.ben-manes.versions")
@@ -74,11 +56,12 @@ final class KotlinDslUsageSpec extends BaseSpecification {
 
     when:
     def result = GradleRunner.create()
-       .withGradleVersion(gradleVersion)
-       .withProjectDir(testProjectDir.root)
-       .withArguments('dependencyUpdates')
-       .forwardStdError(srdErrWriter)
-       .build()
+      .withGradleVersion(gradleVersion)
+      .withPluginClasspath()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .forwardStdError(srdErrWriter)
+      .build()
 
     then:
     result.output.contains('''Failed to determine the latest version for the following dependencies (use --info for details):

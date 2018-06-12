@@ -1,9 +1,17 @@
 package com.github.benmanes.gradle.versions
 
 import org.gradle.testkit.runner.GradleRunner
+import org.junit.Rule
+import org.junit.rules.TemporaryFolder
+import spock.lang.Specification
 import spock.lang.Unroll
 
-final class DifferentGradleVersionsSpec extends BaseSpecification {
+final class DifferentGradleVersionsSpec extends Specification {
+
+  @Rule TemporaryFolder testProjectDir = new TemporaryFolder()
+  private File buildFile
+  private List<File> pluginClasspath
+
   def 'setup'() {
     def pluginClasspathResource = getClass().classLoader.findResource("plugin-classpath.txt")
     if (pluginClasspathResource == null) {
@@ -24,6 +32,7 @@ final class DifferentGradleVersionsSpec extends BaseSpecification {
     def mavenRepoUrl = getClass().getResource('/maven/').toURI()
     def srdErrWriter = new StringWriter()
 
+    buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
       """
         buildscript {
