@@ -204,7 +204,7 @@ class DependencyUpdatesReporter {
       if (split.length > 0) {
         message = split[0].trim()
       }
-      buildUnresolvedDependency(dep.selector.name, dep.selector.group,
+      buildUnresolvedDependency(dep.selector.group, dep.selector.name,
         currentVersions[keyOf(dep.selector)], message, latestVersions[keyOf(dep.selector)])
     } as SortedSet
   }
