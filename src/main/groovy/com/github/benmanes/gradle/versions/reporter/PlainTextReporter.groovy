@@ -37,8 +37,6 @@ class PlainTextReporter extends AbstractReporter {
   def write(printStream, Result result) {
     writeHeader(printStream)
 
-    writeGradleUpdates(printStream, result)
-
     if (result.count == 0) {
       printStream.println '\nNo dependencies found.'
     } else {
@@ -47,6 +45,8 @@ class PlainTextReporter extends AbstractReporter {
       writeUpgrades(printStream, result)
       writeUnresolved(printStream, result)
     }
+
+    writeGradleUpdates(printStream, result)
   }
 
   @Override
@@ -89,7 +89,7 @@ class PlainTextReporter extends AbstractReporter {
       }
       // ignore nightly in textual output
       if (!updatePrinted) {
-        printStream.print(" UP-TO-DATE")
+        printStream.print(": UP-TO-DATE")
       }
       printStream.println("]")
     }
