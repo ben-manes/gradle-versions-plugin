@@ -48,7 +48,8 @@ The current version is known to work with Gradle versions up to 4.6.
 
 Displays a report of the project dependencies that are up-to-date, exceed the latest version found,
 have upgrades, or failed to be resolved. When a dependency cannot be resolved the exception is
-logged at the `info` level.  
+logged at the `info` level.
+
 Gradle updates are checked for on the `current`, `release-candidate` and `nightly` release channels.
 The plaintext report displays gradle updates as a separate category in breadcrumb style (excluding nightly builds).
 The xml and json reports include information about all three release channels, whether a release is considered an update
@@ -130,9 +131,6 @@ This displays a report to the console, e.g.
 : Project Dependency Updates (report to plain text file)
 ------------------------------------------------------------
 
-Gradle updates:
-- Gradle: [4.6 -> 4.7 -> 4.8-rc-2]
-
 The following dependencies are using the latest integration version:
  - backport-util-concurrent:backport-util-concurrent:3.1
  - backport-util-concurrent:backport-util-concurrent-java12:3.1
@@ -148,6 +146,9 @@ The following dependencies have later integration versions:
      http://code.google.com/p/google-guice/
  - com.google.inject.extensions:guice-multibindings [2.0 -> 3.0]
      http://code.google.com/p/google-guice/
+
+Gradle updates:
+- Gradle: [4.6 -> 4.7 -> 4.8-rc-2]
 ```
 
 Json report
