@@ -16,7 +16,9 @@
 package com.github.benmanes.gradle.versions.updates
 
 import groovy.transform.TypeChecked
+import org.gradle.api.Action
 import org.gradle.api.DefaultTask
+import org.gradle.api.artifacts.ResolutionStrategy
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
@@ -60,6 +62,16 @@ class DependencyUpdatesTask extends DefaultTask {
       revisionLevel(), outputFormatterProp(), outputDirectory(), getReportfileName())
     DependencyUpdatesReporter reporter = evaluator.run()
     reporter?.write()
+  }
+
+  /**
+   * Sets the {@link #resolutionStrategy} to the provided strategy.
+   * @param resolutionStrategy the resolution strategy
+   */
+  void resolutionStrategy(final Action<? super ResolutionStrategy> resolutionStrategy) {
+    // The delegate of the Closure body is ResolutionStrategy:
+    // https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/Configuration.html#resolutionStrategy-groovy.lang.Closure-
+    this.resolutionStrategy = { resolutionStrategy.execute(delegate as ResolutionStrategy) }
   }
 
   /** Returns the resolution revision level. */
