@@ -78,10 +78,10 @@ gradle dependencyUpdates -Drevision=release
 ```
 
 The latest versions can be further filtered using [Component Selection Rules][component_selection_rules].
-For example to disallow release candidates as upgradable versions a selection rule could be defined as:
+For example, to disallow release candidates as upgradable versions a selection rule could be defined as:
 
 ```groovy
-dependencyUpdates.resolutionStrategy = {
+dependencyUpdates.resolutionStrategy {
   componentSelection { rules ->
     rules.all { ComponentSelection selection ->
       boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm'].any { qualifier ->
@@ -89,6 +89,29 @@ dependencyUpdates.resolutionStrategy = {
       }
       if (rejected) {
         selection.reject('Release candidate')
+      }
+    }
+  }
+}
+```
+
+If using Gradle's [kotlin-dsl](https://github.com/gradle/kotlin-dsl), you could configure the `dependencyUpdates` like this:
+
+```kotlin
+tasks {
+  "dependencyUpdates"(com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask::class) {
+    resolutionStrategy {
+      componentSelection {
+        all {
+          val rejected = listOf("alpha", "beta", "rc", "cr", "m").map { qualifier ->
+            Regex("(?i).*[.-]$qualifier[.\\d-]*")
+          }.any {
+            it.matches(candidate.version)
+          }
+          if (rejected) {
+            reject("Release candidate")
+          }
+        }
       }
     }
   }
