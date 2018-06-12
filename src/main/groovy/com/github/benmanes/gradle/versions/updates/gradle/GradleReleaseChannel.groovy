@@ -9,8 +9,8 @@ enum GradleReleaseChannel {
   NIGHTLY('nightly')
 
   final String id
+
   private GradleReleaseChannel(String id) {
     this.id = id
   }
-
 }

@@ -69,7 +69,7 @@ class DependencyUpdates {
     return GParsPool.withExistingPool(pool) {
       projectConfigs.keySet().collectParallel { proj ->
         Set<Configuration> configurations = projectConfigs.get(proj)
-        Resolver resolver = new Resolver(proj, resolutionStrategy)
+        Resolver resolver = new Resolver(proj, resolutionStrategy, pool)
         GParsPool.withExistingPool(pool) {
           configurations.collectParallel { Configuration config ->
             resolve(resolver, proj, config)

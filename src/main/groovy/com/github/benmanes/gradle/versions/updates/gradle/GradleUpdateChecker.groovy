@@ -12,7 +12,6 @@ import org.gradle.util.GradleVersion
  * @see GradleReleaseChannel
  */
 class GradleUpdateChecker {
-
   private static final String API_BASE_URL = 'https://services.gradle.org/versions/'
 
   private final Map<GradleReleaseChannel, ReleaseStatus> cacheMap = new EnumMap<>(GradleReleaseChannel.class)
@@ -77,6 +76,7 @@ class GradleUpdateChecker {
     @PackageScope
     static class Available extends ReleaseStatus {
       final GradleVersion gradleVersion
+
       private Available(GradleVersion gradleVersion) {
         this.gradleVersion = gradleVersion
       }
@@ -95,10 +95,10 @@ class GradleUpdateChecker {
     @PackageScope
     static class Failure extends ReleaseStatus {
       final String reason
+
       private Failure(reason) {
         this.reason = reason
       }
     }
   }
-
 }

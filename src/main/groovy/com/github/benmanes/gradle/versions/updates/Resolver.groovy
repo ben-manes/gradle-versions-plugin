@@ -16,6 +16,9 @@
 package com.github.benmanes.gradle.versions.updates
 
 import groovy.transform.TypeChecked
+import groovyx.gpars.GParsPool
+import java.util.concurrent.ConcurrentMap
+import java.util.concurrent.ConcurrentHashMap
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ComponentMetadata
 import org.gradle.api.artifacts.ComponentSelection
@@ -48,14 +51,18 @@ import static org.gradle.api.specs.Specs.SATISFIES_ALL
  */
 @TypeChecked
 class Resolver {
+  final Object pool
   final Project project
   final Closure resolutionStrategy
   final boolean useSelectionRules
   final boolean collectProjectUrls
+  final ConcurrentMap<ModuleVersionIdentifier, ProjectUrl> projectUrls;
 
-  Resolver(Project project, Closure resolutionStrategy) {
-    this.project = project
+  Resolver(Project project, Closure resolutionStrategy, Object pool) {
+    this.projectUrls = new ConcurrentHashMap<>();
     this.resolutionStrategy = resolutionStrategy
+    this.project = project
+    this.pool = pool
 
     useSelectionRules = new VersionComparator(project)
       .compare(project.gradle.gradleVersion, '2.2') >= 0
@@ -77,19 +84,23 @@ class Resolver {
   }
 
   /** Returns the version status of the configuration's dependencies. */
+  @TypeChecked(SKIP)
   private Set<DependencyStatus> getStatus(Map<Coordinate.Key, Coordinate> coordinates,
     Set<ResolvedDependency> resolved, Set<UnresolvedDependency> unresolved) {
-    Set<DependencyStatus> result = new HashSet<>()
-    for (ResolvedDependency dependency : resolved) {
-      Coordinate resolvedCoordinate = Coordinate.from(dependency.module.id)
-      Coordinate originalCoordinate = coordinates.get(resolvedCoordinate.key)
-      Coordinate coord = originalCoordinate ?: resolvedCoordinate
-      if ((originalCoordinate == null) && (resolvedCoordinate.groupId != 'null')) {
-        project.logger.info("Skipping hidden dependency: ${resolvedCoordinate}")
-        continue
+    Set<DependencyStatus> result = Collections.synchronizedSet(new HashSet<>())
+
+    GParsPool.withExistingPool(pool) {
+      resolved.eachParallel { dependency ->
+        Coordinate resolvedCoordinate = Coordinate.from(dependency.module.id)
+        Coordinate originalCoordinate = coordinates.get(resolvedCoordinate.key)
+        Coordinate coord = originalCoordinate ?: resolvedCoordinate
+        if ((originalCoordinate == null) && (resolvedCoordinate.groupId != 'null')) {
+          project.logger.info("Skipping hidden dependency: ${resolvedCoordinate}")
+        } else {
+          String projectUrl = getProjectUrl(dependency.module.id)
+          result.add(new DependencyStatus(coord, resolvedCoordinate.version, projectUrl))
+        }
       }
-      String projectUrl = collectProjectUrls ? getProjectUrl(dependency.module.id) : null
-      result.add(new DependencyStatus(coord, resolvedCoordinate.version, projectUrl))
     }
     for (UnresolvedDependency dependency : unresolved) {
       Coordinate resolvedCoordinate = Coordinate.from(dependency.selector)
@@ -147,7 +158,7 @@ class Resolver {
       componentSelection.componentSelection { rules ->
         rules.all { ComponentSelection selection, ComponentMetadata metadata ->
           boolean accepted =
-            ((revision == 'release') && (metadata.status == 'release')) ||
+              ((revision == 'release') && (metadata.status == 'release')) ||
               ((revision == 'milestone') && (metadata.status != 'integration')) ||
               (revision == 'integration') || (selection.candidate.version == 'none')
           if (!accepted) {
@@ -231,6 +242,25 @@ class Resolver {
   }
 
   private String getProjectUrl(ModuleVersionIdentifier id) {
+    if (!collectProjectUrls || project.getGradle().startParameter.isOffline()) {
+      return null
+    }
+
+    ProjectUrl projectUrl = new ProjectUrl()
+    ProjectUrl cached = projectUrls.putIfAbsent(id, projectUrl)
+    if (cached != null) {
+      projectUrl = cached
+    }
+    synchronized (projectUrl) {
+      if (!projectUrl.isResolved) {
+        projectUrl.isResolved = true
+        projectUrl.url = resolveProjectUrl(id)
+      }
+      return projectUrl.url
+    }
+  }
+
+  private String resolveProjectUrl(ModuleVersionIdentifier id) {
     ArtifactResolutionResult resolutionResult = project.dependencies.createArtifactResolutionQuery()
             .forComponents(DefaultModuleComponentIdentifier.newId(id))
             .withArtifacts(MavenModule, MavenPomArtifact)
@@ -248,7 +278,7 @@ class Resolver {
           String url = getUrlFromPom(file)
           if (url) {
             project.logger.info("Found url for ${id}: ${url}")
-            return url;
+            return url
           } else {
             ModuleVersionIdentifier parent = getParentFromPom(file)
             if (parent && "${parent.group}:${parent.name}" != "org.sonatype.oss:oss-parent") {
@@ -287,5 +317,10 @@ class Resolver {
       }
     }
     return null
+  }
+
+  private static final class ProjectUrl {
+    boolean isResolved;
+    String url;
   }
 }

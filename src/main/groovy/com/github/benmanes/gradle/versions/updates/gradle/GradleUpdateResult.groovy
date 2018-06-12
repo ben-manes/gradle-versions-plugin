@@ -63,5 +63,4 @@ class GradleUpdateResult implements Comparable<GradleUpdateResult> {
   int compareTo(GradleUpdateResult o) {
     return comparator.compare(this, o)
   }
-
 }

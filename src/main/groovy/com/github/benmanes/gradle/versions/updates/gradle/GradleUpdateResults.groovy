@@ -13,5 +13,4 @@ class GradleUpdateResults {
   GradleUpdateResult current
   GradleUpdateResult releaseCandidate
   GradleUpdateResult nightly
-
 }
