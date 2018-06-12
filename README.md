@@ -139,15 +139,15 @@ The following dependencies are using the latest integration version:
 
 The following dependencies exceed the version found at the integration revision level:
  - com.google.guava:guava [99.0-SNAPSHOT <- 16.0-rc1]
-   http://code.google.com/p/guava-libraries
+     http://code.google.com/p/guava-libraries
  - com.google.guava:guava-tests [99.0-SNAPSHOT <- 16.0-rc1]
-   http://code.google.com/p/guava-libraries
+     http://code.google.com/p/guava-libraries
 
 The following dependencies have later integration versions:
  - com.google.inject:guice [2.0 -> 3.0]
-   http://code.google.com/p/google-guice/
+     http://code.google.com/p/google-guice/
  - com.google.inject.extensions:guice-multibindings [2.0 -> 3.0]
-   http://code.google.com/p/google-guice/
+     http://code.google.com/p/google-guice/
 ```
 
 Json report
