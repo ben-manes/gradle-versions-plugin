@@ -2,9 +2,9 @@
 
 # Gradle Versions Plugin
 
-In the spirit of the [Maven Versions Plugin](http://www.mojohaus.org/versions-maven-plugin/),
-this plugin provides a task to determine which dependencies have updates.
-Additionally, the plugin checks for updates to Gradle itself.
+In the spirit of the [Maven Versions Plugin](http://www.mojohaus.org/versions-maven-plugin),
+this plugin provides a task to determine which dependencies have updates. Additionally, the plugin
+checks for updates to Gradle itself.
 
 You may also wish to explore additional functionality provided by,
  - [gradle-use-latest-versions](https://github.com/patrikerdes/gradle-use-latest-versions-plugin)
@@ -40,7 +40,7 @@ buildscript {
 }
 ```
 
-The current version is known to work with Gradle versions up to 4.6.
+The current version is known to work with Gradle versions up to 4.8.
 
 ## Tasks
 
@@ -64,8 +64,9 @@ each subproject to generate separate reports for each subproject.
 
 #### Revisions
 
-The `revision` task property controls the resolution strategy of determining what constitutes the
-latest version of a dependency. The following strategies are supported:
+The `revision` task property controls the [Ivy resolution strategy][ivy_resolution_strategy] for determining what constitutes
+the latest version of a dependency. Maven's dependency metadata does not distinguish between milestone and release versions.
+The following strategies are natively supported by Gradle:
 
   * release: selects the latest release
   * milestone: select the latest version being either a milestone or a release (default)
@@ -95,11 +96,13 @@ dependencyUpdates.resolutionStrategy {
 }
 ```
 
-If using Gradle's [kotlin-dsl](https://github.com/gradle/kotlin-dsl), you could configure the `dependencyUpdates` like this:
+If using Gradle's [kotlin-dsl][kotlin_dsl], you could configure the `dependencyUpdates` like this:
 
 ```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
 tasks {
-  "dependencyUpdates"(com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask::class) {
+  "dependencyUpdates"(DependencyUpdatesTask::class) {
     resolutionStrategy {
       componentSelection {
         all {
@@ -394,8 +397,6 @@ XML report
 </response>
 ```
 
-[component_selection_rules]: https://docs.gradle.org/current/userguide/dependency_management.html#component_selection_rules
-
 #### <a name="custom_report_format"></a>Custom report format
 If you need to create a report in a custom format, you can set the `dependencyUpdates` tasks's `outputFormatter` property to a Closure. The closure will be called with a single argument that is an instance of [com.github.benmanes.gradle.versions.reporter.result.Result](src/main/groovy/com/github/benmanes/gradle/versions/reporter/result/Result.groovy).
 
@@ -438,5 +439,8 @@ dependencyUpdates {
     }
   }
 }
+```
 
-``` 
+[kotlin_dsl]: https://github.com/gradle/kotlin-dsl
+[ivy_resolution_strategy]: http://ant.apache.org/ivy/history/2.4.0/settings/version-matchers.html#Latest%20(Status)%20Matcher
+[component_selection_rules]: https://docs.gradle.org/current/userguide/customizing_dependency_resolution_behavior.html#sec:component_selection_rules

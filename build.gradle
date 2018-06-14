@@ -9,7 +9,7 @@ buildscript {
 }
 
 plugins {
-    id "com.jfrog.bintray" version "1.7.3"
+  id "com.jfrog.bintray" version "1.7.3"
 }
 
 apply plugin: 'java-gradle-plugin'
@@ -21,8 +21,6 @@ group = 'com.github.ben-manes'
 version = '0.17.0'
 
 sourceCompatibility = '1.6'
-
-
 
 repositories {
   mavenCentral()

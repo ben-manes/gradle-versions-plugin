@@ -188,8 +188,11 @@ class Resolver {
       return Collections.emptyMap()
     }
 
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/231
+    boolean transitive = declared.values().any { it.version == 'none' }
+
     Map<Coordinate.Key, Coordinate> coordinates = [:]
-    Configuration copy = configuration.copyRecursive().setTransitive(false)
+    Configuration copy = configuration.copyRecursive().setTransitive(transitive)
     // https://github.com/ben-manes/gradle-versions-plugin/issues/127
     if (copy.metaClass.respondsTo(copy, "setCanBeResolved", Boolean)) {
       copy.setCanBeResolved(true)

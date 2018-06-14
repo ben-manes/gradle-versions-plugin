@@ -17,6 +17,8 @@ final class KotlinDslUsageSpec extends Specification {
     buildFile = testProjectDir.newFile('build.gradle.kts')
     buildFile <<
       """
+        import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
         plugins {
           java
           id("com.github.ben-manes.versions")
@@ -40,7 +42,7 @@ final class KotlinDslUsageSpec extends Specification {
     def srdErrWriter = new StringWriter()
     buildFile << '''
       tasks {
-        "dependencyUpdates"(com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask::class) {
+        "dependencyUpdates"(DependencyUpdatesTask::class) {
           resolutionStrategy {
             componentSelection {
               all {

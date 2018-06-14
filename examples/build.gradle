@@ -20,6 +20,7 @@ repositories {
 }
 
 configurations {
+  bom
   upToDate
   exceedLatest
   upgradesFound
@@ -42,6 +43,9 @@ dependencyUpdates.resolutionStrategy = {
 }
 
 dependencies {
+  bom 'org.springframework.boot:spring-boot-dependencies:1.5.8.RELEASE',
+      'com.google.code.gson:gson',
+      'dom4j:dom4j'
   upToDate 'backport-util-concurrent:backport-util-concurrent:3.1',
            'backport-util-concurrent:backport-util-concurrent-java12:3.1'
   exceedLatest 'com.google.guava:guava:99.0-SNAPSHOT',
