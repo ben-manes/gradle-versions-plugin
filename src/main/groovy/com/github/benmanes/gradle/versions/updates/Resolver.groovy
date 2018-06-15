@@ -56,10 +56,10 @@ class Resolver {
   final Closure resolutionStrategy
   final boolean useSelectionRules
   final boolean collectProjectUrls
-  final ConcurrentMap<ModuleVersionIdentifier, ProjectUrl> projectUrls;
+  final ConcurrentMap<ModuleVersionIdentifier, ProjectUrl> projectUrls
 
   Resolver(Project project, Closure resolutionStrategy, Object pool) {
-    this.projectUrls = new ConcurrentHashMap<>();
+    this.projectUrls = new ConcurrentHashMap<>()
     this.resolutionStrategy = resolutionStrategy
     this.project = project
     this.pool = pool
@@ -238,7 +238,7 @@ class Resolver {
       project.logger.info(" - ${repository.name}: ${repository.dirs}")
     } else if (repository instanceof MavenArtifactRepository ||
       repository instanceof IvyArtifactRepository) {
-      project.logger.info(" - ${repository.name}: ${repository.url}");
+      project.logger.info(" - ${repository.name}: ${repository.url}")
     } else {
       project.logger.info(" - ${repository.name}: ${repository.getClass().simpleName}")
     }
@@ -264,43 +264,48 @@ class Resolver {
   }
 
   private String resolveProjectUrl(ModuleVersionIdentifier id) {
-    ArtifactResolutionResult resolutionResult = project.dependencies.createArtifactResolutionQuery()
-            .forComponents(DefaultModuleComponentIdentifier.newId(id))
-            .withArtifacts(MavenModule, MavenPomArtifact)
-            .execute()
+    try {
+      ArtifactResolutionResult resolutionResult = project.dependencies.createArtifactResolutionQuery()
+              .forComponents(DefaultModuleComponentIdentifier.newId(id))
+              .withArtifacts(MavenModule, MavenPomArtifact)
+              .execute()
 
-    // size is 0 for gradle plugins, 1 for normal dependencies
-    for (ComponentArtifactsResult result : resolutionResult.resolvedComponents) {
-      Set<ArtifactResult> artifacts = result.getArtifacts(MavenPomArtifact)
-      // size should always be 1
-      for (ArtifactResult artifact : result.getArtifacts(MavenPomArtifact)) {
-        if (artifact instanceof ResolvedArtifactResult) {
-          File file = ((ResolvedArtifactResult) artifact).file
-          project.logger.info("Pom file for ${id} is ${file}")
+      // size is 0 for gradle plugins, 1 for normal dependencies
+      for (ComponentArtifactsResult result : resolutionResult.resolvedComponents) {
+        Set<ArtifactResult> artifacts = result.getArtifacts(MavenPomArtifact)
+        // size should always be 1
+        for (ArtifactResult artifact : result.getArtifacts(MavenPomArtifact)) {
+          if (artifact instanceof ResolvedArtifactResult) {
+            File file = ((ResolvedArtifactResult) artifact).file
+            project.logger.info("Pom file for ${id} is ${file}")
 
-          String url = getUrlFromPom(file)
-          if (url) {
-            project.logger.info("Found url for ${id}: ${url}")
-            return url
-          } else {
-            ModuleVersionIdentifier parent = getParentFromPom(file)
-            if (parent && "${parent.group}:${parent.name}" != "org.sonatype.oss:oss-parent") {
-              url = getProjectUrl(parent)
-              if (url) {
-                return url
+            String url = getUrlFromPom(file)
+            if (url) {
+              project.logger.info("Found url for ${id}: ${url}")
+              return url
+            } else {
+              ModuleVersionIdentifier parent = getParentFromPom(file)
+              if (parent && "${parent.group}:${parent.name}" != "org.sonatype.oss:oss-parent") {
+                url = getProjectUrl(parent)
+                if (url) {
+                  return url
+                }
               }
             }
           }
         }
       }
+      project.logger.info("Did not find url for ${id}")
+      return null
+    } catch (Exception e) {
+      project.logger.info("Failed to resolve the project's url", e)
+      return null
     }
-    project.logger.info("Did not find url for ${id}")
-    return null;
   }
 
   @TypeChecked(SKIP)
   private static String getUrlFromPom(File file) {
-    def pom = new XmlSlurper().parse(file)
+    def pom = new XmlSlurper(/* validating */ false, /* namespaceAware */ false).parse(file)
     if (pom.url) {
       return pom.url
     }
@@ -309,21 +314,21 @@ class Resolver {
 
   @TypeChecked(SKIP)
   private static ModuleVersionIdentifier getParentFromPom(File file) {
-    def pom = new XmlSlurper().parse(file)
+    def pom = new XmlSlurper(/* validating */ false, /* namespaceAware */ false).parse(file)
     def parent = pom.children().find { child -> child.name() == 'parent' }
     if (parent) {
       String groupId = parent.groupId
       String artifactId = parent.artifactId
       String version = parent.version
       if (groupId && artifactId && version) {
-        return DefaultModuleVersionIdentifier.newId(groupId, artifactId, version);
+        return DefaultModuleVersionIdentifier.newId(groupId, artifactId, version)
       }
     }
     return null
   }
 
   private static final class ProjectUrl {
-    boolean isResolved;
-    String url;
+    boolean isResolved
+    String url
   }
 }
