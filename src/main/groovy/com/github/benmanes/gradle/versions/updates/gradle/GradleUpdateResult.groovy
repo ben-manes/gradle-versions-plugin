@@ -31,8 +31,13 @@ class GradleUpdateResult implements Comparable<GradleUpdateResult> {
    */
   final String reason
 
-  GradleUpdateResult(GradleUpdateChecker.ReleaseStatus.Available running, GradleUpdateChecker.ReleaseStatus release) {
-    if (release instanceof GradleUpdateChecker.ReleaseStatus.Available) {
+  GradleUpdateResult(boolean enabled, GradleUpdateChecker.ReleaseStatus.Available running, GradleUpdateChecker.ReleaseStatus release) {
+    if (!enabled) {
+      this.version = ""
+      this.isUpdateAvailable = false
+      this.isFailure = false
+      this.reason = "update check disabled"
+    } else if (release instanceof GradleUpdateChecker.ReleaseStatus.Available) {
       this.version = release.gradleVersion.version
       this.isUpdateAvailable = release.gradleVersion > running.gradleVersion
       this.isFailure = false

@@ -44,6 +44,7 @@ class DependencyUpdates {
   Object outputFormatter
   String outputDir
   String reportfileName
+  boolean checkForGradleUpdate
 
   /** Evaluates the dependencies and returns a reporter. */
   DependencyUpdatesReporter run() {
@@ -101,7 +102,7 @@ class DependencyUpdates {
     Map<Map<String, String>, String> upgradeVersions = toMap(versions.upgrade)
 
     // Check for Gradle updates.
-    GradleUpdateChecker gradleUpdateChecker = new GradleUpdateChecker()
+    GradleUpdateChecker gradleUpdateChecker = new GradleUpdateChecker(checkForGradleUpdate)
 
     return new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir, reportfileName,
       currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions,

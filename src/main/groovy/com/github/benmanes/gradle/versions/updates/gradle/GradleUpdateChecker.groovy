@@ -3,6 +3,7 @@ package com.github.benmanes.gradle.versions.updates.gradle
 import groovy.json.JsonException
 import groovy.json.JsonSlurper
 import groovy.transform.PackageScope
+import java.util.concurrent.TimeUnit
 import org.gradle.util.GradleVersion
 
 /**
@@ -12,14 +13,24 @@ import org.gradle.util.GradleVersion
  * @see GradleReleaseChannel
  */
 class GradleUpdateChecker {
+  private static final long TIMEOUT_MS = TimeUnit.SECONDS.toMillis(15)
   private static final String API_BASE_URL = 'https://services.gradle.org/versions/'
 
   private final Map<GradleReleaseChannel, ReleaseStatus> cacheMap = new EnumMap<>(GradleReleaseChannel.class)
+  private final boolean enabled
 
-  GradleUpdateChecker() {
+  GradleUpdateChecker(boolean enabled) {
+    this.enabled = enabled
+    if (enabled) {
+      fetch()
+    }
+  }
+
+  private void fetch() {
     GradleReleaseChannel.values().each {
       try {
-        def versionObject = new JsonSlurper().parse(new URL(API_BASE_URL + it.id))
+        def versionObject = new JsonSlurper().parse(new URL(API_BASE_URL + it.id), [
+          'connectTimeout': TIMEOUT_MS, 'readTimeout': TIMEOUT_MS])
         if (versionObject.version) {
           cacheMap.put(it, new ReleaseStatus.Available(GradleVersion.version(versionObject.version as String)))
         } else {
@@ -39,6 +50,11 @@ class GradleUpdateChecker {
    */
   static ReleaseStatus.Available getRunningGradleVersion() {
     return new ReleaseStatus.Available(GradleVersion.current())
+  }
+
+  /** @return if the check for Gradle updates was enabled and, if so, the versions were fetched. */
+  boolean isEnabled() {
+    return enabled
   }
 
   /**

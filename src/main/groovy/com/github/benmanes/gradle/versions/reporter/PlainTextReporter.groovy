@@ -62,8 +62,11 @@ class PlainTextReporter extends AbstractReporter {
   }
 
   private def writeGradleUpdates(printStream, Result result) {
-    printStream.println('\nGradle updates:')
+    if (!result.gradle.isEnabled()) {
+      return
+    }
 
+    printStream.println('\nGradle updates:')
     result.gradle.with {
       // Log Gradle update checking failures.
       if (current.isFailure) {

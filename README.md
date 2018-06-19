@@ -50,11 +50,11 @@ Displays a report of the project dependencies that are up-to-date, exceed the la
 have upgrades, or failed to be resolved. When a dependency cannot be resolved the exception is
 logged at the `info` level.
 
-Gradle updates are checked for on the `current`, `release-candidate` and `nightly` release channels.
-The plaintext report displays gradle updates as a separate category in breadcrumb style (excluding nightly builds).
-The xml and json reports include information about all three release channels, whether a release is considered an update
-with respect to the running (executing) gradle instance, whether an update check on on a release channel has failed, as
-well as a reason field explaining failures or missing information.
+Gradle updates are checked for on the `current`, `release-candidate` and `nightly` release channels. The plaintext
+report displays gradle updates as a separate category in breadcrumb style (excluding nightly builds). The xml and json
+reports include information about all three release channels, whether a release is considered an update with respect to
+the running (executing) gradle instance, whether an update check on on a release channel has failed, as well as a reason
+field explaining failures or missing information. The update check may be disabled using the `checkForGradleUpdate` flag.
 
 #### Multi-project build
 
@@ -172,7 +172,7 @@ The following dependencies have later integration versions:
      http://code.google.com/p/google-guice/
 
 Gradle updates:
-- Gradle: [4.6 -> 4.7 -> 4.8-rc-2]
+ - Gradle: [4.6 -> 4.7 -> 4.8-rc-2]
 ```
 
 Json report
@@ -196,6 +196,7 @@ Json report
     "count": 2
   },
   "gradle": {
+    "enabled": true,
     "current": {
       "version": "4.7",
       "reason": "",
@@ -369,6 +370,7 @@ XML report
     </dependencies>
   </unresolved>
   <gradle>
+    <enabled>true</enabled>
     <running>
       <version>4.6</version>
       <isUpdateAvailable>false</isUpdateAvailable>

@@ -162,11 +162,13 @@ class DependencyUpdatesReporter {
    * @return filled out object instance
    */
   private GradleUpdateResults buildGradleUpdateResults() {
+    boolean enabled = gradleUpdateChecker.isEnabled()
     return new GradleUpdateResults(
-      running: new GradleUpdateResult(gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.runningGradleVersion),
-      current: new GradleUpdateResult(gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.currentGradleVersion),
-      releaseCandidate: new GradleUpdateResult(gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.releaseCandidateGradleVersion),
-      nightly: new GradleUpdateResult(gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.nightlyGradleVersion)
+      enabled: enabled,
+      running: new GradleUpdateResult(enabled, gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.runningGradleVersion),
+      current: new GradleUpdateResult(enabled, gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.currentGradleVersion),
+      releaseCandidate: new GradleUpdateResult(enabled, gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.releaseCandidateGradleVersion),
+      nightly: new GradleUpdateResult(enabled, gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.nightlyGradleVersion)
     )
   }
 

@@ -8,7 +8,7 @@ import groovy.transform.TupleConstructor
  */
 @TupleConstructor
 class GradleUpdateResults {
-
+  boolean enabled
   GradleUpdateResult running
   GradleUpdateResult current
   GradleUpdateResult releaseCandidate

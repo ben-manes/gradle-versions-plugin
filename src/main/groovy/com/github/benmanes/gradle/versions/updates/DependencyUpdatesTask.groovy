@@ -44,6 +44,9 @@ class DependencyUpdatesTask extends DefaultTask {
     return (outputFormatter instanceof String) ? ((String) outputFormatter) : null
   }
 
+  @Input
+  boolean checkForGradleUpdate = true
+
   Object outputFormatter = 'plain';
   Closure resolutionStrategy = null;
 
@@ -58,8 +61,8 @@ class DependencyUpdatesTask extends DefaultTask {
   def dependencyUpdates() {
     project.evaluationDependsOnChildren()
 
-    def evaluator = new DependencyUpdates(project, resolutionStrategy,
-      revisionLevel(), outputFormatterProp(), outputDirectory(), getReportfileName())
+    def evaluator = new DependencyUpdates(project, resolutionStrategy, revisionLevel(),
+      outputFormatterProp(), outputDirectory(), getReportfileName(), checkForGradleUpdate)
     DependencyUpdatesReporter reporter = evaluator.run()
     reporter?.write()
   }
