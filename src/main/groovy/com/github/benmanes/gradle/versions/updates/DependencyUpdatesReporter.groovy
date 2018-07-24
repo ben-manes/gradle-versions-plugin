@@ -102,7 +102,7 @@ class DependencyUpdatesReporter {
   }
 
   def generateFileReport(Reporter reporter) {
-    String filename = outputDir + File.separator + reportfileName + '.' + reporter.getFileExtension()
+    File filename = new File(outputDir, reportfileName + '.' + reporter.getFileExtension())
     try {
       project.file(outputDir).mkdirs()
       File outputFile = project.file(filename)
