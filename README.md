@@ -10,6 +10,7 @@ You may also wish to explore additional functionality provided by,
  - [gradle-use-latest-versions](https://github.com/patrikerdes/gradle-use-latest-versions-plugin)
  - [gradle-libraries-plugin](https://github.com/fkorotkov/gradle-libraries-plugin)
  - [gradle-update-notifier](https://github.com/y-yagi/gradle-update-notifier)
+ - [gradle-kotlin-dsl-libs](https://github.com/jmfayard/gradle-kotlin-dsl-libs)
 
 ## Usage
 
