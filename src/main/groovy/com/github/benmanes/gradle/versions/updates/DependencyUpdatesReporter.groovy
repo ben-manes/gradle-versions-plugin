@@ -35,6 +35,8 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.ModuleVersionSelector
 import org.gradle.api.artifacts.UnresolvedDependency
 
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.*
+
 /**
  * A reporter for the dependency updates results.
  */
@@ -72,11 +74,14 @@ class DependencyUpdatesReporter {
   /** facade object to access information about running gradle versions and gradle updates */
   GradleUpdateChecker gradleUpdateChecker
 
+  /** The gradle release channel to use for reporting. */
+  String gradleReleaseChannel
+
   private static final Object MUTEX = new Object()
 
   def write() {
     synchronized (MUTEX) {
-      PlainTextReporter plainTextReporter = new PlainTextReporter(project, revision)
+      PlainTextReporter plainTextReporter = new PlainTextReporter(project, revision, gradleReleaseChannel)
 
       plainTextReporter.write(System.out, buildBaseObject())
 
@@ -127,13 +132,13 @@ class DependencyUpdatesReporter {
 
     switch (formatter) {
       case 'json':
-        reporter = new JsonReporter(project, revision)
+        reporter = new JsonReporter(project, revision, gradleReleaseChannel)
         break
       case 'xml':
-        reporter = new XmlReporter(project, revision)
+        reporter = new XmlReporter(project, revision, gradleReleaseChannel)
         break
       default:
-        reporter = new PlainTextReporter(project, revision)
+        reporter = new PlainTextReporter(project, revision, gradleReleaseChannel)
     }
 
     return reporter
@@ -167,8 +172,8 @@ class DependencyUpdatesReporter {
       enabled: enabled,
       running: new GradleUpdateResult(enabled, gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.runningGradleVersion),
       current: new GradleUpdateResult(enabled, gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.currentGradleVersion),
-      releaseCandidate: new GradleUpdateResult(enabled, gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.releaseCandidateGradleVersion),
-      nightly: new GradleUpdateResult(enabled, gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.nightlyGradleVersion)
+      releaseCandidate: new GradleUpdateResult(gradleReleaseChannel == RELEASE_CANDIDATE.id, gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.releaseCandidateGradleVersion),
+      nightly: new GradleUpdateResult(gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id, gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.nightlyGradleVersion)
     )
   }
 

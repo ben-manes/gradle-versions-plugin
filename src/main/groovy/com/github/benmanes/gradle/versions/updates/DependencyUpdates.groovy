@@ -45,6 +45,7 @@ class DependencyUpdates {
   String outputDir
   String reportfileName
   boolean checkForGradleUpdate
+  String gradleReleaseChannel
 
   /** Evaluates the dependencies and returns a reporter. */
   DependencyUpdatesReporter run() {
@@ -105,8 +106,8 @@ class DependencyUpdates {
     GradleUpdateChecker gradleUpdateChecker = new GradleUpdateChecker(checkForGradleUpdate)
 
     return new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir, reportfileName,
-      currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions,
-      unresolved, projectUrls, gradleUpdateChecker)
+       currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions,
+      unresolved, projectUrls, gradleUpdateChecker, gradleReleaseChannel)
   }
 
   private static Map<Map<String, String>, String> toMap(Set<Coordinate> coordinates) {

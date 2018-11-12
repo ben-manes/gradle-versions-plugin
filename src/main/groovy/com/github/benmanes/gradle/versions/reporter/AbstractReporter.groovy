@@ -12,4 +12,6 @@ abstract class AbstractReporter implements Reporter {
   Project project
   /** The revision strategy evaluated with. */
   String revision
+  /** The gradle release channel to use for reporting. */
+  String gradleReleaseChannel
 }

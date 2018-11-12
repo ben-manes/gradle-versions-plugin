@@ -1,5 +1,6 @@
 bin
 build
+out
 .classpath
 .settings
 .project

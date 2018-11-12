@@ -24,6 +24,8 @@ import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Unroll
 
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.*
+
 /**
  * A specification for the dependency updates task.
  */
@@ -545,6 +547,27 @@ final class DependencyUpdatesSpec extends Specification {
     }
   }
 
+  def 'Constructor takes gradle release channel'() {
+    given:
+    def project = new ProjectBuilder().withName('single').build()
+    addRepositoryTo(project)
+    project.configurations {
+      compile
+    }
+    project.dependencies {
+      compile 'com.google.guava:guava:15.0'
+    }
+
+    when:
+    def reporter = evaluate(project, 'milestone', 'plain', 'build', null, null, true, CURRENT.id)
+    reporter.write()
+
+    then:
+    with(reporter) {
+      gradleReleaseChannel.equals(CURRENT.id)
+    }
+  }
+
   private static def singleProject() {
     new ProjectBuilder().withName('single').build()
   }
@@ -557,8 +580,8 @@ final class DependencyUpdatesSpec extends Specification {
   }
 
   private static def evaluate(project, revision = 'milestone', outputFormatter = 'plain',
-    outputDir = 'build', resolutionStrategy = null) {
-    new DependencyUpdates(project, resolutionStrategy, revision, outputFormatter, outputDir).run()
+                              outputDir = 'build', resolutionStrategy = null, reportfileName = null, checkForGradleUpdate = true, gradleReleaseChannel = RELEASE_CANDIDATE.id) {
+    new DependencyUpdates(project, resolutionStrategy, revision, outputFormatter, outputDir, reportfileName, checkForGradleUpdate, gradleReleaseChannel).run()
   }
 
   private def addRepositoryTo(project) {

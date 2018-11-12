@@ -23,6 +23,8 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.*
+
 /**
  * A task that reports which dependencies have later versions.
  */
@@ -31,6 +33,9 @@ class DependencyUpdatesTask extends DefaultTask {
 
   @Input
   String revision = 'milestone'
+
+  @Input
+  String gradleReleaseChannel = RELEASE_CANDIDATE.id
 
   @Input
   String outputDir =
@@ -62,7 +67,7 @@ class DependencyUpdatesTask extends DefaultTask {
     project.evaluationDependsOnChildren()
 
     def evaluator = new DependencyUpdates(project, resolutionStrategy, revisionLevel(),
-      outputFormatterProp(), outputDirectory(), getReportfileName(), checkForGradleUpdate)
+      outputFormatterProp(), outputDirectory(), getReportfileName(), checkForGradleUpdate, gradleReleaseChannelLevel())
     DependencyUpdatesReporter reporter = evaluator.run()
     reporter?.write()
   }
@@ -79,6 +84,9 @@ class DependencyUpdatesTask extends DefaultTask {
 
   /** Returns the resolution revision level. */
   String revisionLevel() { System.properties['revision'] ?: revision }
+
+  /** Returns the resolution revision level. */
+  String gradleReleaseChannelLevel() { System.properties['gradleReleaseChannel'] ?: gradleReleaseChannel }
 
   /** Returns the outputDir format. */
   Object outputFormatterProp() { System.properties['outputFormatter'] ?: outputFormatter }

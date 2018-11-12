@@ -6,6 +6,8 @@ import org.junit.rules.TemporaryFolder
 import spock.lang.Specification
 import spock.lang.Unroll
 
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.*
+
 final class DifferentGradleVersionsSpec extends Specification {
 
   @Rule TemporaryFolder testProjectDir = new TemporaryFolder()
@@ -82,6 +84,63 @@ final class DifferentGradleVersionsSpec extends Specification {
       '4.6',
       '4.7',
       '4.8',
+    ]
+  }
+
+  @Unroll
+  def 'dependencyUpdates task uses specified release channel with Gradle #gradleReleaseChannel'() {
+    given:
+    def classpathString = pluginClasspath
+      .collect { it.absolutePath.replace('\\', '\\\\') } // escape backslashes in Windows paths
+      .collect { "'$it'" }
+      .join(", ")
+    def mavenRepoUrl = getClass().getResource('/maven/').toURI()
+    def srdErrWriter = new StringWriter()
+
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'java'
+        apply plugin: "com.github.ben-manes.versions"
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          compile 'com.google.inject:guice:2.0'
+        }
+        
+        dependencyUpdates.gradleReleaseChannel="${gradleReleaseChannel}"
+        
+        """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withGradleVersion('3.0')
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .forwardStdError(srdErrWriter)
+      .build()
+
+    then:
+    result.output.contains("Gradle ${gradleReleaseChannel} updates:")
+    !result.output.contains("UP-TO-DATE")
+    srdErrWriter.toString().empty
+
+    where:
+    gradleReleaseChannel << [
+      CURRENT.id,
+      RELEASE_CANDIDATE.id,
+      NIGHTLY.id
     ]
   }
 }
