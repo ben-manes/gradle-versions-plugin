@@ -102,23 +102,28 @@ If using Gradle's [kotlin-dsl][kotlin_dsl], you could configure the `dependencyU
 ```kotlin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
-tasks {
-  "dependencyUpdates"(DependencyUpdatesTask::class) {
-    resolutionStrategy {
-      componentSelection {
-        all {
-          val rejected = listOf("alpha", "beta", "rc", "cr", "m", "preview")
-            .map { qualifier -> Regex("(?i).*[.-]$qualifier[.\\d-]*") }
-            .any { it.matches(candidate.version) }
-          if (rejected) {
-            reject("Release candidate")
-          }
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  resolutionStrategy {
+    componentSelection {
+      all {
+        val rejected = listOf("alpha", "beta", "rc", "cr", "m", "preview")
+          .map { qualifier -> Regex("(?i).*[.-]$qualifier[.\\d-]*") }
+          .any { it.matches(candidate.version) }
+        if (rejected) {
+          reject("Release candidate")
         }
       }
     }
   }
+  // optional parameters
+  checkForGradleUpdate = true
+  outputFormatter = "json"
+  outputDir = "build/dependencyUpdates"
+  reportfileName = "report"
 }
 ```
+
+Note: Do use the `plugins { .. }` syntax if you use the Kotlin DSL.
 
 #### Report format
 
