@@ -1,4 +1,4 @@
-[ ![Download](https://api.bintray.com/packages/fooberger/maven/com.github.ben-manes%3Agradle-versions-plugin/images/download.svg) ](https://bintray.com/fooberger/maven/com.github.ben-manes%3Agradle-versions-plugin/_latestVersion)
+
 
 # Gradle Versions Plugin
 
@@ -14,10 +14,15 @@ You may also wish to explore additional functionality provided by,
 
 ## Usage
 
-This plugin is available from [Bintray's JCenter repository](http://jcenter.bintray.com). You can
-add it to your top-level build script using the following configuration:
+[ ![JCenter](https://api.bintray.com/packages/fooberger/maven/com.github.ben-manes%3Agradle-versions-plugin/images/download.svg) ](https://bintray.com/fooberger/maven/com.github.ben-manes%3Agradle-versions-plugin/_latestVersion)
+![https://plugins.gradle.org/plugin/com.github.ben-manes.versions](https://img.shields.io/maven-metadata/v/https/plugins.gradle.org/m2/com/github/ben-manes/versions/com.github.ben-manes.versions.gradle.plugin/maven-metadata.xml.svg?label=gradlePluginPortal)
+
+This plugin is available from [Bintray's JCenter repository](http://jcenter.bintray.com) and from the [Gradle Plugin Portal](https://plugins.gradle.org/plugin/com.github.ben-manes.version).
+
+You can add it to your top-level build script using the following configuration:
 
 ### `plugins` block:
+
 
 ```groovy
 plugins {
@@ -41,7 +46,7 @@ buildscript {
 }
 ```
 
-The current version is known to work with Gradle versions up to 4.8.
+The current version is known to work with Gradle versions up to 5.0.
 
 ## Tasks
 
