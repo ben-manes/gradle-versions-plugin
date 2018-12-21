@@ -27,10 +27,14 @@ class VersionsPlugin implements Plugin<Project> {
   @Override
   void apply(Project project) {
     try {
-      project.tasks.create('dependencyUpdates', DependencyUpdatesTask)
-    } catch (MissingMethodException e) {
-      // Maybe we're running with an old Gradle version, let's try tasks.add
-      project.tasks.add('dependencyUpdates', DependencyUpdatesTask)
+      project.tasks.register('dependencyUpdates', DependencyUpdatesTask)
+    } catch (MissingMethodException ignored) {
+      try {
+        project.tasks.create('dependencyUpdates', DependencyUpdatesTask)
+      } catch (MissingMethodException ignored2) {
+        // Maybe we're running with an old Gradle version, let's try tasks.add
+        project.tasks.add('dependencyUpdates', DependencyUpdatesTask)
+      }
     }
   }
 }
