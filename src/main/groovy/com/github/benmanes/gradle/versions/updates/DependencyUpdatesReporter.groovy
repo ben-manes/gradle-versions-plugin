@@ -81,9 +81,10 @@ class DependencyUpdatesReporter {
 
   def write() {
     synchronized (MUTEX) {
-      PlainTextReporter plainTextReporter = new PlainTextReporter(project, revision, gradleReleaseChannel)
-
-      plainTextReporter.write(System.out, buildBaseObject())
+      if (!(outputFormatter instanceof Closure)) {
+        PlainTextReporter plainTextReporter = new PlainTextReporter(project, revision, gradleReleaseChannel)
+        plainTextReporter.write(System.out, buildBaseObject())
+      }
 
       if (outputFormatter == null ||
         (outputFormatter instanceof String && ((String) outputFormatter).isEmpty())) {
