@@ -173,8 +173,8 @@ class DependencyUpdatesReporter {
       enabled: enabled,
       running: new GradleUpdateResult(enabled, gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.runningGradleVersion),
       current: new GradleUpdateResult(enabled, gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.currentGradleVersion),
-      releaseCandidate: new GradleUpdateResult(gradleReleaseChannel == RELEASE_CANDIDATE.id, gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.releaseCandidateGradleVersion),
-      nightly: new GradleUpdateResult(gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id, gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.nightlyGradleVersion)
+      releaseCandidate: new GradleUpdateResult(enabled && (gradleReleaseChannel == RELEASE_CANDIDATE.id), gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.releaseCandidateGradleVersion),
+      nightly: new GradleUpdateResult(enabled && (gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id), gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.nightlyGradleVersion)
     )
   }
 
