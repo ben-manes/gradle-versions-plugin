@@ -568,6 +568,26 @@ final class DependencyUpdatesSpec extends Specification {
     }
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/285')
+  def 'checkForGradleUpdate=false does not cause an NPE'() {
+    given:
+    def project = new ProjectBuilder().withName('single').build()
+    addDependenciesTo(project)
+
+    when:
+    def reporter = evaluate(project, 'milestone', 'plain', 'build', null, null, false)
+    reporter.write()
+
+    then:
+    noExceptionThrown()
+    with(reporter) {
+      unresolved.size() == 8
+      upgradeVersions.isEmpty()
+      upToDateVersions.isEmpty()
+      downgradeVersions.isEmpty()
+    }
+  }
+
   private static def singleProject() {
     new ProjectBuilder().withName('single').build()
   }
