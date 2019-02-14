@@ -2,6 +2,8 @@ language: java
 cache:
   directories:
   - $HOME/.gradle
+script:
+  - ./gradlew build --scan
 deploy:
   provider: script
   script: ./gradlew bintrayUpload
