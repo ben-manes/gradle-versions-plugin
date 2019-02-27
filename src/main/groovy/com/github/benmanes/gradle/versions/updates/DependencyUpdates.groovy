@@ -18,7 +18,6 @@ package com.github.benmanes.gradle.versions.updates
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
 import groovy.transform.TupleConstructor
 import groovy.transform.TypeChecked
-import groovyx.gpars.GParsPool
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.UnresolvedDependency
@@ -52,7 +51,7 @@ class DependencyUpdates {
     Map<Project, Set<Configuration>> projectConfigs = project.allprojects.collectEntries { proj ->
       [proj, proj.configurations.plus(proj.buildscript.configurations) as Set]
     }
-    Set<DependencyStatus> status = resolveInParallel(projectConfigs)
+    Set<DependencyStatus> status = resolveProjects(projectConfigs)
 
     VersionMapping versions = new VersionMapping(project, status)
     Set<UnresolvedDependency> unresolved =
@@ -63,22 +62,14 @@ class DependencyUpdates {
     return createReporter(versions, unresolved, projectUrls)
   }
 
-  @TypeChecked(SKIP)
-  private Set<DependencyStatus> resolveInParallel(Map<Project, Set<Configuration>> projectConfigs) {
-    int numberOfThreads = Math.min((int) 1.5 * Runtime.getRuntime().availableProcessors(),
-      projectConfigs.values().collect { it.size() }.sum())
-    def pool = GParsPool.createPool(numberOfThreads)
-    return GParsPool.withExistingPool(pool) {
-      projectConfigs.keySet().collectParallel { proj ->
-        Set<Configuration> configurations = projectConfigs.get(proj)
-        Resolver resolver = new Resolver(proj, resolutionStrategy, pool)
-        GParsPool.withExistingPool(pool) {
-          configurations.collectParallel { Configuration config ->
-            resolve(resolver, proj, config)
-          }.flatten() as Set<DependencyStatus>
-        }
+  private Set<DependencyStatus> resolveProjects(Map<Project, Set<Configuration>> projectConfigs) {
+    projectConfigs.keySet().collect { proj ->
+      Set<Configuration> configurations = projectConfigs.get(proj)
+      Resolver resolver = new Resolver(proj, resolutionStrategy)
+      configurations.collect { Configuration config ->
+        resolve(resolver, proj, config)
       }.flatten() as Set<DependencyStatus>
-    }
+    }.flatten() as Set<DependencyStatus>
   }
 
   private Set<DependencyStatus> resolve(Resolver resolver, Project proj, Configuration config) {

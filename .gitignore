@@ -5,6 +5,7 @@ out
 .settings
 .project
 .gradle
+.vscode/
 .idea/
 *.iml
 *.ipr

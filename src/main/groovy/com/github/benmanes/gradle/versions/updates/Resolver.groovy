@@ -16,7 +16,6 @@
 package com.github.benmanes.gradle.versions.updates
 
 import groovy.transform.TypeChecked
-import groovyx.gpars.GParsPool
 import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.ConcurrentHashMap
 import org.gradle.api.Project
@@ -51,18 +50,16 @@ import static org.gradle.api.specs.Specs.SATISFIES_ALL
  */
 @TypeChecked
 class Resolver {
-  final Object pool
   final Project project
   final Closure resolutionStrategy
   final boolean useSelectionRules
   final boolean collectProjectUrls
   final ConcurrentMap<ModuleVersionIdentifier, ProjectUrl> projectUrls
 
-  Resolver(Project project, Closure resolutionStrategy, Object pool) {
+  Resolver(Project project, Closure resolutionStrategy) {
     this.projectUrls = new ConcurrentHashMap<>()
     this.resolutionStrategy = resolutionStrategy
     this.project = project
-    this.pool = pool
 
     useSelectionRules = new VersionComparator(project)
       .compare(project.gradle.gradleVersion, '2.2') >= 0
@@ -84,22 +81,19 @@ class Resolver {
   }
 
   /** Returns the version status of the configuration's dependencies. */
-  @TypeChecked(SKIP)
   private Set<DependencyStatus> getStatus(Map<Coordinate.Key, Coordinate> coordinates,
     Set<ResolvedDependency> resolved, Set<UnresolvedDependency> unresolved) {
-    Set<DependencyStatus> result = Collections.synchronizedSet(new HashSet<>())
+    Set<DependencyStatus> result = new HashSet<>()
 
-    GParsPool.withExistingPool(pool) {
-      resolved.eachParallel { dependency ->
-        Coordinate resolvedCoordinate = Coordinate.from(dependency.module.id)
-        Coordinate originalCoordinate = coordinates.get(resolvedCoordinate.key)
-        Coordinate coord = originalCoordinate ?: resolvedCoordinate
-        if ((originalCoordinate == null) && (resolvedCoordinate.groupId != 'null')) {
-          project.logger.info("Skipping hidden dependency: ${resolvedCoordinate}")
-        } else {
-          String projectUrl = getProjectUrl(dependency.module.id)
-          result.add(new DependencyStatus(coord, resolvedCoordinate.version, projectUrl))
-        }
+    resolved.each { dependency ->
+      Coordinate resolvedCoordinate = Coordinate.from(dependency.module.id)
+      Coordinate originalCoordinate = coordinates.get(resolvedCoordinate.key)
+      Coordinate coord = originalCoordinate ?: resolvedCoordinate
+      if ((originalCoordinate == null) && (resolvedCoordinate.groupId != 'null')) {
+        project.logger.info("Skipping hidden dependency: ${resolvedCoordinate}")
+      } else {
+        String projectUrl = getProjectUrl(dependency.module.id)
+        result.add(new DependencyStatus(coord, resolvedCoordinate.version, projectUrl))
       }
     }
     for (UnresolvedDependency dependency : unresolved) {
