@@ -92,8 +92,8 @@ For example, to disallow release candidates as upgradable versions a selection r
 dependencyUpdates.resolutionStrategy {
   componentSelection { rules ->
     rules.all { ComponentSelection selection ->
-      boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm', 'preview'].any { qualifier ->
-        selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
+      boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm', 'preview', 'b', 'ea'].any { qualifier ->
+        selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-+]*/
       }
       if (rejected) {
         selection.reject('Release candidate')
@@ -112,8 +112,8 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
   resolutionStrategy {
     componentSelection {
       all {
-        val rejected = listOf("alpha", "beta", "rc", "cr", "m", "preview")
-          .map { qualifier -> Regex("(?i).*[.-]$qualifier[.\\d-]*") }
+        val rejected = listOf("alpha", "beta", "rc", "cr", "m", "preview", "b", "ea")
+          .map { qualifier -> Regex("(?i).*[.-]$qualifier[.\\d-+]*") }
           .any { it.matches(candidate.version) }
         if (rejected) {
           reject("Release candidate")
