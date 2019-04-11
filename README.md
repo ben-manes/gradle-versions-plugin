@@ -93,7 +93,7 @@ dependencyUpdates.resolutionStrategy {
   componentSelection { rules ->
     rules.all { ComponentSelection selection ->
       boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm', 'preview', 'b', 'ea'].any { qualifier ->
-        selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-+]*/
+        selection.candidate.version ==~ /(?i).*[.-]$qualifier[.\d-+]*/
       }
       if (rejected) {
         selection.reject('Release candidate')
