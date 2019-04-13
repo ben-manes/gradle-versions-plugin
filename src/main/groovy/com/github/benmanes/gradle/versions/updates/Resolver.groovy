@@ -150,7 +150,7 @@ class Resolver {
   private void addRevisionFilter(Configuration configuration, String revision) {
     configuration.resolutionStrategy { ResolutionStrategy componentSelection ->
       componentSelection.componentSelection { rules ->
-        rules.all { ComponentSelection selection, ComponentMetadata metadata ->
+        def revisionFilter = { ComponentSelection selection, ComponentMetadata metadata ->
           boolean accepted =
               ((revision == 'release') && (metadata.status == 'release')) ||
               ((revision == 'milestone') && (metadata.status != 'integration')) ||
@@ -159,6 +159,7 @@ class Resolver {
             selection.reject("Component status ${metadata.status} rejected by revision ${revision}")
           }
         }
+        rules.all ComponentSelection.methods.any { it.name == 'getMetadata' } ? { revisionFilter(it, it.metadata) } : revisionFilter
       }
     }
   }
