@@ -1,5 +1,3 @@
-
-
 # Gradle Versions Plugin
 
 In the spirit of the [Maven Versions Plugin](http://www.mojohaus.org/versions-maven-plugin),
@@ -15,7 +13,8 @@ You may also wish to explore additional functionality provided by,
 
 ## Usage
 
-[ ![JCenter](https://api.bintray.com/packages/fooberger/maven/com.github.ben-manes%3Agradle-versions-plugin/images/download.svg) ](https://bintray.com/fooberger/maven/com.github.ben-manes%3Agradle-versions-plugin/_latestVersion)
+[ ![JCenter](https://api.bintray.com/packages/fooberger/maven/com.github.ben-manes%3Agradle-versions-plugin/images/download.svg) [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fben-manes%2Fgradle-versions-plugin.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fben-manes%2Fgradle-versions-plugin?ref=badge_shield)
+](https://bintray.com/fooberger/maven/com.github.ben-manes%3Agradle-versions-plugin/_latestVersion)
 [![gradlePluginPortal](https://img.shields.io/maven-metadata/v/https/plugins.gradle.org/m2/com/github/ben-manes/versions/com.github.ben-manes.versions.gradle.plugin/maven-metadata.xml.svg?label=gradlePluginPortal)](https://plugins.gradle.org/plugin/com.github.ben-manes.versions)
 
 This plugin is available from [Bintray's JCenter repository](http://jcenter.bintray.com) and from the [Gradle Plugin Portal](https://plugins.gradle.org/plugin/com.github.ben-manes.versions).
@@ -458,3 +457,7 @@ dependencyUpdates {
 [kotlin_dsl]: https://github.com/gradle/kotlin-dsl
 [ivy_resolution_strategy]: http://ant.apache.org/ivy/history/2.4.0/settings/version-matchers.html#Latest%20(Status)%20Matcher
 [component_selection_rules]: https://docs.gradle.org/current/userguide/customizing_dependency_resolution_behavior.html#sec:component_selection_rules
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fben-manes%2Fgradle-versions-plugin.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fben-manes%2Fgradle-versions-plugin?ref=badge_large)
