@@ -20,6 +20,7 @@ import groovy.transform.TypeChecked
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ModuleVersionSelector
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 
 /**
  * The dependency's coordinate.
@@ -62,6 +63,10 @@ class Coordinate implements Comparable<Coordinate> {
 
   static Coordinate from(ModuleVersionIdentifier identifier) {
     return new Coordinate(identifier.group, identifier.name, identifier.version)
+  }
+
+  static Coordinate from(ModuleComponentIdentifier identifier) {
+    return new Coordinate(identifier.group, identifier.module, identifier.version)
   }
 
   @EqualsAndHashCode

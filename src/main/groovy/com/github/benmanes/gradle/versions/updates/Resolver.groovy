@@ -15,9 +15,11 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.transform.TypeChecked
 import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.ConcurrentHashMap
+import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ComponentMetadata
 import org.gradle.api.artifacts.ComponentSelection
@@ -51,12 +53,12 @@ import static org.gradle.api.specs.Specs.SATISFIES_ALL
 @TypeChecked
 class Resolver {
   final Project project
-  final Closure resolutionStrategy
+  final Action<? super ResolutionStrategyWithCurrent> resolutionStrategy
   final boolean useSelectionRules
   final boolean collectProjectUrls
   final ConcurrentMap<ModuleVersionIdentifier, ProjectUrl> projectUrls
 
-  Resolver(Project project, Closure resolutionStrategy) {
+  Resolver(Project project, Action<? super ResolutionStrategyWithCurrent> resolutionStrategy) {
     this.projectUrls = new ConcurrentHashMap<>()
     this.resolutionStrategy = resolutionStrategy
     this.project = project
@@ -72,7 +74,7 @@ class Resolver {
   /** Returns the version status of the configuration's dependencies at the given revision. */
   public Set<DependencyStatus> resolve(Configuration configuration, String revision) {
     Map<Coordinate.Key, Coordinate> coordinates = getCurrentCoordinates(configuration)
-    Configuration latestConfiguration = createLatestConfiguration(configuration, revision)
+    Configuration latestConfiguration = createLatestConfiguration(configuration, revision, coordinates)
 
     LenientConfiguration lenient = latestConfiguration.resolvedConfiguration.lenientConfiguration
     Set<ResolvedDependency> resolved = lenient.getFirstLevelModuleDependencies(SATISFIES_ALL)
@@ -106,7 +108,7 @@ class Resolver {
   }
 
   /** Returns a copy of the configuration where dependencies will be resolved up to the revision. */
-  private Configuration createLatestConfiguration(Configuration configuration, String revision) {
+  private Configuration createLatestConfiguration(Configuration configuration, String revision, Map<Coordinate.Key, Coordinate> currentCoordinates) {
     List<Dependency> latest = configuration.dependencies.findAll { dependency ->
       dependency instanceof ExternalDependency
     }.collect { dependency ->
@@ -124,7 +126,7 @@ class Resolver {
 
     if (useSelectionRules) {
       addRevisionFilter(copy, revision)
-      addCustomResolutionStrategy(copy)
+      addCustomResolutionStrategy(copy, currentCoordinates)
     }
     return copy
   }
@@ -165,9 +167,14 @@ class Resolver {
   }
 
   /** Adds a custom resolution strategy only applicable for the dependency updates task. */
-  private void addCustomResolutionStrategy(Configuration configuration) {
+  private void addCustomResolutionStrategy(Configuration configuration, Map<Coordinate.Key, Coordinate> currentCoordinates) {
     if (resolutionStrategy != null) {
-      configuration.resolutionStrategy(resolutionStrategy)
+      configuration.resolutionStrategy(new Action<ResolutionStrategy>() {
+        @java.lang.Override
+        void execute(ResolutionStrategy inner) {
+          resolutionStrategy.execute(new ResolutionStrategyWithCurrent(inner as ResolutionStrategy, currentCoordinates))
+        }
+      })
     }
   }
 
