@@ -46,8 +46,8 @@ final class KotlinDslUsageSpec extends Specification {
           resolutionStrategy {
             componentSelection {
               all {
-                if (candidate.version == "3.0") {
-                  reject("Guava 3.0 not allowed")
+                if (candidate.version == "3.1" && current != "") {
+                  reject("Guice 3.1 not allowed")
                 }
               }
             }
@@ -66,8 +66,7 @@ final class KotlinDslUsageSpec extends Specification {
       .build()
 
     then:
-    result.output.contains('''Failed to determine the latest version for the following dependencies (use --info for details):
-       | - com.google.inject:guice'''.stripMargin())
+    result.output.contains('''com.google.inject:guice [2.0 -> 3.0]''')
     srdErrWriter.toString().empty
 
     where:
