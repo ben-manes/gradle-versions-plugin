@@ -21,9 +21,7 @@ class ComponentSelectionRulesWithCurrent {
   ComponentSelectionRulesWithCurrent all(Action<? super ComponentSelectionWithCurrent> selectionAction) {
     delegate.all(new Action<ComponentSelection>() {
       void execute(ComponentSelection inner) {
-        Coordinate candidateCoordinate = Coordinate.from(inner.candidate)
-        Coordinate current = currentCoordinates.get(candidateCoordinate.key)
-        selectionAction.execute(new ComponentSelectionWithCurrent(inner, current.version))
+        selectionAction.execute(wrapComponentSelection(inner))
       }
     })
     return this
@@ -32,9 +30,7 @@ class ComponentSelectionRulesWithCurrent {
   ComponentSelectionRulesWithCurrent all(Closure<?> closure) {
     delegate.all(new Action<ComponentSelection>() {
       void execute(ComponentSelection inner) {
-        Coordinate candidateCoordinate = Coordinate.from(inner.candidate)
-        Coordinate current = currentCoordinates.get(candidateCoordinate.key)
-        ComponentSelectionWithCurrent wrapped = new ComponentSelectionWithCurrent(inner, current.version)
+        ComponentSelectionWithCurrent wrapped = wrapComponentSelection(inner)
         closure.delegate = wrapped
         closure(wrapped)
       }
@@ -46,9 +42,7 @@ class ComponentSelectionRulesWithCurrent {
     RuleAction<ComponentSelectionWithCurrent> ruleAction = RuleSourceBackedRuleAction.create(ModelType.of(ComponentSelectionWithCurrent.class), ruleSource)
     delegate.all(new Action<ComponentSelection>() {
       void execute(ComponentSelection inner) {
-        Coordinate candidateCoordinate = Coordinate.from(inner.candidate)
-        Coordinate current = currentCoordinates.get(candidateCoordinate.key)
-        ruleAction.execute(new ComponentSelectionWithCurrent(inner, current.version), [])
+        ruleAction.execute(wrapComponentSelection(inner), [])
       }
     })
     return this
@@ -67,5 +61,12 @@ class ComponentSelectionRulesWithCurrent {
   ComponentSelectionRulesWithCurrent withModule(Object id, Object ruleSource) {
     delegate.withModule(id, ruleSource)
     return this
+  }
+
+  private ComponentSelectionWithCurrent wrapComponentSelection(ComponentSelection inner) {
+    Coordinate candidateCoordinate = Coordinate.from(inner.candidate)
+    Coordinate current = currentCoordinates.get(candidateCoordinate.key)
+    ComponentSelectionWithCurrent wrapped = new ComponentSelectionWithCurrent(inner, current.version)
+    return wrapped
   }
 }
