@@ -1,6 +1,7 @@
 package com.github.benmanes.gradle.versions.updates.resolutionstrategy
 
 import com.github.benmanes.gradle.versions.updates.Coordinate
+import groovy.transform.TupleConstructor
 import org.gradle.api.Action
 import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.artifacts.DependencySubstitutions
@@ -8,18 +9,11 @@ import org.gradle.api.artifacts.ModuleVersionSelector
 import org.gradle.api.artifacts.ResolutionStrategy
 import org.gradle.api.artifacts.ResolutionStrategy.SortOrder
 
-import java.util.concurrent.TimeUnit;
-
+@TupleConstructor(includeFields = true)
 class ResolutionStrategyWithCurrent {
 
   private ResolutionStrategy delegate
   private Map<Coordinate.Key, Coordinate> currentCoordinates
-
-  ResolutionStrategyWithCurrent(ResolutionStrategy delegate,
-      Map<Coordinate.Key, Coordinate> currentCoordinates) {
-    this.delegate = delegate
-    this.currentCoordinates = currentCoordinates
-  }
 
   ResolutionStrategyWithCurrent failOnVersionConflict() {
     delegate.failOnVersionConflict()
