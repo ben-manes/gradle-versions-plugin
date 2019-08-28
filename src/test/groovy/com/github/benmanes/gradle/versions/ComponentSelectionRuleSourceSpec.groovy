@@ -13,10 +13,10 @@ final class ComponentSelectionRuleSourceSpec extends Specification {
   private List<File> pluginClasspath
 
   def 'setup'() {
-    def pluginClasspathResource = getClass().classLoader.findResource("plugin-classpath.txt")
+    def pluginClasspathResource = getClass().classLoader.findResource('plugin-classpath.txt')
     if (pluginClasspathResource == null) {
       throw new IllegalStateException(
-        "Did not find plugin classpath resource, run `testClasses` build task.")
+        'Did not find plugin classpath resource, run `testClasses` build task.')
     }
 
     pluginClasspath = pluginClasspathResource.readLines().collect { new File(it) }
@@ -28,7 +28,7 @@ final class ComponentSelectionRuleSourceSpec extends Specification {
     def classpathString = pluginClasspath
       .collect { it.absolutePath.replace('\\', '\\\\') } // escape backslashes in Windows paths
       .collect { "'$it'" }
-      .join(", ")
+      .join(', ')
     def mavenRepoUrl = getClass().getResource('/maven/').toURI()
     def srdErrWriter = new StringWriter()
 

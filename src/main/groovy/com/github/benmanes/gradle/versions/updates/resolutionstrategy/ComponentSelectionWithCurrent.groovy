@@ -6,8 +6,8 @@ import org.gradle.api.artifacts.ComponentSelection
 @TupleConstructor(includeFields=true)
 class ComponentSelectionWithCurrent {
 
+  final String currentVersion
+
   @Delegate
   private final ComponentSelection delegate
-
-  public final String currentVersion
 }

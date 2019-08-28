@@ -52,8 +52,8 @@ class DependencyUpdatesTask extends DefaultTask {
   @Input
   boolean checkForGradleUpdate = true
 
-  Object outputFormatter = 'plain';
-  Action<? super ResolutionStrategyWithCurrent> resolutionStrategy = null;
+  Object outputFormatter = 'plain'
+  Action<? super ResolutionStrategyWithCurrent> resolutionStrategyAction = null
 
   DependencyUpdatesTask() {
     description = 'Displays the dependency updates for the project.'
@@ -66,7 +66,7 @@ class DependencyUpdatesTask extends DefaultTask {
   def dependencyUpdates() {
     project.evaluationDependsOnChildren()
 
-    def evaluator = new DependencyUpdates(project, resolutionStrategy, revisionLevel(),
+    def evaluator = new DependencyUpdates(project, resolutionStrategyAction, revisionLevel(),
       outputFormatterProp(), outputDirectory(), getReportfileName(), checkForGradleUpdate, gradleReleaseChannelLevel())
     DependencyUpdatesReporter reporter = evaluator.run()
     reporter?.write()
@@ -77,7 +77,7 @@ class DependencyUpdatesTask extends DefaultTask {
    * @param resolutionStrategy the resolution strategy
    */
   void resolutionStrategy(final Action<? super ResolutionStrategyWithCurrent> resolutionStrategy) {
-    this.resolutionStrategy = resolutionStrategy
+    this.resolutionStrategyAction = resolutionStrategy
   }
 
   /** Returns the resolution revision level. */
