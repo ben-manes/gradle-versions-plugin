@@ -16,13 +16,13 @@
 package com.github.benmanes.gradle.versions.updates
 
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.transform.TupleConstructor
 import groovy.transform.TypeChecked
+import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.UnresolvedDependency
-
-import static groovy.transform.TypeCheckingMode.SKIP
 
 /**
  * An evaluator for reporting of which dependencies have later versions.
@@ -38,7 +38,7 @@ import static groovy.transform.TypeCheckingMode.SKIP
 @TupleConstructor
 class DependencyUpdates {
   Project project
-  Closure resolutionStrategy
+  Action<? super ResolutionStrategyWithCurrent> resolutionStrategy
   String revision
   Object outputFormatter
   String outputDir

@@ -86,17 +86,22 @@ The strategy can be specified either on the task or as a system property for ad 
 gradle dependencyUpdates -Drevision=release
 ```
 
-The latest versions can be further filtered using [Component Selection Rules][component_selection_rules].
-For example, to disallow release candidates as upgradable versions a selection rule could be defined as:
+The latest versions can be further filtered using [Component Selection Rules][component_selection_rules]. 
+The current version of a component can be retrieved with `currentVersion` property. For example, to 
+disallow release candidates as upgradable versions from stable versions, a selection rule could be 
+defined as:
 
 ```groovy
 dependencyUpdates.resolutionStrategy {
   componentSelection { rules ->
-    rules.all { ComponentSelection selection ->
-      boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm', 'preview', 'b', 'ea'].any { qualifier ->
-        selection.candidate.version ==~ /(?i).*[.-]$qualifier[.\d-+]*/
+    rules.all {
+      def isNonStable = { String version -> 
+        ['alpha', 'beta', 'rc', 'cr', 'm', 'preview', 'b', 'ea'].any { qualifier ->
+          version ==~ /(?i).*[.-]\$qualifier[.\\d-+]*/
+        }
       }
-      if (rejected) {
+
+      if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
         selection.reject('Release candidate')
       }
     }
@@ -113,10 +118,10 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
   resolutionStrategy {
     componentSelection {
       all {
-        val rejected = listOf("alpha", "beta", "rc", "cr", "m", "preview", "b", "ea").any { qualifier ->
-          candidate.version.matches(Regex("(?i).*[.-]$qualifier[.\\d-+]*"))
+        fun isNonStable(version: String) = listOf("alpha", "beta", "rc", "cr", "m", "preview", "b", "ea").any { qualifier ->
+          version.matches(Regex("(?i).*[.-]\$qualifier[.\\d-+]*"))
         }
-        if (rejected) {
+        if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
           reject("Release candidate")
         }
       }

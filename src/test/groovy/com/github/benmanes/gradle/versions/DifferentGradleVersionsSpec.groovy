@@ -55,6 +55,16 @@ final class DifferentGradleVersionsSpec extends Specification {
         dependencies {
           compile 'com.google.inject:guice:2.0'
         }
+        
+        dependencyUpdates.resolutionStrategy {
+          componentSelection {
+            all {
+              if (candidate.version == "3.1" && currentVersion == "2.0") {
+                reject("Guice 3.1 not allowed")
+              }
+            }
+          }
+        }
         """.stripIndent()
 
     when:
@@ -71,7 +81,6 @@ final class DifferentGradleVersionsSpec extends Specification {
 
     where:
     gradleVersion << [
-      '2.0',
       '3.3',
       '3.4',
       '3.5',
@@ -86,7 +95,13 @@ final class DifferentGradleVersionsSpec extends Specification {
       '4.8',
       '4.9',
       '4.10',
-      '5.0'
+      '5.0',
+      '5.1.1',
+      '5.2.1',
+      '5.3.1',
+      '5.4.1',
+      '5.5.1',
+      '5.6.1'
     ]
   }
 

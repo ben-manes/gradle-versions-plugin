@@ -15,10 +15,10 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.transform.TypeChecked
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
-import org.gradle.api.artifacts.ResolutionStrategy
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
@@ -52,8 +52,8 @@ class DependencyUpdatesTask extends DefaultTask {
   @Input
   boolean checkForGradleUpdate = true
 
-  Object outputFormatter = 'plain';
-  Closure resolutionStrategy = null;
+  Object outputFormatter = 'plain'
+  Action<? super ResolutionStrategyWithCurrent> resolutionStrategyAction = null
 
   DependencyUpdatesTask() {
     description = 'Displays the dependency updates for the project.'
@@ -66,7 +66,7 @@ class DependencyUpdatesTask extends DefaultTask {
   def dependencyUpdates() {
     project.evaluationDependsOnChildren()
 
-    def evaluator = new DependencyUpdates(project, resolutionStrategy, revisionLevel(),
+    def evaluator = new DependencyUpdates(project, resolutionStrategyAction, revisionLevel(),
       outputFormatterProp(), outputDirectory(), getReportfileName(), checkForGradleUpdate, gradleReleaseChannelLevel())
     DependencyUpdatesReporter reporter = evaluator.run()
     reporter?.write()
@@ -76,10 +76,8 @@ class DependencyUpdatesTask extends DefaultTask {
    * Sets the {@link #resolutionStrategy} to the provided strategy.
    * @param resolutionStrategy the resolution strategy
    */
-  void resolutionStrategy(final Action<? super ResolutionStrategy> resolutionStrategy) {
-    // The delegate of the Closure body is ResolutionStrategy:
-    // https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/Configuration.html#resolutionStrategy-groovy.lang.Closure-
-    this.resolutionStrategy = { resolutionStrategy.execute(delegate as ResolutionStrategy) }
+  void resolutionStrategy(final Action<? super ResolutionStrategyWithCurrent> resolutionStrategy) {
+    this.resolutionStrategyAction = resolutionStrategy
   }
 
   /** Returns the resolution revision level. */
