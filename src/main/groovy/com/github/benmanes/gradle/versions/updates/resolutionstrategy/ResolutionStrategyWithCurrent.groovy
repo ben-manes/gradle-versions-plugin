@@ -15,7 +15,8 @@ class ResolutionStrategyWithCurrent {
   private ResolutionStrategy delegate
   private Map<Coordinate.Key, Coordinate> currentCoordinates
 
-  ResolutionStrategyWithCurrent(ResolutionStrategy delegate, Map<Coordinate.Key, Coordinate> currentCoordinates) {
+  ResolutionStrategyWithCurrent(ResolutionStrategy delegate,
+      Map<Coordinate.Key, Coordinate> currentCoordinates) {
     this.delegate = delegate
     this.currentCoordinates = currentCoordinates
   }
@@ -70,10 +71,12 @@ class ResolutionStrategyWithCurrent {
   }
 
   ComponentSelectionRulesWithCurrent getComponentSelection() {
-    return new ComponentSelectionRulesWithCurrent(delegate.getComponentSelection(), currentCoordinates)
+    return new ComponentSelectionRulesWithCurrent(delegate.getComponentSelection(),
+      currentCoordinates)
   }
 
-  ResolutionStrategyWithCurrent componentSelection(Action<? super ComponentSelectionRulesWithCurrent> action) {
+  ResolutionStrategyWithCurrent componentSelection(
+      Action<? super ComponentSelectionRulesWithCurrent> action) {
     action.execute(getComponentSelection())
     return this
   }
@@ -92,7 +95,8 @@ class ResolutionStrategyWithCurrent {
     return delegate.getDependencySubstitution()
   }
 
-  ResolutionStrategyWithCurrent dependencySubstitution(Action<? super DependencySubstitutions> action) {
+  ResolutionStrategyWithCurrent dependencySubstitution(
+      Action<? super DependencySubstitutions> action) {
     delegate.dependencySubstitution(action)
     return this
   }

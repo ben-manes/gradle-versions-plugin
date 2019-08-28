@@ -74,7 +74,8 @@ class Resolver {
   /** Returns the version status of the configuration's dependencies at the given revision. */
   public Set<DependencyStatus> resolve(Configuration configuration, String revision) {
     Map<Coordinate.Key, Coordinate> coordinates = getCurrentCoordinates(configuration)
-    Configuration latestConfiguration = createLatestConfiguration(configuration, revision, coordinates)
+    Configuration latestConfiguration = createLatestConfiguration(configuration, revision,
+      coordinates)
 
     LenientConfiguration lenient = latestConfiguration.resolvedConfiguration.lenientConfiguration
     Set<ResolvedDependency> resolved = lenient.getFirstLevelModuleDependencies(SATISFIES_ALL)
@@ -108,7 +109,8 @@ class Resolver {
   }
 
   /** Returns a copy of the configuration where dependencies will be resolved up to the revision. */
-  private Configuration createLatestConfiguration(Configuration configuration, String revision, Map<Coordinate.Key, Coordinate> currentCoordinates) {
+  private Configuration createLatestConfiguration(Configuration configuration, String revision,
+      Map<Coordinate.Key, Coordinate> currentCoordinates) {
     List<Dependency> latest = configuration.dependencies.findAll { dependency ->
       dependency instanceof ExternalDependency
     }.collect { dependency ->
@@ -167,12 +169,14 @@ class Resolver {
   }
 
   /** Adds a custom resolution strategy only applicable for the dependency updates task. */
-  private void addCustomResolutionStrategy(Configuration configuration, Map<Coordinate.Key, Coordinate> currentCoordinates) {
+  private void addCustomResolutionStrategy(Configuration configuration,
+      Map<Coordinate.Key, Coordinate> currentCoordinates) {
     if (resolutionStrategy != null) {
       configuration.resolutionStrategy(new Action<ResolutionStrategy>() {
         @java.lang.Override
         void execute(ResolutionStrategy inner) {
-          resolutionStrategy.execute(new ResolutionStrategyWithCurrent(inner as ResolutionStrategy, currentCoordinates))
+          resolutionStrategy.execute(new ResolutionStrategyWithCurrent(inner as ResolutionStrategy,
+            currentCoordinates))
         }
       })
     }
