@@ -66,7 +66,7 @@ final class ComponentSelectionRuleSourceSpec extends Specification {
         
           @Mutate
           void select(ComponentSelectionWithCurrent selection) {
-            if (selection.candidate.version == "3.1" && selection.current == "2.0") {
+            if (selection.candidate.version == "3.1" && selection.currentVersion == "2.0") {
               selection.reject("Guice 3.1 not allowed")
             }
           }

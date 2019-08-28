@@ -59,7 +59,7 @@ final class DifferentGradleVersionsSpec extends Specification {
         dependencyUpdates.resolutionStrategy {
           componentSelection {
             all {
-              if (candidate.version == "3.1" && current == "2.0") {
+              if (candidate.version == "3.1" && currentVersion == "2.0") {
                 reject("Guice 3.1 not allowed")
               }
             }

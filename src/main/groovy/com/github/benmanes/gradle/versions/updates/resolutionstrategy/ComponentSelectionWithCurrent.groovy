@@ -7,11 +7,7 @@ import org.gradle.api.artifacts.ComponentSelection
 class ComponentSelectionWithCurrent {
 
   @Delegate
-  private ComponentSelection delegate
+  private final ComponentSelection delegate
 
-  private String current
-
-  String getCurrent() {
-    return current
-  }
+  public final String currentVersion
 }

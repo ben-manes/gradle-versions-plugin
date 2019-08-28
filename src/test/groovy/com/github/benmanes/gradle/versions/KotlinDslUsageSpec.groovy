@@ -46,7 +46,7 @@ final class KotlinDslUsageSpec extends Specification {
           resolutionStrategy {
             componentSelection {
               all {
-                if (candidate.version == "3.1" && current != "") {
+                if (candidate.version == "3.1" && currentVersion != "") {
                   reject("Guice 3.1 not allowed")
                 }
               }
