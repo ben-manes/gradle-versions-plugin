@@ -49,17 +49,32 @@ class ComponentSelectionRulesWithCurrent {
   }
 
   ComponentSelectionRulesWithCurrent withModule(Object id, Action<? super ComponentSelectionWithCurrent> selectionAction) {
-    delegate.withModule(id, selectionAction)
+    delegate.withModule(id, new Action<ComponentSelection>() {
+      void execute(ComponentSelection inner) {
+        selectionAction.execute(wrapComponentSelection(inner))
+      }
+    })
     return this
   }
 
   ComponentSelectionRulesWithCurrent withModule(Object id, Closure<?> closure) {
-    delegate.withModule(id, closure)
+    delegate.withModule(id, new Action<ComponentSelection>() {
+      void execute(ComponentSelection inner) {
+        ComponentSelectionWithCurrent wrapped = wrapComponentSelection(inner)
+        closure.delegate = wrapped
+        closure(wrapped)
+      }
+    })
     return this
   }
 
   ComponentSelectionRulesWithCurrent withModule(Object id, Object ruleSource) {
-    delegate.withModule(id, ruleSource)
+    RuleAction<ComponentSelectionWithCurrent> ruleAction = RuleSourceBackedRuleAction.create(ModelType.of(ComponentSelectionWithCurrent.class), ruleSource)
+    delegate.withModule(id, new Action<ComponentSelection>() {
+      void execute(ComponentSelection inner) {
+        ruleAction.execute(wrapComponentSelection(inner), [])
+      }
+    })
     return this
   }
 
