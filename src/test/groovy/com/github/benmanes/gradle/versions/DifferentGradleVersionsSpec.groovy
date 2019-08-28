@@ -86,7 +86,13 @@ final class DifferentGradleVersionsSpec extends Specification {
       '4.8',
       '4.9',
       '4.10',
-      '5.0'
+      '5.0',
+      '5.1',
+      '5.2',
+      '5.3',
+      '5.4',
+      '5.5',
+      '5.6'
     ]
   }
 

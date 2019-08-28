@@ -41,8 +41,11 @@ final class KotlinDslUsageSpec extends Specification {
     given:
     def srdErrWriter = new StringWriter()
     buildFile << '''
-      tasks {
-        "dependencyUpdates"(DependencyUpdatesTask::class) {
+      tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+          checkForGradleUpdate = true
+          outputFormatter = "json"
+          outputDir = "build/dependencyUpdates"
+          reportfileName = "report"
           resolutionStrategy {
             componentSelection {
               all {
@@ -53,7 +56,6 @@ final class KotlinDslUsageSpec extends Specification {
             }
           }
         }
-      }
     '''
 
     when:
@@ -71,6 +73,6 @@ final class KotlinDslUsageSpec extends Specification {
     srdErrWriter.toString().empty
 
     where:
-    gradleVersion << ['4.8']
+    gradleVersion << ['5.6']
   }
 }
