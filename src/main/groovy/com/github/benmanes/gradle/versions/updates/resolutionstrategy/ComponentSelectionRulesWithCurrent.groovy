@@ -1,6 +1,7 @@
 package com.github.benmanes.gradle.versions.updates.resolutionstrategy
 
 import com.github.benmanes.gradle.versions.updates.Coordinate
+import groovy.transform.TupleConstructor
 import org.gradle.api.Action
 import org.gradle.api.artifacts.ComponentSelection
 import org.gradle.api.artifacts.ComponentSelectionRules
@@ -8,16 +9,11 @@ import org.gradle.internal.rules.RuleAction
 import org.gradle.internal.rules.RuleSourceBackedRuleAction
 import org.gradle.model.internal.type.ModelType
 
+@TupleConstructor(includeFields=true)
 class ComponentSelectionRulesWithCurrent {
 
-  private ComponentSelectionRules delegate
-  private Map<Coordinate.Key, Coordinate> currentCoordinates
-
-  ComponentSelectionRulesWithCurrent(ComponentSelectionRules delegate,
-      Map<Coordinate.Key, Coordinate> currentCoordinates) {
-    this.delegate = delegate
-    this.currentCoordinates = currentCoordinates
-  }
+  private final ComponentSelectionRules delegate
+  private final Map<Coordinate.Key, Coordinate> currentCoordinates
 
   ComponentSelectionRulesWithCurrent all(
       Action<? super ComponentSelectionWithCurrent> selectionAction) {
