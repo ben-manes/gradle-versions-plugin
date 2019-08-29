@@ -19,7 +19,10 @@ class ComponentSelectionRulesWithCurrent {
       Action<? super ComponentSelectionWithCurrent> selectionAction) {
     delegate.all(new Action<ComponentSelection>() {
       void execute(ComponentSelection inner) {
-        selectionAction.execute(wrapComponentSelection(inner))
+        ComponentSelectionWithCurrent wrapped = wrapComponentSelection(inner)
+        if (wrapped != null) {
+          selectionAction.execute(wrapped)
+        }
       }
     })
     return this
@@ -29,8 +32,10 @@ class ComponentSelectionRulesWithCurrent {
     delegate.all(new Action<ComponentSelection>() {
       void execute(ComponentSelection inner) {
         ComponentSelectionWithCurrent wrapped = wrapComponentSelection(inner)
-        closure.delegate = wrapped
-        closure(wrapped)
+        if (wrapped != null) {
+          closure.delegate = wrapped
+          closure(wrapped)
+        }
       }
     })
     return this
@@ -41,7 +46,10 @@ class ComponentSelectionRulesWithCurrent {
       ModelType.of(ComponentSelectionWithCurrent), ruleSource)
     delegate.all(new Action<ComponentSelection>() {
       void execute(ComponentSelection inner) {
-        ruleAction.execute(wrapComponentSelection(inner), [])
+        ComponentSelectionWithCurrent wrapped = wrapComponentSelection(inner)
+        if (wrapped != null) {
+          ruleAction.execute(wrapped, [])
+        }
       }
     })
     return this
@@ -51,7 +59,10 @@ class ComponentSelectionRulesWithCurrent {
       Action<? super ComponentSelectionWithCurrent> selectionAction) {
     delegate.withModule(id, new Action<ComponentSelection>() {
       void execute(ComponentSelection inner) {
-        selectionAction.execute(wrapComponentSelection(inner))
+        ComponentSelectionWithCurrent wrapped = wrapComponentSelection(inner)
+        if (wrapped != null) {
+          selectionAction.execute(wrapped)
+        }
       }
     })
     return this
@@ -61,8 +72,10 @@ class ComponentSelectionRulesWithCurrent {
     delegate.withModule(id, new Action<ComponentSelection>() {
       void execute(ComponentSelection inner) {
         ComponentSelectionWithCurrent wrapped = wrapComponentSelection(inner)
-        closure.delegate = wrapped
-        closure(wrapped)
+        if (wrapped != null) {
+          closure.delegate = wrapped
+          closure(wrapped)
+        }
       }
     })
     return this
@@ -73,7 +86,10 @@ class ComponentSelectionRulesWithCurrent {
       ModelType.of(ComponentSelectionWithCurrent), ruleSource)
     delegate.withModule(id, new Action<ComponentSelection>() {
       void execute(ComponentSelection inner) {
-        ruleAction.execute(wrapComponentSelection(inner), [])
+        ComponentSelectionWithCurrent wrapped = wrapComponentSelection(inner)
+        if (wrapped != null) {
+          ruleAction.execute(wrapped, [])
+        }
       }
     })
     return this
@@ -82,8 +98,8 @@ class ComponentSelectionRulesWithCurrent {
   private ComponentSelectionWithCurrent wrapComponentSelection(ComponentSelection inner) {
     Coordinate candidateCoordinate = Coordinate.from(inner.candidate)
     Coordinate current = currentCoordinates.get(candidateCoordinate.key)
-    ComponentSelectionWithCurrent wrapped = new ComponentSelectionWithCurrent(current.version,
-      inner)
-    return wrapped
+    if (current == null) return null
+
+    return new ComponentSelectionWithCurrent(current?.version, inner)
   }
 }
