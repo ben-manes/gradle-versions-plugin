@@ -55,7 +55,7 @@ final class DifferentGradleVersionsSpec extends Specification {
         dependencies {
           compile 'com.google.inject:guice:2.0'
         }
-        
+
         dependencyUpdates.resolutionStrategy {
           componentSelection {
             all {
@@ -101,7 +101,7 @@ final class DifferentGradleVersionsSpec extends Specification {
       '5.3.1',
       '5.4.1',
       '5.5.1',
-      '5.6.1'
+      '5.6',
     ]
   }
 
@@ -136,14 +136,14 @@ final class DifferentGradleVersionsSpec extends Specification {
         dependencies {
           compile 'com.google.inject:guice:2.0'
         }
-        
+
         dependencyUpdates.gradleReleaseChannel="${gradleReleaseChannel}"
-        
+
         """.stripIndent()
 
     when:
     def result = GradleRunner.create()
-      .withGradleVersion('3.0')
+      .withGradleVersion('3.3')
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .forwardStdError(srdErrWriter)
