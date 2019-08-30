@@ -97,7 +97,7 @@ dependencyUpdates.resolutionStrategy {
     rules.all {
       def isNonStable = { String version -> 
         ['alpha', 'beta', 'rc', 'cr', 'm', 'preview', 'b', 'ea'].any { qualifier ->
-          version ==~ /(?i).*[.-]\$qualifier[.\\d-+]*/
+          version ==~ /(?i).*[.-]$qualifier[.\d-+]*/
         }
       }
 
@@ -119,7 +119,7 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
     componentSelection {
       all {
         fun isNonStable(version: String) = listOf("alpha", "beta", "rc", "cr", "m", "preview", "b", "ea").any { qualifier ->
-          version.matches(Regex("(?i).*[.-]\$qualifier[.\\d-+]*"))
+          version.matches(Regex("(?i).*[.-]$qualifier[.\\d-+]*"))
         }
         if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
           reject("Release candidate")
