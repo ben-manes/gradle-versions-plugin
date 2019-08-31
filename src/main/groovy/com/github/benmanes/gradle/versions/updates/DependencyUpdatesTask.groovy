@@ -22,6 +22,8 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
+import org.gradle.util.ConfigureUtil
+import org.gradle.util.SingleMessageLogger;
 
 import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.*
 
@@ -53,7 +55,9 @@ class DependencyUpdatesTask extends DefaultTask {
   boolean checkForGradleUpdate = true
 
   Object outputFormatter = 'plain'
-  Action<? super ResolutionStrategyWithCurrent> resolutionStrategyAction = null
+
+  Closure resolutionStrategy = null;
+  private Action<? super ResolutionStrategyWithCurrent> resolutionStrategyAction = null
 
   DependencyUpdatesTask() {
     description = 'Displays the dependency updates for the project.'
@@ -65,6 +69,12 @@ class DependencyUpdatesTask extends DefaultTask {
   @TaskAction
   def dependencyUpdates() {
     project.evaluationDependsOnChildren()
+
+    if (resolutionStrategy != null) {
+      resolutionStrategy(ConfigureUtil.configureUsing(resolutionStrategy))
+      SingleMessageLogger.nagUserWith('dependencyUpdates.resolutionStrategy', /* removalDetails */ '',
+        'Remove the assignment operator, \'=\', when setting this task property', /* contextualAdvice */ null);
+    }
 
     def evaluator = new DependencyUpdates(project, resolutionStrategyAction, revisionLevel(),
       outputFormatterProp(), outputDirectory(), getReportfileName(), checkForGradleUpdate, gradleReleaseChannelLevel())
@@ -78,6 +88,7 @@ class DependencyUpdatesTask extends DefaultTask {
    */
   void resolutionStrategy(final Action<? super ResolutionStrategyWithCurrent> resolutionStrategy) {
     this.resolutionStrategyAction = resolutionStrategy
+    this.resolutionStrategy = null
   }
 
   /** Returns the resolution revision level. */

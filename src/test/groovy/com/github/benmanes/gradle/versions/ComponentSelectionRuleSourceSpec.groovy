@@ -23,7 +23,7 @@ final class ComponentSelectionRuleSourceSpec extends Specification {
   }
 
   @Unroll
-  def 'component selection works with rule-source'() {
+  def 'component selection works with rule-source (#assignment)'() {
     given:
     def classpathString = pluginClasspath
       .collect { it.absolutePath.replace('\\', '\\\\') } // escape backslashes in Windows paths
@@ -55,15 +55,15 @@ final class ComponentSelectionRuleSourceSpec extends Specification {
         dependencies {
           compile 'com.google.inject:guice:2.0'
         }
-        
-        dependencyUpdates.resolutionStrategy {
+
+        dependencyUpdates.resolutionStrategy ${assignment} {
           componentSelection {
             all(new Rule())
           }
         }
-        
+
         class Rule {
-        
+
           @Mutate
           void select(ComponentSelectionWithCurrent selection) {
             if (selection.candidate.version == "3.1" && selection.currentVersion == "2.0") {
@@ -83,5 +83,8 @@ final class ComponentSelectionRuleSourceSpec extends Specification {
     then:
     result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
     srdErrWriter.toString().empty
+
+    where:
+    assignment << [' ', '=']
   }
 }
