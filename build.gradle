@@ -2,31 +2,37 @@ buildscript {
   repositories {
     jcenter()
   }
-
   dependencies {
     classpath 'org.gradle.api.plugins:gradle-nexus-plugin:0.7.1'
   }
 }
 
 plugins {
-  id "com.gradle.build-scan" version "1.16"
   id "com.jfrog.bintray" version "1.7.3"
+  id 'com.gradle.build-scan' version '2.4.1'
+  id("org.gradle.maven-publish")
+  id("org.gradle.java-gradle-plugin")
+  id("org.gradle.groovy")
+  id("org.gradle.codenarc")
 }
+apply plugin: 'nexus'
 
 buildScan {
   termsOfServiceUrl = 'https://gradle.com/terms-of-service'
   termsOfServiceAgree = 'yes'
 }
 
-apply plugin: 'java-gradle-plugin'
-apply plugin: 'groovy'
-apply plugin: 'nexus'
-apply plugin: 'codenarc'
 
 group = 'com.github.ben-manes'
 version = '0.24.0'
 
 sourceCompatibility = '1.6'
+
+publishing {
+  repositories {
+    maven { url = "build/repository" }
+  }
+}
 
 repositories {
   mavenCentral()

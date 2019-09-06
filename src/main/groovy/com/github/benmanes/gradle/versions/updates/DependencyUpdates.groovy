@@ -22,6 +22,7 @@ import groovy.transform.TypeChecked
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.artifacts.UnresolvedDependency
 
 /**
@@ -48,8 +49,9 @@ class DependencyUpdates {
 
   /** Evaluates the dependencies and returns a reporter. */
   DependencyUpdatesReporter run() {
-    Map<Project, Set<Configuration>> projectConfigs = project.allprojects.collectEntries { proj ->
-      [proj, proj.configurations.plus(proj.buildscript.configurations) as Set]
+    Map<Project, ConfigurationContainer> projectConfigs = project.allprojects.collectEntries { proj ->
+      proj.configurations.addAll(proj.buildscript.configurations)
+      [proj, proj.configurations]
     }
     Set<DependencyStatus> status = resolveProjects(projectConfigs)
 
@@ -62,7 +64,7 @@ class DependencyUpdates {
     return createReporter(versions, unresolved, projectUrls)
   }
 
-  private Set<DependencyStatus> resolveProjects(Map<Project, Set<Configuration>> projectConfigs) {
+  private Set<DependencyStatus> resolveProjects(Map<Project, ConfigurationContainer> projectConfigs) {
     projectConfigs.keySet().collect { proj ->
       Set<Configuration> configurations = projectConfigs.get(proj)
       Resolver resolver = new Resolver(proj, resolutionStrategy)

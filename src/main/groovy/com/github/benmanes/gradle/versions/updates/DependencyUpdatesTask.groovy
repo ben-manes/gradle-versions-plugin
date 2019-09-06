@@ -54,8 +54,10 @@ class DependencyUpdatesTask extends DefaultTask {
   @Input
   boolean checkForGradleUpdate = true
 
+  @Input @Optional
   Object outputFormatter = 'plain'
 
+  @Input @Optional
   Closure resolutionStrategy = null;
   private Action<? super ResolutionStrategyWithCurrent> resolutionStrategyAction = null
 
