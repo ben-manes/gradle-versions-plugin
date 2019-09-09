@@ -85,9 +85,10 @@ The strategy can be specified either on the task or as a system property for ad 
 ```groovy
 gradle dependencyUpdates -Drevision=release
 ```
+ 
 
-The latest versions can be further filtered using [Component Selection Rules][component_selection_rules]. 
-To do that, you need to define what does not constitute a stable version for your project:
+To further define which version to accept, you need to define what means an unstable version. Sadly, there are
+no agreed standard on this, but this is a good starting point:
 
 <details open>
 <summary>Groovy</summary>
@@ -115,6 +116,9 @@ fun isNonStable(version: String): Boolean {
 
 </details>
 
+You can then configure [Component Selection Rules][component_selection_rules].
+The current version of a component can be retrieved with the `currentVersion` property.
+You can either use the simplified syntax `rejectVersionIf { ... }` or configure a complete resolution strategy.
 
 
 <details open>
