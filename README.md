@@ -97,7 +97,7 @@ no agreed standard on this, but this is a good starting point:
 def isNonStable = { String version ->
   def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { it -> version.toUpperCase().contains(it) }
   def regex = /^[0-9,.v-]+$/
-  return !stableKeyword && !(version ==~ /^[0-9,.v-]+$/)
+  return !stableKeyword && !(version ==~ regex)
 }
 ```
 
@@ -139,7 +139,7 @@ dependencyUpdates {
    // Example 3: using the full syntax
    resolutionStrategy {
      componentSelection { rules ->
-       rules.all { ComponentSelection selection ->
+       rules.all {
          if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
            selection.reject('Release candidate')
          }

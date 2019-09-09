@@ -32,7 +32,7 @@ configurations {
 def isNonStable = { String version ->
   def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { it -> version.toUpperCase().contains(it) }
   def regex = /^[0-9,.v-]+$/
-  return !stableKeyword && !(version ==~ /^[0-9,.v-]+$/)
+  return !stableKeyword && !(version ==~ regex)
 }
 
 dependencyUpdates {
@@ -41,6 +41,17 @@ dependencyUpdates {
   rejectVersionIf { selection ->
     isNonStable(selection.candidate.version) && !isNonStable(selection.currentVersion)
   }
+
+//  resolutionStrategy {
+//    componentSelection { rules ->
+//      rules.all {
+//        if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
+//          selection.reject('Release candidate')
+//        }
+//      }
+//    }
+//  }
+
 }
 
 dependencies {

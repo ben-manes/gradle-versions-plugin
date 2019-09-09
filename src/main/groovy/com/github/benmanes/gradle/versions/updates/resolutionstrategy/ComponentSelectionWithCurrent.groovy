@@ -37,12 +37,12 @@ class ComponentSelectionWithCurrent implements ComponentSelection {
 
   @Override
   public String toString() {
-    final StringBuffer sb = new StringBuffer("ComponentSelectionWithCurrent{");
-    sb.append("group=").append(getCandidate().group);
-    sb.append(", module=").append(getCandidate().module);
-    sb.append(", version=").append(getCandidate().version)
-    sb.append(", currentVersion='").append(currentVersion).append('\'');
-    sb.append('}');
-    return sb.toString();
+    return """\
+ComponentSelectionWithCurrent{
+    group="${candidate.group}",
+    module="${candidate.module}",
+    version="${candidate.version}",
+    currentVersion="$currentVersion", 
+}"""
   }
 }

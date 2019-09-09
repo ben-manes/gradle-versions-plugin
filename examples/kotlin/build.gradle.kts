@@ -34,6 +34,16 @@ tasks.withType<DependencyUpdatesTask> {
     isNonStable(selection.candidate.version) && isNonStable(selection.currentVersion).not()
   }
 
+  resolutionStrategy {
+    componentSelection {
+      all {
+        if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
+          reject("Release candidate")
+        }
+      }
+    }
+  }
+
   // optional parameters
   checkForGradleUpdate = true
   outputFormatter = "json"
