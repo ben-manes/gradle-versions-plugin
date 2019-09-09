@@ -6,8 +6,8 @@ defaultTasks 'dependencyUpdates'
 buildscript {
   repositories {
     // Use 'gradle install' to install latest
-    jcenter()
     mavenLocal()
+    jcenter()
   }
 
   dependencies {
@@ -29,19 +29,17 @@ configurations {
   unresolvable2
 }
 
+def isNonStable = { String version ->
+  def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { it -> version.toUpperCase().contains(it) }
+  def regex = /^[0-9,.v-]+$/
+  return !stableKeyword && !(version ==~ /^[0-9,.v-]+$/)
+}
+
 dependencyUpdates {
   checkForGradleUpdate = true
-  resolutionStrategy {
-    componentSelection { rules ->
-      rules.all { ComponentSelection selection ->
-        boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm', 'preview', 'b', 'ea'].any { qualifier ->
-          selection.candidate.version ==~ /(?i).*[.-]$qualifier[.\d-+]*/
-        }
-        if (rejected) {
-          selection.reject('Release candidate')
-        }
-      }
-    }
+
+  rejectVersionIf { selection ->
+    isNonStable(selection.candidate.version) && !isNonStable(selection.currentVersion)
   }
 }
 

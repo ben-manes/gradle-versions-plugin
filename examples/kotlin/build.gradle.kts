@@ -1,7 +1,7 @@
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
 plugins {
-  id("com.github.ben-manes.versions") version "0.20.0"
+  id("com.github.ben-manes.versions") version "0.24.0"
 }
 
 
@@ -19,19 +19,21 @@ configurations {
   register("unresolvable2")
 }
 
-tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
-  resolutionStrategy {
-    componentSelection {
-      all {
-        val rejected = listOf("alpha", "beta", "rc", "cr", "m", "preview", "b", "ea").any { qualifier ->
-          candidate.version.matches(Regex("(?i).*[.-]$qualifier[.\\d-+]*"))
-        }
-        if (rejected) {
-          reject("Release candidate")
-        }
-      }
-    }
+fun isNonStable(version: String): Boolean {
+  val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.toUpperCase().contains(it) }
+  val regex = "^[0-9,.v-]+$".toRegex()
+  val isStable = stableKeyword || regex.matches(version)
+  return isStable.not()
+}
+
+
+
+tasks.withType<DependencyUpdatesTask> {
+
+  rejectVersionIf { selection ->
+    isNonStable(selection.candidate.version) && isNonStable(selection.currentVersion).not()
   }
+
   // optional parameters
   checkForGradleUpdate = true
   outputFormatter = "json"
