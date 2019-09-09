@@ -86,47 +86,107 @@ The strategy can be specified either on the task or as a system property for ad 
 gradle dependencyUpdates -Drevision=release
 ```
 
-The latest versions can be further filtered using [Component Selection Rules][component_selection_rules].
-The current version of a component can be retrieved with `currentVersion` property. For example, to
-disallow release candidates as upgradable versions from stable versions, a selection rule could be
-defined as:
+The latest versions can be further filtered using [Component Selection Rules][component_selection_rules]. 
+To do that, you need to define what does not constitute a stable version for your project:
+
+<details open>
+<summary>Groovy</summary>
 
 ```groovy
-dependencyUpdates.resolutionStrategy {
-  componentSelection { rules ->
-    rules.all { ComponentSelection selection ->
-      def isNonStable = { String version ->
-        ['alpha', 'beta', 'rc', 'cr', 'm', 'preview', 'b', 'ea'].any { qualifier ->
-          version ==~ /(?i).*[.-]$qualifier[.\d-+]*/
-        }
-      }
+def isNonStable = { String version ->
+  def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { it -> version.toUpperCase().contains(it) }
+  def regex = /^[0-9,.v-]+$/
+  return !stableKeyword && !(version ==~ /^[0-9,.v-]+$/)
+}
+```
 
-      if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
-        selection.reject('Release candidate')
-      }
-    }
+</details>
+<details>
+<summary>Kotlin</summary>
+
+```kotlin
+fun isNonStable(version: String): Boolean {
+    val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.toUpperCase().contains(it) }
+    val regex = "^[0-9,.v-]+$".toRegex()
+    val isStable = stableKeyword || regex.matches(version)
+    return isStable.not()
+}
+```
+
+</details>
+
+
+
+<details open>
+<summary>Groovy</summary>
+
+```groovy
+dependencyUpdates {
+   // Example 1: reject all non stable versions
+   rejectVersionIf { selection ->
+       isNonStable(candidate.version)
+   }
+
+   // Example 2: disallow release candidates as upgradable versions from stable versions
+   rejectVersionIf { selection ->
+       isNonStable(candidate.version) && !isNonStable(currentVersion)
+   }
+
+   // Example 3: using the full syntax
+   resolutionStrategy {
+     componentSelection { rules ->
+       rules.all { ComponentSelection selection ->
+         if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
+           selection.reject('Release candidate')
+         }
+       }
+     }
   }
 }
 ```
+
+</details>
+<details>
+<summary>Kotlin</summary>
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+tasks.withType<DependencyUpdatesTask> {
+    // Example 1: reject all non stable versions
+    rejectVersionIf { selection ->
+        isNonStable(selection.candidate.version)
+    }
+
+    // Example 2: disallow release candidates as upgradable versions from stable versions
+    rejectVersionIf { selection ->
+        isNonStable(selection.candidate.version) && !isNonStable(selection.currentVersion)
+    }
+
+    // Example 3: using the full syntax
+    resolutionStrategy {
+        componentSelection {
+            all {
+                if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
+                    reject("Release candidate")
+                }
+            }
+        }
+    }
+}
+```
+
+</details>
+
+#### Kotlin DSL
 
 If using Gradle's [kotlin-dsl][kotlin_dsl], you could configure the `dependencyUpdates` like this:
 
 ```kotlin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
-tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
-  resolutionStrategy {
-    componentSelection {
-      all {
-        fun isNonStable(version: String) = listOf("alpha", "beta", "rc", "cr", "m", "preview", "b", "ea").any { qualifier ->
-          version.matches(Regex("(?i).*[.-]$qualifier[.\\d-+]*"))
-        }
-        if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
-          reject("Release candidate")
-        }
-      }
-    }
-  }
+tasks.withType<DependencyUpdatesTask> {
+
   // optional parameters
   checkForGradleUpdate = true
   outputFormatter = "json"

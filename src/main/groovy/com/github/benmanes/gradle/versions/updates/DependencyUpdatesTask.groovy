@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentFilter
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionRulesWithCurrent
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.transform.TypeChecked
 import org.gradle.api.Action
@@ -89,6 +92,18 @@ class DependencyUpdatesTask extends DefaultTask {
   void resolutionStrategy(final Action<? super ResolutionStrategyWithCurrent> resolutionStrategy) {
     this.resolutionStrategyAction = resolutionStrategy
     this.resolutionStrategy = null
+  }
+
+  void rejectVersionIf(final ComponentFilter filter) {
+    resolutionStrategy { ResolutionStrategyWithCurrent strategy ->
+      strategy.componentSelection { ComponentSelectionRulesWithCurrent selection ->
+        selection.all { ComponentSelectionWithCurrent current ->
+          if (filter.reject(current)) {
+            current.reject("Rejected by rejectVersionIf ")
+          }
+        }
+      }
+    }
   }
 
   /** Returns the resolution revision level. */
