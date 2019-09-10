@@ -201,6 +201,19 @@ tasks.withType<DependencyUpdatesTask> {
 
 Note: Do use the `plugins { .. }` syntax if you use the Kotlin DSL.
 
+#### Try out the samples
+
+Have a look at [`examples/groovy`](https://github.com/ben-manes/gradle-versions-plugin/tree/master/examples/groovy) and [`examples/kotlin`](https://github.com/ben-manes/gradle-versions-plugin/tree/master/examples/kotlin)
+
+```bash
+# Pubish the latest version of the plugin to mavenCentral
+$ ./gradlew install  
+
+# Try out the samples
+$ ./gradlew -p examples/groovy dependencyUpdate
+$ ./gradlew -p examples/kotlin dependencyUpdate
+```
+
 #### Report format
 
 The task property `outputFormatter` controls the report output format. The following values are supported:
