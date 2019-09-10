@@ -38,20 +38,20 @@ def isNonStable = { String version ->
 dependencyUpdates {
   checkForGradleUpdate = true
 
+  resolutionStrategy {
+    componentSelection { rules ->
+      rules.all {
+        if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
+          selection.reject('Release candidate')
+        }
+      }
+    }
+  }
+
+
   rejectVersionIf { selection ->
     isNonStable(selection.candidate.version) && !isNonStable(selection.currentVersion)
   }
-
-//  resolutionStrategy {
-//    componentSelection { rules ->
-//      rules.all {
-//        if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
-//          selection.reject('Release candidate')
-//        }
-//      }
-//    }
-//  }
-
 }
 
 dependencies {

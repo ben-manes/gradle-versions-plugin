@@ -1,9 +1,9 @@
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
+// Use 'gradle install' to install latest plugin version
 plugins {
   id("com.github.ben-manes.versions") version "0.24.0"
 }
-
 
 repositories {
   jcenter()
@@ -30,10 +30,6 @@ fun isNonStable(version: String): Boolean {
 
 tasks.withType<DependencyUpdatesTask> {
 
-  rejectVersionIf { selection ->
-    isNonStable(selection.candidate.version) && isNonStable(selection.currentVersion).not()
-  }
-
   resolutionStrategy {
     componentSelection {
       all {
@@ -42,6 +38,10 @@ tasks.withType<DependencyUpdatesTask> {
         }
       }
     }
+  }
+
+  rejectVersionIf { selection ->
+    isNonStable(selection.candidate.version) && isNonStable(selection.currentVersion).not()
   }
 
   // optional parameters
