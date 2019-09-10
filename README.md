@@ -124,6 +124,8 @@ You can either use the simplified syntax `rejectVersionIf { ... }` or configure 
 <details open>
 <summary>Groovy</summary>
 
+<!--  Always modify first examples/groovy and make sure that it works. THEN modify the README -->
+
 ```groovy
 dependencyUpdates {
    // Example 1: reject all non stable versions
@@ -153,30 +155,32 @@ dependencyUpdates {
 <details>
 <summary>Kotlin</summary>
 
+<!--  Always modify first examples/kotlin and make sure that it works. THEN modify the README -->
+
 ```kotlin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
 tasks.withType<DependencyUpdatesTask> {
-    // Example 1: reject all non stable versions
-    rejectVersionIf { selection ->
-        isNonStable(selection.candidate.version)
-    }
+  // Example 1: reject all non stable versions
+  rejectVersionIf {
+    isNonStable(candidate.version)
+  }
 
-    // Example 2: disallow release candidates as upgradable versions from stable versions
-    rejectVersionIf { selection ->
-        isNonStable(selection.candidate.version) && !isNonStable(selection.currentVersion)
-    }
+  // Example 2: disallow release candidates as upgradable versions from stable versions
+  rejectVersionIf {
+    isNonStable(candidate.version) && !isNonStable(currentVersion)
+  }
 
-    // Example 3: using the full syntax
-    resolutionStrategy {
-        componentSelection {
-            all {
-                if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
-                    reject("Release candidate")
-                }
-            }
+  // Example 3: using the full syntax
+  resolutionStrategy {
+    componentSelection {
+      all {
+        if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
+          reject("Release candidate")
         }
+      }
     }
+  }
 }
 ```
 

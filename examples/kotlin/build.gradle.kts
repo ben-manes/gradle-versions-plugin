@@ -30,6 +30,17 @@ fun isNonStable(version: String): Boolean {
 
 tasks.withType<DependencyUpdatesTask> {
 
+  // Example 1: reject all non stable versions
+  rejectVersionIf {
+    isNonStable(candidate.version)
+  }
+
+  // Example 2: disallow release candidates as upgradable versions from stable versions
+  rejectVersionIf {
+    isNonStable(candidate.version) && !isNonStable(currentVersion)
+  }
+
+  // Example 3: using the full syntax
   resolutionStrategy {
     componentSelection {
       all {
@@ -38,10 +49,6 @@ tasks.withType<DependencyUpdatesTask> {
         }
       }
     }
-  }
-
-  rejectVersionIf { selection ->
-    isNonStable(selection.candidate.version) && isNonStable(selection.currentVersion).not()
   }
 
   // optional parameters
