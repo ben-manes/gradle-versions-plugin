@@ -1,0 +1,3 @@
+rootProject.name = 'gradle-versions-sample-groovy'
+enableFeaturePreview("IMPROVED_POM_SUPPORT")
+

@@ -1,9 +1,9 @@
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
+// Use 'gradle install' to install latest plugin version
 plugins {
-  id("com.github.ben-manes.versions") version "0.20.0"
+  id("com.github.ben-manes.versions") version "0.25.0"
 }
-
 
 repositories {
   jcenter()
@@ -19,19 +19,38 @@ configurations {
   register("unresolvable2")
 }
 
-tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+fun isNonStable(version: String): Boolean {
+  val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.toUpperCase().contains(it) }
+  val regex = "^[0-9,.v-]+$".toRegex()
+  val isStable = stableKeyword || regex.matches(version)
+  return isStable.not()
+}
+
+
+
+tasks.withType<DependencyUpdatesTask> {
+
+  // Example 1: reject all non stable versions
+  rejectVersionIf {
+    isNonStable(candidate.version)
+  }
+
+  // Example 2: disallow release candidates as upgradable versions from stable versions
+  rejectVersionIf {
+    isNonStable(candidate.version) && !isNonStable(currentVersion)
+  }
+
+  // Example 3: using the full syntax
   resolutionStrategy {
     componentSelection {
       all {
-        val rejected = listOf("alpha", "beta", "rc", "cr", "m", "preview", "b", "ea").any { qualifier ->
-          candidate.version.matches(Regex("(?i).*[.-]$qualifier[.\\d-+]*"))
-        }
-        if (rejected) {
+        if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
           reject("Release candidate")
         }
       }
     }
   }
+
   // optional parameters
   checkForGradleUpdate = true
   outputFormatter = "json"

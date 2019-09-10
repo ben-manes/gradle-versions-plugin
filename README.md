@@ -85,48 +85,116 @@ The strategy can be specified either on the task or as a system property for ad 
 ```groovy
 gradle dependencyUpdates -Drevision=release
 ```
+ 
 
-The latest versions can be further filtered using [Component Selection Rules][component_selection_rules].
-The current version of a component can be retrieved with `currentVersion` property. For example, to
-disallow release candidates as upgradable versions from stable versions, a selection rule could be
-defined as:
+To further define which version to accept, you need to define what means an unstable version. Sadly, there are
+no agreed standard on this, but this is a good starting point:
+
+<details open>
+<summary>Groovy</summary>
 
 ```groovy
-dependencyUpdates.resolutionStrategy {
-  componentSelection { rules ->
-    rules.all { ComponentSelection selection ->
-      def isNonStable = { String version ->
-        ['alpha', 'beta', 'rc', 'cr', 'm', 'preview', 'b', 'ea'].any { qualifier ->
-          version ==~ /(?i).*[.-]$qualifier[.\d-+]*/
-        }
-      }
+def isNonStable = { String version ->
+  def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { it -> version.toUpperCase().contains(it) }
+  def regex = /^[0-9,.v-]+$/
+  return !stableKeyword && !(version ==~ regex)
+}
+```
 
-      if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
-        selection.reject('Release candidate')
+</details>
+<details>
+<summary>Kotlin</summary>
+
+```kotlin
+fun isNonStable(version: String): Boolean {
+    val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.toUpperCase().contains(it) }
+    val regex = "^[0-9,.v-]+$".toRegex()
+    val isStable = stableKeyword || regex.matches(version)
+    return isStable.not()
+}
+```
+
+</details>
+
+You can then configure [Component Selection Rules][component_selection_rules].
+The current version of a component can be retrieved with the `currentVersion` property.
+You can either use the simplified syntax `rejectVersionIf { ... }` or configure a complete resolution strategy.
+
+
+<details open>
+<summary>Groovy</summary>
+
+<!--  Always modify first examples/groovy and make sure that it works. THEN modify the README -->
+
+```groovy
+dependencyUpdates {
+   // Example 1: reject all non stable versions
+   rejectVersionIf { selection ->
+       isNonStable(selection.candidate.version)
+   }
+
+   // Example 2: disallow release candidates as upgradable versions from stable versions
+   rejectVersionIf { selection ->
+       isNonStable(selection.candidate.version) && !isNonStable(selection.currentVersion)
+   }
+
+   // Example 3: using the full syntax
+  resolutionStrategy {
+    componentSelection {
+      all {
+        if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
+          reject('Release candidate')
+        }
       }
     }
   }
 }
 ```
 
-If using Gradle's [kotlin-dsl][kotlin_dsl], you could configure the `dependencyUpdates` like this:
+</details>
+<details>
+<summary>Kotlin</summary>
+
+<!--  Always modify first examples/kotlin and make sure that it works. THEN modify the README -->
 
 ```kotlin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
-tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+tasks.withType<DependencyUpdatesTask> {
+  // Example 1: reject all non stable versions
+  rejectVersionIf {
+    isNonStable(candidate.version)
+  }
+
+  // Example 2: disallow release candidates as upgradable versions from stable versions
+  rejectVersionIf {
+    isNonStable(candidate.version) && !isNonStable(currentVersion)
+  }
+
+  // Example 3: using the full syntax
   resolutionStrategy {
     componentSelection {
       all {
-        fun isNonStable(version: String) = listOf("alpha", "beta", "rc", "cr", "m", "preview", "b", "ea").any { qualifier ->
-          version.matches(Regex("(?i).*[.-]$qualifier[.\\d-+]*"))
-        }
         if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
           reject("Release candidate")
         }
       }
     }
   }
+}
+```
+
+</details>
+
+#### Kotlin DSL
+
+If using Gradle's [kotlin-dsl][kotlin_dsl], you could configure the `dependencyUpdates` like this:
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+tasks.withType<DependencyUpdatesTask> {
+
   // optional parameters
   checkForGradleUpdate = true
   outputFormatter = "json"
@@ -136,6 +204,19 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
 ```
 
 Note: Do use the `plugins { .. }` syntax if you use the Kotlin DSL.
+
+#### Try out the samples
+
+Have a look at [`examples/groovy`](https://github.com/ben-manes/gradle-versions-plugin/tree/master/examples/groovy) and [`examples/kotlin`](https://github.com/ben-manes/gradle-versions-plugin/tree/master/examples/kotlin)
+
+```bash
+# Publish the latest version of the plugin to mavenLocal()
+$ ./gradlew install  
+
+# Try out the samples
+$ ./gradlew -p examples/groovy dependencyUpdate
+$ ./gradlew -p examples/kotlin dependencyUpdate
+```
 
 #### Report format
 
