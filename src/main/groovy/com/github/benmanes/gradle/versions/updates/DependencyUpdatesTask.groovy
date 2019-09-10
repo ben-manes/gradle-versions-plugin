@@ -98,7 +98,8 @@ class DependencyUpdatesTask extends DefaultTask {
     resolutionStrategy { ResolutionStrategyWithCurrent strategy ->
       strategy.componentSelection { ComponentSelectionRulesWithCurrent selection ->
         selection.all { ComponentSelectionWithCurrent current ->
-          if (filter.reject(current)) {
+          def isNotNull = current.currentVersion != null && current.candidate.version != null
+          if (isNotNull && filter.reject(current)) {
             current.reject("Rejected by rejectVersionIf ")
           }
         }
