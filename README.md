@@ -210,7 +210,7 @@ Note: Do use the `plugins { .. }` syntax if you use the Kotlin DSL.
 Have a look at [`examples/groovy`](https://github.com/ben-manes/gradle-versions-plugin/tree/master/examples/groovy) and [`examples/kotlin`](https://github.com/ben-manes/gradle-versions-plugin/tree/master/examples/kotlin)
 
 ```bash
-# Pubish the latest version of the plugin to mavenCentral
+# Publish the latest version of the plugin to mavenLocal()
 $ ./gradlew install  
 
 # Try out the samples
