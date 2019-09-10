@@ -2,7 +2,7 @@ import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
 // Use 'gradle install' to install latest plugin version
 plugins {
-  id("com.github.ben-manes.versions") version "0.24.0"
+  id("com.github.ben-manes.versions") version "0.25.0"
 }
 
 repositories {
