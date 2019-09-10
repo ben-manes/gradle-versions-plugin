@@ -137,14 +137,14 @@ dependencyUpdates {
    }
 
    // Example 3: using the full syntax
-   resolutionStrategy {
-     componentSelection { rules ->
-       rules.all {
-         if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
-           selection.reject('Release candidate')
-         }
-       }
-     }
+  resolutionStrategy {
+    componentSelection {
+      all {
+        if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
+          reject('Release candidate')
+        }
+      }
+    }
   }
 }
 ```

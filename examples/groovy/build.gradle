@@ -39,19 +39,18 @@ dependencyUpdates {
   checkForGradleUpdate = true
 
   resolutionStrategy {
-    componentSelection { rules ->
-      rules.all {
+    componentSelection {
+      all {
         if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
-          selection.reject('Release candidate')
+          reject('Release candidate')
         }
       }
     }
   }
 
-
-  rejectVersionIf { selection ->
-    isNonStable(selection.candidate.version) && !isNonStable(selection.currentVersion)
-  }
+//  rejectVersionIf { selection ->
+//    isNonStable(selection.candidate.version) && !isNonStable(selection.currentVersion)
+//  }
 }
 
 dependencies {
