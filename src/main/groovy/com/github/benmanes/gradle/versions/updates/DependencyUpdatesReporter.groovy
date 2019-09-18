@@ -35,6 +35,9 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.ModuleVersionSelector
 import org.gradle.api.artifacts.UnresolvedDependency
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.*
 
 /**
@@ -206,12 +209,10 @@ class DependencyUpdatesReporter {
     unresolved.sort { UnresolvedDependency a, UnresolvedDependency b ->
       compareKeys(keyOf(a.selector), keyOf(b.selector))
     }.collect { UnresolvedDependency dep ->
-      def message = dep.problem.getMessage()
-      def split = message.split('Required by')
+      def stringWriter = new StringWriter()
+      dep.problem.printStackTrace(new PrintWriter(stringWriter))
+      def message = stringWriter.toString()
 
-      if (split.length > 0) {
-        message = split[0].trim()
-      }
       buildUnresolvedDependency(dep.selector.group, dep.selector.name,
         currentVersions[keyOf(dep.selector)], message, latestVersions[keyOf(dep.selector)])
     } as SortedSet
