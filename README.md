@@ -61,7 +61,7 @@ logged at the `info` level.
 Gradle updates are checked for on the `current`, `release-candidate` and `nightly` release channels. The plaintext
 report displays gradle updates as a separate category in breadcrumb style (excluding nightly builds). The xml and json
 reports include information about all three release channels, whether a release is considered an update with respect to
-the running (executing) gradle instance, whether an update check on on a release channel has failed, as well as a reason
+the running (executing) gradle instance, whether an update check on a release channel has failed, as well as a reason
 field explaining failures or missing information. The update check may be disabled using the `checkForGradleUpdate` flag.
 
 #### Multi-project build
