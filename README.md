@@ -130,19 +130,19 @@ You can either use the simplified syntax `rejectVersionIf { ... }` or configure 
 dependencyUpdates {
   // Example 1: reject all non stable versions
   rejectVersionIf {
-    isNonStable(candidate.version)
+    isNonStable(it.candidate.version)
   }
 
   // Example 2: disallow release candidates as upgradable versions from stable versions
   rejectVersionIf {
-    isNonStable(candidate.version) && !isNonStable(currentVersion)
+    isNonStable(it.candidate.version) && !isNonStable(it.currentVersion)
   }
 
   // Example 3: using the full syntax
   resolutionStrategy {
     componentSelection {
       all {
-        if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
+        if (isNonStable(it.candidate.version) && !isNonStable(it.currentVersion)) {
           reject('Release candidate')
         }
       }
