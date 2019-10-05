@@ -96,7 +96,7 @@ no agreed standard on this, but this is a good starting point:
 ```groovy
 def isNonStable = { String version ->
   def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { it -> version.toUpperCase().contains(it) }
-  def regex = /^[0-9,.v-]+$/
+  def regex = /^[0-9,\\.v\\-]+(-r)?$/
   return !stableKeyword && !(version ==~ regex)
 }
 ```
@@ -108,7 +108,7 @@ def isNonStable = { String version ->
 ```kotlin
 fun isNonStable(version: String): Boolean {
     val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.toUpperCase().contains(it) }
-    val regex = "^[0-9,.v-]+$".toRegex()
+    val regex = "^[0-9,\\.v\\-]+(-r)?$".toRegex()
     val isStable = stableKeyword || regex.matches(version)
     return isStable.not()
 }
