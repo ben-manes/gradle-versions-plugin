@@ -25,6 +25,7 @@ import org.gradle.api.artifacts.ComponentMetadata
 import org.gradle.api.artifacts.ComponentSelection
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.DependencyConstraint
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.LenientConfiguration
 import org.gradle.api.artifacts.ModuleVersionIdentifier
@@ -117,6 +118,15 @@ class Resolver {
       createQueryDependency(dependency, revision)
     }
 
+    // Common use case for dependency constraints is a java-platform BOM project.
+    try {
+      configuration.dependencyConstraints.each { dependency ->
+        latest.add(createQueryDependency(dependency, revision))
+      }
+    } catch (MissingPropertyException e) {
+      // Skip if constraints not supported
+    }
+
     Configuration copy = configuration.copyRecursive().setTransitive(false)
     // https://github.com/ben-manes/gradle-versions-plugin/issues/127
     if (copy.metaClass.respondsTo(copy, "setCanBeResolved", Boolean)) {
@@ -143,6 +153,19 @@ class Resolver {
     // In the case of another plugin we use '+' in the hope that the plugin will not restrict the
     // query (see issue #97). Otherwise if its a file then use 'none' to pass it through.
     String version = (dependency.version == null) ? (dependency.artifacts.empty ? '+' : 'none') : versionQuery
+
+    return project.dependencies.create("${dependency.group}:${dependency.name}:${version}") {
+      transitive = false
+    }
+  }
+
+  /** Returns a variant of the provided dependency used for querying the latest version. */
+  @TypeChecked(SKIP)
+  private Dependency createQueryDependency(DependencyConstraint dependency, String revision) {
+    String versionQuery = useSelectionRules ? '+' : "latest.${revision}"
+
+    // If no version was specified then use 'none' to pass it through.
+    String version = dependency.version == null ? 'none' : versionQuery
 
     return project.dependencies.create("${dependency.group}:${dependency.name}:${version}") {
       transitive = false
@@ -184,12 +207,11 @@ class Resolver {
 
   /** Returns the coordinates for the current (declared) dependency versions. */
   private Map<Coordinate.Key, Coordinate> getCurrentCoordinates(Configuration configuration) {
-    Map<Coordinate.Key, Coordinate> declared = configuration.dependencies.findAll { dependency ->
-      dependency instanceof ExternalDependency
-    }.collectEntries {
-      Coordinate coordinate = Coordinate.from(it)
-      return [coordinate.key, coordinate]
-    }
+    Map<Coordinate.Key, Coordinate> declared =
+      getResolvableDependencies(configuration).collectEntries {
+        return [it.key, it]
+      }
+
     if (declared.isEmpty()) {
       return Collections.emptyMap()
     }
@@ -215,6 +237,15 @@ class Resolver {
     for (UnresolvedDependency dependency : unresolved) {
       Coordinate coordinate = Coordinate.from(dependency.selector)
       coordinates.put(coordinate.key, declared.get(coordinate.key))
+    }
+
+    try {
+      for (DependencyConstraint constraint : copy.dependencyConstraints) {
+        Coordinate coordinate = Coordinate.from(constraint)
+        coordinates.put(coordinate.key, declared.get(coordinate.key))
+      }
+    } catch (MissingPropertyException e) {
+      // Skip if constraints not supported
     }
 
     // Ignore undeclared (hidden) dependencies that appear when resolving a configuration
@@ -331,6 +362,24 @@ class Resolver {
       }
     }
     return null
+  }
+
+  private static List<Coordinate> getResolvableDependencies(Configuration configuration) {
+    List<Coordinate> coordinates = configuration.dependencies.findAll { dependency ->
+      dependency instanceof ExternalDependency
+    }.collect { dependency ->
+      Coordinate.from(dependency)
+    }
+
+    try {
+      configuration.dependencyConstraints.each {
+        coordinates.add(Coordinate.from(it))
+      }
+    } catch (MissingPropertyException e) {
+      // Skip
+    }
+
+    return coordinates
   }
 
   private static final class ProjectUrl {

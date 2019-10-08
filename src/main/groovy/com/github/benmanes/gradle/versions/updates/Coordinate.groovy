@@ -18,6 +18,7 @@ package com.github.benmanes.gradle.versions.updates
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.TypeChecked
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.DependencyConstraint
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ModuleVersionSelector
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
@@ -58,6 +59,10 @@ class Coordinate implements Comparable<Coordinate> {
   }
 
   static Coordinate from(Dependency dependency) {
+    return new Coordinate(dependency.group, dependency.name, dependency.version)
+  }
+
+  static Coordinate from(DependencyConstraint dependency) {
     return new Coordinate(dependency.group, dependency.name, dependency.version)
   }
 
