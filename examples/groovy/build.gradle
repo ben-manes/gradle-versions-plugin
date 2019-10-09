@@ -23,6 +23,7 @@ configurations {
   bom
   upToDate
   exceedLatest
+  platform
   upgradesFound
   upgradesFound2
   unresolvable
@@ -76,4 +77,14 @@ dependencies {
                'com.github.ben-manes:unresolvable2:1.0'
   unresolvable2 'com.github.ben-manes:unresolvable:1.0',
                 'com.github.ben-manes:unresolvable2:1.0'
+
+  platform 'com.linecorp.armeria:armeria',
+           'io.zipkin.brave:brave'
+  // Common usage would be to separate this into a project that uses the `java-platform` plugin to
+  // share constraints among several projects.
+  constraints {
+    platform 'com.linecorp.armeria:armeria:0.90.0',
+             'io.zipkin.brave:brave:5.7.0'
+
+  }
 }

@@ -13,6 +13,7 @@ configurations {
   register("bom")
   register("upToDate")
   register("exceedLatest")
+  register("platform")
   register("upgradesFound")
   register("upgradesFound2")
   register("unresolvable")
@@ -74,4 +75,12 @@ dependencies {
   "unresolvable"("com.github.ben-manes:unresolvable2:1.0")
   "unresolvable2"("com.github.ben-manes:unresolvable:1.0")
   "unresolvable2"("com.github.ben-manes:unresolvable2:1.0")
+  "platform"("com.linecorp.armeria:armeria")
+  "platform"("io.zipkin.brave:brave")
+  // Common usage would be to separate this into a project that uses the `java-platform` plugin to
+  // share constraints among several projects.
+  constraints {
+    "platform"("com.linecorp.armeria:armeria:0.90.0")
+    "platform"("io.zipkin.brave:brave:5.7.0")
+  }
 }
