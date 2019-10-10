@@ -119,12 +119,10 @@ class Resolver {
     }
 
     // Common use case for dependency constraints is a java-platform BOM project.
-    try {
+    if (supportsConstraints(configuration)) {
       configuration.dependencyConstraints.each { dependency ->
         latest.add(createQueryDependency(dependency, revision))
       }
-    } catch (MissingPropertyException e) {
-      // Skip if constraints not supported
     }
 
     Configuration copy = configuration.copyRecursive().setTransitive(false)
@@ -239,13 +237,11 @@ class Resolver {
       coordinates.put(coordinate.key, declared.get(coordinate.key))
     }
 
-    try {
+    if (supportsConstraints(copy)) {
       for (DependencyConstraint constraint : copy.dependencyConstraints) {
         Coordinate coordinate = Coordinate.from(constraint)
         coordinates.put(coordinate.key, declared.get(coordinate.key))
       }
-    } catch (MissingPropertyException e) {
-      // Skip if constraints not supported
     }
 
     // Ignore undeclared (hidden) dependencies that appear when resolving a configuration
@@ -364,6 +360,10 @@ class Resolver {
     return null
   }
 
+  private static boolean supportsConstraints(Configuration configuration) {
+    return configuration.metaClass.respondsTo(configuration, "getDependencyConstraints");
+  }
+
   private static List<Coordinate> getResolvableDependencies(Configuration configuration) {
     List<Coordinate> coordinates = configuration.dependencies.findAll { dependency ->
       dependency instanceof ExternalDependency
@@ -371,12 +371,10 @@ class Resolver {
       Coordinate.from(dependency)
     }
 
-    try {
+    if (supportsConstraints(configuration)) {
       configuration.dependencyConstraints.each {
         coordinates.add(Coordinate.from(it))
       }
-    } catch (MissingPropertyException e) {
-      // Skip
     }
 
     return coordinates
