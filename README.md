@@ -186,6 +186,21 @@ tasks.withType<DependencyUpdatesTask> {
 
 </details>
 
+#### Constraints
+
+If you use constraints, for example to define a BOM using the [`java-platform`](https://docs.gradle.org/current/userguide/java_platform_plugin.html) 
+plugin or to [manage](https://docs.gradle.org/current/userguide/managing_transitive_dependencies.html#sec:dependency_constraints) 
+transitive dependency versions, you can enable checking of constraints by specifying the `checkConstraints`
+attribute of the `dependencyUpdates` task.
+
+```groovy
+tasks {
+  dependencyUpdates {
+    checkConstraints = true
+  }
+}
+```
+
 #### Kotlin DSL
 
 If using Gradle's [kotlin-dsl][kotlin_dsl], you could configure the `dependencyUpdates` like this:

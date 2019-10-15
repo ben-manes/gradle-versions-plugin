@@ -45,6 +45,7 @@ class DependencyUpdates {
   String reportfileName
   boolean checkForGradleUpdate
   String gradleReleaseChannel
+  boolean checkConstraints
 
   /** Evaluates the dependencies and returns a reporter. */
   DependencyUpdatesReporter run() {
@@ -65,7 +66,7 @@ class DependencyUpdates {
   private Set<DependencyStatus> resolveProjects(Map<Project, Set<Configuration>> projectConfigs) {
     projectConfigs.keySet().collect { proj ->
       Set<Configuration> configurations = projectConfigs.get(proj)
-      Resolver resolver = new Resolver(proj, resolutionStrategy)
+      Resolver resolver = new Resolver(proj, resolutionStrategy, checkConstraints)
       configurations.collect { Configuration config ->
         resolve(resolver, proj, config)
       }.flatten() as Set<DependencyStatus>

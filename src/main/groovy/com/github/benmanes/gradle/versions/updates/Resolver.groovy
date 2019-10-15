@@ -57,12 +57,15 @@ class Resolver {
   final Action<? super ResolutionStrategyWithCurrent> resolutionStrategy
   final boolean useSelectionRules
   final boolean collectProjectUrls
+  final boolean checkConstraints
   final ConcurrentMap<ModuleVersionIdentifier, ProjectUrl> projectUrls
 
-  Resolver(Project project, Action<? super ResolutionStrategyWithCurrent> resolutionStrategy) {
+  Resolver(Project project, Action<? super ResolutionStrategyWithCurrent> resolutionStrategy,
+           boolean checkConstraints) {
     this.projectUrls = new ConcurrentHashMap<>()
     this.resolutionStrategy = resolutionStrategy
     this.project = project
+    this.checkConstraints = checkConstraints;
 
     useSelectionRules = new VersionComparator(project)
       .compare(project.gradle.gradleVersion, '2.2') >= 0
@@ -118,7 +121,8 @@ class Resolver {
       createQueryDependency(dependency, revision)
     }
 
-    // Common use case for dependency constraints is a java-platform BOM project.
+    // Common use case for dependency constraints is a java-platform BOM project or to control
+    // version of transitive dependency.
     if (supportsConstraints(configuration)) {
       configuration.dependencyConstraints.each { dependency ->
         latest.add(createQueryDependency(dependency, revision))
@@ -240,7 +244,11 @@ class Resolver {
     if (supportsConstraints(copy)) {
       for (DependencyConstraint constraint : copy.dependencyConstraints) {
         Coordinate coordinate = Coordinate.from(constraint)
-        coordinates.put(coordinate.key, declared.get(coordinate.key))
+        // Only add a constraint to the report if there is no dependency matching it, this means it
+        // is targeting a transitive dependency or is part of a platform.
+        if (!coordinates.containsKey(coordinate.key)) {
+          coordinates.put(coordinate.key, declared.get(coordinate.key))
+        }
       }
     }
 
@@ -360,11 +368,11 @@ class Resolver {
     return null
   }
 
-  private static boolean supportsConstraints(Configuration configuration) {
-    return configuration.metaClass.respondsTo(configuration, "getDependencyConstraints");
+  private boolean supportsConstraints(Configuration configuration) {
+    return checkConstraints && configuration.metaClass.respondsTo(configuration, "getDependencyConstraints");
   }
 
-  private static List<Coordinate> getResolvableDependencies(Configuration configuration) {
+  private List<Coordinate> getResolvableDependencies(Configuration configuration) {
     List<Coordinate> coordinates = configuration.dependencies.findAll { dependency ->
       dependency instanceof ExternalDependency
     }.collect { dependency ->

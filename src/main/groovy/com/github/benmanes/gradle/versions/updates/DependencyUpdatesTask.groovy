@@ -57,6 +57,9 @@ class DependencyUpdatesTask extends DefaultTask {
   @Input
   boolean checkForGradleUpdate = true
 
+  @Input
+  boolean checkConstraints = false
+
   Object outputFormatter = 'plain'
 
   Closure resolutionStrategy = null;
@@ -80,7 +83,8 @@ class DependencyUpdatesTask extends DefaultTask {
     }
 
     def evaluator = new DependencyUpdates(project, resolutionStrategyAction, revisionLevel(),
-      outputFormatterProp(), outputDirectory(), getReportfileName(), checkForGradleUpdate, gradleReleaseChannelLevel())
+      outputFormatterProp(), outputDirectory(), getReportfileName(), checkForGradleUpdate, gradleReleaseChannelLevel(),
+      checkConstraints)
     DependencyUpdatesReporter reporter = evaluator.run()
     reporter?.write()
   }
