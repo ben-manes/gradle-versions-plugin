@@ -96,7 +96,7 @@ class DependencyUpdatesTask extends DefaultTask {
     }
 
     def evaluator = new DependencyUpdates(project, resolutionStrategyAction, revisionLevel(),
-      getOutputFormatter(), outputDirectory(), getReportfileName(), checkForGradleUpdate, gradleReleaseChannelLevel(),
+      outputFormatterProp(), outputDirectory(), getReportfileName(), checkForGradleUpdate, gradleReleaseChannelLevel(),
       checkConstraints)
     DependencyUpdatesReporter reporter = evaluator.run()
     reporter?.write()
@@ -131,8 +131,7 @@ class DependencyUpdatesTask extends DefaultTask {
   String gradleReleaseChannelLevel() { System.properties['gradleReleaseChannel'] ?: gradleReleaseChannel }
 
   /** Returns the outputDir format. */
-  @Input
-  Object getOutputFormatter() { System.properties['outputFormatter'] ?: outputFormatter }
+  Object outputFormatterProp() { System.properties['outputFormatter'] ?: outputFormatter }
 
   /** Returns the outputDir destination. */
   String outputDirectory() { System.properties['outputDir'] ?: outputDir }
