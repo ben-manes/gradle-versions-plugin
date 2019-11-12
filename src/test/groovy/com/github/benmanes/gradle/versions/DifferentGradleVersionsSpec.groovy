@@ -46,6 +46,14 @@ final class DifferentGradleVersionsSpec extends Specification {
         apply plugin: 'java'
         apply plugin: "com.github.ben-manes.versions"
 
+        // Gradle 7.0+ do not allow directly using compile configuration so we monkey patch
+        // an implementation configuration in for older Gradle versions.
+        if (configurations.findByName('implementation') == null) {
+          configurations.create('implementation') {
+            extendsFrom configurations.compile
+          }
+        }
+
         repositories {
           maven {
             url '${mavenRepoUrl}'
@@ -53,7 +61,7 @@ final class DifferentGradleVersionsSpec extends Specification {
         }
 
         dependencies {
-          compile 'com.google.inject:guice:2.0'
+          implementation 'com.google.inject:guice:2.0'
         }
 
         dependencyUpdates.resolutionStrategy {
@@ -68,10 +76,15 @@ final class DifferentGradleVersionsSpec extends Specification {
         """.stripIndent()
 
     when:
+    def arguments = ['dependencyUpdates']
+    // Warning mode reporting only supported on recent versions.
+    if (gradleVersion.substring(0, gradleVersion.indexOf('.')).toInteger() >= 6) {
+      arguments.add('--warning-mode=fail')
+    }
     def result = GradleRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
-      .withArguments('dependencyUpdates')
+      .withArguments(arguments)
       .forwardStdError(srdErrWriter)
       .build()
 
@@ -102,6 +115,7 @@ final class DifferentGradleVersionsSpec extends Specification {
       '5.4.1',
       '5.5.1',
       '5.6',
+      '6.0'
     ]
   }
 

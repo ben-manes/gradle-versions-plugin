@@ -23,6 +23,7 @@ import groovy.transform.TypeChecked
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.util.ConfigureUtil
@@ -54,14 +55,26 @@ class DependencyUpdatesTask extends DefaultTask {
     return (outputFormatter instanceof String) ? ((String) outputFormatter) : null
   }
 
-  @Input
+  // Groovy generates both get/is accessors for boolean properties unless we manually define some.
+  // Gradle will reject this behavior starting in 7.0 so we make sure to define accessors ourselves.
   boolean checkForGradleUpdate = true
 
-  @Input
   boolean checkConstraints = false
 
+  @Input
+  boolean getCheckForGradleUpdate() {
+    return checkForGradleUpdate
+  }
+
+  @Input
+  boolean getCheckConstraints() {
+    return checkConstraints
+  }
+
+  @Internal
   Object outputFormatter = 'plain'
 
+  @Internal
   Closure resolutionStrategy = null;
   private Action<? super ResolutionStrategyWithCurrent> resolutionStrategyAction = null
 
@@ -83,7 +96,7 @@ class DependencyUpdatesTask extends DefaultTask {
     }
 
     def evaluator = new DependencyUpdates(project, resolutionStrategyAction, revisionLevel(),
-      outputFormatterProp(), outputDirectory(), getReportfileName(), checkForGradleUpdate, gradleReleaseChannelLevel(),
+      getOutputFormatter(), outputDirectory(), getReportfileName(), checkForGradleUpdate, gradleReleaseChannelLevel(),
       checkConstraints)
     DependencyUpdatesReporter reporter = evaluator.run()
     reporter?.write()
@@ -118,7 +131,8 @@ class DependencyUpdatesTask extends DefaultTask {
   String gradleReleaseChannelLevel() { System.properties['gradleReleaseChannel'] ?: gradleReleaseChannel }
 
   /** Returns the outputDir format. */
-  Object outputFormatterProp() { System.properties['outputFormatter'] ?: outputFormatter }
+  @Input
+  Object getOutputFormatter() { System.properties['outputFormatter'] ?: outputFormatter }
 
   /** Returns the outputDir destination. */
   String outputDirectory() { System.properties['outputDir'] ?: outputDir }
