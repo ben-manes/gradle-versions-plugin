@@ -186,6 +186,20 @@ tasks.withType<DependencyUpdatesTask> {
 
 </details>
 
+#### Gradle Release Channel
+
+The `gradleReleaseChannel` task property controls which release channel of the Gradle project is used to check for available Gradle updates. Options are:
+
+  * `current`
+  * `release-candidate`
+  * `nightly`
+
+The default is `release-candidate`. The value can be changed as shown below:
+
+```groovy
+dependencyUpdates.gradleReleaseChannel="current"
+```
+
 #### Constraints
 
 If you use constraints, for example to define a BOM using the [`java-platform`](https://docs.gradle.org/current/userguide/java_platform_plugin.html)
