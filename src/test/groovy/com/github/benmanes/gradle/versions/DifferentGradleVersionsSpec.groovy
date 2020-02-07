@@ -117,6 +117,7 @@ final class DifferentGradleVersionsSpec extends Specification {
       '5.6',
       '6.0',
       '6.1.1',
+      '6.2-rc-1',
     ]
   }
 
