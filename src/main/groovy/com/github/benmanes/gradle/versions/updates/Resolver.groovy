@@ -57,8 +57,6 @@ import static org.gradle.api.specs.Specs.SATISFIES_ALL
 class Resolver {
   final Project project
   final Action<? super ResolutionStrategyWithCurrent> resolutionStrategy
-  final boolean useSelectionRules
-  final boolean collectProjectUrls
   final boolean checkConstraints
   final ConcurrentMap<ModuleVersionIdentifier, ProjectUrl> projectUrls
 
@@ -68,11 +66,6 @@ class Resolver {
     this.resolutionStrategy = resolutionStrategy
     this.project = project
     this.checkConstraints = checkConstraints
-
-    useSelectionRules = new VersionComparator(project)
-      .compare(project.gradle.gradleVersion, '2.2') >= 0
-    collectProjectUrls = new VersionComparator(project)
-      .compare(project.gradle.gradleVersion, '2.0') >= 0
 
     logRepositories()
   }
@@ -140,23 +133,19 @@ class Resolver {
     copy.dependencies.clear()
     copy.dependencies.addAll(latest)
 
-    if (useSelectionRules) {
       addRevisionFilter(copy, revision)
       addCustomResolutionStrategy(copy, currentCoordinates)
-    }
     return copy
   }
 
   /** Returns a variant of the provided dependency used for querying the latest version. */
   @TypeChecked(SKIP)
   private Dependency createQueryDependency(Dependency dependency, String revision) {
-    String versionQuery = useSelectionRules ? '+' : "latest.${revision}"
-
     // If no version was specified then it may be intended to be resolved by another plugin
     // (e.g. the dependency-management-plugin for BOMs) or is an explicit file (e.g. libs/*.jar).
     // In the case of another plugin we use '+' in the hope that the plugin will not restrict the
     // query (see issue #97). Otherwise if its a file then use 'none' to pass it through.
-    String version = (dependency.version == null) ? (dependency.artifacts.empty ? '+' : 'none') : versionQuery
+    String version = (dependency.version == null) ? (dependency.artifacts.empty ? '+' : 'none') : '+'
 
     return project.dependencies.create("${dependency.group}:${dependency.name}:${version}") {
       transitive = false
@@ -166,10 +155,8 @@ class Resolver {
   /** Returns a variant of the provided dependency used for querying the latest version. */
   @TypeChecked(SKIP)
   private Dependency createQueryDependency(DependencyConstraint dependency, String revision) {
-    String versionQuery = useSelectionRules ? '+' : "latest.${revision}"
-
     // If no version was specified then use 'none' to pass it through.
-    String version = dependency.version == null ? 'none' : versionQuery
+    String version = dependency.version == null ? 'none' : '+'
 
     return project.dependencies.create("${dependency.group}:${dependency.name}:${version}") {
       transitive = false
@@ -288,7 +275,7 @@ class Resolver {
   }
 
   private String getProjectUrl(ModuleVersionIdentifier id) {
-    if (!collectProjectUrls || project.getGradle().startParameter.isOffline()) {
+    if (project.getGradle().startParameter.isOffline()) {
       return null
     }
 

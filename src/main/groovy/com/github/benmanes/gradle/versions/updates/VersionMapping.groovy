@@ -17,6 +17,8 @@ package com.github.benmanes.gradle.versions.updates
 
 import groovy.transform.CompileStatic
 import org.gradle.api.Project
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionComparator
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
 
 /**
  * A mapping of which versions are out of date, up to date, or exceed the latest found.
@@ -31,12 +33,12 @@ class VersionMapping {
   final SortedSet<Coordinate> current = new TreeSet<>()
   final SortedSet<Coordinate> latest = new TreeSet<>()
 
-  final VersionComparator comparator
+  final Comparator<String> comparator
   final Project project
 
   VersionMapping(Project project, Set<DependencyStatus> statuses) {
     this.project = project
-    this.comparator = new VersionComparator(project)
+    this.comparator = makeVersionComparator()
     statuses.each { status ->
       current.add(status.coordinate)
       if (status.unresolved == null) {
@@ -70,6 +72,18 @@ class VersionMapping {
         upToDate.add(coordinate)
       } else {
         downgrade.add(coordinate)
+      }
+    }
+  }
+
+  private Comparator<String> makeVersionComparator() {
+    def baseComparator = new DefaultVersionComparator().asVersionComparator()
+    def versionParser = new VersionParser()
+    return new Comparator<String>() {
+      int compare(String string1, String string2) {
+        return baseComparator.compare(
+          versionParser.transform(string1),
+          versionParser.transform(string2))
       }
     }
   }
