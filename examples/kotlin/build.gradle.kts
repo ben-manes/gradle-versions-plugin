@@ -1,9 +1,18 @@
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
-// Use 'gradle install' to install latest plugin version
-plugins {
-  id("com.github.ben-manes.versions") version "0.25.0"
+buildscript {
+  repositories {
+    // Use 'gradle install' to install latest
+    mavenLocal()
+    jcenter()
+  }
+
+  dependencies {
+    classpath("com.github.ben-manes:gradle-versions-plugin:+")
+  }
 }
+
+apply(plugin = "com.github.ben-manes.versions")
 
 repositories {
   jcenter()

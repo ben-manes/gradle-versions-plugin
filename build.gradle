@@ -9,8 +9,7 @@ buildscript {
 }
 
 plugins {
-  id "com.gradle.build-scan" version "1.16"
-  id "com.jfrog.bintray" version "1.7.3"
+  id "com.jfrog.bintray" version "1.8.4"
 }
 
 buildScan {
@@ -26,10 +25,14 @@ apply plugin: 'codenarc'
 group = 'com.github.ben-manes'
 version = '0.27.0'
 
-sourceCompatibility = '1.6'
+sourceCompatibility = '1.8'
 
 repositories {
   mavenCentral()
+}
+
+tasks.wrapper {
+  distributionType 'all'
 }
 
 codenarcMain {
@@ -49,42 +52,41 @@ tasks.withType(CodeNarc) { codeNarcTask ->
 }
 
 dependencies {
-  compile gradleApi()
-  compile localGroovy()
+  implementation gradleApi()
 
-  compile 'com.thoughtworks.xstream:xstream:1.4.10'
-  testCompile gradleTestKit()
-  testCompile('org.spockframework:spock-core:1.0-groovy-2.4') {
+  implementation 'com.thoughtworks.xstream:xstream:1.4.10'
+  testImplementation gradleTestKit()
+  testImplementation('org.spockframework:spock-core:1.3-groovy-2.5') {
     exclude(module: 'groovy-all')
   }
 }
 
 // Write the plugin's classpath to a file to share with the tests
 task createClasspathManifest {
-    def outputDir = file("$buildDir/$name")
+  def outputDir = file("$buildDir/$name")
 
-    inputs.files sourceSets.main.runtimeClasspath
-    outputs.dir outputDir
+  inputs.files sourceSets.main.runtimeClasspath
+  outputs.dir outputDir
 
-    doLast {
-        outputDir.mkdirs()
-        file("$outputDir/plugin-classpath.txt").text = sourceSets.main.runtimeClasspath.join("\n")
-    }
+  doLast {
+    outputDir.mkdirs()
+    file("$outputDir/plugin-classpath.txt").text = sourceSets.main.runtimeClasspath.join("\n")
+  }
 }
 
 // Add the classpath file to the test runtime classpath
 dependencies {
-    testRuntime files(createClasspathManifest)
+  testRuntimeOnly files(createClasspathManifest)
 }
 
 jar {
   manifest {
-      attributes 'Implementation-Title': 'Gradle Versions plugin',
-                 'Implementation-Version': version,
-                 'Built-By': System.getProperty('user.name'),
-                 'Built-Date': new Date(),
-                 'Built-JDK': System.getProperty('java.version'),
-                 'Built-Gradle': gradle.gradleVersion
+    attributes 'Implementation-Title': 'Gradle Versions plugin',
+      'Implementation-Version': version,
+      'Built-By': System.getProperty('user.name'),
+      'Built-Date': new Date(),
+      'Built-JDK': System.getProperty('java.version'),
+      'Built-Gradle': gradle.gradleVersion
   }
 }
 
@@ -97,8 +99,12 @@ artifacts {
   archives groovydocJar
 }
 
-tasks.withType(Test){
+tasks.withType(Test) {
+  maxParallelForks Runtime.getRuntime().availableProcessors()
+
   testLogging {
+    events "passed", "failed", "skipped"
+    showStandardStreams true
     exceptionFormat "full"
   }
 }
@@ -144,15 +150,15 @@ modifyPom {
 }
 
 bintray {
-    user = 'fooberger'
-    key = System.env.bintrayAPIKey
-    configurations = ['archives']
-    publish = true
-    pkg {
-        repo = 'maven'
-        name = 'com.github.ben-manes:gradle-versions-plugin'
-        version {
-          attributes = ['gradle-plugin' : 'com.github.ben-manes.versions:com.github.ben-manes:gradle-versions-plugin']
-        }
+  user = 'fooberger'
+  key = System.env.bintrayAPIKey
+  configurations = ['archives']
+  publish = true
+  pkg {
+    repo = 'maven'
+    name = 'com.github.ben-manes:gradle-versions-plugin'
+    version {
+      attributes = ['gradle-plugin': 'com.github.ben-manes.versions:com.github.ben-manes:gradle-versions-plugin']
     }
+  }
 }

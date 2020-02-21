@@ -15,13 +15,13 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
-import groovy.transform.TypeChecked
+import groovy.transform.CompileStatic
 import org.gradle.api.Project
 
 /**
  * A mapping of which versions are out of date, up to date, or exceed the latest found.
  */
-@TypeChecked
+@CompileStatic
 class VersionMapping {
   final SortedSet<Coordinate> downgrade = new TreeSet<>()
   final SortedSet<Coordinate> upToDate = new TreeSet<>()
@@ -31,7 +31,7 @@ class VersionMapping {
   final SortedSet<Coordinate> current = new TreeSet<>()
   final SortedSet<Coordinate> latest = new TreeSet<>()
 
-  final VersionComparator comparator;
+  final VersionComparator comparator
   final Project project
 
   VersionMapping(Project project, Set<DependencyStatus> statuses) {

@@ -1,12 +1,14 @@
 package com.github.benmanes.gradle.versions.updates.resolutionstrategy
 
 import com.github.benmanes.gradle.versions.updates.Coordinate
+import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
 import org.gradle.api.Action
 import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.artifacts.DependencySubstitutions
 import org.gradle.api.artifacts.ResolutionStrategy
 
+@CompileStatic
 @TupleConstructor(includeFields = true)
 class ResolutionStrategyWithCurrent {
 

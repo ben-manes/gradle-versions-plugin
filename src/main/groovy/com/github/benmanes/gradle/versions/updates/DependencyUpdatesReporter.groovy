@@ -29,21 +29,19 @@ import com.github.benmanes.gradle.versions.reporter.result.VersionAvailable
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResult
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
+import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
-import groovy.transform.TypeChecked
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ModuleVersionSelector
 import org.gradle.api.artifacts.UnresolvedDependency
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-
-import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.*
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.NIGHTLY
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 
 /**
  * A reporter for the dependency updates results.
  */
-@TypeChecked
+@CompileStatic
 @TupleConstructor
 class DependencyUpdatesReporter {
   /** The project evaluated against. */
@@ -112,26 +110,17 @@ class DependencyUpdatesReporter {
 
   def generateFileReport(Reporter reporter) {
     File filename = new File(outputDir, reportfileName + '.' + reporter.getFileExtension())
-    try {
-      project.file(outputDir).mkdirs()
-      File outputFile = project.file(filename)
-      outputFile.newOutputStream().withStream { OutputStream os ->
-        new FileOutputStream(outputFile).withStream { FileOutputStream fos ->
-          new PrintStream(fos).withStream { PrintStream ps ->
-            def result = buildBaseObject()
-            reporter.write(ps, result)
-          }
-        }
-      }
+    project.file(outputDir).mkdirs()
+    File outputFile = project.file(filename)
+    outputFile.newPrintWriter().withPrintWriter { PrintWriter pw ->
+      def result = buildBaseObject()
+      reporter.write(pw, result)
+    }
 
-      project.logger.lifecycle '\nGenerated report file ' + filename
-    }
-    catch (FileNotFoundException e) {
-      project.logger.error 'Invalid outputDir path ' + filename
-    }
+    project.logger.lifecycle '\nGenerated report file ' + filename
   }
 
-  def Reporter getOutputReporter(def formatter) {
+  Reporter getOutputReporter(def formatter) {
     def reporter
 
     switch (formatter) {

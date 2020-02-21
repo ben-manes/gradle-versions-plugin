@@ -16,9 +16,8 @@
 package com.github.benmanes.gradle.versions.updates
 
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
+import groovy.transform.CompileStatic
 import groovy.transform.TypeChecked
-import java.util.concurrent.ConcurrentMap
-import java.util.concurrent.ConcurrentHashMap
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ComponentMetadata
@@ -45,13 +44,16 @@ import org.gradle.internal.component.external.model.DefaultModuleComponentIdenti
 import org.gradle.maven.MavenModule
 import org.gradle.maven.MavenPomArtifact
 
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
+
 import static groovy.transform.TypeCheckingMode.SKIP
 import static org.gradle.api.specs.Specs.SATISFIES_ALL
 
 /**
  * Resolves the configuration to determine the version status of its dependencies.
  */
-@TypeChecked
+@CompileStatic
 class Resolver {
   final Project project
   final Action<? super ResolutionStrategyWithCurrent> resolutionStrategy
@@ -65,7 +67,7 @@ class Resolver {
     this.projectUrls = new ConcurrentHashMap<>()
     this.resolutionStrategy = resolutionStrategy
     this.project = project
-    this.checkConstraints = checkConstraints;
+    this.checkConstraints = checkConstraints
 
     useSelectionRules = new VersionComparator(project)
       .compare(project.gradle.gradleVersion, '2.2') >= 0
@@ -76,7 +78,7 @@ class Resolver {
   }
 
   /** Returns the version status of the configuration's dependencies at the given revision. */
-  public Set<DependencyStatus> resolve(Configuration configuration, String revision) {
+  Set<DependencyStatus> resolve(Configuration configuration, String revision) {
     Map<Coordinate.Key, Coordinate> coordinates = getCurrentCoordinates(configuration)
     Configuration latestConfiguration = createLatestConfiguration(configuration, revision,
       coordinates)
@@ -369,7 +371,7 @@ class Resolver {
   }
 
   private boolean supportsConstraints(Configuration configuration) {
-    return checkConstraints && configuration.metaClass.respondsTo(configuration, "getDependencyConstraints");
+    return checkConstraints && configuration.metaClass.respondsTo(configuration, "getDependencyConstraints")
   }
 
   private List<Coordinate> getResolvableDependencies(Configuration configuration) {

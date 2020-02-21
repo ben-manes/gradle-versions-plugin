@@ -1,10 +1,12 @@
 package com.github.benmanes.gradle.versions.reporter.result
 
+import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
 
 /**
  * A group of dependencies
  */
+@CompileStatic
 @TupleConstructor
 class DependenciesGroup<T extends Dependency> {
 

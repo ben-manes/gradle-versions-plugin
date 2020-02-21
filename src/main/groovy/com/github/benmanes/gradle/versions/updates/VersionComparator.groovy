@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
+import groovy.transform.CompileStatic
 import groovy.transform.TypeChecked
 import org.gradle.api.GradleException
 import org.gradle.api.Project
@@ -24,7 +25,7 @@ import static groovy.transform.TypeCheckingMode.SKIP
 /**
  * A comparator of the dependency's version to determine which is later.
  */
-@TypeChecked
+@CompileStatic
 class VersionComparator implements Comparator<String> {
   static final String BASE_PKG = 'org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy'
   static final String GRADLE_24 = BASE_PKG + '.DefaultVersionComparator'
@@ -33,14 +34,14 @@ class VersionComparator implements Comparator<String> {
   static final String GRADLE_10 =
     'org.gradle.api.internal.artifacts.version.LatestVersionSemanticComparator'
 
-  final Comparator<String> delegate;
+  final Comparator<String> delegate
 
   VersionComparator(Project project) {
     delegate = getGradleVersionComparator(project)
   }
 
   @Override
-  public int compare(String first, String second) {
+  int compare(String first, String second) {
     return delegate.compare(first, second)
   }
 
@@ -78,10 +79,10 @@ class VersionComparator implements Comparator<String> {
     def baseComparator = createInstance(BASE_PKG + '.StaticVersionComparator')
     def versionParser = createInstance(BASE_PKG + '.VersionParser')
     return new Comparator<String>() {
-      public int compare(String string1, String string2) {
+      int compare(String string1, String string2) {
         return baseComparator.compare(
           versionParser.transform(string1),
-          versionParser.transform(string2));
+          versionParser.transform(string2))
       }
     }
   }

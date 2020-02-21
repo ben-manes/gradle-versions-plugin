@@ -6,11 +6,14 @@ import org.junit.rules.TemporaryFolder
 import spock.lang.Specification
 import spock.lang.Unroll
 
-import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.*
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.CURRENT
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.NIGHTLY
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 
 final class DifferentGradleVersionsSpec extends Specification {
 
-  @Rule TemporaryFolder testProjectDir = new TemporaryFolder()
+  @Rule
+  TemporaryFolder testProjectDir = new TemporaryFolder()
   private File buildFile
   private List<File> pluginClasspath
 
@@ -81,6 +84,7 @@ final class DifferentGradleVersionsSpec extends Specification {
     if (gradleVersion.substring(0, gradleVersion.indexOf('.')).toInteger() >= 6) {
       arguments.add('--warning-mode=fail')
     }
+    arguments.add('-S')
     def result = GradleRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
@@ -94,20 +98,6 @@ final class DifferentGradleVersionsSpec extends Specification {
 
     where:
     gradleVersion << [
-      '3.3',
-      '3.4',
-      '3.5',
-      '4.0',
-      '4.1',
-      '4.2',
-      '4.3',
-      '4.4',
-      '4.5',
-      '4.6',
-      '4.7',
-      '4.8',
-      '4.9',
-      '4.10',
       '5.0',
       '5.1.1',
       '5.2.1',
@@ -117,7 +107,7 @@ final class DifferentGradleVersionsSpec extends Specification {
       '5.6',
       '6.0',
       '6.1.1',
-      '6.2-rc-1',
+      '6.2',
     ]
   }
 
@@ -159,7 +149,7 @@ final class DifferentGradleVersionsSpec extends Specification {
 
     when:
     def result = GradleRunner.create()
-      .withGradleVersion('3.3')
+      .withGradleVersion('5.0')
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .forwardStdError(srdErrWriter)
@@ -286,7 +276,7 @@ final class DifferentGradleVersionsSpec extends Specification {
 
     when:
     def result = GradleRunner.create()
-      .withGradleVersion('6.2-rc-1')
+      .withGradleVersion('6.2')
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .forwardStdError(srdErrWriter)
