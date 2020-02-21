@@ -133,8 +133,8 @@ class Resolver {
     copy.dependencies.clear()
     copy.dependencies.addAll(latest)
 
-      addRevisionFilter(copy, revision)
-      addCustomResolutionStrategy(copy, currentCoordinates)
+    addRevisionFilter(copy, revision)
+    addCustomResolutionStrategy(copy, currentCoordinates)
     return copy
   }
 
@@ -296,9 +296,9 @@ class Resolver {
   private String resolveProjectUrl(ModuleVersionIdentifier id) {
     try {
       ArtifactResolutionResult resolutionResult = project.dependencies.createArtifactResolutionQuery()
-              .forComponents(DefaultModuleComponentIdentifier.newId(id))
-              .withArtifacts(MavenModule, MavenPomArtifact)
-              .execute()
+        .forComponents(DefaultModuleComponentIdentifier.newId(id))
+        .withArtifacts(MavenModule, MavenPomArtifact)
+        .execute()
 
       // size is 0 for gradle plugins, 1 for normal dependencies
       for (ComponentArtifactsResult result : resolutionResult.resolvedComponents) {
