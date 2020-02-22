@@ -68,7 +68,14 @@ class DependencyUpdates {
       Set<Configuration> configurations = projectConfigs.get(proj)
       Resolver resolver = new Resolver(proj, resolutionStrategy, checkConstraints)
       configurations.collect { Configuration config ->
-        resolve(resolver, proj, config)
+        def isUsefulConfiguration = !config.canBeResolved || config.canBeConsumed ||
+          config.name == 'annotationProcessor' || config.name == 'kapt'
+
+        if (isUsefulConfiguration) {
+          resolve(resolver, proj, config)
+        } else {
+          []
+        }
       }.flatten() as Set<DependencyStatus>
     }.flatten() as Set<DependencyStatus>
   }
