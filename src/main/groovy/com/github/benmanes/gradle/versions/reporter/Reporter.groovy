@@ -1,10 +1,12 @@
 package com.github.benmanes.gradle.versions.reporter
 
 import com.github.benmanes.gradle.versions.reporter.result.Result
+import groovy.transform.CompileStatic
 
 /**
  * An interface for reporters.
  */
+@CompileStatic
 interface Reporter {
   /**
    * Writes the result to the output target

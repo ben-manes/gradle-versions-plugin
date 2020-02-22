@@ -2,13 +2,13 @@ package com.github.benmanes.gradle.versions.reporter
 
 import com.github.benmanes.gradle.versions.reporter.result.Result
 import groovy.json.JsonBuilder
+import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
-import groovy.transform.TypeChecked
 
 /**
  * A json reporter for the dependency updates results.
  */
-@TypeChecked
+@CompileStatic
 @TupleConstructor(callSuper = true, includeSuperProperties = true, includeSuperFields = true)
 class JsonReporter extends AbstractReporter {
 

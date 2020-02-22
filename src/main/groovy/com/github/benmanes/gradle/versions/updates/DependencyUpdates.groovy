@@ -17,8 +17,8 @@ package com.github.benmanes.gradle.versions.updates
 
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
+import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
-import groovy.transform.TypeChecked
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -34,7 +34,7 @@ import org.gradle.api.artifacts.UnresolvedDependency
  *   <li>integration: selects the latest revision of the dependency module (such as SNAPSHOT)
  * </ul>
  */
-@TypeChecked
+@CompileStatic
 @TupleConstructor
 class DependencyUpdates {
   Project project
@@ -50,14 +50,14 @@ class DependencyUpdates {
   /** Evaluates the dependencies and returns a reporter. */
   DependencyUpdatesReporter run() {
     Map<Project, Set<Configuration>> projectConfigs = project.allprojects.collectEntries { proj ->
-      [proj, proj.configurations.plus(proj.buildscript.configurations) as Set]
+      [proj, proj.configurations + (Set) proj.buildscript.configurations]
     }
     Set<DependencyStatus> status = resolveProjects(projectConfigs)
 
     VersionMapping versions = new VersionMapping(project, status)
     Set<UnresolvedDependency> unresolved =
       status.findAll { it.unresolved != null }.collect { it.unresolved } as Set
-    Map<Map<String, String>, String> projectUrls = status.findAll{ it.projectUrl }.collectEntries {
+    Map<Map<String, String>, String> projectUrls = status.findAll { it.projectUrl }.collectEntries {
       [[group: it.coordinate.groupId, name: it.coordinate.artifactId]: it.projectUrl]
     }
     return createReporter(versions, unresolved, projectUrls)
@@ -68,7 +68,14 @@ class DependencyUpdates {
       Set<Configuration> configurations = projectConfigs.get(proj)
       Resolver resolver = new Resolver(proj, resolutionStrategy, checkConstraints)
       configurations.collect { Configuration config ->
-        resolve(resolver, proj, config)
+        def isUsefulConfiguration = !config.canBeResolved || config.canBeConsumed ||
+          config.name == 'annotationProcessor' || config.name == 'kapt'
+
+        if (isUsefulConfiguration) {
+          resolve(resolver, proj, config)
+        } else {
+          []
+        }
       }.flatten() as Set<DependencyStatus>
     }.flatten() as Set<DependencyStatus>
   }
@@ -98,7 +105,7 @@ class DependencyUpdates {
     GradleUpdateChecker gradleUpdateChecker = new GradleUpdateChecker(checkForGradleUpdate)
 
     return new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir, reportfileName,
-       currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions,
+      currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions,
       unresolved, projectUrls, gradleUpdateChecker, gradleReleaseChannel)
   }
 

@@ -20,16 +20,19 @@ import com.github.benmanes.gradle.versions.reporter.result.DependencyLatest
 import com.github.benmanes.gradle.versions.reporter.result.DependencyOutdated
 import com.github.benmanes.gradle.versions.reporter.result.DependencyUnresolved
 import com.github.benmanes.gradle.versions.reporter.result.Result
+import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
 import groovy.transform.TypeChecked
 
-import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.*
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.CURRENT
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.NIGHTLY
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 import static groovy.transform.TypeCheckingMode.SKIP
 
 /**
  * A plain text reporter for the dependency updates results.
  */
-@TypeChecked
+@CompileStatic
 @TupleConstructor(callSuper = true, includeSuperProperties = true, includeSuperFields = true)
 class PlainTextReporter extends AbstractReporter {
 

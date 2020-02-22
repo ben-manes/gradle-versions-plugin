@@ -2,9 +2,12 @@ package com.github.benmanes.gradle.versions.updates.gradle
 
 import groovy.json.JsonException
 import groovy.json.JsonSlurper
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-import java.util.concurrent.TimeUnit
 import org.gradle.util.GradleVersion
+
+import java.util.concurrent.TimeUnit
 
 /**
  * Facade class that provides information about the running gradle version and the latest versions of the different
@@ -12,6 +15,7 @@ import org.gradle.util.GradleVersion
  *
  * @see GradleReleaseChannel
  */
+@CompileStatic
 class GradleUpdateChecker {
   private static final long TIMEOUT_MS = TimeUnit.SECONDS.toMillis(15)
   private static final String API_BASE_URL = 'https://services.gradle.org/versions/'
@@ -26,6 +30,7 @@ class GradleUpdateChecker {
     }
   }
 
+  @CompileDynamic
   private void fetch() {
     GradleReleaseChannel.values().each {
       try {

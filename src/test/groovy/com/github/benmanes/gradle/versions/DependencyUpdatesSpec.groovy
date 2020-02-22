@@ -24,7 +24,8 @@ import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Unroll
 
-import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.*
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.CURRENT
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 
 /**
  * A specification for the dependency updates task.
@@ -397,6 +398,28 @@ final class DependencyUpdatesSpec extends Specification {
       unresolved.isEmpty()
       upgradeVersions.isEmpty()
       upToDateVersions == [['group': 'com.google.guava', 'name': 'guava']: '16.0-rc1']
+      downgradeVersions == [['group': 'com.google.guava', 'name': 'guava']: '99.0-SNAPSHOT']
+    }
+  }
+
+  def 'Single project with annotation processor'() {
+    given:
+    def project = singleProject()
+    project.plugins.apply('java')
+    addRepositoryTo(project)
+    project.dependencies {
+      annotationProcessor 'com.google.guava:guava:99.0-SNAPSHOT'
+    }
+
+    when:
+    def reporter = evaluate(project)
+    reporter.write()
+
+    then:
+    with(reporter) {
+      unresolved.isEmpty()
+      upgradeVersions.isEmpty()
+      upToDateVersions.isEmpty()
       downgradeVersions == [['group': 'com.google.guava', 'name': 'guava']: '99.0-SNAPSHOT']
     }
   }

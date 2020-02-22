@@ -19,7 +19,7 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentF
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionRulesWithCurrent
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
-import groovy.transform.TypeChecked
+import groovy.transform.CompileStatic
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
@@ -27,14 +27,13 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.util.ConfigureUtil
-import org.gradle.util.SingleMessageLogger;
 
-import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.*
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 
 /**
  * A task that reports which dependencies have later versions.
  */
-@TypeChecked
+@CompileStatic
 class DependencyUpdatesTask extends DefaultTask {
 
   @Input
@@ -75,7 +74,7 @@ class DependencyUpdatesTask extends DefaultTask {
   Object outputFormatter = 'plain'
 
   @Internal
-  Closure resolutionStrategy = null;
+  Closure resolutionStrategy = null
   private Action<? super ResolutionStrategyWithCurrent> resolutionStrategyAction = null
 
   DependencyUpdatesTask() {
@@ -91,8 +90,8 @@ class DependencyUpdatesTask extends DefaultTask {
 
     if (resolutionStrategy != null) {
       resolutionStrategy(ConfigureUtil.configureUsing(resolutionStrategy))
-      SingleMessageLogger.nagUserWith('dependencyUpdates.resolutionStrategy', /* removalDetails */ '',
-        'Remove the assignment operator, \'=\', when setting this task property', /* contextualAdvice */ null);
+      logger.warn('dependencyUpdates.resolutionStrategy: ' +
+        'Remove the assignment operator, \'=\', when setting this task property')
     }
 
     def evaluator = new DependencyUpdates(project, resolutionStrategyAction, revisionLevel(),
@@ -128,7 +127,9 @@ class DependencyUpdatesTask extends DefaultTask {
   String revisionLevel() { System.properties['revision'] ?: revision }
 
   /** Returns the resolution revision level. */
-  String gradleReleaseChannelLevel() { System.properties['gradleReleaseChannel'] ?: gradleReleaseChannel }
+  String gradleReleaseChannelLevel() {
+    System.properties['gradleReleaseChannel'] ?: gradleReleaseChannel
+  }
 
   /** Returns the outputDir format. */
   Object outputFormatterProp() { System.properties['outputFormatter'] ?: outputFormatter }

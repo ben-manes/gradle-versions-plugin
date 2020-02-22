@@ -8,13 +8,13 @@ import com.github.benmanes.gradle.versions.reporter.result.DependencyUnresolved
 import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.reporter.result.VersionAvailable
 import com.thoughtworks.xstream.XStream
+import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
-import groovy.transform.TypeChecked
 
 /**
  * A xml reporter for the dependency updates results.
  */
-@TypeChecked
+@CompileStatic
 @TupleConstructor(callSuper = true, includeSuperProperties = true, includeSuperFields = true)
 class XmlReporter extends AbstractReporter {
 

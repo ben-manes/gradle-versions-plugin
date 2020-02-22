@@ -15,8 +15,8 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
-import groovy.transform.TypeChecked
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyConstraint
 import org.gradle.api.artifacts.ModuleVersionIdentifier
@@ -26,30 +26,30 @@ import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 /**
  * The dependency's coordinate.
  */
-@TypeChecked
+@CompileStatic
 @EqualsAndHashCode
 class Coordinate implements Comparable<Coordinate> {
   final String groupId
   final String artifactId
   final String version
 
-  public Coordinate(String groupId, String artifactId, String version) {
+  Coordinate(String groupId, String artifactId, String version) {
     this.groupId = groupId ?: 'none'
     this.artifactId = artifactId ?: 'none'
     this.version = version ?: 'none'
   }
 
-  public Key getKey() {
+  Key getKey() {
     return new Key(groupId, artifactId)
   }
 
   @Override
-  public String toString() {
+  String toString() {
     return groupId + ':' + artifactId + ':' + version
   }
 
   @Override
-  public int compareTo(Coordinate coordinate) {
+  int compareTo(Coordinate coordinate) {
     int result = key.compareTo(coordinate.key)
     return (result == 0) ? version.compareTo(coordinate.version) : result
   }
@@ -85,12 +85,12 @@ class Coordinate implements Comparable<Coordinate> {
     }
 
     @Override
-    public String toString() {
+    String toString() {
       return groupId + ':' + artifactId
     }
 
     @Override
-    public int compareTo(Key key) {
+    int compareTo(Key key) {
       int result = groupId.compareTo(key.groupId)
       return (result == 0) ? artifactId.compareTo(key.artifactId) : result
     }

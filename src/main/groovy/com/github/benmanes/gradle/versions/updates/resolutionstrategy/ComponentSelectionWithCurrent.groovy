@@ -1,9 +1,10 @@
 package com.github.benmanes.gradle.versions.updates.resolutionstrategy
 
-
+import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
 import org.gradle.api.artifacts.ComponentSelection
 
+@CompileStatic
 @TupleConstructor(includeFields = true)
 class ComponentSelectionWithCurrent {
 
@@ -14,13 +15,13 @@ class ComponentSelectionWithCurrent {
 
 
   @Override
-  public String toString() {
+  String toString() {
     return """\
 ComponentSelectionWithCurrent{
     group="${candidate.group}",
     module="${candidate.module}",
     version="${candidate.version}",
-    currentVersion="$currentVersion", 
+    currentVersion="$currentVersion",
 }"""
   }
 }
