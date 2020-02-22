@@ -34,10 +34,6 @@ class VersionsPlugin implements Plugin<Project> {
       return
     }
 
-    try {
-      project.tasks.register('dependencyUpdates', DependencyUpdatesTask)
-    } catch (NoSuchMethodError ignored) {
-      project.tasks.create('dependencyUpdates', DependencyUpdatesTask)
-    }
+    project.tasks.register('dependencyUpdates', DependencyUpdatesTask)
   }
 }
