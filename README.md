@@ -58,7 +58,7 @@ Displays a report of the project dependencies that are up-to-date, exceed the la
 have upgrades, or failed to be resolved. When a dependency cannot be resolved the exception is
 logged at the `info` level.
 
-To refresh the cache (i.e. fetch the new releases of the dependencies), add flag `--refresh-dependencies`.
+To refresh the cache (i.e. fetch the new releases/versions of the dependencies), add flag `--refresh-dependencies`.
 
 Gradle updates are checked for on the `current`, `release-candidate` and `nightly` release channels. The plaintext
 report displays gradle updates as a separate category in breadcrumb style (excluding nightly builds). The xml and json
