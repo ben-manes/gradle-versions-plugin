@@ -48,6 +48,28 @@ buildscript {
 }
 ```
 
+### using a Gradle init script ###
+You can also transparently add the plugin to every Gradle project that you run via a Gradle init script, e.g. `$HOME/.gradle/init.d/add-versions-plugin.gradle`:
+```groovy
+initscript {
+  repositories {
+     jcenter()
+  }
+
+  dependencies {
+    classpath 'com.github.ben-manes:gradle-versions-plugin:+'
+  }
+}
+
+allprojects {
+  apply plugin: com.github.benmanes.gradle.versions.VersionsPlugin
+
+  dependencyUpdates {
+    // configure the task, for example wrt. resolution strategies
+  }
+}
+```
+
 The current version is known to work with Gradle versions up to 5.6.
 
 ## Tasks
