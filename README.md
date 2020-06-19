@@ -597,4 +597,4 @@ dependencyUpdates {
 
 [kotlin_dsl]: https://github.com/gradle/kotlin-dsl
 [ivy_resolution_strategy]: http://ant.apache.org/ivy/history/2.4.0/settings/version-matchers.html#Latest%20(Status)%20Matcher
-[component_selection_rules]: https://docs.gradle.org/current/userguide/customizing_dependency_resolution_behavior.html#sec:component_selection_rules
+[component_selection_rules]: https://docs.gradle.org/current/userguide/dynamic_versions.html#sec:component_selection_rules
