@@ -36,7 +36,7 @@ def isNonStable = { String version ->
   return !stableKeyword && !(version ==~ regex)
 }
 
-dependencyUpdates {
+tasks.named("dependencyUpdates").configure {
   checkForGradleUpdate = true
 
   // Example 1: reject all non stable versions

@@ -64,7 +64,7 @@ initscript {
 allprojects {
   apply plugin: com.github.benmanes.gradle.versions.VersionsPlugin
 
-  dependencyUpdates {
+  tasks.named("dependencyUpdates").configure {
     // configure the task, for example wrt. resolution strategies
   }
 }
@@ -151,7 +151,7 @@ You can either use the simplified syntax `rejectVersionIf { ... }` or configure 
 <!--  Always modify first examples/groovy and make sure that it works. THEN modify the README -->
 
 ```groovy
-dependencyUpdates {
+tasks.named("dependencyUpdates").configure {
   // Example 1: reject all non stable versions
   rejectVersionIf {
     isNonStable(it.candidate.version)
@@ -184,7 +184,7 @@ dependencyUpdates {
 ```kotlin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
-tasks.withType<DependencyUpdatesTask> {
+tasks.named("dependencyUpdates", DependencyUpdatesTask::class.java).configure {
   // Example 1: reject all non stable versions
   rejectVersionIf {
     isNonStable(candidate.version)
@@ -232,10 +232,8 @@ transitive dependency versions, you can enable checking of constraints by specif
 attribute of the `dependencyUpdates` task.
 
 ```groovy
-tasks {
-  dependencyUpdates {
+tasks.named("dependencyUpdates").configure {
     checkConstraints = true
-  }
 }
 ```
 
@@ -246,7 +244,7 @@ If using Gradle's [kotlin-dsl][kotlin_dsl], you could configure the `dependencyU
 ```kotlin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
-tasks.withType<DependencyUpdatesTask> {
+tasks.named("dependencyUpdates", DependencyUpdatesTask::class.java).configure {
 
   // optional parameters
   checkForGradleUpdate = true
@@ -558,7 +556,7 @@ For example, if you wanted to create an html table for the upgradable dependenci
 
 ```groovy
 ...
-dependencyUpdates {
+tasks.named("dependencyUpdates").configure {
   outputFormatter = { result ->
     def updatable = result.outdated.dependencies
     if (!updatable.isEmpty()){
