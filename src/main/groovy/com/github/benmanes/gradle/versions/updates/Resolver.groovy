@@ -169,7 +169,7 @@ class Resolver {
     configuration.resolutionStrategy { ResolutionStrategy componentSelection ->
       componentSelection.componentSelection { rules ->
         def revisionFilter = { ComponentSelection selection, ComponentMetadata metadata ->
-          boolean accepted =
+          boolean accepted = (metadata == null) ||
               ((revision == 'release') && (metadata.status == 'release')) ||
               ((revision == 'milestone') && (metadata.status != 'integration')) ||
               (revision == 'integration') || (selection.candidate.version == 'none')
