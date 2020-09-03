@@ -19,6 +19,7 @@ import com.github.benmanes.gradle.versions.reporter.JsonReporter
 import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
 import com.github.benmanes.gradle.versions.reporter.Reporter
 import com.github.benmanes.gradle.versions.reporter.XmlReporter
+import com.github.benmanes.gradle.versions.reporter.HtmlReporter
 import com.github.benmanes.gradle.versions.reporter.result.DependenciesGroup
 import com.github.benmanes.gradle.versions.reporter.result.Dependency
 import com.github.benmanes.gradle.versions.reporter.result.DependencyLatest
@@ -129,6 +130,9 @@ class DependencyUpdatesReporter {
         break
       case 'xml':
         reporter = new XmlReporter(project, revision, gradleReleaseChannel)
+        break
+      case 'html':
+        reporter = new HtmlReporter(project, revision, gradleReleaseChannel)
         break
       default:
         reporter = new PlainTextReporter(project, revision, gradleReleaseChannel)
