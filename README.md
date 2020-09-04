@@ -276,12 +276,13 @@ The task property `outputFormatter` controls the report output format. The follo
   * `"plain"`: format output file as plain text (default)
   * `"json"`: format output file as json text
   * `"xml"`: format output file as xml text, can be used by other plugins (e.g. sonar)
+  * `"html"`: format output file as html
   * a `Closure`: will be called with the result of the dependency update analysis (see [example below](#custom_report_format))
 
 You can also set multiple output formats using comma as the separator:
 
 ```groovy
-gradle dependencyUpdates -Drevision=release -DoutputFormatter=json,xml
+gradle dependencyUpdates -Drevision=release -DoutputFormatter=json,xml,html
 ```
 
 The task property `outputDir` controls the output directory for the report  file(s). The directory will be created if it does not exist.
@@ -548,6 +549,13 @@ XML report
   </gradle>
 </response>
 ```
+
+HTML report
+
+```
+The HTML report provides sections for current, outdated, exceeded and unresolved dependencies. 
+```
+
 
 #### <a name="custom_report_format"></a>Custom report format
 If you need to create a report in a custom format, you can set the `dependencyUpdates` tasks's `outputFormatter` property to a Closure. The closure will be called with a single argument that is an instance of [com.github.benmanes.gradle.versions.reporter.result.Result](src/main/groovy/com/github/benmanes/gradle/versions/reporter/result/Result.groovy).
