@@ -66,7 +66,8 @@ dependencies {
       'com.google.code.gson:gson',
       'dom4j:dom4j'
   upToDate 'backport-util-concurrent:backport-util-concurrent:3.1',
-           'backport-util-concurrent:backport-util-concurrent-java12:3.1'
+           'backport-util-concurrent:backport-util-concurrent-java12:3.1',
+	    'org.openjdk.jmh:jmh-parent:1.25.2'
   exceedLatest 'com.google.guava:guava:99.0-SNAPSHOT',
                'com.google.guava:guava-tests:99.0-SNAPSHOT'
   upgradesFound 'com.google.guava:guava:15.0',
