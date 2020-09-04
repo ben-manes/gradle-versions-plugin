@@ -200,10 +200,12 @@ class HtmlReporter extends AbstractReporter {
   }
 
   private def String getDisplayableVersion(DependencyOutdated item) {
-    if (getRevision().equalsIgnoreCase("release-candidate")) {
-      return item.getAvailable()
+    if (getRevision().equalsIgnoreCase("milestone")) {
+      return item.getAvailable().getMilestone()
     } else if (getRevision().equalsIgnoreCase("release")) {
       return item.getVersion()
+    } else if (getRevision().equalsIgnoreCase("integration")) {
+      return item.getAvailable().getIntegration()
     }
     return ""
   }
@@ -308,12 +310,12 @@ class HtmlReporter extends AbstractReporter {
   }
 
   private def getMvnVersionString(String group, String name, String version) {
-    // https://mvnrepository.com/artifact/com.azure/azure-core-http-netty/1.5.4
+    // https://search.maven.org/artifact/com.azure/azure-core-http-netty/1.5.4
     if (version == null) {
       return "";
     }
-    String versionUrl = String.format("https://mvnrepository.com/artifact/%s/%s/%s", group, name, version)
-    return String.format("<a target=\"_blank\" href=\"%s\">%s</a>", versionUrl, "Mvn")
+    String versionUrl = String.format("https://search.maven.org/artifact/%s/%s/%s/bundle", group, name, version)
+    return String.format("<a target=\"_blank\" href=\"%s\">%s</a>", versionUrl, "Sonatype")
   }
 
   private def getBintrayVersionString(String group, String name, String version) {
