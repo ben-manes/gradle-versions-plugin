@@ -147,9 +147,16 @@ class Resolver {
     // query (see issue #97). Otherwise if its a file then use 'none' to pass it through.
     String version = (dependency.version == null) ? (dependency.artifacts.empty ? '+' : 'none') : '+'
 
-    return project.dependencies.create("${dependency.group}:${dependency.name}:${version}") {
+    def latest = project.dependencies.create("${dependency.group}:${dependency.name}:${version}") {
       transitive = false
     }
+    latest.attributes { container ->
+      for (def key : dependency.attributes.keySet()) {
+        def value = dependency.attributes.getAttribute(key)
+        container.attribute(key, value)
+      }
+    }
+    return latest
   }
 
   /** Returns a variant of the provided dependency used for querying the latest version. */
