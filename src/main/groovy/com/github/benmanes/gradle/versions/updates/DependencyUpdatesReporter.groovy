@@ -121,7 +121,8 @@ class DependencyUpdatesReporter {
     project.logger.lifecycle '\nGenerated report file ' + filename
   }
 
-  Reporter getOutputReporter(def formatter) {
+  Reporter getOutputReporter(String formatterOriginal) {
+    String formatter =  formatterOriginal.replaceAll("\\s", "")
     def reporter
 
     switch (formatter) {

@@ -203,7 +203,7 @@ class HtmlReporter extends AbstractReporter {
     if (getRevision().equalsIgnoreCase("milestone")) {
       return item.getAvailable().getMilestone()
     } else if (getRevision().equalsIgnoreCase("release")) {
-      return item.getVersion()
+      return item.getAvailable().getRelease()
     } else if (getRevision().equalsIgnoreCase("integration")) {
       return item.getAvailable().getIntegration()
     }
