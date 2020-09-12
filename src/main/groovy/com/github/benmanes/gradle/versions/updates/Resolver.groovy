@@ -130,8 +130,12 @@ class Resolver {
       copy.setCanBeResolved(true)
     }
 
+    // Resolve using the latest version of explicitly declaired dependencies and retains those
+    // inherited from the super configurations (which may be required for variant resolution).
+    Set<Dependency> inherited = (configuration.allDependencies - configuration.dependencies)
     copy.dependencies.clear()
     copy.dependencies.addAll(latest)
+    copy.dependencies.addAll(inherited)
 
     addRevisionFilter(copy, revision)
     addCustomResolutionStrategy(copy, currentCoordinates)
