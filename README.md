@@ -12,7 +12,7 @@ You may also wish to explore additional functionality provided by,
  - [gradle-libraries-plugin](https://github.com/fkorotkov/gradle-libraries-plugin)
  - [gradle-update-notifier](https://github.com/y-yagi/gradle-update-notifier)
  - [deblibs-gradle-plugin](https://github.com/hellofresh/deblibs-gradle-plugin)
- - [buildSrcVersions](https://github.com/jmfayard/buildSrcVersions)
+ - [refreshVersions](https://github.com/jmfayard/refreshVersions)
 
 ## Usage
 
