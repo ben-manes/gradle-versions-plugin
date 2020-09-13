@@ -39,6 +39,7 @@ import org.gradle.api.artifacts.result.ArtifactResolutionResult
 import org.gradle.api.artifacts.result.ArtifactResult
 import org.gradle.api.artifacts.result.ComponentArtifactsResult
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
+import org.gradle.api.attributes.HasConfigurableAttributes
 import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
 import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier
 import org.gradle.maven.MavenModule
@@ -138,6 +139,7 @@ class Resolver {
     copy.dependencies.addAll(inherited)
 
     addRevisionFilter(copy, revision)
+    addAttributes(copy, configuration)
     addCustomResolutionStrategy(copy, currentCoordinates)
     return copy
   }
@@ -170,12 +172,7 @@ class Resolver {
 
     // Copy selection qualifiers if the artifact was not explicitly set
     if (dependency.artifacts.isEmpty()) {
-      latest.attributes { container ->
-        for (def key : dependency.attributes.keySet()) {
-          def value = dependency.attributes.getAttribute(key)
-          container.attribute(key, value)
-        }
-      }
+      addAttributes(latest, dependency)
     }
 
     return latest
@@ -189,6 +186,16 @@ class Resolver {
 
     return project.dependencies.create("${dependency.group}:${dependency.name}:${version}") {
       transitive = false
+    }
+  }
+
+  /** Adds the attributes from the source to the target. */
+  private void addAttributes(HasConfigurableAttributes target, HasConfigurableAttributes source) {
+    target.attributes { container ->
+      for (def key : source.attributes.keySet()) {
+        def value = source.attributes.getAttribute(key)
+        container.attribute(key, value)
+      }
     }
   }
 
