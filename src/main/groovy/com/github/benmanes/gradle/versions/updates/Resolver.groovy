@@ -149,17 +149,35 @@ class Resolver {
     // (e.g. the dependency-management-plugin for BOMs) or is an explicit file (e.g. libs/*.jar).
     // In the case of another plugin we use '+' in the hope that the plugin will not restrict the
     // query (see issue #97). Otherwise if its a file then use 'none' to pass it through.
-    String version = (dependency.version == null) ? (dependency.artifacts.empty ? '+' : 'none') : '+'
+    String version = (dependency.version == null)
+        ? (dependency.artifacts.empty ? '+' : 'none')
+        : '+'
 
-    def latest = project.dependencies.create("${dependency.group}:${dependency.name}:${version}") {
-      transitive = false
-    }
-    latest.attributes { container ->
-      for (def key : dependency.attributes.keySet()) {
-        def value = dependency.attributes.getAttribute(key)
-        container.attribute(key, value)
+    // Format the query with an optional classifier and extension
+    String query = "${dependency.group}:${dependency.name}:${version}"
+    if (!dependency.artifacts.isEmpty()) {
+      if (dependency.artifacts[0].classifier) {
+        query += ":${dependency.artifacts[0].classifier}"
+      }
+      if (dependency.artifacts[0].extension) {
+        query += "@${dependency.artifacts[0].extension}"
       }
     }
+
+    def latest = project.dependencies.create(query) {
+      transitive = false
+    }
+
+    // Copy selection qualifiers if the artifact was not explicitly set
+    if (dependency.artifacts.isEmpty()) {
+      latest.attributes { container ->
+        for (def key : dependency.attributes.keySet()) {
+          def value = dependency.attributes.getAttribute(key)
+          container.attribute(key, value)
+        }
+      }
+    }
+
     return latest
   }
 
@@ -188,7 +206,9 @@ class Resolver {
             selection.reject("Component status ${metadata.status} rejected by revision ${revision}")
           }
         }
-        rules.all ComponentSelection.methods.any { it.name == 'getMetadata' } ? { revisionFilter(it, it.metadata) } : revisionFilter
+        rules.all ComponentSelection.methods.any { it.name == 'getMetadata' }
+            ? { revisionFilter(it, it.metadata) }
+            : revisionFilter
       }
     }
   }
@@ -323,13 +343,13 @@ class Resolver {
             String url = getUrlFromPom(file)
             if (url) {
               project.logger.info("Found url for ${id}: ${url}")
-              return url
+              return url.trim()
             } else {
               ModuleVersionIdentifier parent = getParentFromPom(file)
               if (parent && "${parent.group}:${parent.name}" != "org.sonatype.oss:oss-parent") {
                 url = getProjectUrl(parent)
                 if (url) {
-                  return url
+                  return url.trim()
                 }
               }
             }
@@ -369,7 +389,8 @@ class Resolver {
   }
 
   private boolean supportsConstraints(Configuration configuration) {
-    return checkConstraints && configuration.metaClass.respondsTo(configuration, "getDependencyConstraints")
+    return checkConstraints &&
+        configuration.metaClass.respondsTo(configuration, "getDependencyConstraints")
   }
 
   private List<Coordinate> getResolvableDependencies(Configuration configuration) {
