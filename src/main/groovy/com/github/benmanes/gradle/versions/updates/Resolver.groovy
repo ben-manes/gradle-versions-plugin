@@ -138,6 +138,12 @@ class Resolver {
       (dependency instanceof ExternalDependency) && (dependency.group == 'org.jetbrains.kotlin')
     }.minus(configuration.dependencies)
 
+    // Adds the Kotlin 1.2.x legacy metadata to assist in variant selection
+    Configuration metadata = project.configurations.findByName("commonMainMetadataElements")
+    if (metadata != null) {
+      addAttributes(copy, metadata)
+    }
+
     copy.dependencies.clear()
     copy.dependencies.addAll(latest)
     copy.dependencies.addAll(inherited)
