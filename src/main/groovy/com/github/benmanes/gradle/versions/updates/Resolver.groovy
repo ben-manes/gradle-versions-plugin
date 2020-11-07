@@ -139,8 +139,13 @@ class Resolver {
     }.minus(configuration.dependencies)
 
     // Adds the Kotlin 1.2.x legacy metadata to assist in variant selection
-    Configuration metadata = project.configurations.findByName("commonMainMetadataElements")
-    if (metadata != null) {
+    Configuration metadata = project.configurations.findByName('commonMainMetadataElements')
+    if (metadata == null) {
+      Configuration compile = project.configurations.findByName("compile")
+      if (compile != null) {
+        addAttributes(copy, compile, { String key -> key.contains('kotlin') })
+      }
+    } else {
       addAttributes(copy, metadata)
     }
 
@@ -200,11 +205,14 @@ class Resolver {
   }
 
   /** Adds the attributes from the source to the target. */
-  private void addAttributes(HasConfigurableAttributes target, HasConfigurableAttributes source) {
+  private void addAttributes(HasConfigurableAttributes target,
+      HasConfigurableAttributes source, Closure filter = { String key -> true }) {
     target.attributes { container ->
       for (def key : source.attributes.keySet()) {
-        def value = source.attributes.getAttribute(key)
-        container.attribute(key, value)
+        if (filter.call(key.name)) {
+          def value = source.attributes.getAttribute(key)
+          container.attribute(key, value)
+        }
       }
     }
   }

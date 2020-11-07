@@ -70,8 +70,6 @@ allprojects {
 }
 ```
 
-The current version is known to work with Gradle versions up to 5.6.
-
 ## Tasks
 
 ### `dependencyUpdates`
@@ -326,7 +324,7 @@ Gradle updates:
  - Gradle: [4.6 -> 4.7 -> 4.8-rc-2]
 ```
 
-Json report
+#### Json report
 ```json
 {
   "current": {
@@ -440,7 +438,7 @@ Json report
 }
 ```
 
-XML report
+#### XML report
 ```xml
 <response>
   <count>8</count>
@@ -550,12 +548,8 @@ XML report
 </response>
 ```
 
-HTML report
-
-```
-The HTML report provides sections for current, outdated, exceeded and unresolved dependencies. 
-```
-
+#### HTML report
+[<img src="examples/html-report.png" width="400"/>](examples/html-report.png)
 
 #### <a name="custom_report_format"></a>Custom report format
 If you need to create a report in a custom format, you can set the `dependencyUpdates` tasks's `outputFormatter` property to a Closure. The closure will be called with a single argument that is an instance of [com.github.benmanes.gradle.versions.reporter.result.Result](src/main/groovy/com/github/benmanes/gradle/versions/reporter/result/Result.groovy).
