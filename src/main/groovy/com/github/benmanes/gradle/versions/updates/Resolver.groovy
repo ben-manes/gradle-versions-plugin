@@ -135,7 +135,9 @@ class Resolver {
     // inherited stdlib dependencies from the super configurations. This is required for variant
     // resolution, but the full set can break consumer capability matching.
     Set<Dependency> inherited = configuration.allDependencies.findAll { dependency ->
-      (dependency instanceof ExternalDependency) && (dependency.group == 'org.jetbrains.kotlin')
+      (dependency instanceof ExternalDependency) &&
+      (dependency.group == 'org.jetbrains.kotlin') &&
+      (dependency.version != null)
     }.minus(configuration.dependencies)
 
     // Adds the Kotlin 1.2.x legacy metadata to assist in variant selection
