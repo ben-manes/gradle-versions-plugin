@@ -1,0 +1,49 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  jvm:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        java-version:
+          - 1.8
+
+    steps:
+      - name: Cache Gradle dependencies
+        uses: burrunan/gradle-cache-action@v1.6
+        with:
+          remote-build-cache-proxy-enabled: false
+          arguments: clean build -s --scan
+
+      - name: Checkout Project
+        uses: actions/checkout@v2
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/wrapper-validation-action@v1
+
+      - name: Configure JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: ${{ matrix.java-version }}
+
+      - name: Run Build
+        run: ./gradlew clean build -s --scan
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: gradle-versions-plugin-${{ github.workflow }}-${{ github.run_id }}
+          path: |
+            build/libs
+            build/outputs
+            build/publications
+            build/distributions
+            build/reports
+            build/test-results
+          if-no-files-found: warn
+
