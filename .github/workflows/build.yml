@@ -25,8 +25,11 @@ jobs:
         with:
           java-version: ${{ matrix.java-version }}
 
-      - name: Run Build
-        run: ./gradlew clean build -s --scan
+      - name: Run build with caching enabled
+        uses: burrunan/gradle-cache-action@v1.6
+        with:
+          remote-build-cache-proxy-enabled: false
+          arguments: clean build -s --scan
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
