@@ -13,11 +13,6 @@ jobs:
           - 1.8
 
     steps:
-      - name: Cache Gradle dependencies
-        uses: burrunan/gradle-cache-action@v1.6
-        with:
-          remote-build-cache-proxy-enabled: false
-          arguments: clean build -s --scan
 
       - name: Checkout Project
         uses: actions/checkout@v2
@@ -46,4 +41,3 @@ jobs:
             build/reports
             build/test-results
           if-no-files-found: warn
-
