@@ -1,0 +1,31 @@
+name: deploy
+
+on:  
+  push:
+    tags:
+      - '*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@v2
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/wrapper-validation-action@v1
+
+      - name: Configure JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+
+      - name: Publish
+        uses: burrunan/gradle-cache-action@v1.6
+        with:
+          remote-build-cache-proxy-enabled: false
+          arguments: clean build bintrayUpload -s --scan
+        env:
+          BINTRAY_API_KEY: ${{ secrets.BINTRAY_API_KEY }}
+          BINTRAY_USERNAME: ${{ secrets.BINTRAY_USERNAME }}
