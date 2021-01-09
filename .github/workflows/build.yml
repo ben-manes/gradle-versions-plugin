@@ -11,9 +11,9 @@ jobs:
       matrix:
         java-version:
           - 1.8
+          - 11
 
     steps:
-
       - name: Checkout Project
         uses: actions/checkout@v2
 
