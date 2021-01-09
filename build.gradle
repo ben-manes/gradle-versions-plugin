@@ -10,25 +10,25 @@ buildscript {
 
 plugins {
   id "com.jfrog.bintray" version "1.8.4"
+  id "java-gradle-plugin"
+  id "groovy"
+  id "codenarc"
 }
 
-buildScan {
-  termsOfServiceUrl = 'https://gradle.com/terms-of-service'
-  termsOfServiceAgree = 'yes'
+repositories {
+  jcenter()
 }
 
-apply plugin: 'java-gradle-plugin'
-apply plugin: 'groovy'
 apply plugin: 'nexus'
-apply plugin: 'codenarc'
 
 group = 'com.github.ben-manes'
 version = '0.36.0'
 
 sourceCompatibility = '1.8'
 
-repositories {
-  mavenCentral()
+buildScan {
+  termsOfServiceUrl = 'https://gradle.com/terms-of-service'
+  termsOfServiceAgree = 'yes'
 }
 
 tasks.wrapper {
@@ -51,16 +51,6 @@ tasks.withType(CodeNarc) { codeNarcTask ->
   codeNarcTask.ignoreFailures = true
 }
 
-dependencies {
-  implementation gradleApi()
-
-  implementation 'com.thoughtworks.xstream:xstream:1.4.14'
-  testImplementation gradleTestKit()
-  testImplementation('org.spockframework:spock-core:1.3-groovy-2.5') {
-    exclude(module: 'groovy-all')
-  }
-}
-
 // Write the plugin's classpath to a file to share with the tests
 task createClasspathManifest {
   def outputDir = file("$buildDir/$name")
@@ -76,26 +66,34 @@ task createClasspathManifest {
 
 // Add the classpath file to the test runtime classpath
 dependencies {
+  implementation gradleApi()
+  implementation 'com.thoughtworks.xstream:xstream:1.4.14'
+
   testRuntimeOnly files(createClasspathManifest)
+
+  testImplementation gradleTestKit()
+  testImplementation('org.spockframework:spock-core:1.3-groovy-2.5') {
+    exclude(module: 'groovy-all')
+  }
 }
 
 jar {
   manifest {
     attributes 'Implementation-Title': 'Gradle Versions plugin',
-      'Implementation-Version': version,
+      'Implementation-Version': archiveVersion,
       'Built-By': System.getProperty('user.name'),
       'Built-JDK': System.getProperty('java.version'),
       'Built-Gradle': gradle.gradleVersion
   }
 }
 
-task groovydocJar(type: Jar, dependsOn: groovydoc) {
-  classifier = 'javadoc'
+task docsJar(type: Jar, dependsOn: groovydoc) {
+  archiveClassifier = 'docs'
   from groovydoc.destinationDir
 }
 
 artifacts {
-  archives groovydocJar
+  archives docsJar
 }
 
 tasks.withType(Test) {
