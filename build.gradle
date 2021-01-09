@@ -43,10 +43,6 @@ codenarcTest {
   configFile = file('config/codenarc/testrules.groovy')
 }
 
-codenarc {
-  toolVersion = 0.21
-}
-
 tasks.withType(CodeNarc) { codeNarcTask ->
   codeNarcTask.ignoreFailures = true
 }
