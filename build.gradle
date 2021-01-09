@@ -1,6 +1,6 @@
 buildscript {
   repositories {
-    jcenter()
+    gradlePluginPortal()
   }
 
   dependencies {
@@ -16,7 +16,7 @@ plugins {
 }
 
 repositories {
-  jcenter()
+  gradlePluginPortal()
 }
 
 apply plugin: 'nexus'
