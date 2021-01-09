@@ -1,25 +1,14 @@
-buildscript {
-  repositories {
-    jcenter()
-  }
-
-  dependencies {
-    classpath 'org.gradle.api.plugins:gradle-nexus-plugin:0.7.1'
-  }
-}
-
 plugins {
-  id "com.jfrog.bintray" version "1.8.4"
-  id "java-gradle-plugin"
-  id "groovy"
-  id "codenarc"
+  id 'com.jfrog.bintray' version '1.8.4'
+  id 'java-gradle-plugin'
+  id 'maven-publish'
+  id 'groovy'
+  id 'codenarc'
 }
 
 repositories {
   jcenter()
 }
-
-apply plugin: 'nexus'
 
 group = 'com.github.ben-manes'
 version = '0.36.0'
@@ -75,21 +64,14 @@ dependencies {
 
 jar {
   manifest {
-    attributes 'Implementation-Title': 'Gradle Versions plugin',
+    attributes(
+      'Implementation-Title': 'Gradle Versions plugin',
       'Implementation-Version': archiveVersion,
       'Built-By': System.getProperty('user.name'),
       'Built-JDK': System.getProperty('java.version'),
       'Built-Gradle': gradle.gradleVersion
+    )
   }
-}
-
-task docsJar(type: Jar, dependsOn: groovydoc) {
-  archiveClassifier = 'docs'
-  from groovydoc.destinationDir
-}
-
-artifacts {
-  archives docsJar
 }
 
 tasks.withType(Test) {
@@ -102,56 +84,119 @@ tasks.withType(Test) {
   }
 }
 
-modifyPom {
-  project {
-    name 'Gradle Versions plugin'
-    description 'Gradle plugin that provides tasks for discovering dependency updates.'
-    url 'https://github.com/ben-manes/gradle-versions-plugin'
-    inceptionYear '2012'
+task docsJar(type: Jar, dependsOn: groovydoc) {
+  group = 'Publications'
+  description = 'Create jar of documentation.'
+  archiveClassifier = 'docs'
+  from groovydoc.destinationDir
+}
 
-    scm {
-      url 'https://github.com/ben-manes/gradle-versions-plugin'
-      connection 'scm:https://ben-manes@github.com/ben-manes/gradle-versions-plugin.git'
-      developerConnection 'scm:git://github.com/ben-manes/gradle-versions-plugin.git'
-    }
+task sourcesJar(type: Jar, dependsOn: classes) {
+  group = 'Publications'
+  description = 'Create jar of sources.'
+  archiveClassifier = 'sources'
+  from sourceSets.main.allSource
+}
 
-    licenses {
-      license {
-        name 'The Apache Software License, Version 2.0'
-        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-        distribution 'repo'
-      }
-    }
+task testsJar(type: Jar) {
+  group = 'Publications'
+  description = 'Create jar of tests.'
+  archiveClassifier = 'tests'
+  from sourceSets.test.output
+}
 
-    developers {
-      developer {
-        id 'ben-manes'
-        name 'Ben Manes'
-        email 'ben.manes@gmail.com'
-      }
-      developer {
-        id 'zenedith'
-        name 'Zenedith'
-        email 'zenedith@wp.pl'
-      }
-      developer {
-        id 'jochenberger'
-        name 'Jochen Berger'
+task reportsZip(type: Zip, dependsOn: check) {
+  group = 'Publications'
+  description = 'Create a zip of all reports.'
+  archiveClassifier = 'reports'
+  from reporting.baseDir
+}
+
+// Local published to ~/.m2 - mavenLocal()
+publishing {
+  repositories {
+    mavenLocal()
+  }
+
+  publications {
+    pluginMaven(MavenPublication) {
+      artifact docsJar
+      artifact sourcesJar
+      artifact testsJar
+      artifact reportsZip
+
+      pom {
+        resolveStrategy = Closure.DELEGATE_FIRST
+        name = 'Gradle Versions plugin'
+        description = 'Gradle plugin that provides tasks for discovering dependency updates.'
+        url = 'https://github.com/ben-manes/gradle-versions-plugin'
+        inceptionYear = '2012'
+
+        licenses {
+          license {
+            name = 'The Apache Software License, Version 2.0'
+            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+            distribution = 'repo'
+          }
+        }
+
+        developers {
+          developer {
+            id = 'ben-manes'
+            name = 'Ben Manes'
+            email = 'ben.manes@gmail.com'
+          }
+          developer {
+            id = 'zenedith'
+            name = 'Zenedith'
+            email = 'zenedith@wp.pl'
+          }
+          developer {
+            id = 'jochenberger'
+            name = 'Jochen Berger'
+          }
+        }
+
+        issueManagement {
+          system = 'github'
+          url = 'https://github.com/ben-manes/gradle-versions-plugin/issues'
+        }
+
+        scm {
+          url = 'https://github.com/ben-manes/gradle-versions-plugin'
+          connection = 'scm:https://ben-manes@github.com/ben-manes/gradle-versions-plugin.git'
+          developerConnection = 'scm:git://github.com/ben-manes/gradle-versions-plugin.git'
+        }
       }
     }
   }
 }
+publish.dependsOn jar, docsJar, sourcesJar, testsJar, reportsZip
+publish.dependsOn 'generatePomFileForPluginMavenPublication'
 
+// Publishes to JFrog Bintray's JCenter repository
 bintray {
-  user = project.properties['BINTRAY_USERNAME'] ?: System.getenv('BINTRAY_USERNAME')
-  key = project.properties['BINTRAY_API_KEY'] ?: System.getenv('BINTRAY_API_KEY')
+  user = project.properties['BINTRAY_USERNAME'] ?: System.env.'BINTRAY_USERNAME'
+  key = project.properties['BINTRAY_API_KEY'] ?: System.env.'BINTRAY_API_KEY'
   configurations = ['archives']
   publish = true
+
   pkg {
     repo = 'maven'
     name = 'com.github.ben-manes:gradle-versions-plugin'
+    desc = 'Gradle plugin that provides tasks for discovering dependency updates.'
+    websiteUrl = 'https://github.com/ben-manes/gradle-versions-plugin'
+    issueTrackerUrl = 'https://github.com/ben-manes/gradle-versions-plugin/issues'
+    vcsUrl = 'https://github.com/ben-manes/gradle-versions-plugin'
+    labels = ['gradle', 'plugin', 'versions']
+    githubRepo = 'ben-manes/gradle-versions-plugin'
+    githubReleaseNotesFile = 'README.md'
+
     version {
+      desc = 'Gradle plugin that provides tasks for discovering dependency updates.'
       attributes = ['gradle-plugin': 'com.github.ben-manes.versions:com.github.ben-manes:gradle-versions-plugin']
     }
   }
 }
+bintrayUpload.dependsOn jar, docsJar, sourcesJar, testsJar, reportsZip
+bintrayUpload.dependsOn 'generatePomFileForPluginMavenPublication'
