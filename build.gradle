@@ -52,7 +52,7 @@ task createClasspathManifest {
 // Add the classpath file to the test runtime classpath
 dependencies {
   implementation gradleApi()
-  implementation 'com.thoughtworks.xstream:xstream:1.4.14'
+  implementation 'com.thoughtworks.xstream:xstream:1.4.15'
 
   testRuntimeOnly files(createClasspathManifest)
 
