@@ -9,12 +9,16 @@ import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
 final class ConstraintsSpec extends Specification {
 
-  @Rule TemporaryFolder testProjectDir = new TemporaryFolder()
+  @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
   private File buildFile
+  private String mavenRepoUrl
+
+  def 'setup'() {
+    mavenRepoUrl = getClass().getResource('/maven/').toURI()
+  }
 
   def "Show updates for an api dependency constraint"() {
     given:
-    def mavenRepoUrl = getClass().getResource('/maven/').toURI()
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
       """
@@ -54,7 +58,6 @@ final class ConstraintsSpec extends Specification {
 
   def "Does not override explicit dependency with constraint"() {
     given:
-    def mavenRepoUrl = getClass().getResource('/maven/').toURI()
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
       """
