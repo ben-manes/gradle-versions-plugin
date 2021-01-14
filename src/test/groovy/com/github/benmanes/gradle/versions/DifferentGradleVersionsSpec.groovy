@@ -12,29 +12,30 @@ import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseCh
 
 final class DifferentGradleVersionsSpec extends Specification {
 
-  @Rule
-  TemporaryFolder testProjectDir = new TemporaryFolder()
+  @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
   private File buildFile
   private List<File> pluginClasspath
+  private String classpathString
+  private String mavenRepoUrl
 
   def 'setup'() {
-    def pluginClasspathResource = getClass().classLoader.findResource("plugin-classpath.txt")
+    def pluginClasspathResource = getClass().classLoader.getResource("plugin-classpath.txt")
     if (pluginClasspathResource == null) {
       throw new IllegalStateException(
         "Did not find plugin classpath resource, run `testClasses` build task.")
     }
 
     pluginClasspath = pluginClasspathResource.readLines().collect { new File(it) }
+    classpathString = pluginClasspath
+      .collect { it.absolutePath.replace('\\', '\\\\') } // escape backslashes in Windows paths
+      .collect { "'$it'" }
+      .join(", ")
+    mavenRepoUrl = getClass().getResource('/maven/').toURI()
   }
 
   @Unroll
   def 'dependencyUpdates task completes without errors with Gradle #gradleVersion'() {
     given:
-    def classpathString = pluginClasspath
-      .collect { it.absolutePath.replace('\\', '\\\\') } // escape backslashes in Windows paths
-      .collect { "'$it'" }
-      .join(", ")
-    def mavenRepoUrl = getClass().getResource('/maven/').toURI()
     def srdErrWriter = new StringWriter()
 
     buildFile = testProjectDir.newFile('build.gradle')
@@ -123,11 +124,6 @@ final class DifferentGradleVersionsSpec extends Specification {
   @Unroll
   def 'dependencyUpdates task uses specified release channel with Gradle #gradleReleaseChannel'() {
     given:
-    def classpathString = pluginClasspath
-      .collect { it.absolutePath.replace('\\', '\\\\') } // escape backslashes in Windows paths
-      .collect { "'$it'" }
-      .join(", ")
-    def mavenRepoUrl = getClass().getResource('/maven/').toURI()
     def srdErrWriter = new StringWriter()
 
     buildFile = testProjectDir.newFile('build.gradle')
@@ -179,11 +175,6 @@ final class DifferentGradleVersionsSpec extends Specification {
 
   def 'dependencyUpdates task works with dependency verification enabled'() {
     given:
-    def classpathString = pluginClasspath
-      .collect { it.absolutePath.replace('\\', '\\\\') } // escape backslashes in Windows paths
-      .collect { "'$it'" }
-      .join(", ")
-    def mavenRepoUrl = getClass().getResource('/maven/').toURI()
     def srdErrWriter = new StringWriter()
 
     buildFile = testProjectDir.newFile('build.gradle')

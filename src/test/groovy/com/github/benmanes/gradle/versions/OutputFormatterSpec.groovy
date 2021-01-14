@@ -17,7 +17,7 @@ final class OutputFormatterSpec extends Specification {
   private String mavenRepoUrl
 
   def 'setup'() {
-    def pluginClasspathResource = getClass().classLoader.findResource("plugin-classpath.txt")
+    def pluginClasspathResource = getClass().classLoader.getResource("plugin-classpath.txt")
     if (pluginClasspathResource == null) {
       throw new IllegalStateException(
         "Did not find plugin classpath resource, run `testClasses` build task.")

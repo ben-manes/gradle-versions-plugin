@@ -8,7 +8,7 @@ import spock.lang.Unroll
 
 final class ComponentSelectionRuleSourceSpec extends Specification {
 
-  @Rule TemporaryFolder testProjectDir = new TemporaryFolder()
+  @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
   private File buildFile
   private List<File> pluginClasspath
 
