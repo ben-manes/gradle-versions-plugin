@@ -60,6 +60,7 @@ final class OutputFormatterSpec extends Specification {
 
         dependencyUpdates {
           outputFormatter = {}
+          checkForGradleUpdate = false // future proof tests from breaking
         }
         """.stripIndent()
 
@@ -102,6 +103,7 @@ final class OutputFormatterSpec extends Specification {
         }
 
         dependencyUpdates {
+          checkForGradleUpdate = false // future proof tests from breaking
         }
         """.stripIndent()
 
@@ -144,6 +146,7 @@ final class OutputFormatterSpec extends Specification {
 
         dependencyUpdates {
           outputFormatter = 'plain'
+          checkForGradleUpdate = false // future proof tests from breaking
         }
         """.stripIndent()
 
@@ -162,9 +165,6 @@ final class OutputFormatterSpec extends Specification {
     The following dependencies have later milestone versions:
      - com.google.inject:guice [2.0 -> 3.1]
          http://code.google.com/p/google-guice/
-
-    Gradle release-candidate updates:
-     - Gradle: [6.3 -> 6.8]
       """.stripIndent()
     def actual = reportFile.text
 
@@ -202,6 +202,7 @@ final class OutputFormatterSpec extends Specification {
 
         dependencyUpdates {
           outputFormatter = 'json'
+          checkForGradleUpdate = false // future proof tests from breaking
         }
       """.stripIndent()
 
@@ -222,9 +223,9 @@ final class OutputFormatterSpec extends Specification {
         },
         "gradle": {
             "current": {
-                "version": "6.8",
-                "reason": "",
-                "isUpdateAvailable": true,
+                "version": "",
+                "reason": "update check disabled",
+                "isUpdateAvailable": false,
                 "isFailure": false
             },
             "nightly": {
@@ -233,16 +234,16 @@ final class OutputFormatterSpec extends Specification {
                 "isUpdateAvailable": false,
                 "isFailure": false
             },
-            "enabled": true,
+            "enabled": false,
             "releaseCandidate": {
                 "version": "",
-                "reason": "update check succeeded: no release available",
+                "reason": "update check disabled",
                 "isUpdateAvailable": false,
                 "isFailure": false
             },
             "running": {
-                "version": "6.3",
-                "reason": "",
+                "version": "",
+                "reason": "update check disabled",
                 "isUpdateAvailable": false,
                 "isFailure": false
             }
@@ -314,6 +315,7 @@ final class OutputFormatterSpec extends Specification {
 
         dependencyUpdates {
           outputFormatter = 'xml'
+          checkForGradleUpdate = false // future proof tests from breaking
         }
       """.stripIndent()
 
@@ -324,7 +326,7 @@ final class OutputFormatterSpec extends Specification {
       .withPluginClasspath()
       .build()
     def expected = xmlParser.parseText(
-      """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      """    <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     <response>
       <count>1</count>
       <current>
@@ -354,24 +356,24 @@ final class OutputFormatterSpec extends Specification {
         <dependencies/>
       </unresolved>
       <gradle>
-        <enabled>true</enabled>
+        <enabled>false</enabled>
         <running>
-          <version>6.3</version>
+          <version></version>
           <isUpdateAvailable>false</isUpdateAvailable>
           <isFailure>false</isFailure>
-          <reason></reason>
+          <reason>update check disabled</reason>
         </running>
         <current>
-          <version>6.8</version>
-          <isUpdateAvailable>true</isUpdateAvailable>
+          <version></version>
+          <isUpdateAvailable>false</isUpdateAvailable>
           <isFailure>false</isFailure>
-          <reason></reason>
+          <reason>update check disabled</reason>
         </current>
         <releaseCandidate>
           <version></version>
           <isUpdateAvailable>false</isUpdateAvailable>
           <isFailure>false</isFailure>
-          <reason>update check succeeded: no release available</reason>
+          <reason>update check disabled</reason>
         </releaseCandidate>
         <nightly>
           <version></version>
