@@ -226,7 +226,7 @@ dependencyUpdates.gradleReleaseChannel="current"
 #### Constraints
 
 If you use constraints, for example to define a BOM using the [`java-platform`](https://docs.gradle.org/current/userguide/java_platform_plugin.html)
-plugin or to [manage](https://docs.gradle.org/current/userguide/managing_transitive_dependencies.html#sec:dependency_constraints)
+plugin or to [manage](https://docs.gradle.org/current/userguide/dependency_constraints.html)
 transitive dependency versions, you can enable checking of constraints by specifying the `checkConstraints`
 attribute of the `dependencyUpdates` task.
 
