@@ -8,7 +8,8 @@ import spock.lang.Unroll
 
 final class KotlinDslUsageSpec extends Specification {
 
-  @Rule TemporaryFolder testProjectDir = new TemporaryFolder()
+  @Rule
+  TemporaryFolder testProjectDir = new TemporaryFolder()
   private File buildFile
 
   def 'setup'() {
@@ -23,7 +24,7 @@ final class KotlinDslUsageSpec extends Specification {
           java
           id("com.github.ben-manes.versions")
         }
-        
+
         apply(plugin = "com.github.ben-manes.versions")
 
         repositories {
@@ -67,7 +68,7 @@ final class KotlinDslUsageSpec extends Specification {
 
     then:
     result.output.contains('''Failed to determine the latest version for the following dependencies (use --info for details):
-       | - com.google.inject:guice'''.stripMargin())
+       | - com.google.inject:guice'''.stripMargin().replace('\r','').replace('\n', System.lineSeparator()))
     srdErrWriter.toString().empty
 
     where:

@@ -177,12 +177,11 @@ class Resolver {
   }
 
   /** Returns the coordinates for the current (declared) dependency versions. */
+  @TypeChecked(SKIP)
   private Map<Coordinate.Key, Coordinate> getCurrentCoordinates(Configuration configuration) {
     Map<Coordinate.Key, Coordinate> declared = configuration.dependencies.findAll { dependency ->
       dependency instanceof ExternalDependency
-    }.collectEntries {
-      Coordinate coordinate = Coordinate.from(it)
-      return [coordinate.key, coordinate]
+    }.collectEntries {Coordinate.from(it).getEntry()
     }
     if (declared.isEmpty()) {
       return Collections.emptyMap()
@@ -201,14 +200,14 @@ class Resolver {
 
     Set<ResolvedDependency> resolved = lenient.getFirstLevelModuleDependencies(SATISFIES_ALL)
     for (ResolvedDependency dependency : resolved) {
-      Coordinate coordinate = Coordinate.from(dependency.module.id)
+        Coordinate coordinate = Coordinate.from(dependency.module.id, declared)
       coordinates.put(coordinate.key, coordinate)
     }
 
     Set<UnresolvedDependency> unresolved = lenient.getUnresolvedModuleDependencies()
     for (UnresolvedDependency dependency : unresolved) {
-      Coordinate coordinate = Coordinate.from(dependency.selector)
-      coordinates.put(coordinate.key, declared.get(coordinate.key))
+      Coordinate.Key key = Coordinate.keyFrom(dependency.selector)
+      coordinates.put(key, declared.get(key))
     }
 
     // Ignore undeclared (hidden) dependencies that appear when resolving a configuration

@@ -18,6 +18,7 @@ package com.github.benmanes.gradle.versions.updates
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.TypeChecked
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ModuleVersionSelector
 
@@ -25,16 +26,18 @@ import org.gradle.api.artifacts.ModuleVersionSelector
  * The dependency's coordinate.
  */
 @TypeChecked
-@EqualsAndHashCode
+@EqualsAndHashCode(excludes = 'userReason')
 class Coordinate implements Comparable<Coordinate> {
   final String groupId
   final String artifactId
   final String version
+  final String userReason
 
-  public Coordinate(String groupId, String artifactId, String version) {
+  Coordinate(String groupId, String artifactId, String version, String userReason) {
     this.groupId = groupId ?: 'none'
     this.artifactId = artifactId ?: 'none'
     this.version = version ?: 'none'
+    this.userReason = userReason
   }
 
   public Key getKey() {
@@ -52,16 +55,41 @@ class Coordinate implements Comparable<Coordinate> {
     return (result == 0) ? version.compareTo(coordinate.version) : result
   }
 
-  static Coordinate from(ModuleVersionSelector selector) {
-    return new Coordinate(selector.group, selector.name, selector.version)
+  static Coordinate from(ExternalModuleDependency dependency) {
+    String userReason = null
+    if (dependency.metaClass.respondsTo(dependency, "getReason")) {
+      userReason = dependency.getReason()
+    }
+    return new Coordinate(dependency.group, dependency.name, dependency.version, userReason)
   }
 
-  static Coordinate from(Dependency dependency) {
-    return new Coordinate(dependency.group, dependency.name, dependency.version)
+  static Coordinate from(ModuleVersionSelector selector) {
+    return new Coordinate(selector.group, selector.name, selector.version, null)
   }
 
   static Coordinate from(ModuleVersionIdentifier identifier) {
-    return new Coordinate(identifier.group, identifier.name, identifier.version)
+    return new Coordinate(identifier.group, identifier.name, identifier.version, null)
+  }
+
+  static Coordinate from(Dependency dependency) {
+    String userReason = null
+    if (dependency.metaClass.respondsTo(dependency, "reason")) {
+      userReason = dependency.getReason()
+    }
+    return new Coordinate(dependency.group, dependency.name, dependency.version, userReason)
+  }
+
+  static Key keyFrom(ModuleVersionSelector selector) {
+    return new Key(selector.group, selector.name)
+  }
+
+  static Coordinate from(ModuleVersionIdentifier identifier, Map<Key, Coordinate> declared) {
+    return new Coordinate(identifier.group, identifier.name, identifier.version,
+      declared?.getOrDefault(new Key(identifier.group, identifier.name), null)?.getUserReason())
+  }
+
+  Map.Entry<Key, Coordinate> getEntry() {
+    return new MapEntry(getKey(), this)
   }
 
   @EqualsAndHashCode

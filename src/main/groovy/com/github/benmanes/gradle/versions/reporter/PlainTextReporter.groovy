@@ -38,7 +38,8 @@ class PlainTextReporter extends AbstractReporter {
     writeHeader(printStream)
 
     if (result.count == 0) {
-      printStream.println '\nNo dependencies found.'
+      printStream.println()
+      printStream.println 'No dependencies found.'
     } else {
       writeUpToDate(printStream, result)
       writeExceedLatestFound(printStream, result)
@@ -55,10 +56,10 @@ class PlainTextReporter extends AbstractReporter {
   }
 
   private def writeHeader(printStream) {
-    printStream.println """
-      |------------------------------------------------------------
-      |${project.path} Project Dependency Updates (report to plain text file)
-      |------------------------------------------------------------""".stripMargin()
+    printStream.println()
+    printStream.println("------------------------------------------------------------")
+    printStream.println("${project.path} Project Dependency Updates (report to plain text file)")
+    printStream.println("------------------------------------------------------------")
   }
 
   private def writeGradleUpdates(printStream, Result result) {
@@ -66,7 +67,8 @@ class PlainTextReporter extends AbstractReporter {
       return
     }
 
-    printStream.println('\nGradle updates:')
+    printStream.println()
+    printStream.println('Gradle updates:')
     result.gradle.with {
       // Log Gradle update checking failures.
       if (current.isFailure) {
@@ -101,20 +103,28 @@ class PlainTextReporter extends AbstractReporter {
   private def writeUpToDate(printStream, Result result) {
     SortedSet<Dependency> upToDateVersions = result.current.dependencies
     if (!upToDateVersions.isEmpty()) {
+      printStream.println()
       printStream.println(
-        "\nThe following dependencies are using the latest ${revision} version:")
-      upToDateVersions.each { printStream.println " - ${label(it)}:${it.version}" }
+        "The following dependencies are using the latest ${revision} version:")
+      upToDateVersions.each { printStream.println " - ${label(it)}:${it.version}"
+      if (it.getUserReason()) {
+        printStream.println("     ${it.getUserReason()}")
+      }}
     }
   }
 
   private def writeExceedLatestFound(printStream, Result result) {
     def downgradeVersions = result.exceeded.dependencies
     if (!downgradeVersions.isEmpty()) {
-      printStream.println('\nThe following dependencies exceed the version found at the '
+      printStream.println()
+      printStream.println('The following dependencies exceed the version found at the '
         + revision + ' revision level:')
       downgradeVersions.each { DependencyLatest dep ->
         def currentVersion = dep.version
         printStream.println " - ${label(dep)} [${currentVersion} <- ${dep.latest}]"
+        if (dep.getUserReason()) {
+          printStream.println("     ${dep.getUserReason()}")
+        }
         if (dep.projectUrl != null) {
           printStream.println "     ${dep.projectUrl}"
         }
@@ -126,10 +136,14 @@ class PlainTextReporter extends AbstractReporter {
   private def writeUpgrades(printStream, Result result) {
     def upgradeVersions = result.outdated.dependencies
     if (!upgradeVersions.isEmpty()) {
-      printStream.println "\nThe following dependencies have later ${revision} versions:"
+      printStream.println()
+      printStream.println "The following dependencies have later ${revision} versions:"
       upgradeVersions.each { DependencyOutdated dep ->
         def currentVersion = dep.version
         printStream.println " - ${label(dep)} [${currentVersion} -> ${dep.available[revision]}]"
+        if (dep.getUserReason()) {
+          printStream.println("     ${dep.getUserReason()}")
+        }
         if (dep.projectUrl != null) {
           printStream.println "     ${dep.projectUrl}"
         }
@@ -140,11 +154,15 @@ class PlainTextReporter extends AbstractReporter {
   private def writeUnresolved(printStream, Result result) {
     def unresolved = result.unresolved.dependencies
     if (!unresolved.isEmpty()) {
+      printStream.println()
       printStream.println(
-        '\nFailed to determine the latest version for the following dependencies '
+        'Failed to determine the latest version for the following dependencies '
           + '(use --info for details):')
       unresolved.each { DependencyUnresolved dep ->
         printStream.println ' - ' + label(dep)
+        if (dep.getUserReason()) {
+          printStream.println("     ${dep.getUserReason()}")
+        }
         if (dep.projectUrl != null) {
           printStream.println "     ${dep.projectUrl}"
         }

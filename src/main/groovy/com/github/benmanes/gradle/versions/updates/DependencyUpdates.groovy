@@ -90,16 +90,17 @@ class DependencyUpdates {
     }
   }
 
+  @TypeChecked(SKIP)
   private DependencyUpdatesReporter createReporter(
     VersionMapping versions, Set<UnresolvedDependency> unresolved, Map<Map<String, String>, String> projectUrls) {
-    Map<Map<String, String>, String> currentVersions =
-      versions.current.collectEntries { [[group: it.groupId, name: it.artifactId]: it.version] }
-    Map<Map<String, String>, String> latestVersions =
-      versions.latest.collectEntries { [[group: it.groupId, name: it.artifactId]: it.version] }
-    Map<Map<String, String>, String> upToDateVersions =
-      versions.upToDate.collectEntries { [[group: it.groupId, name: it.artifactId]: it.version] }
-    Map<Map<String, String>, String> downgradeVersions = toMap(versions.downgrade)
-    Map<Map<String, String>, String> upgradeVersions = toMap(versions.upgrade)
+    Map<Map<String, String>, Coordinate> currentVersions =
+      versions.current.collectEntries { [[group: it.groupId, name: it.artifactId]: it] }
+    Map<Map<String, String>, Coordinate> latestVersions =
+      versions.latest.collectEntries { [[group: it.groupId, name: it.artifactId]: it] }
+    Map<Map<String, String>, Coordinate> upToDateVersions =
+      versions.upToDate.collectEntries { [[group: it.groupId, name: it.artifactId]: it] }
+    Map<Map<String, String>, Coordinate> downgradeVersions = toMap(versions.downgrade)
+    Map<Map<String, String>, Coordinate> upgradeVersions = toMap(versions.upgrade)
 
     // Check for Gradle updates.
     GradleUpdateChecker gradleUpdateChecker = new GradleUpdateChecker(checkForGradleUpdate)
@@ -109,14 +110,15 @@ class DependencyUpdates {
       unresolved, projectUrls, gradleUpdateChecker)
   }
 
-  private static Map<Map<String, String>, String> toMap(Set<Coordinate> coordinates) {
-    Map<Map<String, String>, String> map = [:]
+  @TypeChecked(SKIP)
+  private static Map<Map<String, String>, Coordinate> toMap(Set<Coordinate> coordinates) {
+    Map<Map<String, String>, Coordinate> map = [:]
     for (Coordinate coordinate : coordinates) {
       for (int i = 0; ; i++) {
         String artifactId = coordinate.artifactId + ((i == 0) ? '' : "[${i + 1}]")
         def key = [group: coordinate.groupId, name: artifactId]
         if (!map.containsKey(key)) {
-          map.put(key, coordinate.version)
+          map.put(key, coordinate)
           break
         }
       }

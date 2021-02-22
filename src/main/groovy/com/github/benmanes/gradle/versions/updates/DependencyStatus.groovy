@@ -49,6 +49,6 @@ class DependencyStatus {
   }
 
   Coordinate getLatestCoordinate() {
-    return new Coordinate(coordinate?.groupId, coordinate?.artifactId, latestVersion)
+    return new Coordinate(coordinate?.groupId, coordinate?.artifactId, latestVersion, coordinate?.getUserReason())
   }
 }

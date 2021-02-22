@@ -13,4 +13,5 @@ class Dependency {
   String name
   String version
   String projectUrl
+  String userReason
 }
