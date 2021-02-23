@@ -570,7 +570,7 @@ final class DependencyUpdatesSpec extends Specification {
     new DependencyUpdates(project, resolutionStrategy, revision, outputFormatter, outputDir, reportfileName, checkForGradleUpdate, gradleReleaseChannel).run()
   }
 
-  private static void addRepositoryTo(project) {
+  private void addRepositoryTo(project) {
     def localMavenRepo = getClass().getResource('/maven/')
     project.repositories {
       maven {
