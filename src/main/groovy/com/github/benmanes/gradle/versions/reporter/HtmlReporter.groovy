@@ -129,12 +129,13 @@ class HtmlReporter extends AbstractReporter {
     // The following dependencies are using the latest milestone version:
     DependenciesGroup<Dependency> list = result.getCurrent();
     rows.add("<tr class=\"header\" id = \"currentId\" ><th colspan=\"4\"><b>Current dependencies<span>(Click to expand)</span></b></th></tr>")
-    rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td></tr>")
+    rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Reason</b></td></tr>")
     for (Dependency item : list.dependencies) {
       String rowString;
-      String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
+      String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
       rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
-        getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item)))
+        getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item)),
+        item.getUserReason()?:'')
       rows.add(rowString)
     }
     return rows
@@ -159,13 +160,14 @@ class HtmlReporter extends AbstractReporter {
     // The following dependencies are using the latest milestone version:
     DependenciesGroup<DependencyLatest> list = result.getExceeded()
     rows.add("<tr class=\"header\"><th colspan=\"5\"><b>Exceeded dependencies<span>(Click to collapse)</span></b></th></tr>")
-    rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Latest Version</b></td></tr>")
+    rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Latest Version</b></td><td><b>Reason</b></td></tr>")
     for (DependencyLatest item : list.dependencies) {
       String rowString;
-      String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
+      String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
       rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
         getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), item.getVersion()),
-        getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item)))
+        getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item)),
+        item.getUserReason()?:'')
       rows.add(rowString)
     }
     return rows
@@ -187,13 +189,14 @@ class HtmlReporter extends AbstractReporter {
     List<String> rows = new ArrayList<>();
     DependenciesGroup<DependencyOutdated> list = result.getOutdated()
     rows.add("<tr class=\"header\"><th colspan=\"5\"><b>Later dependencies<span>(Click to collapse)</span></b></th></tr>")
-    rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Latest Version</b></td></tr>")
+    rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Latest Version</b></td><td><b>Reason</b></td></tr>")
     for (DependencyOutdated item : list.dependencies) {
       String rowString;
-      String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
+      String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
       rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
         getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), item.getVersion()),
-        getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item)))
+        getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item)),
+        item.getUserReason()?:'')
       rows.add(rowString)
     }
     return rows
@@ -230,12 +233,13 @@ class HtmlReporter extends AbstractReporter {
     List<String> rows = new ArrayList<>();
     DependenciesGroup<DependencyUnresolved> list = result.getUnresolved()
     rows.add("<tr class=\"header\"><th colspan=\"4\"><b>Unresolved dependencies<span>(Click to collapse)</span></b></th></tr>")
-    rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td></tr>")
+    rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td>Reason</td></tr>")
     for (DependencyUnresolved item : list.dependencies) {
       String rowString;
-      String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
+      String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
       rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
-        getUrlString(item.getProjectUrl()) , getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item)))
+        getUrlString(item.getProjectUrl()) , getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item)),
+        item.getUserReason()?:'')
       rows.add(rowString)
     }
     return rows

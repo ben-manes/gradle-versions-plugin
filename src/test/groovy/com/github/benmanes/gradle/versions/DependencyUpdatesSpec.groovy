@@ -565,6 +565,11 @@ final class DependencyUpdatesSpec extends Specification {
     [rootProject, childProject, leafProject]
   }
 
+  private static def evaluate(project, revision = 'milestone', outputFormatter = 'plain',
+                              outputDir = 'build', resolutionStrategy = null, reportfileName = null, checkForGradleUpdate = true, gradleReleaseChannel = RELEASE_CANDIDATE.id) {
+    new DependencyUpdates(project, resolutionStrategy, revision, outputFormatter, outputDir, reportfileName, checkForGradleUpdate, gradleReleaseChannel).run()
+  }
+
   private static void addRepositoryTo(project) {
     def localMavenRepo = getClass().getResource('/maven/')
     project.repositories {
@@ -597,11 +602,6 @@ final class DependencyUpdatesSpec extends Specification {
       unresolvable('com.github.ben-manes:unresolvable:1.0') { because 'Life is hard' }
       unresolvable('com.github.ben-manes:unresolvable2:1.0')
     }
-  }
-
-  private static def evaluate(project, revision = 'milestone', outputFormatter = 'plain',
-                      outputDir = 'build', resolutionStrategy = null, reportfileName = null, checkForGradleUpdate = true, gradleReleaseChannel = RELEASE_CANDIDATE.id) {
-    new DependencyUpdates(project, resolutionStrategy, revision, outputFormatter, outputDir, reportfileName, checkForGradleUpdate, gradleReleaseChannel).run()
   }
 
   private static void checkUnresolvedVersions(def reporter) {
