@@ -19,6 +19,7 @@ import com.github.benmanes.gradle.versions.reporter.JsonReporter
 import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
 import com.github.benmanes.gradle.versions.reporter.Reporter
 import com.github.benmanes.gradle.versions.reporter.XmlReporter
+import com.github.benmanes.gradle.versions.reporter.HtmlReporter
 import com.github.benmanes.gradle.versions.reporter.result.DependenciesGroup
 import com.github.benmanes.gradle.versions.reporter.result.Dependency
 import com.github.benmanes.gradle.versions.reporter.result.DependencyLatest
@@ -29,17 +30,20 @@ import com.github.benmanes.gradle.versions.reporter.result.VersionAvailable
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResult
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
+import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
-import groovy.transform.TypeChecked
 import groovy.transform.TypeCheckingMode
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ModuleVersionSelector
 import org.gradle.api.artifacts.UnresolvedDependency
 
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.NIGHTLY
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
+
 /**
  * A reporter for the dependency updates results.
  */
-@TypeChecked
+@CompileStatic
 @TupleConstructor
 class DependencyUpdatesReporter {
   /** The project evaluated against. */
@@ -73,13 +77,17 @@ class DependencyUpdatesReporter {
   /** facade object to access information about running gradle versions and gradle updates */
   GradleUpdateChecker gradleUpdateChecker
 
+  /** The gradle release channel to use for reporting. */
+  String gradleReleaseChannel
+
   private static final Object MUTEX = new Object()
 
   def write() {
     synchronized (MUTEX) {
-      PlainTextReporter plainTextReporter = new PlainTextReporter(project, revision)
-
-      plainTextReporter.write(System.out, buildBaseObject())
+      if (!(outputFormatter instanceof Closure)) {
+        PlainTextReporter plainTextReporter = new PlainTextReporter(project, revision, gradleReleaseChannel)
+        plainTextReporter.write(System.out, buildBaseObject())
+      }
 
       if (outputFormatter == null ||
         (outputFormatter instanceof String && ((String) outputFormatter).isEmpty())) {
@@ -103,38 +111,33 @@ class DependencyUpdatesReporter {
   }
 
   def generateFileReport(Reporter reporter) {
-    String filename = outputDir + File.separator + reportfileName + '.' + reporter.getFileExtension()
-    try {
-      project.file(outputDir).mkdirs()
-      File outputFile = project.file(filename)
-      outputFile.newOutputStream().withStream { OutputStream os ->
-        new FileOutputStream(outputFile).withStream { FileOutputStream fos ->
-          new PrintStream(fos).withStream { PrintStream ps ->
-            def result = buildBaseObject()
-            reporter.write(ps, result)
-          }
-        }
-      }
+    File filename = new File(outputDir, reportfileName + '.' + reporter.getFileExtension())
+    project.file(outputDir).mkdirs()
+    File outputFile = project.file(filename)
+    outputFile.newPrintWriter().withPrintWriter { PrintWriter pw ->
+      def result = buildBaseObject()
+      reporter.write(pw, result)
+    }
 
-      project.logger.lifecycle '\nGenerated report file ' + filename
-    }
-    catch (FileNotFoundException e) {
-      project.logger.error 'Invalid outputDir path ' + filename
-    }
+    project.logger.lifecycle '\nGenerated report file ' + filename
   }
 
-  def Reporter getOutputReporter(def formatter) {
+  Reporter getOutputReporter(String formatterOriginal) {
+    String formatter =  formatterOriginal.replaceAll("\\s", "")
     def reporter
 
     switch (formatter) {
       case 'json':
-        reporter = new JsonReporter(project, revision)
+        reporter = new JsonReporter(project, revision, gradleReleaseChannel)
         break
       case 'xml':
-        reporter = new XmlReporter(project, revision)
+        reporter = new XmlReporter(project, revision, gradleReleaseChannel)
+        break
+      case 'html':
+        reporter = new HtmlReporter(project, revision, gradleReleaseChannel)
         break
       default:
-        reporter = new PlainTextReporter(project, revision)
+        reporter = new PlainTextReporter(project, revision, gradleReleaseChannel)
     }
 
     return reporter
@@ -168,8 +171,8 @@ class DependencyUpdatesReporter {
       enabled: enabled,
       running: new GradleUpdateResult(enabled, gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.runningGradleVersion),
       current: new GradleUpdateResult(enabled, gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.currentGradleVersion),
-      releaseCandidate: new GradleUpdateResult(enabled, gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.releaseCandidateGradleVersion),
-      nightly: new GradleUpdateResult(enabled, gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.nightlyGradleVersion)
+      releaseCandidate: new GradleUpdateResult(enabled && (gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id), gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.releaseCandidateGradleVersion),
+      nightly: new GradleUpdateResult(enabled && (gradleReleaseChannel == NIGHTLY.id), gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.nightlyGradleVersion)
     )
   }
 
@@ -178,7 +181,6 @@ class DependencyUpdatesReporter {
     existingKey['name'] = (index == -1) ? existingKey['name'] : existingKey['name'].substring(0, index)
   }
 
-  @TypeChecked(TypeCheckingMode.SKIP)
   protected SortedSet buildCurrentGroup() {
     sortByGroupAndName(upToDateVersions).collect { Map.Entry<Map<String, String>, Coordinate> dep ->
       updateKey(dep.key)
@@ -186,7 +188,6 @@ class DependencyUpdatesReporter {
     } as SortedSet
   }
 
-  @TypeChecked(TypeCheckingMode.SKIP)
   protected SortedSet buildOutdatedGroup() {
     sortByGroupAndName(upgradeVersions).collect { Map.Entry<Map<String, String>, Coordinate> dep ->
       updateKey(dep.key)
@@ -194,7 +195,6 @@ class DependencyUpdatesReporter {
     } as SortedSet
   }
 
-  @TypeChecked(TypeCheckingMode.SKIP)
   protected SortedSet buildExceededGroup() {
     sortByGroupAndName(downgradeVersions).collect { Map.Entry<Map<String, String>, Coordinate> dep ->
       updateKey(dep.key)
@@ -202,17 +202,14 @@ class DependencyUpdatesReporter {
     } as SortedSet
   }
 
-  @TypeChecked(TypeCheckingMode.SKIP)
   protected SortedSet<DependencyUnresolved> buildUnresolvedGroup() {
     unresolved.sort { UnresolvedDependency a, UnresolvedDependency b ->
       compareKeys(keyOf(a.selector), keyOf(b.selector))
     }.collect { UnresolvedDependency dep ->
-      def message = dep.problem.getMessage()
-      def split = message.split('Required by')
+      def stringWriter = new StringWriter()
+      dep.problem.printStackTrace(new PrintWriter(stringWriter))
+      def message = stringWriter.toString()
 
-      if (split.length > 0) {
-        message = split[0].trim()
-      }
       buildUnresolvedDependency(dep.selector, message)
     } as SortedSet
   }
@@ -236,13 +233,11 @@ class DependencyUpdatesReporter {
       coordinate.getUserReason())
   }
 
-  @TypeChecked(TypeCheckingMode.SKIP)
   protected def buildExceededDependency(Coordinate coordinate, Map<String, String> key) {
     new DependencyLatest(key['group'], key['name'], coordinate?.getVersion(), projectUrls[key],
       coordinate?.getUserReason(), latestVersions[key]?.getVersion())
   }
 
-  @TypeChecked(TypeCheckingMode.SKIP)
   protected def buildUnresolvedDependency(ModuleVersionSelector selector, String message) {
     new DependencyUnresolved(selector.group, selector.name,
       currentVersions[keyOf(selector)]?.getVersion(),
@@ -251,7 +246,6 @@ class DependencyUpdatesReporter {
       message)
   }
 
-  @TypeChecked(TypeCheckingMode.SKIP)
   protected def buildOutdatedDependency(Coordinate coordinate, Map<String, String> key) {
     def available
 
@@ -271,7 +265,6 @@ class DependencyUpdatesReporter {
       projectUrls[key], coordinate?.getUserReason(), available)
   }
 
-  @TypeChecked(TypeCheckingMode.SKIP)
   def sortByGroupAndName(Map<Map<String, String>, Coordinate> dependencies) {
     dependencies.sort { Map.Entry<Map<String, String>, Coordinate> a,
       Map.Entry<Map<String, String>, Coordinate> b -> compareKeys(a.key, b.key)

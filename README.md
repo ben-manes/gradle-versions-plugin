@@ -1,4 +1,4 @@
-[ ![Download](https://api.bintray.com/packages/fooberger/maven/com.github.ben-manes%3Agradle-versions-plugin/images/download.svg) ](https://bintray.com/fooberger/maven/com.github.ben-manes%3Agradle-versions-plugin/_latestVersion)
+
 
 # Gradle Versions Plugin
 
@@ -8,15 +8,24 @@ checks for updates to Gradle itself.
 
 You may also wish to explore additional functionality provided by,
  - [gradle-use-latest-versions](https://github.com/patrikerdes/gradle-use-latest-versions-plugin)
+ - [gradle-upgrade-interactive](https://github.com/kevcodez/gradle-upgrade-interactive)
  - [gradle-libraries-plugin](https://github.com/fkorotkov/gradle-libraries-plugin)
  - [gradle-update-notifier](https://github.com/y-yagi/gradle-update-notifier)
+ - [deblibs-gradle-plugin](https://github.com/hellofresh/deblibs-gradle-plugin)
+ - [refreshVersions](https://github.com/jmfayard/refreshVersions)
 
 ## Usage
 
-This plugin is available from [Bintray's JCenter repository](http://jcenter.bintray.com). You can
-add it to your top-level build script using the following configuration:
+[![Build](https://github.com/ben-manes/gradle-versions-plugin/workflows/build/badge.svg)](https://github.com/ben-manes/gradle-versions-plugin/actions)
+[![JCenter](https://api.bintray.com/packages/fooberger/maven/com.github.ben-manes%3Agradle-versions-plugin/images/download.svg) ](https://bintray.com/fooberger/maven/com.github.ben-manes%3Agradle-versions-plugin/_latestVersion)
+[![gradlePluginPortal](https://img.shields.io/maven-metadata/v/https/plugins.gradle.org/m2/com/github/ben-manes/versions/com.github.ben-manes.versions.gradle.plugin/maven-metadata.xml.svg?label=gradlePluginPortal)](https://plugins.gradle.org/plugin/com.github.ben-manes.versions)
+
+This plugin is available from [Bintray's JCenter repository](https://bintray.com/search?query=gradle-versions-plugin) and from the [Gradle Plugin Portal](https://plugins.gradle.org/plugin/com.github.ben-manes.versions).
+
+You can add it to your top-level build script using the following configuration:
 
 ### `plugins` block:
+
 
 ```groovy
 plugins {
@@ -40,7 +49,27 @@ buildscript {
 }
 ```
 
-The current version is known to work with Gradle versions up to 4.8.
+### using a Gradle init script ###
+You can also transparently add the plugin to every Gradle project that you run via a Gradle init script, e.g. `$HOME/.gradle/init.d/add-versions-plugin.gradle`:
+```groovy
+initscript {
+  repositories {
+     jcenter()
+  }
+
+  dependencies {
+    classpath 'com.github.ben-manes:gradle-versions-plugin:+'
+  }
+}
+
+allprojects {
+  apply plugin: com.github.benmanes.gradle.versions.VersionsPlugin
+
+  tasks.named("dependencyUpdates").configure {
+    // configure the task, for example wrt. resolution strategies
+  }
+}
+```
 
 ## Tasks
 
@@ -50,10 +79,12 @@ Displays a report of the project dependencies that are up-to-date, exceed the la
 have upgrades, or failed to be resolved. When a dependency cannot be resolved the exception is
 logged at the `info` level.
 
+To refresh the cache (i.e. fetch the new releases/versions of the dependencies), use flag `--refresh-dependencies`.
+
 Gradle updates are checked for on the `current`, `release-candidate` and `nightly` release channels. The plaintext
 report displays gradle updates as a separate category in breadcrumb style (excluding nightly builds). The xml and json
 reports include information about all three release channels, whether a release is considered an update with respect to
-the running (executing) gradle instance, whether an update check on on a release channel has failed, as well as a reason
+the running (executing) gradle instance, whether an update check on a release channel has failed, as well as a reason
 field explaining failures or missing information. The update check may be disabled using the `checkForGradleUpdate` flag.
 
 #### Multi-project build
@@ -78,45 +109,163 @@ The strategy can be specified either on the task or as a system property for ad 
 gradle dependencyUpdates -Drevision=release
 ```
 
-The latest versions can be further filtered using [Component Selection Rules][component_selection_rules].
-For example, to disallow release candidates as upgradable versions a selection rule could be defined as:
+
+To further define which version to accept, you need to define what means an unstable version. Sadly, there are
+no agreed standard on this, but this is a good starting point:
+
+<details open>
+<summary>Groovy</summary>
 
 ```groovy
-dependencyUpdates.resolutionStrategy {
-  componentSelection { rules ->
-    rules.all { ComponentSelection selection ->
-      boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm'].any { qualifier ->
-        selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
-      }
-      if (rejected) {
-        selection.reject('Release candidate')
+def isNonStable = { String version ->
+  def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { it -> version.toUpperCase().contains(it) }
+  def regex = /^[0-9,.v-]+(-r)?$/
+  return !stableKeyword && !(version ==~ regex)
+}
+```
+
+</details>
+<details>
+<summary>Kotlin</summary>
+
+```kotlin
+fun isNonStable(version: String): Boolean {
+    val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.toUpperCase().contains(it) }
+    val regex = "^[0-9,.v-]+(-r)?$".toRegex()
+    val isStable = stableKeyword || regex.matches(version)
+    return isStable.not()
+}
+```
+
+</details>
+
+You can then configure [Component Selection Rules][component_selection_rules].
+The current version of a component can be retrieved with the `currentVersion` property.
+You can either use the simplified syntax `rejectVersionIf { ... }` or configure a complete resolution strategy.
+
+
+<details open>
+<summary>Groovy</summary>
+
+<!--  Always modify first examples/groovy and make sure that it works. THEN modify the README -->
+
+```groovy
+tasks.named("dependencyUpdates").configure {
+  // Example 1: reject all non stable versions
+  rejectVersionIf {
+    isNonStable(it.candidate.version)
+  }
+
+  // Example 2: disallow release candidates as upgradable versions from stable versions
+  rejectVersionIf {
+    isNonStable(it.candidate.version) && !isNonStable(it.currentVersion)
+  }
+
+  // Example 3: using the full syntax
+  resolutionStrategy {
+    componentSelection {
+      all {
+        if (isNonStable(it.candidate.version) && !isNonStable(it.currentVersion)) {
+          reject('Release candidate')
+        }
       }
     }
   }
 }
 ```
 
-If using Gradle's [kotlin-dsl][kotlin_dsl], you could configure the `dependencyUpdates` like this:
+</details>
+<details>
+<summary>Kotlin</summary>
+
+<!--  Always modify first examples/kotlin and make sure that it works. THEN modify the README -->
 
 ```kotlin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
-tasks {
-  "dependencyUpdates"(DependencyUpdatesTask::class) {
-    resolutionStrategy {
-      componentSelection {
-        all {
-          val rejected = listOf("alpha", "beta", "rc", "cr", "m")
-            .map { qualifier -> Regex("(?i).*[.-]$qualifier[.\\d-]*") }
-            .any { it.matches(candidate.version) }
-          if (rejected) {
-            reject("Release candidate")
-          }
+tasks.named("dependencyUpdates", DependencyUpdatesTask::class.java).configure {
+  // Example 1: reject all non stable versions
+  rejectVersionIf {
+    isNonStable(candidate.version)
+  }
+
+  // Example 2: disallow release candidates as upgradable versions from stable versions
+  rejectVersionIf {
+    isNonStable(candidate.version) && !isNonStable(currentVersion)
+  }
+
+  // Example 3: using the full syntax
+  resolutionStrategy {
+    componentSelection {
+      all {
+        if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
+          reject("Release candidate")
         }
       }
     }
   }
 }
+```
+
+</details>
+
+#### Gradle Release Channel
+
+The `gradleReleaseChannel` task property controls which release channel of the Gradle project is used to check for available Gradle updates. Options are:
+
+  * `current`
+  * `release-candidate`
+  * `nightly`
+
+The default is `release-candidate`. The value can be changed as shown below:
+
+```groovy
+dependencyUpdates.gradleReleaseChannel="current"
+```
+
+#### Constraints
+
+If you use constraints, for example to define a BOM using the [`java-platform`](https://docs.gradle.org/current/userguide/java_platform_plugin.html)
+plugin or to [manage](https://docs.gradle.org/current/userguide/dependency_constraints.html)
+transitive dependency versions, you can enable checking of constraints by specifying the `checkConstraints`
+attribute of the `dependencyUpdates` task.
+
+```groovy
+tasks.named("dependencyUpdates").configure {
+    checkConstraints = true
+}
+```
+
+#### Kotlin DSL
+
+If using Gradle's [kotlin-dsl][kotlin_dsl], you could configure the `dependencyUpdates` like this:
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+tasks.named("dependencyUpdates", DependencyUpdatesTask::class.java).configure {
+
+  // optional parameters
+  checkForGradleUpdate = true
+  outputFormatter = "json"
+  outputDir = "build/dependencyUpdates"
+  reportfileName = "report"
+}
+```
+
+Note: Do use the `plugins { .. }` syntax if you use the Kotlin DSL.
+
+#### Try out the samples
+
+Have a look at [`examples/groovy`](https://github.com/ben-manes/gradle-versions-plugin/tree/master/examples/groovy) and [`examples/kotlin`](https://github.com/ben-manes/gradle-versions-plugin/tree/master/examples/kotlin)
+
+```bash
+# Publish the latest version of the plugin to mavenLocal()
+$ ./gradlew install
+
+# Try out the samples
+$ ./gradlew -p examples/groovy dependencyUpdate
+$ ./gradlew -p examples/kotlin dependencyUpdate
 ```
 
 #### Report format
@@ -126,12 +275,13 @@ The task property `outputFormatter` controls the report output format. The follo
   * `"plain"`: format output file as plain text (default)
   * `"json"`: format output file as json text
   * `"xml"`: format output file as xml text, can be used by other plugins (e.g. sonar)
+  * `"html"`: format output file as html
   * a `Closure`: will be called with the result of the dependency update analysis (see [example below](#custom_report_format))
 
 You can also set multiple output formats using comma as the separator:
 
 ```groovy
-gradle dependencyUpdates -Drevision=release -DoutputFormatter=json,xml
+gradle dependencyUpdates -Drevision=release -DoutputFormatter=json,xml,html
 ```
 
 The task property `outputDir` controls the output directory for the report  file(s). The directory will be created if it does not exist.
@@ -175,7 +325,7 @@ Gradle updates:
  - Gradle: [4.6 -> 4.7 -> 4.8-rc-2]
 ```
 
-Json report
+#### Json report
 ```json
 {
   "current": {
@@ -289,7 +439,7 @@ Json report
 }
 ```
 
-XML report
+#### XML report
 ```xml
 <response>
   <count>8</count>
@@ -399,6 +549,9 @@ XML report
 </response>
 ```
 
+#### HTML report
+[<img src="examples/html-report.png" width="400"/>](examples/html-report.png)
+
 #### <a name="custom_report_format"></a>Custom report format
 If you need to create a report in a custom format, you can set the `dependencyUpdates` tasks's `outputFormatter` property to a Closure. The closure will be called with a single argument that is an instance of [com.github.benmanes.gradle.versions.reporter.result.Result](src/main/groovy/com/github/benmanes/gradle/versions/reporter/result/Result.groovy).
 
@@ -406,7 +559,7 @@ For example, if you wanted to create an html table for the upgradable dependenci
 
 ```groovy
 ...
-dependencyUpdates {
+tasks.named("dependencyUpdates").configure {
   outputFormatter = { result ->
     def updatable = result.outdated.dependencies
     if (!updatable.isEmpty()){
@@ -445,4 +598,4 @@ dependencyUpdates {
 
 [kotlin_dsl]: https://github.com/gradle/kotlin-dsl
 [ivy_resolution_strategy]: http://ant.apache.org/ivy/history/2.4.0/settings/version-matchers.html#Latest%20(Status)%20Matcher
-[component_selection_rules]: https://docs.gradle.org/current/userguide/customizing_dependency_resolution_behavior.html#sec:component_selection_rules
+[component_selection_rules]: https://docs.gradle.org/current/userguide/dynamic_versions.html#sec:component_selection_rules

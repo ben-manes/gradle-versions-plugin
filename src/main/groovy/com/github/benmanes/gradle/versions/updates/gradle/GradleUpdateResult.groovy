@@ -1,18 +1,22 @@
 package com.github.benmanes.gradle.versions.updates.gradle
 
+import groovy.transform.CompileStatic
 import org.gradle.util.GradleVersion
 
 /**
  * Holder class for gradle update results of a specific release channel (or the running version).
  * Used for reporting & serialization to JSON/XML
  */
+@CompileStatic
 class GradleUpdateResult implements Comparable<GradleUpdateResult> {
 
   /**
    * Comparator that compares two instances of {@link GradleUpdateResult} by comparing the {@link GradleVersion} they
    * represent
    */
-  private static final Comparator<GradleUpdateResult> comparator = Comparator.comparing { gradleUpdateResult -> GradleVersion.version(gradleUpdateResult.version) }
+  private static final Comparator comparator = Comparator.comparing {
+    GradleUpdateResult gradleUpdateResult -> GradleVersion.version(gradleUpdateResult.version)
+  }
 
   /**
    * The version available on the release channel represented by this object.

@@ -15,17 +15,19 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
-import groovy.transform.TypeChecked
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalModuleDependency
+import org.gradle.api.artifacts.DependencyConstraint
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ModuleVersionSelector
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 
 /**
  * The dependency's coordinate.
  */
-@TypeChecked
+@CompileStatic
 @EqualsAndHashCode(excludes = 'userReason')
 class Coordinate implements Comparable<Coordinate> {
   final String groupId
@@ -40,17 +42,17 @@ class Coordinate implements Comparable<Coordinate> {
     this.userReason = userReason
   }
 
-  public Key getKey() {
+  Key getKey() {
     return new Key(groupId, artifactId)
   }
 
   @Override
-  public String toString() {
+  String toString() {
     return groupId + ':' + artifactId + ':' + version
   }
 
   @Override
-  public int compareTo(Coordinate coordinate) {
+  int compareTo(Coordinate coordinate) {
     int result = key.compareTo(coordinate.key)
     return (result == 0) ? version.compareTo(coordinate.version) : result
   }
@@ -73,7 +75,7 @@ class Coordinate implements Comparable<Coordinate> {
 
   static Coordinate from(Dependency dependency) {
     String userReason = null
-    if (dependency.metaClass.respondsTo(dependency, "reason")) {
+    if (dependency.metaClass.respondsTo(dependency, "getReason")) {
       userReason = dependency.getReason()
     }
     return new Coordinate(dependency.group, dependency.name, dependency.version, userReason)
@@ -88,8 +90,8 @@ class Coordinate implements Comparable<Coordinate> {
       declared?.getOrDefault(new Key(identifier.group, identifier.name), null)?.getUserReason())
   }
 
-  Map.Entry<Key, Coordinate> getEntry() {
-    return new MapEntry(getKey(), this)
+  static Coordinate from(ModuleComponentIdentifier identifier) {
+    return new Coordinate(identifier.group, identifier.module, identifier.version, null)
   }
 
   @EqualsAndHashCode
@@ -103,12 +105,12 @@ class Coordinate implements Comparable<Coordinate> {
     }
 
     @Override
-    public String toString() {
+    String toString() {
       return groupId + ':' + artifactId
     }
 
     @Override
-    public int compareTo(Key key) {
+    int compareTo(Key key) {
       int result = groupId.compareTo(key.groupId)
       return (result == 0) ? artifactId.compareTo(key.artifactId) : result
     }

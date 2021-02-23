@@ -15,22 +15,32 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
-import groovy.transform.TypeChecked
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentFilter
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionRulesWithCurrent
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
+import groovy.transform.CompileStatic
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
-import org.gradle.api.artifacts.ResolutionStrategy
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
+import org.gradle.util.ConfigureUtil
+
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 
 /**
  * A task that reports which dependencies have later versions.
  */
-@TypeChecked
+@CompileStatic
 class DependencyUpdatesTask extends DefaultTask {
 
   @Input
   String revision = 'milestone'
+
+  @Input
+  String gradleReleaseChannel = RELEASE_CANDIDATE.id
 
   @Input
   String outputDir =
@@ -44,11 +54,28 @@ class DependencyUpdatesTask extends DefaultTask {
     return (outputFormatter instanceof String) ? ((String) outputFormatter) : null
   }
 
-  @Input
+  // Groovy generates both get/is accessors for boolean properties unless we manually define some.
+  // Gradle will reject this behavior starting in 7.0 so we make sure to define accessors ourselves.
   boolean checkForGradleUpdate = true
 
-  Object outputFormatter = 'plain';
-  Closure resolutionStrategy = null;
+  boolean checkConstraints = false
+
+  @Input
+  boolean getCheckForGradleUpdate() {
+    return checkForGradleUpdate
+  }
+
+  @Input
+  boolean getCheckConstraints() {
+    return checkConstraints
+  }
+
+  @Internal
+  Object outputFormatter = 'plain'
+
+  @Internal
+  Closure resolutionStrategy = null
+  private Action<? super ResolutionStrategyWithCurrent> resolutionStrategyAction = null
 
   DependencyUpdatesTask() {
     description = 'Displays the dependency updates for the project.'
@@ -61,8 +88,15 @@ class DependencyUpdatesTask extends DefaultTask {
   def dependencyUpdates() {
     project.evaluationDependsOnChildren()
 
-    def evaluator = new DependencyUpdates(project, resolutionStrategy, revisionLevel(),
-      outputFormatterProp(), outputDirectory(), getReportfileName(), checkForGradleUpdate)
+    if (resolutionStrategy != null) {
+      resolutionStrategy(ConfigureUtil.configureUsing(resolutionStrategy))
+      logger.warn('dependencyUpdates.resolutionStrategy: ' +
+        'Remove the assignment operator, \'=\', when setting this task property')
+    }
+
+    def evaluator = new DependencyUpdates(project, resolutionStrategyAction, revisionLevel(),
+      outputFormatterProp(), outputDirectory(), getReportfileName(), checkForGradleUpdate, gradleReleaseChannelLevel(),
+      checkConstraints)
     DependencyUpdatesReporter reporter = evaluator.run()
     reporter?.write()
   }
@@ -71,14 +105,31 @@ class DependencyUpdatesTask extends DefaultTask {
    * Sets the {@link #resolutionStrategy} to the provided strategy.
    * @param resolutionStrategy the resolution strategy
    */
-  void resolutionStrategy(final Action<? super ResolutionStrategy> resolutionStrategy) {
-    // The delegate of the Closure body is ResolutionStrategy:
-    // https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/Configuration.html#resolutionStrategy-groovy.lang.Closure-
-    this.resolutionStrategy = { resolutionStrategy.execute(delegate as ResolutionStrategy) }
+  void resolutionStrategy(final Action<? super ResolutionStrategyWithCurrent> resolutionStrategy) {
+    this.resolutionStrategyAction = resolutionStrategy
+    this.resolutionStrategy = null
+  }
+
+  void rejectVersionIf(final ComponentFilter filter) {
+    resolutionStrategy { ResolutionStrategyWithCurrent strategy ->
+      strategy.componentSelection { ComponentSelectionRulesWithCurrent selection ->
+        selection.all { ComponentSelectionWithCurrent current ->
+          def isNotNull = current.currentVersion != null && current.candidate.version != null
+          if (isNotNull && filter.reject(current)) {
+            current.reject("Rejected by rejectVersionIf ")
+          }
+        }
+      }
+    }
   }
 
   /** Returns the resolution revision level. */
   String revisionLevel() { System.properties['revision'] ?: revision }
+
+  /** Returns the resolution revision level. */
+  String gradleReleaseChannelLevel() {
+    System.properties['gradleReleaseChannel'] ?: gradleReleaseChannel
+  }
 
   /** Returns the outputDir format. */
   Object outputFormatterProp() { System.properties['outputFormatter'] ?: outputFormatter }

@@ -1,10 +1,15 @@
 bin
 build
+out
+.java-version
 .classpath
 .settings
 .project
 .gradle
+.vscode/
 .idea/
 *.iml
 *.ipr
 *.iws
+
+local.properties

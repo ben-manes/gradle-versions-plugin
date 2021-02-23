@@ -15,9 +15,9 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
-import groovy.transform.TypeChecked
 import org.gradle.api.artifacts.UnresolvedDependency
 
 /**
@@ -27,7 +27,7 @@ import org.gradle.api.artifacts.UnresolvedDependency
  * <tt>unresolved</tt> contains the exception that caused the resolution to fail.
  */
 @ToString
-@TypeChecked
+@CompileStatic
 @EqualsAndHashCode
 class DependencyStatus {
   final UnresolvedDependency unresolved

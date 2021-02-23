@@ -42,19 +42,21 @@ final class KotlinDslUsageSpec extends Specification {
     given:
     def srdErrWriter = new StringWriter()
     buildFile << '''
-      tasks {
-        "dependencyUpdates"(DependencyUpdatesTask::class) {
+      tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+          checkForGradleUpdate = true
+          outputFormatter = "json"
+          outputDir = "build/dependencyUpdates"
+          reportfileName = "report"
           resolutionStrategy {
             componentSelection {
               all {
-                if (candidate.version == "3.0") {
-                  reject("Guava 3.0 not allowed")
+                if (candidate.version == "3.1" && currentVersion != "") {
+                  reject("Guice 3.1 not allowed")
                 }
               }
             }
           }
         }
-      }
     '''
 
     when:
@@ -67,11 +69,10 @@ final class KotlinDslUsageSpec extends Specification {
       .build()
 
     then:
-    result.output.contains('''Failed to determine the latest version for the following dependencies (use --info for details):
-       | - com.google.inject:guice'''.stripMargin().replace('\r','').replace('\n', System.lineSeparator()))
+    result.output.contains('''com.google.inject:guice [2.0 -> 3.0]''')
     srdErrWriter.toString().empty
 
     where:
-    gradleVersion << ['4.8']
+    gradleVersion << ['5.6']
   }
 }

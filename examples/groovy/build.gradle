@@ -6,8 +6,8 @@ defaultTasks 'dependencyUpdates'
 buildscript {
   repositories {
     // Use 'gradle install' to install latest
-    jcenter()
     mavenLocal()
+    jcenter()
   }
 
   dependencies {
@@ -23,22 +23,38 @@ configurations {
   bom
   upToDate
   exceedLatest
+  platform
   upgradesFound
   upgradesFound2
   unresolvable
   unresolvable2
 }
 
-dependencyUpdates {
+def isNonStable = { String version ->
+  def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { it -> version.toUpperCase().contains(it) }
+  def regex = /^[0-9,.v-]+(-r)?$/
+  return !stableKeyword && !(version ==~ regex)
+}
+
+tasks.named("dependencyUpdates").configure {
   checkForGradleUpdate = true
+
+  // Example 1: reject all non stable versions
+  rejectVersionIf {
+    isNonStable(candidate.version)
+  }
+
+  // Example 2: disallow release candidates as upgradable versions from stable versions
+  rejectVersionIf {
+    isNonStable(candidate.version) && !isNonStable(currentVersion)
+  }
+
+  // Example 3: using the full syntax
   resolutionStrategy {
-    componentSelection { rules ->
-      rules.all { ComponentSelection selection ->
-        boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm'].any { qualifier ->
-          selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
-        }
-        if (rejected) {
-          selection.reject('Release candidate')
+    componentSelection {
+      all {
+        if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
+          reject('Release candidate')
         }
       }
     }
@@ -50,7 +66,8 @@ dependencies {
       'com.google.code.gson:gson',
       'dom4j:dom4j'
   upToDate 'backport-util-concurrent:backport-util-concurrent:3.1',
-           'backport-util-concurrent:backport-util-concurrent-java12:3.1'
+           'backport-util-concurrent:backport-util-concurrent-java12:3.1',
+	    'org.openjdk.jmh:jmh-parent:1.25.2'
   exceedLatest 'com.google.guava:guava:99.0-SNAPSHOT',
                'com.google.guava:guava-tests:99.0-SNAPSHOT'
   upgradesFound 'com.google.guava:guava:15.0',
@@ -61,4 +78,14 @@ dependencies {
                'com.github.ben-manes:unresolvable2:1.0'
   unresolvable2 'com.github.ben-manes:unresolvable:1.0',
                 'com.github.ben-manes:unresolvable2:1.0'
+
+  platform 'com.linecorp.armeria:armeria',
+           'io.zipkin.brave:brave'
+  // Common usage would be to separate this into a project that uses the `java-platform` plugin to
+  // share constraints among several projects.
+  constraints {
+    platform 'com.linecorp.armeria:armeria:0.90.0',
+             'io.zipkin.brave:brave:5.7.0'
+
+  }
 }

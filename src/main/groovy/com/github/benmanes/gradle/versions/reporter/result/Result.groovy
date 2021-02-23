@@ -1,11 +1,13 @@
 package com.github.benmanes.gradle.versions.reporter.result
 
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
+import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
 
 /**
  * The result of a dependency update analysis
  */
+@CompileStatic
 @TupleConstructor
 class Result {
   /**

@@ -16,14 +16,13 @@
 package com.github.benmanes.gradle.versions.updates
 
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
+import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
-import groovy.transform.TypeChecked
-import groovyx.gpars.GParsPool
+import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.UnresolvedDependency
-
-import static groovy.transform.TypeCheckingMode.SKIP
 
 /**
  * An evaluator for reporting of which dependencies have later versions.
@@ -35,49 +34,50 @@ import static groovy.transform.TypeCheckingMode.SKIP
  *   <li>integration: selects the latest revision of the dependency module (such as SNAPSHOT)
  * </ul>
  */
-@TypeChecked
+@CompileStatic
 @TupleConstructor
 class DependencyUpdates {
   Project project
-  Closure resolutionStrategy
+  Action<? super ResolutionStrategyWithCurrent> resolutionStrategy
   String revision
   Object outputFormatter
   String outputDir
   String reportfileName
   boolean checkForGradleUpdate
+  String gradleReleaseChannel
+  boolean checkConstraints
 
   /** Evaluates the dependencies and returns a reporter. */
   DependencyUpdatesReporter run() {
     Map<Project, Set<Configuration>> projectConfigs = project.allprojects.collectEntries { proj ->
-      [proj, proj.configurations.plus(proj.buildscript.configurations) as Set]
+      [proj, proj.configurations + (Set) proj.buildscript.configurations]
     }
-    Set<DependencyStatus> status = resolveInParallel(projectConfigs)
+    Set<DependencyStatus> status = resolveProjects(projectConfigs)
 
     VersionMapping versions = new VersionMapping(project, status)
     Set<UnresolvedDependency> unresolved =
       status.findAll { it.unresolved != null }.collect { it.unresolved } as Set
-    Map<Map<String, String>, String> projectUrls = status.findAll{ it.projectUrl }.collectEntries {
+    Map<Map<String, String>, String> projectUrls = status.findAll { it.projectUrl }.collectEntries {
       [[group: it.coordinate.groupId, name: it.coordinate.artifactId]: it.projectUrl]
     }
     return createReporter(versions, unresolved, projectUrls)
   }
 
-  @TypeChecked(SKIP)
-  private Set<DependencyStatus> resolveInParallel(Map<Project, Set<Configuration>> projectConfigs) {
-    int numberOfThreads = Math.min((int) 1.5 * Runtime.getRuntime().availableProcessors(),
-      projectConfigs.values().collect { it.size() }.sum())
-    def pool = GParsPool.createPool(numberOfThreads)
-    return GParsPool.withExistingPool(pool) {
-      projectConfigs.keySet().collectParallel { proj ->
-        Set<Configuration> configurations = projectConfigs.get(proj)
-        Resolver resolver = new Resolver(proj, resolutionStrategy, pool)
-        GParsPool.withExistingPool(pool) {
-          configurations.collectParallel { Configuration config ->
-            resolve(resolver, proj, config)
-          }.flatten() as Set<DependencyStatus>
+  private Set<DependencyStatus> resolveProjects(Map<Project, Set<Configuration>> projectConfigs) {
+    projectConfigs.keySet().collect { proj ->
+      Set<Configuration> configurations = projectConfigs.get(proj)
+      Resolver resolver = new Resolver(proj, resolutionStrategy, checkConstraints)
+      configurations.collect { Configuration config ->
+        def isUsefulConfiguration = !config.canBeResolved || config.canBeConsumed ||
+          config.name == 'annotationProcessor' || config.name == 'kapt'
+
+        if (isUsefulConfiguration) {
+          resolve(resolver, proj, config)
+        } else {
+          []
         }
       }.flatten() as Set<DependencyStatus>
-    }
+    }.flatten() as Set<DependencyStatus>
   }
 
   private Set<DependencyStatus> resolve(Resolver resolver, Project proj, Configuration config) {
@@ -90,7 +90,6 @@ class DependencyUpdates {
     }
   }
 
-  @TypeChecked(SKIP)
   private DependencyUpdatesReporter createReporter(
     VersionMapping versions, Set<UnresolvedDependency> unresolved, Map<Map<String, String>, String> projectUrls) {
     Map<Map<String, String>, Coordinate> currentVersions =
@@ -107,10 +106,9 @@ class DependencyUpdates {
 
     return new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir, reportfileName,
       currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions,
-      unresolved, projectUrls, gradleUpdateChecker)
+      unresolved, projectUrls, gradleUpdateChecker, gradleReleaseChannel)
   }
 
-  @TypeChecked(SKIP)
   private static Map<Map<String, String>, Coordinate> toMap(Set<Coordinate> coordinates) {
     Map<Map<String, String>, Coordinate> map = [:]
     for (Coordinate coordinate : coordinates) {

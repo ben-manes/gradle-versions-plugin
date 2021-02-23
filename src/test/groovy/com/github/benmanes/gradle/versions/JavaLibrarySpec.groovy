@@ -10,12 +10,16 @@ import spock.lang.Specification
 
 final class JavaLibrarySpec extends Specification {
 
-  @Rule TemporaryFolder testProjectDir = new TemporaryFolder()
+  @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
   private File buildFile
+  private String mavenRepoUrl
+
+  def 'setup'() {
+    mavenRepoUrl = getClass().getResource('/maven/').toURI()
+  }
 
   def "Show updates for an api dependency in a java-library project"() {
     given:
-    def mavenRepoUrl = getClass().getResource('/maven/').toURI()
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
       """
@@ -43,7 +47,7 @@ final class JavaLibrarySpec extends Specification {
       .build()
 
     then:
-    result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 }

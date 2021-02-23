@@ -20,16 +20,17 @@ import com.github.benmanes.gradle.versions.reporter.result.DependencyLatest
 import com.github.benmanes.gradle.versions.reporter.result.DependencyOutdated
 import com.github.benmanes.gradle.versions.reporter.result.DependencyUnresolved
 import com.github.benmanes.gradle.versions.reporter.result.Result
-import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel
+import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
-import groovy.transform.TypeChecked
 
-import static groovy.transform.TypeCheckingMode.SKIP
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.CURRENT
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.NIGHTLY
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 
 /**
  * A plain text reporter for the dependency updates results.
  */
-@TypeChecked
+@CompileStatic
 @TupleConstructor(callSuper = true, includeSuperProperties = true, includeSuperFields = true)
 class PlainTextReporter extends AbstractReporter {
 
@@ -68,17 +69,17 @@ class PlainTextReporter extends AbstractReporter {
     }
 
     printStream.println()
-    printStream.println('Gradle updates:')
+    printStream.println("Gradle ${gradleReleaseChannel} updates:")
     result.gradle.with {
       // Log Gradle update checking failures.
       if (current.isFailure) {
-        printStream.println("[ERROR] [release channel: ${GradleReleaseChannel.CURRENT.id}] " + current.reason)
+        printStream.println("[ERROR] [release channel: ${CURRENT.id}] " + current.reason)
       }
-      if (releaseCandidate.isFailure) {
-        printStream.println("[ERROR] [release channel: ${GradleReleaseChannel.RELEASE_CANDIDATE.id}] " + releaseCandidate.reason)
+      if ((gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id) && releaseCandidate.isFailure) {
+        printStream.println("[ERROR] [release channel: ${RELEASE_CANDIDATE.id}] " + releaseCandidate.reason)
       }
-      if (nightly.isFailure) {
-        printStream.println("[ERROR] [release channel: ${GradleReleaseChannel.NIGHTLY.id}] " + nightly.reason)
+      if (gradleReleaseChannel == NIGHTLY.id && nightly.isFailure) {
+        printStream.println("[ERROR] [release channel: ${NIGHTLY.id}] " + nightly.reason)
       }
 
       // print Gradle updates in breadcrumb format
@@ -88,11 +89,14 @@ class PlainTextReporter extends AbstractReporter {
         updatePrinted = true
         printStream.print(" -> " + current.version)
       }
-      if (releaseCandidate.isUpdateAvailable && releaseCandidate > current) {
+      if ((gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id) && releaseCandidate.isUpdateAvailable && releaseCandidate > current) {
         updatePrinted = true
         printStream.print(" -> " + releaseCandidate.version)
       }
-      // ignore nightly in textual output
+      if (gradleReleaseChannel == NIGHTLY.id && nightly.isUpdateAvailable && nightly > current) {
+        updatePrinted = true
+        printStream.print(" -> " + nightly.version)
+      }
       if (!updatePrinted) {
         printStream.print(": UP-TO-DATE")
       }
@@ -132,7 +136,6 @@ class PlainTextReporter extends AbstractReporter {
     }
   }
 
-  @TypeChecked(SKIP)
   private def writeUpgrades(printStream, Result result) {
     def upgradeVersions = result.outdated.dependencies
     if (!upgradeVersions.isEmpty()) {
