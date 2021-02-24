@@ -243,7 +243,7 @@ If using Gradle's [kotlin-dsl][kotlin_dsl], you could configure the `dependencyU
 ```kotlin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
-tasks.named("dependencyUpdates", DependencyUpdatesTask::class.java).configure {
+tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
 
   // optional parameters
   checkForGradleUpdate = true
