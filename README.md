@@ -183,7 +183,7 @@ tasks.named("dependencyUpdates").configure {
 ```kotlin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
-tasks.named("dependencyUpdates", DependencyUpdatesTask::class.java).configure {
+tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
   // Example 1: reject all non stable versions
   rejectVersionIf {
     isNonStable(candidate.version)
