@@ -1,13 +1,13 @@
 plugins {
-  id 'com.jfrog.bintray' version '1.8.5'
+  id 'com.gradle.plugin-publish' version '0.13.0'
   id 'java-gradle-plugin'
   id 'maven-publish'
-  id 'groovy'
   id 'codenarc'
+  id 'groovy'
 }
 
 repositories {
-  jcenter()
+  mavenCentral()
 }
 
 group = 'com.github.ben-manes'
@@ -51,7 +51,6 @@ task createClasspathManifest {
 
 // Add the classpath file to the test runtime classpath
 dependencies {
-  implementation gradleApi()
   implementation 'com.thoughtworks.xstream:xstream:1.4.15'
 
   testRuntimeOnly files(createClasspathManifest)
@@ -174,29 +173,19 @@ publishing {
 publish.dependsOn jar, docsJar, sourcesJar, testsJar, reportsZip
 publish.dependsOn 'generatePomFileForPluginMavenPublication'
 
-// Publishes to JFrog Bintray's JCenter repository
-bintray {
-  user = project.properties['BINTRAY_USERNAME'] ?: System.env.'BINTRAY_USERNAME'
-  key = project.properties['BINTRAY_API_KEY'] ?: System.env.'BINTRAY_API_KEY'
-  configurations = ['archives']
-  publish = true
-
-  pkg {
-    repo = 'maven'
-    name = 'com.github.ben-manes:gradle-versions-plugin'
-    desc = 'Gradle plugin that provides tasks for discovering dependency updates.'
-    websiteUrl = 'https://github.com/ben-manes/gradle-versions-plugin'
-    issueTrackerUrl = 'https://github.com/ben-manes/gradle-versions-plugin/issues'
-    vcsUrl = 'https://github.com/ben-manes/gradle-versions-plugin'
-    labels = ['gradle', 'plugin', 'versions']
-    githubRepo = 'ben-manes/gradle-versions-plugin'
-    githubReleaseNotesFile = 'README.md'
-
-    version {
-      desc = 'Gradle plugin that provides tasks for discovering dependency updates.'
-      attributes = ['gradle-plugin': 'com.github.ben-manes.versions:com.github.ben-manes:gradle-versions-plugin']
+gradlePlugin {
+  plugins {
+    versionsPlugin {
+      id = 'com.github.ben-manes.versions'
+      displayName = 'Gradle Versions Plugin'
+      implementationClass = 'com.github.benmanes.gradle.versions.VersionsPlugin'
+      description = 'Gradle plugin that provides tasks for discovering dependency updates.'
     }
   }
 }
-bintrayUpload.dependsOn jar, docsJar, sourcesJar, testsJar, reportsZip
-bintrayUpload.dependsOn 'generatePomFileForPluginMavenPublication'
+
+pluginBundle {
+  website = 'https://github.com/ben-manes/gradle-versions-plugin'
+  vcsUrl = 'https://github.com/ben-manes/gradle-versions-plugin'
+  tags = [ 'dependencies', 'versions', 'updates' ]
+}

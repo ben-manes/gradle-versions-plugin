@@ -17,12 +17,9 @@ You may also wish to explore additional functionality provided by,
 ## Usage
 
 [![Build](https://github.com/ben-manes/gradle-versions-plugin/workflows/build/badge.svg)](https://github.com/ben-manes/gradle-versions-plugin/actions)
-[![JCenter](https://api.bintray.com/packages/fooberger/maven/com.github.ben-manes%3Agradle-versions-plugin/images/download.svg) ](https://bintray.com/fooberger/maven/com.github.ben-manes%3Agradle-versions-plugin/_latestVersion)
 [![gradlePluginPortal](https://img.shields.io/maven-metadata/v/https/plugins.gradle.org/m2/com/github/ben-manes/versions/com.github.ben-manes.versions.gradle.plugin/maven-metadata.xml.svg?label=gradlePluginPortal)](https://plugins.gradle.org/plugin/com.github.ben-manes.versions)
 
-This plugin is available from [Bintray's JCenter repository](https://bintray.com/search?query=gradle-versions-plugin) and from the [Gradle Plugin Portal](https://plugins.gradle.org/plugin/com.github.ben-manes.versions).
-
-You can add it to your top-level build script using the following configuration:
+You can add this plugin to your top-level build script using the following configuration:
 
 ### `plugins` block:
 
@@ -40,7 +37,7 @@ apply plugin: "com.github.ben-manes.versions"
 
 buildscript {
   repositories {
-    jcenter()
+    gradlePluginPortal()
   }
 
   dependencies {
@@ -54,7 +51,7 @@ You can also transparently add the plugin to every Gradle project that you run v
 ```groovy
 initscript {
   repositories {
-     jcenter()
+     gradlePluginPortal()
   }
 
   dependencies {
