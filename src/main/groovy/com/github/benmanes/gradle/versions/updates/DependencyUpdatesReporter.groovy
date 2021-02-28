@@ -114,7 +114,7 @@ class DependencyUpdatesReporter {
     File filename = new File(outputDir, reportfileName + '.' + reporter.getFileExtension())
     project.file(outputDir).mkdirs()
     File outputFile = project.file(filename)
-    outputFile.newPrintWriter().withPrintWriter { PrintWriter pw ->
+    outputFile.withPrintWriter { PrintWriter pw ->
       def result = buildBaseObject()
       reporter.write(pw, result)
     }
