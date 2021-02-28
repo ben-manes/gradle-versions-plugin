@@ -9,6 +9,7 @@ checks for updates to Gradle itself.
 You may also wish to explore additional functionality provided by,
  - [gradle-use-latest-versions](https://github.com/patrikerdes/gradle-use-latest-versions-plugin)
  - [gradle-upgrade-interactive](https://github.com/kevcodez/gradle-upgrade-interactive)
+ - [gradle-update-checker](https://github.com/marketplace/actions/gradle-update-checker)
  - [gradle-libraries-plugin](https://github.com/fkorotkov/gradle-libraries-plugin)
  - [gradle-update-notifier](https://github.com/y-yagi/gradle-update-notifier)
  - [deblibs-gradle-plugin](https://github.com/hellofresh/deblibs-gradle-plugin)
