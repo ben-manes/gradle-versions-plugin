@@ -26,7 +26,7 @@ jobs:
           java-version: ${{ matrix.java-version }}
 
       - name: Run build with caching enabled
-        uses: burrunan/gradle-cache-action@v1.6
+        uses: burrunan/gradle-cache-action@v1.10
         with:
           remote-build-cache-proxy-enabled: false
           arguments: clean build -s --scan
