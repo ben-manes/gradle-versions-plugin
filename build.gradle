@@ -13,7 +13,7 @@ repositories {
 group = 'com.github.ben-manes'
 version = '0.38.0'
 
-sourceCompatibility = '1.8'
+sourceCompatibility = JavaVersion.VERSION_1_8
 
 buildScan {
   termsOfServiceUrl = 'https://gradle.com/terms-of-service'
@@ -51,7 +51,7 @@ task createClasspathManifest {
 
 // Add the classpath file to the test runtime classpath
 dependencies {
-  implementation 'com.thoughtworks.xstream:xstream:1.4.15'
+  implementation 'com.thoughtworks.xstream:xstream:1.4.16'
 
   testRuntimeOnly files(createClasspathManifest)
 
