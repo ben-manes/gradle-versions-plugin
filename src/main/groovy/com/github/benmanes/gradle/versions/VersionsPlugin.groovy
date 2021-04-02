@@ -16,24 +16,30 @@
 package com.github.benmanes.gradle.versions
 
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+import com.github.benmanes.gradle.versions.version.GetVersion
+import com.github.benmanes.gradle.versions.version.SetVersion
 import groovy.transform.CompileStatic
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.util.GradleVersion
 
 /**
- * Registers the plugin's tasks.
+ * Registers the plugin's tasks and extension.
  */
 @CompileStatic
 class VersionsPlugin implements Plugin<Project> {
+
   @Override
   void apply(Project project) {
-    if (GradleVersion.current() < GradleVersion.version("5.0")) {
+    if (GradleVersion.current() < GradleVersion.version('5.0')) {
       project.logger.error(
-        "Gradle 5.0 or greater is required to apply the com.github.ben-manes.versions plugin.")
+        'Gradle 5.0 or greater is required to apply the com.github.ben-manes.versions plugin.')
       return
     }
 
+    project.extensions.create('versions', VersionsPluginExtension)
     project.tasks.register('dependencyUpdates', DependencyUpdatesTask)
+    project.tasks.register('getVersion', GetVersion)
+    project.tasks.register('setVersion', SetVersion)
   }
 }

@@ -21,6 +21,7 @@ ruleset {
   ruleset('rulesets/convention.xml')
   ruleset('rulesets/design.xml') {
     AbstractClassWithoutAbstractMethod(enabled: false)
+    Instanceof(ignoreTypeNames: '*Statement, *Expression, *Initializer')
   }
   ruleset('rulesets/dry.xml') {
     DuplicateStringLiteral(enabled: false) // too much hassle
@@ -29,6 +30,7 @@ ruleset {
   ruleset('rulesets/formatting.xml') {
     Indentation(spacesPerIndentLevel: 2)
     SpaceAroundMapEntryColon(characterAfterColonRegex: /\s/)
+    ClassEndsWithBlankLine(enabled: false)
   }
   ruleset('rulesets/comments.xml') {
     ClassJavadoc(enabled: false)

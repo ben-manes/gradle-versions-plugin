@@ -18,7 +18,9 @@ ruleset {
   ruleset('rulesets/basic.xml')
   ruleset('rulesets/braces.xml')
   ruleset('rulesets/concurrency.xml')
-  ruleset('rulesets/convention.xml')
+  ruleset('rulesets/convention.xml') {
+    CompileStatic(enabled: false)
+  }
   ruleset('rulesets/design.xml') {
     AbstractClassWithoutAbstractMethod(enabled: false)
   }
@@ -30,6 +32,7 @@ ruleset {
   ruleset('rulesets/exceptions.xml')
   ruleset('rulesets/formatting.xml') {
     Indentation(spacesPerIndentLevel: 2)
+    ClassEndsWithBlankLine(enabled: false)
   }
   ruleset('rulesets/comments.xml') {
     ClassJavadoc(enabled: false)
@@ -48,8 +51,8 @@ ruleset {
   }
   ruleset('rulesets/imports.xml') {
     NoWildcardImports(enabled: false)
+    MisorderedStaticImports(enabled: false)
   }
-  ruleset('rulesets/junit.xml')
   ruleset('rulesets/logging.xml')
   ruleset('rulesets/naming.xml') {
     FactoryMethodName(enabled: false)
@@ -61,6 +64,7 @@ ruleset {
   ruleset('rulesets/serialization.xml')
   ruleset('rulesets/size.xml') {
     CrapMetric(enabled: false)
+    MethodCount(enabled: false)
   }
   ruleset('rulesets/unnecessary.xml') {
     UnnecessaryDefInMethodDeclaration(enabled: false)

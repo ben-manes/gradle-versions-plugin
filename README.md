@@ -1,10 +1,8 @@
-
-
 # Gradle Versions Plugin
 
 In the spirit of the [Maven Versions Plugin](http://www.mojohaus.org/versions-maven-plugin),
-this plugin provides a task to determine which dependencies have updates. Additionally, the plugin
-checks for updates to Gradle itself.
+this plugin provides tasks to determine which dependencies have updates and to manage version updates.
+Additionally, the plugin checks for updates to Gradle itself.
 
 You may also wish to explore additional functionality provided by,
  - [gradle-use-latest-versions](https://github.com/patrikerdes/gradle-use-latest-versions-plugin)
@@ -556,7 +554,6 @@ If you need to create a report in a custom format, you can set the `dependencyUp
 For example, if you wanted to create an html table for the upgradable dependencies, you could use:
 
 ```groovy
-...
 tasks.named("dependencyUpdates").configure {
   outputFormatter = { result ->
     def updatable = result.outdated.dependencies
@@ -597,3 +594,104 @@ tasks.named("dependencyUpdates").configure {
 [kotlin_dsl]: https://github.com/gradle/kotlin-dsl
 [ivy_resolution_strategy]: http://ant.apache.org/ivy/history/2.4.0/settings/version-matchers.html#Latest%20(Status)%20Matcher
 [component_selection_rules]: https://docs.gradle.org/current/userguide/dynamic_versions.html#sec:component_selection_rules
+
+### `getVersion`
+
+This task displays the current version of your project, optionally updated by suffix addition/removal and/or incrementation.
+
+The new version is not applied, to do so use the task [setVersion](#setversion). As both tasks use the same logic 
+internally you can use getVersion task for dry run execution.
+
+When modifying current version, it is expected to have :
+- an optional prefix matching [a-zA-Z0-1\/_-]* regex
+- a base version made of at least 2 numbers separated by points
+- an optional suffix matching [a-zA-Z0-1\/_-]* regex
+
+Quick examples :
+
+| Project version          | Command                                               | Result                   |
+|--------------------------|-------------------------------------------------------|--------------------------|
+| 1.0.0                    | ./gradlew getVersion                                  | 1.0.0                    |
+| 1.0.0                    | ./gradlew getVersion --new-version=1.2.3              | 1.2.3                    |
+| 1.0.0                    | ./gradlew getVersion --increment=technical            | 1.0.1                    |
+| 1.0.0                    | ./gradlew getVersion --increment=3 --suffix=true      | 1.0.1-SNAPSHOT           |
+| 1.2.3-SNAPSHOT           | ./gradlew getVersion --no-suffix                      | 1.2.3                    |
+| 1.2.3-SNAPSHOT           | ./gradlew getVersion --suffix=rc                      | 1.2.3-rc                 |
+| 1.2.3-SNAPSHOT           | ./gradlew getVersion --increment=1 --no-suffix        | 2.0.0                    |
+| 1.2.3-SNAPSHOT           | ./gradlew getVersion --increment=minor --suffix=false | 1.3.0                    |
+| v1.2                     | ./gradlew getVersion --increment=major                | v2.0                     |
+| feature/42-1.2.3.4-alpha | ./gradlew getVersion --increment=4                    | feature/42-1.2.3.5-alpha |
+| feature/42-1.2.3.4-alpha | ./gradlew getVersion --new-version=1.2.3.4            | 1.2.3.4                  |
+
+#### Plugin configuration
+
+##### defaultSuffix
+  
+Default suffix value used by `--suffix=true` option. 'SNAPSHOT' by default, you can set it in your 'build.gradle', 
+for example :
+
+``` groovy
+versions {
+  defaultSuffix = 'dev'
+}
+```
+
+##### skipVersionUpdate
+
+Boolean to disable version update on a specific module.
+
+``` groovy
+versions {
+  skipVersionUpdate = true
+}
+```
+
+#### Task options
+
+##### new-version
+
+String option to define a new version from scratch, regardless of existing version value.
+
+For example ```./gradlew getVersion --new-version=1.2.3-SNAPSHOT``` returns `1.2.3-SNAPSHOT`.
+
+##### no-suffix
+
+Boolean option to trim any existing suffix.
+
+For example, if current project version is `1.0.0-SNAPSHOT`, execution of `./gradlew getVersion --no-suffix` returns `1.0.0`.
+
+##### suffix
+
+String option to add or replace a suffix. Can be set to any alphanumerical string, except `true` and `false`, see below.
+The suffix is separated from base version with `-`.
+
+For example, if the current version is `1.0.0-SNAPSHOT`, or `1.0.0`, executing `./gradlew getVersion --suffix=dev` will
+return `1.0.0-dev`.
+
+For scripting convenience, you can use `--suffix=true` to add the project's [default suffix](#defaultSuffix) or 
+`--suffix=false` to remove the suffix (equivalent of [`--no-suffix`](#no-suffix) option).
+
+##### increment
+
+Use this option to increment base version digits. Specify the position of the version digit to increment, 1 being first
+from the left. All digits on the right of the incremented digit will be set to 0.
+
+For readability, you can use aliases :
+- `major` equals position 1
+- `minor` equals position 2
+- `technical` equals position 3
+
+For examples, if current version is `1.2.3-SNAPSHOT`, executing `./gradlew getVersion --increment=2` will return
+`1.3.0-SNAPSHOT`.
+
+### `setVersion`
+
+This task updates the project/modules versions.
+
+Its options to generate a new version are shared with [getVersion task](#getversion) task, refer to it for configuration.
+
+There are several ways to define versions in gradle. As fo now, this task can update versions defined in project/modules
+build files or in a buildSrc plugin defined with a build script, see [gradle sample](https://docs.gradle.org/current/samples/sample_convention_plugins.html#organizing_build_logic).
+  
+In both cases the version can be defined directly or through a variable defined in the gradle.properties file of the 
+project or one of its parent.

@@ -8,10 +8,11 @@ plugins {
 
 repositories {
   mavenCentral()
+  maven { url "https://jitpack.io" }
 }
 
 group = 'com.github.ben-manes'
-version = '0.38.0'
+version = '0.39.0-SNAPSHOT'
 
 sourceCompatibility = JavaVersion.VERSION_1_8
 
@@ -52,10 +53,10 @@ task createClasspathManifest {
 // Add the classpath file to the test runtime classpath
 dependencies {
   implementation 'com.thoughtworks.xstream:xstream:1.4.16'
+  api 'org.jetbrains.kotlin:kotlin-compiler-embeddable:1.3.50'
 
   testRuntimeOnly files(createClasspathManifest)
 
-  testImplementation gradleTestKit()
   testImplementation('org.spockframework:spock-core:1.3-groovy-2.5') {
     exclude(module: 'groovy-all')
   }
@@ -154,6 +155,11 @@ publishing {
             id = 'jochenberger'
             name = 'Jochen Berger'
           }
+          developer {
+            id = 'ldenisey'
+            name = 'Lucien Denisey'
+            email = 'ldenisey@gmail.com'
+          }
         }
 
         issueManagement {
@@ -187,5 +193,5 @@ gradlePlugin {
 pluginBundle {
   website = 'https://github.com/ben-manes/gradle-versions-plugin'
   vcsUrl = 'https://github.com/ben-manes/gradle-versions-plugin'
-  tags = [ 'dependencies', 'versions', 'updates' ]
+  tags = ['dependencies', 'versions', 'updates']
 }
