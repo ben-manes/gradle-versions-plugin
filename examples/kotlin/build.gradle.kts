@@ -29,30 +29,30 @@ configurations {
   register("unresolvable2")
 }
 
-fun isNonStable(version: String): Boolean {
-  val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.toUpperCase().contains(it) }
+fun String.isNonStable(): Boolean {
+  val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { toUpperCase().contains(it) }
   val regex = "^[0-9,.v-]+(-r)?$".toRegex()
-  val isStable = stableKeyword || regex.matches(version)
+  val isStable = stableKeyword || regex.matches(this)
   return isStable.not()
 }
 
-tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
+tasks.withType<DependencyUpdatesTask> {
 
   // Example 1: reject all non stable versions
   rejectVersionIf {
-    isNonStable(candidate.version)
+    candidate.version.isNonStable()
   }
 
   // Example 2: disallow release candidates as upgradable versions from stable versions
   rejectVersionIf {
-    isNonStable(candidate.version) && !isNonStable(currentVersion)
+    candidate.version.isNonStable() && !currentVersion.isNonStable()
   }
 
   // Example 3: using the full syntax
   resolutionStrategy {
     componentSelection {
       all {
-        if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
+        if (candidate.version.isNonStable() && !currentVersion.isNonStable()) {
           reject("Release candidate")
         }
       }
