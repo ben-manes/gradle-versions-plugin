@@ -2,7 +2,7 @@
 
 # Gradle Versions Plugin
 
-In the spirit of the [Maven Versions Plugin](http://www.mojohaus.org/versions-maven-plugin),
+In the spirit of the [Maven Versions Plugin](https://www.mojohaus.org/versions-maven-plugin),
 this plugin provides a task to determine which dependencies have updates. Additionally, the plugin
 checks for updates to Gradle itself.
 
@@ -309,15 +309,15 @@ The following dependencies are using the latest integration version:
 
 The following dependencies exceed the version found at the integration revision level:
  - com.google.guava:guava [99.0-SNAPSHOT <- 16.0-rc1]
-     http://code.google.com/p/guava-libraries
+     https://code.google.com/p/guava-libraries
  - com.google.guava:guava-tests [99.0-SNAPSHOT <- 16.0-rc1]
-     http://code.google.com/p/guava-libraries
+     https://code.google.com/p/guava-libraries
 
 The following dependencies have later integration versions:
  - com.google.inject:guice [2.0 -> 3.0]
-     http://code.google.com/p/google-guice/
+     https://code.google.com/p/google-guice/
  - com.google.inject.extensions:guice-multibindings [2.0 -> 3.0]
-     http://code.google.com/p/google-guice/
+     https://code.google.com/p/google-guice/
 
 Gradle updates:
  - Gradle: [4.6 -> 4.7 -> 4.8-rc-2]
@@ -332,13 +332,13 @@ Gradle updates:
         "group": "backport-util-concurrent",
         "version": "3.1",
         "name": "backport-util-concurrent",
-        "projectUrl": "http://backport-jsr166.sourceforge.net/"
+        "projectUrl": "https://backport-jsr166.sourceforge.net/"
       },
       {
         "group": "backport-util-concurrent",
         "version": "3.1",
         "name": "backport-util-concurrent-java12",
-        "projectUrl": "http://backport-jsr166.sourceforge.net/"
+        "projectUrl": "https://backport-jsr166.sourceforge.net/"
       }
     ],
     "count": 2
@@ -377,14 +377,14 @@ Gradle updates:
         "latest": "16.0-rc1",
         "version": "99.0-SNAPSHOT",
         "name": "guava",
-        "projectUrl": "http://code.google.com/p/guava-libraries"
+        "projectUrl": "https://code.google.com/p/guava-libraries"
       },
       {
         "group": "com.google.guava",
         "latest": "16.0-rc1",
         "version": "99.0-SNAPSHOT",
         "name": "guava-tests",
-        "projectUrl": "http://code.google.com/p/guava-libraries"
+        "projectUrl": "https://code.google.com/p/guava-libraries"
       }
     ],
     "count": 2
@@ -400,7 +400,7 @@ Gradle updates:
         },
         "version": "2.0",
         "name": "guice",
-        "projectUrl": "http://code.google.com/p/google-guice/"
+        "projectUrl": "https://code.google.com/p/google-guice/"
       },
       {
         "group": "com.google.inject.extensions",
@@ -411,7 +411,7 @@ Gradle updates:
         },
         "version": "2.0",
         "name": "guice-multibindings",
-        "projectUrl": "http://code.google.com/p/google-guice/"
+        "projectUrl": "https://code.google.com/p/google-guice/"
       }
     ],
     "count": 2
@@ -448,13 +448,13 @@ Gradle updates:
         <name>backport-util-concurrent</name>
         <group>backport-util-concurrent</group>
         <version>3.1</version>
-        <projectUrl>http://backport-jsr166.sourceforge.net/</projectUrl>
+        <projectUrl>https://backport-jsr166.sourceforge.net/</projectUrl>
       </dependency>
       <dependency>
         <name>backport-util-concurrent-java12</name>
         <group>backport-util-concurrent</group>
         <version>3.1</version>
-        <projectUrl>http://backport-jsr166.sourceforge.net/</projectUrl>
+        <projectUrl>https://backport-jsr166.sourceforge.net/</projectUrl>
       </dependency>
     </dependencies>
   </current>
@@ -468,7 +468,7 @@ Gradle updates:
         <available>
           <release>3.0</release>
         </available>
-        <projectUrl>http://code.google.com/p/google-guice/</projectUrl>
+        <projectUrl>https://code.google.com/p/google-guice/</projectUrl>
       </outdatedDependency>
       <outdatedDependency>
         <name>guice-multibindings</name>
@@ -477,7 +477,7 @@ Gradle updates:
         <available>
           <release>3.0</release>
         </available>
-        <projectUrl>http://code.google.com/p/guava-libraries</projectUrl>
+        <projectUrl>https://code.google.com/p/guava-libraries</projectUrl>
       </outdatedDependency>
     </dependencies>
   </outdated>
@@ -489,14 +489,14 @@ Gradle updates:
         <group>com.google.guava</group>
         <version>99.0-SNAPSHOT</version>
         <latest>16.0-rc1</latest>
-        <projectUrl>http://code.google.com/p/guava-libraries</projectUrl>
+        <projectUrl>https://code.google.com/p/guava-libraries</projectUrl>
       </exceededDependency>
       <exceededDependency>
         <name>guava-tests</name>
         <group>com.google.guava</group>
         <version>99.0-SNAPSHOT</version>
         <latest>16.0-rc1</latest>
-        <projectUrl>http://code.google.com/p/guava-libraries</projectUrl>
+        <projectUrl>https://code.google.com/p/guava-libraries</projectUrl>
       </exceededDependency>
     </dependencies>
   </exceeded>
@@ -595,5 +595,5 @@ tasks.named("dependencyUpdates").configure {
 ```
 
 [kotlin_dsl]: https://github.com/gradle/kotlin-dsl
-[ivy_resolution_strategy]: http://ant.apache.org/ivy/history/2.4.0/settings/version-matchers.html#Latest%20(Status)%20Matcher
+[ivy_resolution_strategy]: https://ant.apache.org/ivy/history/2.4.0/settings/version-matchers.html#Latest%20(Status)%20Matcher
 [component_selection_rules]: https://docs.gradle.org/current/userguide/dynamic_versions.html#sec:component_selection_rules

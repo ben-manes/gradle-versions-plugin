@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -420,7 +420,7 @@ final class DependencyUpdatesSpec extends Specification {
     then:
     with(reporter) {
       projectUrls == [['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent']:
-                        'http://backport-jsr166.sourceforge.net/']
+                        'https://backport-jsr166.sourceforge.net/']
     }
   }
 
@@ -442,7 +442,7 @@ final class DependencyUpdatesSpec extends Specification {
     then:
     with(reporter) {
       projectUrls == [['group': 'com.google.inject', 'name': 'guice']:
-                        'http://code.google.com/p/google-guice/']
+                        'https://code.google.com/p/google-guice/']
     }
   }
 
@@ -466,7 +466,7 @@ final class DependencyUpdatesSpec extends Specification {
       unresolved.isEmpty()
       upgradeVersions.isEmpty()
       projectUrls == [['group': 'com.google.inject.extensions', 'name': 'guice-multibindings']:
-                        'http://code.google.com/p/google-guice/']
+                        'https://code.google.com/p/google-guice/']
       downgradeVersions.isEmpty()
     }
   }
@@ -581,7 +581,7 @@ final class DependencyUpdatesSpec extends Specification {
 
   private static void addBadRepositoryTo(project) {
     project.repositories {
-      maven { url = 'http://www.example.com' }
+      maven { url = 'https://www.example.com' }
     }
   }
 

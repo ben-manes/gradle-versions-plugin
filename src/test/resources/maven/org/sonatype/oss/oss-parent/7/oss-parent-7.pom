@@ -4,14 +4,14 @@
   ~
   ~ This program is licensed to you under the Apache License Version 2.0,
   ~ and you may not use this file except in compliance with the Apache License Version 2.0.
-  ~ You may obtain a copy of the Apache License Version 2.0 at http://www.apache.org/licenses/LICENSE-2.0.
+  ~ You may obtain a copy of the Apache License Version 2.0 at https://www.apache.org/licenses/LICENSE-2.0.
   ~
   ~ Unless required by applicable law or agreed to in writing,
   ~ software distributed under the Apache License Version 2.0 is distributed on an
   ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   ~ See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>org.sonatype.oss</groupId>
@@ -20,13 +20,13 @@
 	<packaging>pom</packaging>
 
 	<name>Sonatype OSS Parent</name>
-	<url>http://nexus.sonatype.org/oss-repository-hosting.html</url>
+	<url>https://nexus.sonatype.org/oss-repository-hosting.html</url>
 	<description>Sonatype helps open source projects to set up Maven repositories on https://oss.sonatype.org/ </description>
 
 	<scm>
-		<connection>scm:svn:http://svn.sonatype.org/spice/tags/oss-parent-7</connection>
+		<connection>scm:svn:https://svn.sonatype.org/spice/tags/oss-parent-7</connection>
 		<developerConnection>scm:svn:https://svn.sonatype.org/spice/tags/oss-parent-7</developerConnection>
-		<url>http://svn.sonatype.org/spice/tags/oss-parent-7</url>
+		<url>https://svn.sonatype.org/spice/tags/oss-parent-7</url>
 	</scm>
 
 	<repositories>

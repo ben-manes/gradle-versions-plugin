@@ -9,7 +9,7 @@
     <licenses>
         <license>
             <name>Public Domain</name>
-            <url>http://creativecommons.org/licenses/publicdomain</url>
+            <url>https://creativecommons.org/licenses/publicdomain</url>
             <distribution>repo</distribution>
         </license>
     </licenses>
@@ -18,7 +18,7 @@
     </scm>
     <organization>
         <name>Dawid Kurzyniec</name>
-        <url>http://www.mathcs.emory.edu/~dawidk/</url>
+        <url>https://www.mathcs.emory.edu/~dawidk/</url>
     </organization>
     <dependencies/>
 </project>

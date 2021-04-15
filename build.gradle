@@ -134,7 +134,7 @@ publishing {
         licenses {
           license {
             name = 'The Apache Software License, Version 2.0'
-            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+            url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
             distribution = 'repo'
           }
         }
@@ -187,5 +187,5 @@ gradlePlugin {
 pluginBundle {
   website = 'https://github.com/ben-manes/gradle-versions-plugin'
   vcsUrl = 'https://github.com/ben-manes/gradle-versions-plugin'
-  tags = [ 'dependencies', 'versions', 'updates' ]
+  tags = ['dependencies', 'versions', 'updates']
 }
