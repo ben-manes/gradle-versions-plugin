@@ -5,7 +5,7 @@ Copyright (c) 2006 Google, Inc. All rights reserved.
 
 This program is licensed to you under the Apache License Version 2.0,
 and you may not use this file except in compliance with the Apache License Version 2.0.
-You may obtain a copy of the Apache License Version 2.0 at http://www.apache.org/licenses/LICENSE-2.0.
+You may obtain a copy of the Apache License Version 2.0 at https://www.apache.org/licenses/LICENSE-2.0.
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the Apache License Version 2.0 is distributed on an
@@ -13,7 +13,7 @@ software distributed under the Apache License Version 2.0 is distributed on an
 See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
 -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
 
@@ -35,40 +35,40 @@ See the Apache License Version 2.0 for the specific language governing permissio
     Guice is a lightweight dependency injection framework for Java 5 and above
   </description>
 
-  <url>http://code.google.com/p/google-guice/</url>
+  <url>https://code.google.com/p/google-guice/</url>
   <inceptionYear>2006</inceptionYear>
 
   <organization>
     <name>Google, Inc.</name>
-    <url>http://www.google.com</url>
+    <url>https://www.google.com</url>
   </organization>
 
   <mailingLists>
     <mailingList>
       <name>Guice Users List</name>
-      <archive>http://groups.google.com/group/google-guice/topics</archive>
-      <subscribe>http://groups.google.com/group/google-guice/subscribe</subscribe>
-      <unsubscribe>http://groups.google.com/group/google-guice/subscribe</unsubscribe>
-      <post>http://groups.google.com/group/google-guice/post</post>
+      <archive>https://groups.google.com/group/google-guice/topics</archive>
+      <subscribe>https://groups.google.com/group/google-guice/subscribe</subscribe>
+      <unsubscribe>https://groups.google.com/group/google-guice/subscribe</unsubscribe>
+      <post>https://groups.google.com/group/google-guice/post</post>
     </mailingList>
     <mailingList>
       <name>Guice Developers List</name>
-      <archive>http://groups.google.com/group/google-guice-dev/topics</archive>
-      <subscribe>http://groups.google.com/group/google-guice-dev/subscribe</subscribe>
-      <unsubscribe>http://groups.google.com/group/google-guice-dev/subscribe</unsubscribe>
-      <post>http://groups.google.com/group/google-guice-dev/post</post>
+      <archive>https://groups.google.com/group/google-guice-dev/topics</archive>
+      <subscribe>https://groups.google.com/group/google-guice-dev/subscribe</subscribe>
+      <unsubscribe>https://groups.google.com/group/google-guice-dev/subscribe</unsubscribe>
+      <post>https://groups.google.com/group/google-guice-dev/post</post>
     </mailingList>
   </mailingLists>
 
   <scm>
-    <connection>scm:svn:http://google-guice.googlecode.com/svn/trunk</connection>
+    <connection>scm:svn:https://google-guice.googlecode.com/svn/trunk</connection>
     <developerConnection>scm:svn:https://google-guice.googlecode.com/svn/trunk</developerConnection>
-    <url>http://code.google.com/p/google-guice/source/browse</url>
+    <url>https://code.google.com/p/google-guice/source/browse</url>
   </scm>
 
   <issueManagement>
     <system>Google Code</system>
-    <url>http://code.google.com/p/google-guice/issues/</url>
+    <url>https://code.google.com/p/google-guice/issues/</url>
   </issueManagement>
 
   <ciManagement>
@@ -79,7 +79,7 @@ See the Apache License Version 2.0 for the specific language governing permissio
   <licenses>
     <license>
       <name>The Apache Software License, Version 2.0</name>
-      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
       <distribution>repo</distribution>
     </license>
   </licenses>
@@ -281,7 +281,7 @@ See the Apache License Version 2.0 for the specific language governing permissio
               <module>com.google.inject</module>
               <_include>-${project.basedir}/build.properties</_include>
               <Bundle-Copyright>Copyright (C) 2006 Google Inc.</Bundle-Copyright>
-              <Bundle-DocURL>http://code.google.com/p/google-guice/</Bundle-DocURL>
+              <Bundle-DocURL>https://code.google.com/p/google-guice/</Bundle-DocURL>
               <Bundle-Name>${project.artifactId}</Bundle-Name>
               <Bundle-SymbolicName>$(module)</Bundle-SymbolicName>
               <Bundle-RequiredExecutionEnvironment>
@@ -366,9 +366,9 @@ See the Apache License Version 2.0 for the specific language governing permissio
       <id>sonatype-grid</id>
       <properties>
         <forgeReleaseId>forge-releases</forgeReleaseId>
-        <forgeReleaseUrl>http://repository.sonatype.org:8081/service/local/staging/deploy/maven2</forgeReleaseUrl>
+        <forgeReleaseUrl>https://repository.sonatype.org:8081/service/local/staging/deploy/maven2</forgeReleaseUrl>
         <forgeSnapshotId>forge-snapshots</forgeSnapshotId>
-        <forgeSnapshotUrl>http://repository.sonatype.org/content/repositories/snapshots</forgeSnapshotUrl>
+        <forgeSnapshotUrl>https://repository.sonatype.org/content/repositories/snapshots</forgeSnapshotUrl>
       </properties>
       <distributionManagement>
         <repository>

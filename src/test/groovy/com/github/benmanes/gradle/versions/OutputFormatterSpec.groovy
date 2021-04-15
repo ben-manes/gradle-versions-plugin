@@ -164,7 +164,7 @@ final class OutputFormatterSpec extends Specification {
 
     The following dependencies have later milestone versions:
      - com.google.inject:guice [2.0 -> 3.1]
-         http://code.google.com/p/google-guice/
+         https://code.google.com/p/google-guice/
       """.stripIndent().replace('\r','').replace('\n', System.lineSeparator())
     def actual = reportFile.text
 
@@ -265,7 +265,7 @@ final class OutputFormatterSpec extends Specification {
                     },
                     "userReason": null,
                     "version": "2.0",
-                    "projectUrl": "http://code.google.com/p/google-guice/",
+                    "projectUrl": "https://code.google.com/p/google-guice/",
                     "name": "guice"
                 }
             ],
@@ -341,7 +341,7 @@ final class OutputFormatterSpec extends Specification {
             <group>com.google.inject</group>
             <name>guice</name>
             <version>2.0</version>
-            <projectUrl>http://code.google.com/p/google-guice/</projectUrl>
+            <projectUrl>https://code.google.com/p/google-guice/</projectUrl>
             <available>
               <milestone>3.1</milestone>
             </available>
@@ -455,9 +455,9 @@ The following dependencies exceed the version found at the milestone revision le
 The following dependencies have later milestone versions:
  - com.google.inject:guice [2.0 -> 3.1]
      That's just the way it is
-     http://code.google.com/p/google-guice/
+     https://code.google.com/p/google-guice/
  - com.google.inject.extensions:guice-multibindings [2.0 -> 3.0]
-     http://code.google.com/p/google-guice/
+     https://code.google.com/p/google-guice/
 
 Failed to determine the latest version for the following dependencies (use --info for details):
  - com.github.ben-manes:unresolvable

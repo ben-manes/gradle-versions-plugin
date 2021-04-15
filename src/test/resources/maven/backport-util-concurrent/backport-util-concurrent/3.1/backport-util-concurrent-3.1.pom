@@ -5,12 +5,12 @@
     <version>3.1</version>
     <packaging>jar</packaging>
     <name>Backport of JSR 166</name>
-    <url>http://backport-jsr166.sourceforge.net/</url>
+    <url>https://backport-jsr166.sourceforge.net/</url>
     <description>Dawid Kurzyniec's backport of JSR 166</description>
     <licenses>
         <license>
             <name>Public Domain</name>
-            <url>http://creativecommons.org/licenses/publicdomain</url>
+            <url>https://creativecommons.org/licenses/publicdomain</url>
             <distribution>repo</distribution>
         </license>
     </licenses>
@@ -19,7 +19,7 @@
     </scm>
     <organization>
         <name>Dawid Kurzyniec</name>
-        <url>http://www.mathcs.emory.edu/~dawidk/</url>
+        <url>https://www.mathcs.emory.edu/~dawidk/</url>
     </organization>
     <dependencies/>
 </project>

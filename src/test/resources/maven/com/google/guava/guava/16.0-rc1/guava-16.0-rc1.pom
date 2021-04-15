@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>com.google.guava</groupId>
@@ -107,8 +107,8 @@
           <excludePackageNames>com.google.common.base.internal</excludePackageNames>
           <linksource>true</linksource>
           <links>
-            <link>http://jsr-305.googlecode.com/svn/trunk/javadoc</link>
-            <link>http://docs.oracle.com/javase/7/docs/api/</link>
+            <link>https://jsr-305.googlecode.com/svn/trunk/javadoc</link>
+            <link>https://docs.oracle.com/javase/7/docs/api/</link>
           </links>
           <!-- TODO(cpovirk): can we use includeDependencySources and a local com.oracle.java:jdk-lib:noversion:sources instead of all this unzipping and manual sourcepath modification? -->
           <sourcepath>${project.build.sourceDirectory}:${project.build.directory}/jdk-sources</sourcepath>
