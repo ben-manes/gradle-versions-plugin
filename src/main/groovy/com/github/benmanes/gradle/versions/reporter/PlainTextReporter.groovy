@@ -121,8 +121,7 @@ class PlainTextReporter extends AbstractReporter {
     def downgradeVersions = result.exceeded.dependencies
     if (!downgradeVersions.isEmpty()) {
       printStream.println()
-      printStream.println('The following dependencies exceed the version found at the '
-        + revision + ' revision level:')
+      printStream.println("The following dependencies exceed the version found at the ${revision} revision level:")
       downgradeVersions.each { DependencyLatest dep ->
         def currentVersion = dep.version
         printStream.println " - ${label(dep)} [${currentVersion} <- ${dep.latest}]"
@@ -159,8 +158,7 @@ class PlainTextReporter extends AbstractReporter {
     if (!unresolved.isEmpty()) {
       printStream.println()
       printStream.println(
-        'Failed to determine the latest version for the following dependencies '
-          + '(use --info for details):')
+        'Failed to determine the latest version for the following dependencies (use --info for details):')
       unresolved.each { DependencyUnresolved dep ->
         printStream.println ' - ' + label(dep)
         if (dep.getUserReason()) {
@@ -175,7 +173,7 @@ class PlainTextReporter extends AbstractReporter {
   }
 
   /** Returns the dependency key as a stringified label. */
-  private def label(Dependency dependency) {
+  private static def label(Dependency dependency) {
     dependency.group + ':' + dependency.name
   }
 }

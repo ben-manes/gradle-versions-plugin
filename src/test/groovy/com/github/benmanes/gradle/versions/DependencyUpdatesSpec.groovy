@@ -210,8 +210,8 @@ final class DependencyUpdatesSpec extends Specification {
     with(reporter) {
       unresolved.isEmpty()
       upgradeVersions.isEmpty()
-      upToDateVersions.get(['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent'])
-        .getVersion().equals('3.1')
+      (upToDateVersions.get(['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent'])
+        .getVersion() == '3.1')
       downgradeVersions.isEmpty()
     }
   }
@@ -234,8 +234,8 @@ final class DependencyUpdatesSpec extends Specification {
     with(reporter) {
       unresolved.isEmpty()
       upgradeVersions.isEmpty()
-      upToDateVersions.get(['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent'])
-        .getVersion().equals('none')
+      (upToDateVersions.get(['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent'])
+        .getVersion() == 'none')
       downgradeVersions.isEmpty()
     }
   }
@@ -314,7 +314,7 @@ final class DependencyUpdatesSpec extends Specification {
         [['group': dependency.group, 'name': dependency.name]: dependency.version]
       } == [['group': 'null', 'name': 'guava-18.0']: 'none']
       upgradeVersions.isEmpty()
-      upToDateVersions.get(['group': 'null', 'name': 'guice-4.0']).getVersion().equals('none')
+      (upToDateVersions.get(['group': 'null', 'name': 'guice-4.0']).getVersion() == 'none')
       downgradeVersions.isEmpty()
     }
   }
@@ -340,8 +340,8 @@ final class DependencyUpdatesSpec extends Specification {
     with(reporter) {
       unresolved.isEmpty()
       upgradeVersions.isEmpty()
-      upToDateVersions.get(['group': 'com.google.guava', 'name': 'guava']).getVersion().equals('16.0-rc1')
-      downgradeVersions.get(['group': 'com.google.guava', 'name': 'guava']).getVersion().equals('99.0-SNAPSHOT')
+      (upToDateVersions.get(['group': 'com.google.guava', 'name': 'guava']).getVersion() == '16.0-rc1')
+      (downgradeVersions.get(['group': 'com.google.guava', 'name': 'guava']).getVersion() == '99.0-SNAPSHOT')
     }
   }
 
@@ -397,7 +397,7 @@ final class DependencyUpdatesSpec extends Specification {
     with(reporter) {
       unresolved.isEmpty()
       upgradeVersions.isEmpty()
-      upToDateVersions.get(['group': 'com.google.guava', 'name': 'guava']).getVersion().equals('15.0')
+      (upToDateVersions.get(['group': 'com.google.guava', 'name': 'guava']).getVersion() == '15.0')
       downgradeVersions.isEmpty()
     }
   }
@@ -530,7 +530,7 @@ final class DependencyUpdatesSpec extends Specification {
 
     then:
     with(reporter) {
-      gradleReleaseChannel.equals(CURRENT.id)
+      (gradleReleaseChannel == CURRENT.id)
     }
   }
 

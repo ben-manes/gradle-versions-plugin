@@ -55,7 +55,7 @@ class ResolutionStrategyWithCurrent {
 
   ResolutionStrategyWithCurrent componentSelection(Closure<?> closure) {
     return componentSelection(new Action<ComponentSelectionRulesWithCurrent>() {
-      @java.lang.Override
+      @Override
       void execute(ComponentSelectionRulesWithCurrent componentSelectionRulesWithCurrent) {
         closure.delegate = componentSelectionRulesWithCurrent
         closure(componentSelectionRulesWithCurrent)

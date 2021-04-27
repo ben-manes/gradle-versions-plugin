@@ -124,14 +124,14 @@ class HtmlReporter extends AbstractReporter {
     }
   }
 
-  private def getCurrentRows(Result result) {
-    List<String> rows = new ArrayList<>();
+  private static def getCurrentRows(Result result) {
+    List<String> rows = new ArrayList<>()
     // The following dependencies are using the latest milestone version:
-    DependenciesGroup<Dependency> list = result.getCurrent();
+    DependenciesGroup<Dependency> list = result.getCurrent()
     rows.add("<tr class=\"header\" id = \"currentId\" ><th colspan=\"4\"><b>Current dependencies<span>(Click to expand)</span></b></th></tr>")
     rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Reason</b></td></tr>")
     for (Dependency item : list.dependencies) {
-      String rowString;
+      String rowString
       String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
       rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
         getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item)),
@@ -142,7 +142,7 @@ class HtmlReporter extends AbstractReporter {
   }
 
   private def writeExceedLatestFound(printStream, Result result) {
-    SortedSet<DependencyLatest> versions = result.getExceeded().getDependencies();
+    SortedSet<DependencyLatest> versions = result.getExceeded().getDependencies()
     if (!versions.isEmpty()) {
       // The following dependencies exceed the version found at the '
       //        + revision + ' revision level:
@@ -155,14 +155,14 @@ class HtmlReporter extends AbstractReporter {
     }
   }
 
-  private def getExceededRows(Result result) {
-    List<String> rows = new ArrayList<>();
+  private static def getExceededRows(Result result) {
+    List<String> rows = new ArrayList<>()
     // The following dependencies are using the latest milestone version:
     DependenciesGroup<DependencyLatest> list = result.getExceeded()
     rows.add("<tr class=\"header\"><th colspan=\"5\"><b>Exceeded dependencies<span>(Click to collapse)</span></b></th></tr>")
     rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Latest Version</b></td><td><b>Reason</b></td></tr>")
     for (DependencyLatest item : list.dependencies) {
-      String rowString;
+      String rowString
       String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
       rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
         getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), item.getVersion()),
@@ -174,7 +174,7 @@ class HtmlReporter extends AbstractReporter {
   }
 
   private def writeUpgrades(printStream, Result result) {
-    SortedSet<DependencyOutdated> versions = result.getOutdated().getDependencies();
+    SortedSet<DependencyOutdated> versions = result.getOutdated().getDependencies()
     if (!versions.isEmpty()) {
       printStream.println("<H2>Later dependencies</H2>")
       printStream.println("<p>The following dependencies have later ${revision} versions:<p>")
@@ -185,13 +185,13 @@ class HtmlReporter extends AbstractReporter {
     }
   }
 
-  private def getUpgradesRows(Result result) {
-    List<String> rows = new ArrayList<>();
+  private static def getUpgradesRows(Result result) {
+    List<String> rows = new ArrayList<>()
     DependenciesGroup<DependencyOutdated> list = result.getOutdated()
     rows.add("<tr class=\"header\"><th colspan=\"5\"><b>Later dependencies<span>(Click to collapse)</span></b></th></tr>")
     rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Latest Version</b></td><td><b>Reason</b></td></tr>")
     for (DependencyOutdated item : list.dependencies) {
-      String rowString;
+      String rowString
       String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
       rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
         getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), item.getVersion()),
@@ -202,7 +202,7 @@ class HtmlReporter extends AbstractReporter {
     return rows
   }
 
-  private def String getDisplayableVersion(DependencyOutdated item) {
+  private String getDisplayableVersion(DependencyOutdated item) {
     if (getRevision().equalsIgnoreCase("milestone")) {
       return item.getAvailable().getMilestone()
     } else if (getRevision().equalsIgnoreCase("release")) {
@@ -213,12 +213,12 @@ class HtmlReporter extends AbstractReporter {
     return ""
   }
 
-  private def String getDisplayableVersion(Dependency item) {
+  private static String getDisplayableVersion(Dependency item) {
       return item.getVersion()
   }
 
-  private def writeUnresolved(printStream, Result result) {
-    SortedSet<DependencyUnresolved> versions = result.getUnresolved().getDependencies();
+  private static def writeUnresolved(printStream, Result result) {
+    SortedSet<DependencyUnresolved> versions = result.getUnresolved().getDependencies()
     if (!versions.isEmpty()) {
       printStream.println("<H2>Unresolved dependencies</H2>")
       printStream.println("<p>Failed to determine the latest version for the following dependencies:<p>")
@@ -229,13 +229,13 @@ class HtmlReporter extends AbstractReporter {
     }
   }
 
-  private def getUnresolvedRows(Result result) {
-    List<String> rows = new ArrayList<>();
+  private static def getUnresolvedRows(Result result) {
+    List<String> rows = new ArrayList<>()
     DependenciesGroup<DependencyUnresolved> list = result.getUnresolved()
     rows.add("<tr class=\"header\"><th colspan=\"4\"><b>Unresolved dependencies<span>(Click to collapse)</span></b></th></tr>")
     rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td>Reason</td></tr>")
     for (DependencyUnresolved item : list.dependencies) {
-      String rowString;
+      String rowString
       String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
       rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
         getUrlString(item.getProjectUrl()) , getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item)),
@@ -289,43 +289,43 @@ class HtmlReporter extends AbstractReporter {
     }
   }
 
-  private def getGradleUrl() {
-    return "<P>For information about Gradle releases click <a target=\"_blank\" href=\"https://gradle.org/releases/\">here</a>.";
+  private static def getGradleUrl() {
+    return "<P>For information about Gradle releases click <a target=\"_blank\" href=\"https://gradle.org/releases/\">here</a>."
   }
 
-  private def getGradleVersionUrl(String version) {
+  private static def getGradleVersionUrl(String version) {
     if (version == null) {
-      return "https://gradle.org/releases/";
+      return "https://gradle.org/releases/"
     }
     return String.format("<a target=\"_blank\" href=\"https://docs.gradle.org/%s/release-notes.html\">%s</a>", version, version)
   }
 
-  private def getUrlString(String url) {
+  private static def getUrlString(String url) {
     if (url == null) {
-      return "";
+      return ""
     }
     return String.format("<a target=\"_blank\" href=\"%s\">%s</a>", url, url)
   }
 
-  private def getVersionString(String group, String name, String version) {
+  private static def getVersionString(String group, String name, String version) {
     String mvn = getMvnVersionString(group, name, version)
     String bintray = getBintrayVersionString(group, name, version)
     return String.format("%s %s %s", version, mvn, bintray)
   }
 
-  private def getMvnVersionString(String group, String name, String version) {
+  private static def getMvnVersionString(String group, String name, String version) {
     // https://search.maven.org/artifact/com.azure/azure-core-http-netty/1.5.4
     if (version == null) {
-      return "";
+      return ""
     }
     String versionUrl = String.format("https://search.maven.org/artifact/%s/%s/%s/bundle", group, name, version)
     return String.format("<a target=\"_blank\" href=\"%s\">%s</a>", versionUrl, "Sonatype")
   }
 
-  private def getBintrayVersionString(String group, String name, String version) {
+  private static def getBintrayVersionString(String group, String name, String version) {
     // https://bintray.com/bintray/jcenter/com.azure%3Aazure-sdk-template/1.0.3
     if (version == null) {
-      return "";
+      return ""
     }
     String versionUrl = String.format("https://bintray.com/bintray/jcenter/%s%%3A%s/%s", group, name, version)
     return String.format("<a target=\"_blank\" href=\"%s\">%s</a>", versionUrl, "Bintray")

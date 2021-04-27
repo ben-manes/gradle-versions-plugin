@@ -136,9 +136,9 @@ class Resolver {
     // resolution, but the full set can break consumer capability matching.
     Set<Dependency> inherited = configuration.allDependencies.findAll { dependency ->
       (dependency instanceof ExternalDependency) &&
-      (dependency.group == 'org.jetbrains.kotlin') &&
-      (dependency.version != null)
-    }.minus(configuration.dependencies)
+        (dependency.group == 'org.jetbrains.kotlin') &&
+        (dependency.version != null)
+    } - configuration.dependencies
 
     // Adds the Kotlin 1.2.x legacy metadata to assist in variant selection
     Configuration metadata = project.configurations.findByName('commonMainMetadataElements')
@@ -207,7 +207,7 @@ class Resolver {
   }
 
   /** Adds the attributes from the source to the target. */
-  private void addAttributes(HasConfigurableAttributes target,
+  private static void addAttributes(HasConfigurableAttributes target,
       HasConfigurableAttributes source, Closure filter = { String key -> true }) {
     target.attributes { container ->
       for (def key : source.attributes.keySet()) {
@@ -221,7 +221,7 @@ class Resolver {
 
   /** Adds a revision filter by rejecting candidates using a component selection rule. */
   @TypeChecked(SKIP)
-  private void addRevisionFilter(Configuration configuration, String revision) {
+  private static void addRevisionFilter(Configuration configuration, String revision) {
     configuration.resolutionStrategy { ResolutionStrategy componentSelection ->
       componentSelection.componentSelection { rules ->
         def revisionFilter = { ComponentSelection selection, ComponentMetadata metadata ->
@@ -245,7 +245,7 @@ class Resolver {
       Map<Coordinate.Key, Coordinate> currentCoordinates) {
     if (resolutionStrategy != null) {
       configuration.resolutionStrategy(new Action<ResolutionStrategy>() {
-        @java.lang.Override
+        @Override
         void execute(ResolutionStrategy inner) {
           resolutionStrategy.execute(new ResolutionStrategyWithCurrent(inner as ResolutionStrategy,
             currentCoordinates))
@@ -361,7 +361,6 @@ class Resolver {
 
       // size is 0 for gradle plugins, 1 for normal dependencies
       for (ComponentArtifactsResult result : resolutionResult.resolvedComponents) {
-        Set<ArtifactResult> artifacts = result.getArtifacts(MavenPomArtifact)
         // size should always be 1
         for (ArtifactResult artifact : result.getArtifacts(MavenPomArtifact)) {
           if (artifact instanceof ResolvedArtifactResult) {
