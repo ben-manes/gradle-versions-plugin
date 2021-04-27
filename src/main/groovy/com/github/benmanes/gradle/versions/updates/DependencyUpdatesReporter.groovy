@@ -32,7 +32,6 @@ import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResult
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
 import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
-import groovy.transform.TypeCheckingMode
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ModuleVersionSelector
 import org.gradle.api.artifacts.UnresolvedDependency
@@ -214,16 +213,16 @@ class DependencyUpdatesReporter {
     } as SortedSet
   }
 
-  protected Result buildObject(int count,
-                               DependenciesGroup current,
-                               DependenciesGroup outdated,
-                               DependenciesGroup exceeded,
-                               DependenciesGroup unresolved,
-                               GradleUpdateResults gradleUpdateResults) {
+  protected static Result buildObject(int count,
+                                      DependenciesGroup current,
+                                      DependenciesGroup outdated,
+                                      DependenciesGroup exceeded,
+                                      DependenciesGroup unresolved,
+                                      GradleUpdateResults gradleUpdateResults) {
     new Result(count, current, outdated, exceeded, unresolved, gradleUpdateResults)
   }
 
-  protected <T extends Dependency> DependenciesGroup<T> buildDependenciesGroup(
+  protected static <T extends Dependency> DependenciesGroup<T> buildDependenciesGroup(
     SortedSet<T> dependencies) {
     new DependenciesGroup<T>(dependencies.size(), dependencies)
   }
@@ -249,7 +248,7 @@ class DependencyUpdatesReporter {
   protected def buildOutdatedDependency(Coordinate coordinate, Map<String, String> key) {
     def available
 
-    String laterVersion = latestVersions[key]?.getVersion();
+    String laterVersion = latestVersions[key]?.getVersion()
     switch (revision) {
       case 'milestone':
         available = new VersionAvailable(null, laterVersion)
@@ -265,7 +264,7 @@ class DependencyUpdatesReporter {
       projectUrls[key], coordinate?.getUserReason(), available)
   }
 
-  def sortByGroupAndName(Map<Map<String, String>, Coordinate> dependencies) {
+  static def sortByGroupAndName(Map<Map<String, String>, Coordinate> dependencies) {
     dependencies.sort { Map.Entry<Map<String, String>, Coordinate> a,
       Map.Entry<Map<String, String>, Coordinate> b -> compareKeys(a.key, b.key)
     }
