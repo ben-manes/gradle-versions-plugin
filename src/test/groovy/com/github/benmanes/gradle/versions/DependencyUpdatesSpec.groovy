@@ -530,7 +530,7 @@ final class DependencyUpdatesSpec extends Specification {
 
     then:
     with(reporter) {
-      gradleReleaseChannel.equals(CURRENT.id)
+      (gradleReleaseChannel == CURRENT.id)
     }
   }
 
