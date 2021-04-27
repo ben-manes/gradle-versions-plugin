@@ -206,7 +206,7 @@ class HtmlReporter extends AbstractReporter {
     return rows
   }
 
-  private def String getDisplayableVersion(DependencyOutdated item) {
+  private String getDisplayableVersion(DependencyOutdated item) {
     if (getRevision().equalsIgnoreCase("milestone")) {
       return item.getAvailable().getMilestone()
     } else if (getRevision().equalsIgnoreCase("release")) {
@@ -217,7 +217,7 @@ class HtmlReporter extends AbstractReporter {
     return ""
   }
 
-  private static def String getDisplayableVersion(Dependency item) {
+  private static String getDisplayableVersion(Dependency item) {
       return item.getVersion()
   }
 
