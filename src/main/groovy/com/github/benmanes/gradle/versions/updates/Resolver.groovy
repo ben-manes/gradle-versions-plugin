@@ -136,9 +136,9 @@ class Resolver {
     // resolution, but the full set can break consumer capability matching.
     Set<Dependency> inherited = configuration.allDependencies.findAll { dependency ->
       (dependency instanceof ExternalDependency) &&
-      (dependency.group == 'org.jetbrains.kotlin') &&
-      (dependency.version != null)
-    }.minus(configuration.dependencies)
+        (dependency.group == 'org.jetbrains.kotlin') &&
+        (dependency.version != null)
+    } - configuration.dependencies
 
     // Adds the Kotlin 1.2.x legacy metadata to assist in variant selection
     Configuration metadata = project.configurations.findByName('commonMainMetadataElements')
@@ -245,7 +245,7 @@ class Resolver {
       Map<Coordinate.Key, Coordinate> currentCoordinates) {
     if (resolutionStrategy != null) {
       configuration.resolutionStrategy(new Action<ResolutionStrategy>() {
-        @java.lang.Override
+        @Override
         void execute(ResolutionStrategy inner) {
           resolutionStrategy.execute(new ResolutionStrategyWithCurrent(inner as ResolutionStrategy,
             currentCoordinates))

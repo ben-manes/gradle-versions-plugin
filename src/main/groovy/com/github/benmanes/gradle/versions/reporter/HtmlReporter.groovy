@@ -213,7 +213,7 @@ class HtmlReporter extends AbstractReporter {
     return ""
   }
 
-  private def String getDisplayableVersion(Dependency item) {
+  private static def String getDisplayableVersion(Dependency item) {
       return item.getVersion()
   }
 
@@ -289,18 +289,18 @@ class HtmlReporter extends AbstractReporter {
     }
   }
 
-  private def getGradleUrl() {
+  private static def getGradleUrl() {
     return "<P>For information about Gradle releases click <a target=\"_blank\" href=\"https://gradle.org/releases/\">here</a>.";
   }
 
-  private def getGradleVersionUrl(String version) {
+  private static def getGradleVersionUrl(String version) {
     if (version == null) {
       return "https://gradle.org/releases/";
     }
     return String.format("<a target=\"_blank\" href=\"https://docs.gradle.org/%s/release-notes.html\">%s</a>", version, version)
   }
 
-  private def getUrlString(String url) {
+  private static def getUrlString(String url) {
     if (url == null) {
       return "";
     }
@@ -313,7 +313,7 @@ class HtmlReporter extends AbstractReporter {
     return String.format("%s %s %s", version, mvn, bintray)
   }
 
-  private def getMvnVersionString(String group, String name, String version) {
+  private static def getMvnVersionString(String group, String name, String version) {
     // https://search.maven.org/artifact/com.azure/azure-core-http-netty/1.5.4
     if (version == null) {
       return "";
@@ -322,7 +322,7 @@ class HtmlReporter extends AbstractReporter {
     return String.format("<a target=\"_blank\" href=\"%s\">%s</a>", versionUrl, "Sonatype")
   }
 
-  private def getBintrayVersionString(String group, String name, String version) {
+  private static def getBintrayVersionString(String group, String name, String version) {
     // https://bintray.com/bintray/jcenter/com.azure%3Aazure-sdk-template/1.0.3
     if (version == null) {
       return "";

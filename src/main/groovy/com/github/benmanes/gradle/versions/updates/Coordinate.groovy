@@ -53,8 +53,8 @@ class Coordinate implements Comparable<Coordinate> {
 
   @Override
   int compareTo(Coordinate coordinate) {
-    int result = key.compareTo(coordinate.key)
-    return (result == 0) ? version.compareTo(coordinate.version) : result
+    int result = key <=> coordinate.key
+    return (result == 0) ? version <=> coordinate.version : result
   }
 
   static Coordinate from(ExternalModuleDependency dependency) {
@@ -111,8 +111,8 @@ class Coordinate implements Comparable<Coordinate> {
 
     @Override
     int compareTo(Key key) {
-      int result = groupId.compareTo(key.groupId)
-      return (result == 0) ? artifactId.compareTo(key.artifactId) : result
+      int result = groupId <=> key.groupId
+      return (result == 0) ? artifactId <=> key.artifactId : result
     }
   }
 }
