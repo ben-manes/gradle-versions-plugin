@@ -19,7 +19,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalModuleDependency
-import org.gradle.api.artifacts.DependencyConstraint
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ModuleVersionSelector
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
