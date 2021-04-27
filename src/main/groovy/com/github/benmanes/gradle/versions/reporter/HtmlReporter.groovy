@@ -185,23 +185,19 @@ class HtmlReporter extends AbstractReporter {
     }
   }
 
-  private static String getRowString(Dependency item) {
-    String rowString
-    String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
-    rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
-      getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), item.getVersion()),
-      getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item)),
-      item.getUserReason()?:'')
-    return rowString
-  }
-
   private static def getUpgradesRows(Result result) {
     List<String> rows = new ArrayList<>()
     DependenciesGroup<DependencyOutdated> list = result.getOutdated()
     rows.add("<tr class=\"header\"><th colspan=\"5\"><b>Later dependencies<span>(Click to collapse)</span></b></th></tr>")
     rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Latest Version</b></td><td><b>Reason</b></td></tr>")
     for (DependencyOutdated item : list.dependencies) {
-      rows.add(getRowString(item))
+      String rowString
+      String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
+      rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
+        getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), item.getVersion()),
+        getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item)),
+        item.getUserReason()?:'')
+      rows.add(rowString)
     }
     return rows
   }
@@ -239,7 +235,12 @@ class HtmlReporter extends AbstractReporter {
     rows.add("<tr class=\"header\"><th colspan=\"4\"><b>Unresolved dependencies<span>(Click to collapse)</span></b></th></tr>")
     rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td>Reason</td></tr>")
     for (DependencyUnresolved item : list.dependencies) {
-      rows.add(getRowString(item))
+      String rowString
+      String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
+      rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
+        getUrlString(item.getProjectUrl()) , getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item)),
+        item.getUserReason()?:'')
+      rows.add(rowString)
     }
     return rows
   }
