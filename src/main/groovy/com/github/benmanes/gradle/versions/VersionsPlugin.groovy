@@ -34,6 +34,8 @@ class VersionsPlugin implements Plugin<Project> {
       return
     }
 
-    project.tasks.register('dependencyUpdates', DependencyUpdatesTask)
+    if (!project.tasks.findByName("dependencyUpdates")) {
+      project.tasks.register('dependencyUpdates', DependencyUpdatesTask)
+    }
   }
 }
