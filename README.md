@@ -7,6 +7,7 @@ this plugin provides a task to determine which dependencies have updates. Additi
 checks for updates to Gradle itself.
 
 You may also wish to explore additional functionality provided by,
+ - [gradle-versions-filter-plugin](https://github.com/janderssonse/gradle-versions-filter-plugin)
  - [gradle-use-latest-versions](https://github.com/patrikerdes/gradle-use-latest-versions-plugin)
  - [gradle-upgrade-interactive](https://github.com/kevcodez/gradle-upgrade-interactive)
  - [gradle-update-checker](https://github.com/marketplace/actions/gradle-update-checker)
