@@ -6,6 +6,7 @@ import com.github.benmanes.gradle.versions.reporter.result.DependencyLatest
 import com.github.benmanes.gradle.versions.reporter.result.DependencyOutdated
 import com.github.benmanes.gradle.versions.reporter.result.DependencyUnresolved
 import com.github.benmanes.gradle.versions.reporter.result.Result
+import com.github.benmanes.gradle.versions.reporter.result.VersionAvailable
 import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
 
@@ -134,7 +135,7 @@ class HtmlReporter extends AbstractReporter {
       String rowString
       String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
       rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
-        getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item)),
+        getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), item.getVersion()),
         item.getUserReason()?:'')
       rows.add(rowString)
     }
@@ -166,7 +167,7 @@ class HtmlReporter extends AbstractReporter {
       String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
       rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
         getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), item.getVersion()),
-        getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item)),
+        getVersionString(item.getGroup(), item.getName(), item.getVersion()),
         item.getUserReason()?:'')
       rows.add(rowString)
     }
@@ -185,7 +186,7 @@ class HtmlReporter extends AbstractReporter {
     }
   }
 
-  private static def getUpgradesRows(Result result) {
+  private def getUpgradesRows(Result result) {
     List<String> rows = new ArrayList<>()
     DependenciesGroup<DependencyOutdated> list = result.getOutdated()
     rows.add("<tr class=\"header\"><th colspan=\"5\"><b>Later dependencies<span>(Click to collapse)</span></b></th></tr>")
@@ -195,26 +196,22 @@ class HtmlReporter extends AbstractReporter {
       String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
       rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
         getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), item.getVersion()),
-        getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item)),
+        getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item.getAvailable())),
         item.getUserReason()?:'')
       rows.add(rowString)
     }
     return rows
   }
 
-  private String getDisplayableVersion(DependencyOutdated item) {
+  private String getDisplayableVersion(VersionAvailable versionAvailable) {
     if (getRevision().equalsIgnoreCase("milestone")) {
-      return item.getAvailable().getMilestone()
+      return versionAvailable.getMilestone()
     } else if (getRevision().equalsIgnoreCase("release")) {
-      return item.getAvailable().getRelease()
+      return versionAvailable.getRelease()
     } else if (getRevision().equalsIgnoreCase("integration")) {
-      return item.getAvailable().getIntegration()
+      return versionAvailable.getIntegration()
     }
     return ""
-  }
-
-  private static String getDisplayableVersion(Dependency item) {
-      return item.getVersion()
   }
 
   private static def writeUnresolved(printStream, Result result) {
@@ -238,7 +235,7 @@ class HtmlReporter extends AbstractReporter {
       String rowString
       String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
       rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
-        getUrlString(item.getProjectUrl()) , getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item)),
+        getUrlString(item.getProjectUrl()) , getVersionString(item.getGroup(), item.getName(), item.getVersion()),
         item.getUserReason()?:'')
       rows.add(rowString)
     }
