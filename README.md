@@ -124,7 +124,8 @@ def isNonStable = { String version ->
 ```
 
 </details>
-<details>
+
+<details open>
 <summary>Kotlin</summary>
 
 ```kotlin
@@ -148,19 +149,33 @@ You can either use the simplified syntax `rejectVersionIf { ... }` or configure 
 
 <!--  Always modify first examples/groovy and make sure that it works. THEN modify the README -->
 
+Example 1: reject all non stable versions
+
 ```groovy
+// https://github.com/ben-manes/gradle-versions-plugin
 tasks.named("dependencyUpdates").configure {
-  // Example 1: reject all non stable versions
   rejectVersionIf {
     isNonStable(it.candidate.version)
   }
+}
+```
 
-  // Example 2: disallow release candidates as upgradable versions from stable versions
+Example 2: disallow release candidates as upgradable versions from stable versions
+
+```groovy
+// https://github.com/ben-manes/gradle-versions-plugin
+tasks.named("dependencyUpdates").configure {
   rejectVersionIf {
     isNonStable(it.candidate.version) && !isNonStable(it.currentVersion)
   }
+}
+```
 
-  // Example 3: using the full syntax
+Example 3: using the full syntax
+
+```groovy
+// https://github.com/ben-manes/gradle-versions-plugin
+tasks.named("dependencyUpdates").configure {
   resolutionStrategy {
     componentSelection {
       all {
@@ -174,26 +189,44 @@ tasks.named("dependencyUpdates").configure {
 ```
 
 </details>
-<details>
+<details open>
 <summary>Kotlin</summary>
 
 <!--  Always modify first examples/kotlin and make sure that it works. THEN modify the README -->
 
+Example 1: reject all non stable versions
+
 ```kotlin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
+// https://github.com/ben-manes/gradle-versions-plugin
 tasks.withType<DependencyUpdatesTask> {
-  // Example 1: reject all non stable versions
   rejectVersionIf {
     isNonStable(candidate.version)
   }
+}
+```
 
-  // Example 2: disallow release candidates as upgradable versions from stable versions
+Example 2: disallow release candidates as upgradable versions from stable versions
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+// https://github.com/ben-manes/gradle-versions-plugin
+tasks.withType<DependencyUpdatesTask> {
   rejectVersionIf {
     isNonStable(candidate.version) && !isNonStable(currentVersion)
   }
+}
+```
 
-  // Example 3: using the full syntax
+Example 3: using the full syntax
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+// https://github.com/ben-manes/gradle-versions-plugin
+tasks.withType<DependencyUpdatesTask> {
   resolutionStrategy {
     componentSelection {
       all {
@@ -205,7 +238,6 @@ tasks.withType<DependencyUpdatesTask> {
   }
 }
 ```
-
 </details>
 
 #### Gradle Release Channel
