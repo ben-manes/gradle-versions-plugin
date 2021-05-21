@@ -16,6 +16,28 @@ You may also wish to explore additional functionality provided by,
  - [deblibs-gradle-plugin](https://github.com/hellofresh/deblibs-gradle-plugin)
  - [refreshVersions](https://github.com/jmfayard/refreshVersions)
 
+**Table of contents**
+<!-- TOC -->
+- [Usage](#usage)
+  - [`plugins` block:](#plugins-block)
+  - [`buildscript` block:](#buildscript-block)
+  - [using a Gradle init script](#using-a-gradle-init-script)
+- [Tasks](#tasks)
+  - [`dependencyUpdates`](#dependencyupdates)
+    - [Multi-project build](#multi-project-build)
+    - [Revisions](#revisions)
+    - [RejectVersionsIf and componentSelection](#rejectversionsif-and-componentselection)
+    - [Gradle Release Channel](#gradle-release-channel)
+    - [Constraints](#constraints)
+    - [Kotlin DSL](#kotlin-dsl)
+    - [Try out the samples](#try-out-the-samples)
+    - [Report format](#report-format)
+    - [Json report](#json-report)
+    - [XML report](#xml-report)
+    - [HTML report](#html-report)
+    - [<a name="custom_report_format"></a>Custom report format](#a-namecustom_report_formatacustom-report-format)
+<!-- /TOC -->
+
 ## Usage
 
 [![Build](https://github.com/ben-manes/gradle-versions-plugin/workflows/build/badge.svg)](https://github.com/ben-manes/gradle-versions-plugin/actions)
@@ -108,6 +130,7 @@ The strategy can be specified either on the task or as a system property for ad 
 gradle dependencyUpdates -Drevision=release
 ```
 
+#### RejectVersionsIf and componentSelection
 
 To further define which version to accept, you need to define what means an unstable version. Sadly, there are
 no agreed standard on this, but this is a good starting point:
