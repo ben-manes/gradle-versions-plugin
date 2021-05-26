@@ -68,11 +68,8 @@ class DependencyUpdates {
     for(Project currentProject : projectConfigs.keySet()) {
       Resolver resolver = new Resolver(currentProject, resolutionStrategy, checkConstraints)
       for(Configuration currentConfiguration : projectConfigs.get(currentProject)) {
-        def isUsefulConfiguration = !currentConfiguration.canBeResolved || currentConfiguration.canBeConsumed || currentConfiguration.name == 'annotationProcessor' || currentConfiguration.name == 'kapt'
-        if (isUsefulConfiguration) {
-          for(DependencyStatus newStatus : resolve(resolver, currentProject, currentConfiguration)) {
-            addValidatedDependencyStatus(resultStatusSet, newStatus)
-          }
+        for(DependencyStatus newStatus : resolve(resolver, currentProject, currentConfiguration)) {
+          addValidatedDependencyStatus(resultStatusSet, newStatus)
         }
       }
     }
@@ -103,8 +100,7 @@ class DependencyUpdates {
     try {
       return resolver.resolve(config, revision)
     } catch (Exception e) {
-      String msg = "Failed to resolve ${proj.path}:${config.name}"
-      project.logger.error(msg, project.logger.isInfoEnabled() ? e : null)
+      project.logger.info("Skipping configuration ${proj.path}:${config.name}", e)
       return Collections.emptySet()
     }
   }
