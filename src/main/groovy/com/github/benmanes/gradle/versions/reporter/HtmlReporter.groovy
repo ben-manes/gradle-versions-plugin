@@ -103,6 +103,7 @@ class HtmlReporter extends AbstractReporter {
       writeUpToDate(printStream, result)
       writeExceedLatestFound(printStream, result)
       writeUpgrades(printStream, result)
+      writeUndeclared(printStream, result)
       writeUnresolved(printStream, result)
     }
 
@@ -198,6 +199,30 @@ class HtmlReporter extends AbstractReporter {
         getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), item.getVersion()),
         getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item.getAvailable())),
         item.getUserReason()?:'')
+      rows.add(rowString)
+    }
+    return rows
+  }
+
+  private static void writeUndeclared(printStream, Result result) {
+    SortedSet<Dependency> versions = result.undeclared.dependencies
+    if (!versions.empty) {
+      printStream.println("<H2>Undeclared dependencies</H2>")
+      printStream.println("<p>Failed to compare versions for the following dependencies because they were declared without version:<p>")
+      printStream.println("<table class=\"warningInfo\">")
+      getUndeclaredRows(result).each { String row -> printStream.println( row)}
+      printStream.println("</table>")
+      printStream.println("<br>")
+    }
+  }
+
+  private static List<String> getUndeclaredRows(Result result) {
+    List<String> rows = new ArrayList<>()
+    rows.add("<tr class=\"header\"><th colspan=\"2\"><b>Undeclared dependencies<span>(Click to collapse)</span></b></th></tr>")
+    rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td></tr>")
+    for(Dependency item : result.undeclared.dependencies) {
+      String rowString
+      rowString = String.format("<tr><td>%s</td><td>%s</td></tr>", item.name, item.group)
       rows.add(rowString)
     }
     return rows

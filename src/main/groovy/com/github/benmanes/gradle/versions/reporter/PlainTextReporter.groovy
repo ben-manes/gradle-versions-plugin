@@ -45,6 +45,7 @@ class PlainTextReporter extends AbstractReporter {
       writeUpToDate(printStream, result)
       writeExceedLatestFound(printStream, result)
       writeUpgrades(printStream, result)
+      writeUndeclared(printStream,result)
       writeUnresolved(printStream, result)
     }
 
@@ -150,6 +151,15 @@ class PlainTextReporter extends AbstractReporter {
           printStream.println "     ${dep.projectUrl}"
         }
       }
+    }
+  }
+
+  private void writeUndeclared(Object printStream, Result result) {
+    Collection<Dependency> undeclaredVersions = result.undeclared.dependencies
+    if(!undeclaredVersions.empty) {
+      printStream.println()
+      printStream.println( 'Failed to compare versions for the following dependencies because they were declared without version:')
+      undeclaredVersions.each { Dependency dependency -> printStream.println( " - ${label(dependency)}")}
     }
   }
 
