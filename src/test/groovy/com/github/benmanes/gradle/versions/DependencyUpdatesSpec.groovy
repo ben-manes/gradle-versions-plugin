@@ -17,6 +17,7 @@ package com.github.benmanes.gradle.versions
 
 import com.github.benmanes.gradle.versions.reporter.Reporter
 import com.github.benmanes.gradle.versions.reporter.result.Result
+import com.github.benmanes.gradle.versions.updates.Coordinate
 import com.github.benmanes.gradle.versions.updates.DependencyUpdates
 import org.gradle.api.artifacts.ComponentSelection
 import org.gradle.api.artifacts.ModuleVersionSelector
@@ -32,6 +33,9 @@ import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseCh
  * A specification for the dependency updates task.
  */
 final class DependencyUpdatesSpec extends Specification {
+
+  private static final String NONE_VERSION = 'none'
+
   def 'Single project with no dependencies for many formats'() {
     given:
     def project = singleProject()
@@ -46,6 +50,7 @@ final class DependencyUpdatesSpec extends Specification {
       upgradeVersions.isEmpty()
       upToDateVersions.isEmpty()
       downgradeVersions.isEmpty()
+      undeclared.isEmpty()
     }
   }
 
@@ -64,6 +69,7 @@ final class DependencyUpdatesSpec extends Specification {
       upgradeVersions.isEmpty()
       upToDateVersions.isEmpty()
       downgradeVersions.isEmpty()
+      undeclared.isEmpty()
     }
 
     where:
@@ -84,6 +90,7 @@ final class DependencyUpdatesSpec extends Specification {
       upgradeVersions.isEmpty()
       upToDateVersions.isEmpty()
       downgradeVersions.isEmpty()
+      undeclared.isEmpty()
     }
   }
 
@@ -99,10 +106,11 @@ final class DependencyUpdatesSpec extends Specification {
 
     then:
     with(reporter) {
-      unresolved.size() == 8
+      unresolved.size() == 10
       upgradeVersions.isEmpty()
       upToDateVersions.isEmpty()
       downgradeVersions.isEmpty()
+      undeclared.isEmpty()
     }
 
     where:
@@ -125,6 +133,7 @@ final class DependencyUpdatesSpec extends Specification {
     checkUpgradeVersions(reporter)
     checkUpToDateVersions(reporter)
     checkDowngradeVersions(reporter)
+    checkUndeclaredVersions(reporter)
   }
 
   @Unroll
@@ -143,6 +152,7 @@ final class DependencyUpdatesSpec extends Specification {
     checkUpgradeVersions(reporter)
     checkUpToDateVersions(reporter)
     checkDowngradeVersions(reporter)
+    checkUndeclaredVersions(reporter)
 
     where:
     revision << ['release', 'milestone', 'integration']
@@ -165,6 +175,7 @@ final class DependencyUpdatesSpec extends Specification {
     checkUpgradeVersions(reporter)
     checkUpToDateVersions(reporter)
     checkDowngradeVersions(reporter)
+    checkUndeclaredVersions(reporter)
 
     where:
     revision << ['release', 'milestone', 'integration']
@@ -187,6 +198,7 @@ final class DependencyUpdatesSpec extends Specification {
     checkUpgradeVersions(reporter)
     checkUpToDateVersions(reporter)
     checkDowngradeVersions(reporter)
+    checkUndeclaredVersions(reporter)
 
     where:
     revision << ['release', 'milestone', 'integration']
@@ -213,6 +225,7 @@ final class DependencyUpdatesSpec extends Specification {
       (upToDateVersions.get(['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent'])
         .getVersion() == '3.1')
       downgradeVersions.isEmpty()
+      undeclared.isEmpty()
     }
   }
 
@@ -234,9 +247,9 @@ final class DependencyUpdatesSpec extends Specification {
     with(reporter) {
       unresolved.isEmpty()
       upgradeVersions.isEmpty()
-      (upToDateVersions.get(['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent'])
-        .getVersion() == 'none')
+      upToDateVersions.isEmpty()
       downgradeVersions.isEmpty()
+      undeclared.contains(new Coordinate('backport-util-concurrent','backport-util-concurrent',NONE_VERSION,null))
     }
   }
 
@@ -256,6 +269,7 @@ final class DependencyUpdatesSpec extends Specification {
       result.current.count == 2
       result.outdated.count == 2
       result.exceeded.count == 2
+      result.undeclared.count == 2
       result.unresolved.count == 2
     }
   }
@@ -268,12 +282,14 @@ final class DependencyUpdatesSpec extends Specification {
     int current = -1
     int outdated = -1
     int exceeded = -1
+    int undeclared = -1
     int unresolved = -1
 
     def customReporter = { result ->
       current = result.current.count
       outdated = result.outdated.count
       exceeded = result.exceeded.count
+      undeclared = result.undeclared.count
       unresolved = result.unresolved.count
     }
 
@@ -285,6 +301,7 @@ final class DependencyUpdatesSpec extends Specification {
     current == 2
     outdated == 2
     exceeded == 2
+    undeclared == 2
     unresolved == 2
   }
 
@@ -312,10 +329,11 @@ final class DependencyUpdatesSpec extends Specification {
     with(reporter) {
       unresolved.collect { it.selector }.collectEntries { dependency ->
         [['group': dependency.group, 'name': dependency.name]: dependency.version]
-      } == [['group': 'null', 'name': 'guava-18.0']: 'none']
+      } == [['group': 'null', 'name': 'guava-18.0']: NONE_VERSION]
       upgradeVersions.isEmpty()
-      (upToDateVersions.get(['group': 'null', 'name': 'guice-4.0']).getVersion() == 'none')
+      upToDateVersions.isEmpty()
       downgradeVersions.isEmpty()
+      undeclared.contains(new Coordinate('null','guice-4.0',NONE_VERSION,null))
     }
   }
 
@@ -342,6 +360,7 @@ final class DependencyUpdatesSpec extends Specification {
       upgradeVersions.isEmpty()
       (upToDateVersions.get(['group': 'com.google.guava', 'name': 'guava']).getVersion() == '16.0-rc1')
       (downgradeVersions.get(['group': 'com.google.guava', 'name': 'guava']).getVersion() == '99.0-SNAPSHOT')
+      undeclared.isEmpty()
     }
   }
 
@@ -364,6 +383,7 @@ final class DependencyUpdatesSpec extends Specification {
       upgradeVersions.isEmpty()
       upToDateVersions.isEmpty()
       downgradeVersions[['group': 'com.google.guava', 'name': 'guava']].getVersion() == '99.0-SNAPSHOT'
+      undeclared.isEmpty()
     }
   }
 
@@ -399,6 +419,7 @@ final class DependencyUpdatesSpec extends Specification {
       upgradeVersions.isEmpty()
       (upToDateVersions.get(['group': 'com.google.guava', 'name': 'guava']).getVersion() == '15.0')
       downgradeVersions.isEmpty()
+      undeclared.isEmpty()
     }
   }
 
@@ -468,6 +489,7 @@ final class DependencyUpdatesSpec extends Specification {
       projectUrls == [['group': 'com.google.inject.extensions', 'name': 'guice-multibindings']:
                         'https://code.google.com/p/google-guice/']
       downgradeVersions.isEmpty()
+      undeclared.isEmpty()
     }
   }
 
@@ -547,10 +569,11 @@ final class DependencyUpdatesSpec extends Specification {
     then:
     noExceptionThrown()
     with(reporter) {
-      unresolved.size() == 8
+      unresolved.size() == 10
       upgradeVersions.isEmpty()
       upToDateVersions.isEmpty()
       downgradeVersions.isEmpty()
+      undeclared.isEmpty()
     }
   }
 
@@ -590,6 +613,7 @@ final class DependencyUpdatesSpec extends Specification {
       upToDate
       exceedLatest
       upgradesFound
+      undeclared
       unresolvable
     }
     project.dependencies {
@@ -599,6 +623,8 @@ final class DependencyUpdatesSpec extends Specification {
       exceedLatest('com.google.guava:guava-tests:99.0-SNAPSHOT')
       upgradesFound('com.google.inject:guice:2.0') { because 'That\'s just the way it is' }
       upgradesFound('com.google.inject.extensions:guice-multibindings:2.0')
+      undeclared('com.thoughtworks.xstream:xstream')
+      undeclared('com.jayway.jsonpath:json-path')
       unresolvable('com.github.ben-manes:unresolvable:1.0') { because 'Life is hard' }
       unresolvable('com.github.ben-manes:unresolvable2:1.0')
     }
@@ -658,5 +684,12 @@ final class DependencyUpdatesSpec extends Specification {
     assert reporter.downgradeVersions
       .get(['group': 'com.google.guava', 'name': 'guava-tests'])
       .getVersion() == '99.0-SNAPSHOT'
+  }
+
+  private static void checkUndeclaredVersions(def reporter) {
+    assert reporter.undeclared.size() == 2
+    assert reporter.undeclared.containsAll([
+      new Coordinate('com.thoughtworks.xstream','xstream',NONE_VERSION,null),
+      new Coordinate('com.jayway.jsonpath','json-path',NONE_VERSION,null)])
   }
 }

@@ -28,6 +28,10 @@ class Result {
    */
   DependenciesGroup<DependencyLatest> exceeded
   /**
+   * The dependencies whose versions were not declared
+   */
+  DependenciesGroup<Dependency> undeclared
+  /**
    * The unresolvable dependencies
    */
   DependenciesGroup<DependencyUnresolved> unresolved

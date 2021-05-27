@@ -142,6 +142,7 @@ final class OutputFormatterSpec extends Specification {
 
         dependencies {
           compile 'com.google.inject:guice:2.0'
+          implementation 'com.thoughtworks.xstream:xstream'
         }
 
         dependencyUpdates {
@@ -165,6 +166,9 @@ final class OutputFormatterSpec extends Specification {
     The following dependencies have later milestone versions:
      - com.google.inject:guice [2.0 -> 3.1]
          https://code.google.com/p/google-guice/
+
+    Failed to compare versions for the following dependencies because they were declared without version:
+     - com.thoughtworks.xstream:xstream
       """.stripIndent().replace('\r','').replace('\n', System.lineSeparator())
     def actual = reportFile.text
 
@@ -198,6 +202,7 @@ final class OutputFormatterSpec extends Specification {
 
         dependencies {
           compile 'com.google.inject:guice:2.0'
+          implementation 'com.thoughtworks.xstream:xstream'
         }
 
         dependencyUpdates {
@@ -277,7 +282,19 @@ final class OutputFormatterSpec extends Specification {
             ],
             "count": 0
         },
-        "count": 1
+        "undeclared": {
+            "dependencies": [
+                {
+                    "group": "com.thoughtworks.xstream",
+                    "name": "xstream",
+                    "version": null,
+                    "projectUrl": null,
+                    "userReason": null
+                }
+            ],
+            "count": 1
+        },
+        "count": 2
     }
       """.stripIndent())
     def actual = jsonSlurper.parseText(reportFile.text)
@@ -312,6 +329,7 @@ final class OutputFormatterSpec extends Specification {
 
         dependencies {
           compile 'com.google.inject:guice:2.0'
+          implementation 'com.thoughtworks.xstream:xstream'
         }
 
         dependencyUpdates {
@@ -329,7 +347,7 @@ final class OutputFormatterSpec extends Specification {
     def expected = xmlParser.parseText(
       """    <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     <response>
-      <count>1</count>
+      <count>2</count>
       <current>
         <count>0</count>
         <dependencies/>
@@ -352,6 +370,15 @@ final class OutputFormatterSpec extends Specification {
         <count>0</count>
         <dependencies/>
       </exceeded>
+      <undeclared>
+        <count>1</count>
+        <dependencies>
+          <dependency>
+            <group>com.thoughtworks.xstream</group>
+            <name>xstream</name>
+          </dependency>
+        </dependencies>
+      </undeclared>
       <unresolved>
         <count>0</count>
         <dependencies/>
