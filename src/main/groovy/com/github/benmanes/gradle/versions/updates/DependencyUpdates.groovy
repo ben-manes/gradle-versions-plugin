@@ -64,28 +64,43 @@ class DependencyUpdates {
   }
 
   private Set<DependencyStatus> resolveProjects(Map<Project, Set<Configuration>> projectConfigs) {
-    projectConfigs.keySet().collect { proj ->
-      Set<Configuration> configurations = projectConfigs.get(proj)
-      Resolver resolver = new Resolver(proj, resolutionStrategy, checkConstraints)
-      configurations.collect { Configuration config ->
-        def isUsefulConfiguration = !config.canBeResolved || config.canBeConsumed ||
-          config.name == 'annotationProcessor' || config.name == 'kapt'
-
-        if (isUsefulConfiguration) {
-          resolve(resolver, proj, config)
-        } else {
-          []
+    Set<DependencyStatus> resultStatusSet = []
+    for(Project currentProject : projectConfigs.keySet()) {
+      Resolver resolver = new Resolver(currentProject, resolutionStrategy, checkConstraints)
+      for(Configuration currentConfiguration : projectConfigs.get(currentProject)) {
+        for(DependencyStatus newStatus : resolve(resolver, currentProject, currentConfiguration)) {
+          addValidatedDependencyStatus(resultStatusSet, newStatus)
         }
-      }.flatten() as Set<DependencyStatus>
-    }.flatten() as Set<DependencyStatus>
+      }
+    }
+    return resultStatusSet
+  }
+
+  /**
+   * A new status will be added if
+   * <ol>
+   *   <li>{@link Coordinate.Key} of new status is not yet present in status collection <b>OR</b></li>
+   *   <li>new status has concrete version (not {@code none}); the old status will then be removed if its coordinate is {@code none} versioned</li>
+   * </ol>
+   */
+  private static void addValidatedDependencyStatus(Collection<DependencyStatus> statusCollection, DependencyStatus status) {
+    DependencyStatus statusWithSameCoordinateKey = statusCollection.find { DependencyStatus it -> it.coordinate.key == status.coordinate.key}
+    if( !statusWithSameCoordinateKey) {
+      statusCollection.add(status)
+    }
+    else if(status.coordinate.version != 'none') {
+      statusCollection.add(status)
+      if(statusWithSameCoordinateKey.coordinate.version == 'none') {
+        statusCollection.remove(statusWithSameCoordinateKey)
+      }
+    }
   }
 
   private Set<DependencyStatus> resolve(Resolver resolver, Project proj, Configuration config) {
     try {
       return resolver.resolve(config, revision)
     } catch (Exception e) {
-      String msg = "Failed to resolve ${proj.path}:${config.name}"
-      project.logger.error(msg, project.logger.isInfoEnabled() ? e : null)
+      project.logger.info("Skipping configuration ${proj.path}:${config.name}", e)
       return Collections.emptySet()
     }
   }
@@ -105,7 +120,7 @@ class DependencyUpdates {
     GradleUpdateChecker gradleUpdateChecker = new GradleUpdateChecker(checkForGradleUpdate)
 
     return new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir, reportfileName,
-      currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions,
+      currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions, versions.undeclared,
       unresolved, projectUrls, gradleUpdateChecker, gradleReleaseChannel)
   }
 
