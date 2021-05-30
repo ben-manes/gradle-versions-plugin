@@ -1,4 +1,5 @@
-
+[![Build](https://github.com/ben-manes/gradle-versions-plugin/workflows/build/badge.svg)](https://github.com/ben-manes/gradle-versions-plugin/actions)
+[![gradlePluginPortal](https://img.shields.io/maven-metadata/v/https/plugins.gradle.org/m2/com/github/ben-manes/versions/com.github.ben-manes.versions.gradle.plugin/maven-metadata.xml.svg?label=gradlePluginPortal)](https://plugins.gradle.org/plugin/com.github.ben-manes.versions)
 
 # Gradle Versions Plugin
 
@@ -6,42 +7,25 @@ In the spirit of the [Maven Versions Plugin](https://www.mojohaus.org/versions-m
 this plugin provides a task to determine which dependencies have updates. Additionally, the plugin
 checks for updates to Gradle itself.
 
-You may also wish to explore additional functionality provided by,
- - [gradle-versions-filter-plugin](https://github.com/janderssonse/gradle-versions-filter-plugin)
- - [gradle-use-latest-versions](https://github.com/patrikerdes/gradle-use-latest-versions-plugin)
- - [gradle-upgrade-interactive](https://github.com/kevcodez/gradle-upgrade-interactive)
- - [gradle-update-checker](https://github.com/marketplace/actions/gradle-update-checker)
- - [gradle-libraries-plugin](https://github.com/fkorotkov/gradle-libraries-plugin)
- - [gradle-update-notifier](https://github.com/y-yagi/gradle-update-notifier)
- - [deblibs-gradle-plugin](https://github.com/hellofresh/deblibs-gradle-plugin)
- - [refreshVersions](https://github.com/jmfayard/refreshVersions)
-
 **Table of contents**
 <!-- TOC -->
 - [Usage](#usage)
-  - [`plugins` block:](#plugins-block)
-  - [`buildscript` block:](#buildscript-block)
-  - [using a Gradle init script](#using-a-gradle-init-script)
-- [Tasks](#tasks)
-  - [`dependencyUpdates`](#dependencyupdates)
-    - [Multi-project build](#multi-project-build)
-    - [Revisions](#revisions)
-    - [RejectVersionsIf and componentSelection](#rejectversionsif-and-componentselection)
-    - [Gradle Release Channel](#gradle-release-channel)
-    - [Constraints](#constraints)
-    - [Kotlin DSL](#kotlin-dsl)
-    - [Try out the samples](#try-out-the-samples)
-    - [Report format](#report-format)
-    - [Json report](#json-report)
-    - [XML report](#xml-report)
-    - [HTML report](#html-report)
-    - [<a name="custom_report_format"></a>Custom report format](#a-namecustom_report_formatacustom-report-format)
+  - [plugins block](#plugins-block)
+  - [buildscript block](#buildscript-block)
+  - [Using a Gradle init script](#using-a-gradle-init-script)
+  - [Related plugins](#related-plugins)
+- [dependencyUpdates](#dependencyupdates)
+  - [Multi-project build](#multi-project-build)
+  - [Revisions](#revisions)
+  - [RejectVersionsIf and componentSelection](#rejectversionsif-and-componentselection)
+  - [Gradle Release Channel](#gradle-release-channel)
+  - [Constraints](#constraints)
+  - [Kotlin DSL](#kotlin-dsl)
+  - [Try out the samples](#try-out-the-samples)
+  - [Report format](#report-format)
 <!-- /TOC -->
 
 ## Usage
-
-[![Build](https://github.com/ben-manes/gradle-versions-plugin/workflows/build/badge.svg)](https://github.com/ben-manes/gradle-versions-plugin/actions)
-[![gradlePluginPortal](https://img.shields.io/maven-metadata/v/https/plugins.gradle.org/m2/com/github/ben-manes/versions/com.github.ben-manes.versions.gradle.plugin/maven-metadata.xml.svg?label=gradlePluginPortal)](https://plugins.gradle.org/plugin/com.github.ben-manes.versions)
 
 You can add this plugin to your top-level build script using the following configuration:
 
@@ -70,7 +54,7 @@ buildscript {
 }
 ```
 
-### using a Gradle init script ###
+### Using a Gradle init script ###
 You can also transparently add the plugin to every Gradle project that you run via a Gradle init script, e.g. `$HOME/.gradle/init.d/add-versions-plugin.gradle`:
 ```groovy
 initscript {
@@ -91,6 +75,17 @@ allprojects {
   }
 }
 ```
+
+### Related Plugins ###
+You may also wish to explore additional functionality provided by,
+ - [gradle-versions-filter-plugin](https://github.com/janderssonse/gradle-versions-filter-plugin)
+ - [gradle-upgrade-interactive](https://github.com/kevcodez/gradle-upgrade-interactive)
+ - [gradle-use-latest-versions](https://github.com/patrikerdes/gradle-use-latest-versions-plugin)
+ - [gradle-update-checker](https://github.com/marketplace/actions/gradle-update-checker)
+ - [gradle-libraries-plugin](https://github.com/fkorotkov/gradle-libraries-plugin)
+ - [gradle-update-notifier](https://github.com/y-yagi/gradle-update-notifier)
+ - [deblibs-gradle-plugin](https://github.com/hellofresh/deblibs-gradle-plugin)
+ - [refreshVersions](https://github.com/jmfayard/refreshVersions)
 
 ## Tasks
 
@@ -322,7 +317,7 @@ $ ./gradlew -p examples/groovy dependencyUpdate
 $ ./gradlew -p examples/kotlin dependencyUpdate
 ```
 
-#### Report format
+### Report format
 
 The task property `outputFormatter` controls the report output format. The following values are supported:
 
@@ -330,7 +325,7 @@ The task property `outputFormatter` controls the report output format. The follo
   * `"json"`: format output file as json text
   * `"xml"`: format output file as xml text, can be used by other plugins (e.g. sonar)
   * `"html"`: format output file as html
-  * a `Closure`: will be called with the result of the dependency update analysis (see [example below](#custom_report_format))
+  * `Closure`: will be called with the result of the dependency update analysis
 
 You can also set multiple output formats using comma as the separator:
 
@@ -352,7 +347,11 @@ The extension will be set according to the used output format.
 gradle dependencyUpdates -Drevision=release -DoutputFormatter=json -DreportfileName=myCustomReport
 ```
 
-This displays a report to the console, e.g.
+This displays a report to the console.
+
+
+<details open>
+<summary>Text Report</summary>
 
 ```
 ------------------------------------------------------------
@@ -378,8 +377,13 @@ The following dependencies have later integration versions:
 Gradle updates:
  - Gradle: [4.6 -> 4.7 -> 4.8-rc-2]
 ```
+</details>
 
-#### Json report
+Alternatively, the report may be outputed to a structured file.
+
+<details>
+<summary>Json report</summary>
+
 ```json
 {
   "current": {
@@ -492,8 +496,12 @@ Gradle updates:
   "count": 8
 }
 ```
+</details>
 
-#### XML report
+<details>
+<summary>XML report</summary>
+
+
 ```xml
 <response>
   <count>8</count>
@@ -602,17 +610,22 @@ Gradle updates:
   </gradle>
 </response>
 ```
+</details>
 
-#### HTML report
-[<img src="examples/html-report.png" width="400"/>](examples/html-report.png)
+<details>
+<summary>HTML report</summary>
 
-#### <a name="custom_report_format"></a>Custom report format
+[<img src="examples/html-report.png"/>](examples/html-report.png)
+</details>
+
+<details>
+<summary>Custom report</summary>
+
 If you need to create a report in a custom format, you can set the `dependencyUpdates` tasks's `outputFormatter` property to a Closure. The closure will be called with a single argument that is an instance of [com.github.benmanes.gradle.versions.reporter.result.Result](src/main/groovy/com/github/benmanes/gradle/versions/reporter/result/Result.groovy).
 
 For example, if you wanted to create an html table for the upgradable dependencies, you could use:
 
 ```groovy
-...
 tasks.named("dependencyUpdates").configure {
   outputFormatter = { result ->
     def updatable = result.outdated.dependencies
@@ -649,6 +662,7 @@ tasks.named("dependencyUpdates").configure {
   }
 }
 ```
+</details>
 
 [kotlin_dsl]: https://github.com/gradle/kotlin-dsl
 [ivy_resolution_strategy]: https://ant.apache.org/ivy/history/2.4.0/settings/version-matchers.html#Latest%20(Status)%20Matcher
