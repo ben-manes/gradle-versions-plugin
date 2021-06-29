@@ -56,6 +56,45 @@ final class ConstraintsSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
+  def "Show updates for an strictly implementation dependency constraint"() {
+    given:
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'com.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          constraints {
+            implementation('com.google.inject:guice') {version {strictly '2.0'}}
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then:
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
   def "Does not override explicit dependency with constraint"() {
     given:
     buildFile = testProjectDir.newFile('build.gradle')
