@@ -155,6 +155,9 @@ class Resolver {
     copy.dependencies.addAll(latest)
     copy.dependencies.addAll(inherited)
 
+    // Remove all dependency constraints, even the 'strictly' ones
+    copy.dependencyConstraints.clear()
+
     addRevisionFilter(copy, revision)
     addAttributes(copy, configuration)
     addCustomResolutionStrategy(copy, currentCoordinates)
