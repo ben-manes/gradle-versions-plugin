@@ -20,16 +20,12 @@ buildScan {
   termsOfServiceAgree = 'yes'
 }
 
-tasks.wrapper {
-  distributionType 'all'
-}
-
 codenarcMain {
   configFile = file('config/codenarc/rules.groovy')
 }
 
 codenarcTest {
-  configFile = file('config/codenarc/testrules.groovy')
+  configFile = file('config/codenarc/testRules.groovy')
 }
 
 tasks.withType(CodeNarc) { codeNarcTask ->
