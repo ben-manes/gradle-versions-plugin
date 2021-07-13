@@ -15,17 +15,11 @@
  */
 package com.github.benmanes.gradle.versions.reporter
 
-import com.github.benmanes.gradle.versions.reporter.result.Dependency
-import com.github.benmanes.gradle.versions.reporter.result.DependencyLatest
-import com.github.benmanes.gradle.versions.reporter.result.DependencyOutdated
-import com.github.benmanes.gradle.versions.reporter.result.DependencyUnresolved
-import com.github.benmanes.gradle.versions.reporter.result.Result
+import com.github.benmanes.gradle.versions.reporter.result.*
 import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
 
-import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.CURRENT
-import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.NIGHTLY
-import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.*
 
 /**
  * A plain text reporter for the dependency updates results.
@@ -154,12 +148,15 @@ class PlainTextReporter extends AbstractReporter {
     }
   }
 
-  private void writeUndeclared(Object printStream, Result result) {
+  private static void writeUndeclared(Object printStream, Result result) {
     Collection<Dependency> undeclaredVersions = result.undeclared.dependencies
-    if(!undeclaredVersions.empty) {
+    if (!undeclaredVersions.empty) {
       printStream.println()
-      printStream.println( 'Failed to compare versions for the following dependencies because they were declared without version:')
-      undeclaredVersions.each { Dependency dependency -> printStream.println( " - ${label(dependency)}")}
+      printStream.
+        println(
+          'Failed to compare versions for the following dependencies because they were declared without version:')
+      undeclaredVersions.
+        each { Dependency dependency -> printStream.println(" - ${label(dependency)}") }
     }
   }
 

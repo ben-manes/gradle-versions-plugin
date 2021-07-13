@@ -42,7 +42,7 @@ class DependencyUpdates {
   String revision
   Object outputFormatter
   String outputDir
-  String reportfileName
+  String reportFileName
   boolean checkForGradleUpdate
   String gradleReleaseChannel
   boolean checkConstraints
@@ -119,8 +119,10 @@ class DependencyUpdates {
     // Check for Gradle updates.
     GradleUpdateChecker gradleUpdateChecker = new GradleUpdateChecker(checkForGradleUpdate)
 
-    return new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir, reportfileName,
-      currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions, versions.undeclared,
+    return new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir,
+      reportFileName,
+      currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions,
+      versions.undeclared,
       unresolved, projectUrls, gradleUpdateChecker, gradleReleaseChannel)
   }
 

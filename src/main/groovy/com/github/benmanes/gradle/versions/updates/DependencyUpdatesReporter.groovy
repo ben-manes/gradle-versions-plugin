@@ -15,18 +15,8 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
-import com.github.benmanes.gradle.versions.reporter.JsonReporter
-import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
-import com.github.benmanes.gradle.versions.reporter.Reporter
-import com.github.benmanes.gradle.versions.reporter.XmlReporter
-import com.github.benmanes.gradle.versions.reporter.HtmlReporter
-import com.github.benmanes.gradle.versions.reporter.result.DependenciesGroup
-import com.github.benmanes.gradle.versions.reporter.result.Dependency
-import com.github.benmanes.gradle.versions.reporter.result.DependencyLatest
-import com.github.benmanes.gradle.versions.reporter.result.DependencyOutdated
-import com.github.benmanes.gradle.versions.reporter.result.DependencyUnresolved
-import com.github.benmanes.gradle.versions.reporter.result.Result
-import com.github.benmanes.gradle.versions.reporter.result.VersionAvailable
+import com.github.benmanes.gradle.versions.reporter.*
+import com.github.benmanes.gradle.versions.reporter.result.*
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResult
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
@@ -54,7 +44,7 @@ class DependencyUpdatesReporter {
   /** The outputDir for report. */
   String outputDir
   /** The filename of the report file. */
-  String reportfileName
+  String reportFileName
 
   /** The current versions of each dependency declared in the project(s). */
   Map<Map<String, String>, Coordinate> currentVersions
@@ -112,7 +102,7 @@ class DependencyUpdatesReporter {
   }
 
   def generateFileReport(Reporter reporter) {
-    File filename = new File(outputDir, reportfileName + '.' + reporter.getFileExtension())
+    File filename = new File(outputDir, reportFileName + '.' + reporter.getFileExtension())
     project.file(outputDir).mkdirs()
     File outputFile = project.file(filename)
     outputFile.withPrintWriter { PrintWriter pw ->
