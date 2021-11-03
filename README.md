@@ -78,6 +78,7 @@ allprojects {
 
 ### Related Plugins ###
 You may also wish to explore additional functionality provided by,
+ - [version-catalog-update-plugin](https://github.com/littlerobots/version-catalog-update-plugin)
  - [gradle-versions-filter-plugin](https://github.com/janderssonse/gradle-versions-filter-plugin)
  - [gradle-upgrade-interactive](https://github.com/kevcodez/gradle-upgrade-interactive)
  - [gradle-use-latest-versions](https://github.com/patrikerdes/gradle-use-latest-versions-plugin)
