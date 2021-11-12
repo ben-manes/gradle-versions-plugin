@@ -331,8 +331,7 @@ class HtmlReporter extends AbstractReporter {
 
   private static def getVersionString(String group, String name, String version) {
     String mvn = getMvnVersionString(group, name, version)
-    String bintray = getBintrayVersionString(group, name, version)
-    return String.format("%s %s %s", version, mvn, bintray)
+    return String.format("%s %s %s", version, mvn)
   }
 
   private static def getMvnVersionString(String group, String name, String version) {
@@ -342,15 +341,6 @@ class HtmlReporter extends AbstractReporter {
     }
     String versionUrl = String.format("https://search.maven.org/artifact/%s/%s/%s/bundle", group, name, version)
     return String.format("<a target=\"_blank\" href=\"%s\">%s</a>", versionUrl, "Sonatype")
-  }
-
-  private static def getBintrayVersionString(String group, String name, String version) {
-    // https://bintray.com/bintray/jcenter/com.azure%3Aazure-sdk-template/1.0.3
-    if (version == null) {
-      return ""
-    }
-    String versionUrl = String.format("https://bintray.com/bintray/jcenter/%s%%3A%s/%s", group, name, version)
-    return String.format("<a target=\"_blank\" href=\"%s\">%s</a>", versionUrl, "Bintray")
   }
 
   @Override
