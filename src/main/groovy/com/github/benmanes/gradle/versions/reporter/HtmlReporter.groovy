@@ -331,7 +331,7 @@ class HtmlReporter extends AbstractReporter {
 
   private static def getVersionString(String group, String name, String version) {
     String mvn = getMvnVersionString(group, name, version)
-    return String.format("%s %s %s", version, mvn)
+    return String.format("%s %s", version, mvn)
   }
 
   private static def getMvnVersionString(String group, String name, String version) {
