@@ -59,6 +59,7 @@ class DependencyUpdatesTask extends DefaultTask {
   boolean checkForGradleUpdate = true
 
   boolean checkConstraints = false
+  boolean checkBuildEnvironmentConstraints = false
 
   @Input
   boolean getCheckForGradleUpdate() {
@@ -68,6 +69,11 @@ class DependencyUpdatesTask extends DefaultTask {
   @Input
   boolean getCheckConstraints() {
     return checkConstraints
+  }
+
+  @Input
+  boolean getCheckBuildEnvironmentConstraints() {
+    return checkBuildEnvironmentConstraints
   }
 
   @Internal
@@ -96,7 +102,7 @@ class DependencyUpdatesTask extends DefaultTask {
 
     def evaluator = new DependencyUpdates(project, resolutionStrategyAction, revisionLevel(),
       outputFormatterProp(), outputDirectory(), getReportfileName(), checkForGradleUpdate, gradleReleaseChannelLevel(),
-      checkConstraints)
+      checkConstraints, checkBuildEnvironmentConstraints)
     DependencyUpdatesReporter reporter = evaluator.run()
     reporter?.write()
   }

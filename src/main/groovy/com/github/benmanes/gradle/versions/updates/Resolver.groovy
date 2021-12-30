@@ -131,7 +131,7 @@ class Resolver {
       copy.setCanBeResolved(true)
     }
 
-    // Resolve using the latest version of explicitly declaired dependencies and retains Kotlin's
+    // Resolve using the latest version of explicitly declared dependencies and retains Kotlin's
     // inherited stdlib dependencies from the super configurations. This is required for variant
     // resolution, but the full set can break consumer capability matching.
     Set<Dependency> inherited = configuration.allDependencies.findAll { dependency ->
