@@ -279,10 +279,13 @@ If you use constraints, for example to define a BOM using the [`java-platform`](
 plugin or to [manage](https://docs.gradle.org/current/userguide/dependency_constraints.html)
 transitive dependency versions, you can enable checking of constraints by specifying the `checkConstraints`
 attribute of the `dependencyUpdates` task.
+If you want to check external constraints (defined in init scripts or by Gradle since 7.3.2) you can do so by specifying the `checkBuildEnvironmentConstraints`
+attribute of the `dependencyUpdates` task.
 
 ```groovy
 tasks.named("dependencyUpdates").configure {
     checkConstraints = true
+    checkBuildEnvironmentConstraints = true
 }
 ```
 

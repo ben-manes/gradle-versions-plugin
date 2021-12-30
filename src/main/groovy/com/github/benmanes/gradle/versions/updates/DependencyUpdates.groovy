@@ -46,24 +46,33 @@ class DependencyUpdates {
   boolean checkForGradleUpdate
   String gradleReleaseChannel
   boolean checkConstraints
+  boolean checkBuildEnvironmentConstraints
 
-  /** Evaluates the dependencies and returns a reporter. */
+  /** Evaluates the dependencies in two part,
+   * first the project dependencies and second the buildScript dependencies,
+   * to apply different options and returns a reporter. */
   DependencyUpdatesReporter run() {
     Map<Project, Set<Configuration>> projectConfigs = project.allprojects.collectEntries { proj ->
-      [proj, proj.configurations + (Set) proj.buildscript.configurations]
+      [proj, (Set) proj.configurations ]
     }
-    Set<DependencyStatus> status = resolveProjects(projectConfigs)
+    Set<DependencyStatus> status = resolveProjects(projectConfigs, checkConstraints)
 
-    VersionMapping versions = new VersionMapping(project, status)
+    Map<Project, Set<Configuration>> buildscriptProjectConfigs = project.allprojects.collectEntries { proj ->
+      [proj, (Set) proj.buildscript.configurations ]
+    }
+    Set<DependencyStatus> buildscriptStatus = resolveProjects(buildscriptProjectConfigs, checkBuildEnvironmentConstraints)
+
+    def statuses = status + buildscriptStatus
+    VersionMapping versions = new VersionMapping(project, statuses)
     Set<UnresolvedDependency> unresolved =
-      status.findAll { it.unresolved != null }.collect { it.unresolved } as Set
-    Map<Map<String, String>, String> projectUrls = status.findAll { it.projectUrl }.collectEntries {
+      statuses.findAll { it.unresolved != null }.collect { it.unresolved } as Set
+    Map<Map<String, String>, String> projectUrls = statuses.findAll { it.projectUrl }.collectEntries {
       [[group: it.coordinate.groupId, name: it.coordinate.artifactId]: it.projectUrl]
     }
     return createReporter(versions, unresolved, projectUrls)
   }
 
-  private Set<DependencyStatus> resolveProjects(Map<Project, Set<Configuration>> projectConfigs) {
+  private Set<DependencyStatus> resolveProjects(Map<Project, Set<Configuration>> projectConfigs, boolean checkConstraints) {
     Set<DependencyStatus> resultStatusSet = []
     for(Project currentProject : projectConfigs.keySet()) {
       Resolver resolver = new Resolver(currentProject, resolutionStrategy, checkConstraints)
