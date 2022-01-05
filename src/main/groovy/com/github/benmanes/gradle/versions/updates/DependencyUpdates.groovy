@@ -54,11 +54,11 @@ class DependencyUpdates {
    */
   DependencyUpdatesReporter run() {
     Map<Project, Set<Configuration>> projectConfigs = project.allprojects
-      .collectEntries { proj -> [proj, proj.configurations ] }
+      .collectEntries { proj -> [proj, new LinkedHashSet<>(proj.configurations) ] }
     Set<DependencyStatus> status = resolveProjects(projectConfigs, checkConstraints)
 
     Map<Project, Set<Configuration>> buildscriptProjectConfigs = project.allprojects
-      .collectEntries { proj -> [proj, proj.buildscript.configurations ] }
+      .collectEntries { proj -> [proj, new LinkedHashSet<>(proj.buildscript.configurations) ] }
     Set<DependencyStatus> buildscriptStatus = resolveProjects(
       buildscriptProjectConfigs, checkBuildEnvironmentConstraints)
 
