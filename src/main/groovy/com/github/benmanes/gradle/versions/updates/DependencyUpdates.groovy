@@ -48,52 +48,58 @@ class DependencyUpdates {
   boolean checkConstraints
   boolean checkBuildEnvironmentConstraints
 
-  /** Evaluates the dependencies in two part,
-   * first the project dependencies and second the buildScript dependencies,
-   * to apply different options and returns a reporter. */
+  /**
+   * Evaluates the project dependencies and then the buildScript dependencies to apply different
+   * task options and returns a reporter for the results.
+   */
   DependencyUpdatesReporter run() {
-    Map<Project, Set<Configuration>> projectConfigs = project.allprojects.collectEntries { proj ->
-      [proj, (Set) proj.configurations ]
-    }
+    Map<Project, Set<Configuration>> projectConfigs = project.allprojects
+      .collectEntries { proj -> [proj, proj.configurations ] }
     Set<DependencyStatus> status = resolveProjects(projectConfigs, checkConstraints)
 
-    Map<Project, Set<Configuration>> buildscriptProjectConfigs = project.allprojects.collectEntries { proj ->
-      [proj, (Set) proj.buildscript.configurations ]
-    }
-    Set<DependencyStatus> buildscriptStatus = resolveProjects(buildscriptProjectConfigs, checkBuildEnvironmentConstraints)
+    Map<Project, Set<Configuration>> buildscriptProjectConfigs = project.allprojects
+      .collectEntries { proj -> [proj, proj.buildscript.configurations ] }
+    Set<DependencyStatus> buildscriptStatus = resolveProjects(
+      buildscriptProjectConfigs, checkBuildEnvironmentConstraints)
 
     def statuses = status + buildscriptStatus
     VersionMapping versions = new VersionMapping(project, statuses)
     Set<UnresolvedDependency> unresolved =
       statuses.findAll { it.unresolved != null }.collect { it.unresolved } as Set
-    Map<Map<String, String>, String> projectUrls = statuses.findAll { it.projectUrl }.collectEntries {
-      [[group: it.coordinate.groupId, name: it.coordinate.artifactId]: it.projectUrl]
-    }
+    Map<Map<String, String>, String> projectUrls = statuses
+      .findAll { it.projectUrl }
+      .collectEntries {
+        [[group: it.coordinate.groupId, name: it.coordinate.artifactId]: it.projectUrl]
+      }
     return createReporter(versions, unresolved, projectUrls)
   }
 
-  private Set<DependencyStatus> resolveProjects(Map<Project, Set<Configuration>> projectConfigs, boolean checkConstraints) {
-    Set<DependencyStatus> resultStatusSet = []
-    for(Project currentProject : projectConfigs.keySet()) {
+  private Set<DependencyStatus> resolveProjects(
+      Map<Project, Set<Configuration>> projectConfigs, boolean checkConstraints) {
+    Set<DependencyStatus> resultStatus = []
+    projectConfigs.each { currentProject, currentConfigurations ->
       Resolver resolver = new Resolver(currentProject, resolutionStrategy, checkConstraints)
-      for(Configuration currentConfiguration : projectConfigs.get(currentProject)) {
+      for (Configuration currentConfiguration : currentConfigurations) {
         for(DependencyStatus newStatus : resolve(resolver, currentProject, currentConfiguration)) {
-          addValidatedDependencyStatus(resultStatusSet, newStatus)
+          addValidatedDependencyStatus(resultStatus, newStatus)
         }
       }
     }
-    return resultStatusSet
+    return resultStatus
   }
 
   /**
-   * A new status will be added if
+   * A new status will be added if either,
    * <ol>
-   *   <li>{@link Coordinate.Key} of new status is not yet present in status collection <b>OR</b></li>
-   *   <li>new status has concrete version (not {@code none}); the old status will then be removed if its coordinate is {@code none} versioned</li>
+   *   <li>{@link Coordinate.Key} of new status is not yet present in status collection
+   *   <li>new status has concrete version (not {@code none}); the old status will then be removed
+   *       if its coordinate is {@code none} versioned</li>
    * </ol>
    */
-  private static void addValidatedDependencyStatus(Collection<DependencyStatus> statusCollection, DependencyStatus status) {
-    DependencyStatus statusWithSameCoordinateKey = statusCollection.find { DependencyStatus it -> it.coordinate.key == status.coordinate.key}
+  private static void addValidatedDependencyStatus(
+      Collection<DependencyStatus> statusCollection, DependencyStatus status) {
+    DependencyStatus statusWithSameCoordinateKey = statusCollection.find {
+        DependencyStatus it -> it.coordinate.key == status.coordinate.key}
     if( !statusWithSameCoordinateKey) {
       statusCollection.add(status)
     }
@@ -114,8 +120,8 @@ class DependencyUpdates {
     }
   }
 
-  private DependencyUpdatesReporter createReporter(
-    VersionMapping versions, Set<UnresolvedDependency> unresolved, Map<Map<String, String>, String> projectUrls) {
+  private DependencyUpdatesReporter createReporter(VersionMapping versions,
+      Set<UnresolvedDependency> unresolved, Map<Map<String, String>, String> projectUrls) {
     Map<Map<String, String>, Coordinate> currentVersions =
       versions.current.collectEntries { [[group: it.groupId, name: it.artifactId]: it] }
     Map<Map<String, String>, Coordinate> latestVersions =
@@ -128,9 +134,10 @@ class DependencyUpdates {
     // Check for Gradle updates.
     GradleUpdateChecker gradleUpdateChecker = new GradleUpdateChecker(checkForGradleUpdate)
 
-    return new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir, reportfileName,
-      currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions, versions.undeclared,
-      unresolved, projectUrls, gradleUpdateChecker, gradleReleaseChannel)
+    return new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir,
+      reportfileName, currentVersions, latestVersions, upToDateVersions, downgradeVersions,
+      upgradeVersions, versions.undeclared, unresolved, projectUrls, gradleUpdateChecker,
+      gradleReleaseChannel)
   }
 
   private static Map<Map<String, String>, Coordinate> toMap(Set<Coordinate> coordinates) {
