@@ -287,4 +287,124 @@ final class DifferentGradleVersionsSpec extends Specification {
     result.output.contains('com.google.inject:guice [3.0 -> 3.1]')
     srdErrWriter.toString().empty
   }
+
+  def 'dependencyUpdates task completes without errors if configuration cache is enabled with Gradle 7.4'() {
+    given:
+    def srdErrWriter = new StringWriter()
+
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'java'
+        apply plugin: "com.github.ben-manes.versions"
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation 'com.google.inject:guice:3.0'
+        }
+        """.stripIndent()
+
+    testProjectDir.newFolder("gradle")
+
+    when:
+    def result = GradleRunner.create()
+      .withGradleVersion('7.4-rc-2')
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates', '--configuration-cache')
+      .forwardStdError(srdErrWriter)
+      .build()
+
+    then:
+    result.output.contains('BUILD SUCCESSFUL')
+    srdErrWriter.toString().empty
+  }
+
+  @Unroll
+  def 'dependencyUpdates task fails if configuration cache is enabled with Gradle #gradleVersion'() {
+    given:
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'java'
+        apply plugin: "com.github.ben-manes.versions"
+
+        // Gradle 7.0+ do not allow directly using compile configuration so we monkey patch
+        // an implementation configuration in for older Gradle versions.
+        if (configurations.findByName('implementation') == null) {
+          configurations.create('implementation') {
+            extendsFrom configurations.compile
+          }
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation 'com.google.inject:guice:2.0'
+        }
+        """.stripIndent()
+
+    when:
+    def arguments = ['dependencyUpdates']
+    // Warning mode reporting only supported on recent versions.
+    if (gradleVersion.substring(0, gradleVersion.indexOf('.')).toInteger() >= 6) {
+      arguments.add('--warning-mode=fail')
+    }
+    arguments.add('-S')
+    arguments.add('--configuration-cache')
+    def result = GradleRunner.create()
+      .withGradleVersion(gradleVersion)
+      .withProjectDir(testProjectDir.root)
+      .withArguments(arguments)
+      .buildAndFail()
+
+    then:
+    result.output.contains('FAILURE: Build failed with an exception.')
+    result.output.contains('Configuration cache problems found in this build.')
+
+    where:
+    gradleVersion << [
+      '6.6',
+      '6.6.1',
+      '6.7',
+      '6.7.1',
+      '6.8',
+      '6.8.1',
+      '6.8.2',
+      '6.8.3',
+      '6.9',
+      '6.9.1',
+      '6.9.2',
+      '7.0',
+      '7.0.1',
+      '7.0.2',
+      '7.1',
+      '7.1.1',
+      '7.2',
+      '7.3',
+      '7.3.1',
+      '7.3.2',
+      '7.3.3',
+    ]
+  }
 }

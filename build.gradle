@@ -11,7 +11,7 @@ repositories {
 }
 
 group = 'com.github.ben-manes'
-version = '0.41.0'
+version = '0.42.0'
 
 sourceCompatibility = JavaVersion.VERSION_1_8
 
