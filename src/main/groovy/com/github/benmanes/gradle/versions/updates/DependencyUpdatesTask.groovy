@@ -88,6 +88,20 @@ class DependencyUpdatesTask extends DefaultTask {
     group = 'Help'
 
     outputs.upToDateWhen { false }
+
+    if(supportsIncompatibleWithConfigurationCache()) {
+      callIncompatibleWithConfigurationCache()
+    }
+  }
+
+  private boolean supportsIncompatibleWithConfigurationCache() {
+    return metaClass.respondsTo(this, "notCompatibleWithConfigurationCache", String)
+  }
+
+  private void callIncompatibleWithConfigurationCache() {
+    String methodName = "notCompatibleWithConfigurationCache"
+    Object[] methodArgs = ["The gradle-versions-plugin isn't compatible with the configuration cache"]
+    metaClass.invokeMethod(this, methodName, methodArgs)
   }
 
   @TaskAction
