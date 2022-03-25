@@ -41,6 +41,9 @@ import org.gradle.api.artifacts.result.ComponentArtifactsResult
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.attributes.HasConfigurableAttributes
 import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
+import org.gradle.api.internal.artifacts.configurations.DefaultConfiguration
+import org.gradle.api.internal.artifacts.configurations.ResolutionStrategyInternal
+import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.DefaultResolutionStrategy
 import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier
 import org.gradle.maven.MavenModule
 import org.gradle.maven.MavenPomArtifact
@@ -129,6 +132,12 @@ class Resolver {
     // https://github.com/ben-manes/gradle-versions-plugin/issues/127
     if (copy.metaClass.respondsTo(copy, "setCanBeResolved", Boolean)) {
       copy.setCanBeResolved(true)
+    }
+
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/592
+    // allow resolution of dynamic latest versions regardless of the original strategy
+    if(copy.resolutionStrategy.metaClass.hasProperty(copy.resolutionStrategy, "failOnDynamicVersions")) {
+      copy.resolutionStrategy.metaClass.setProperty(copy.resolutionStrategy, "failOnDynamicVersions", false)
     }
 
     // Resolve using the latest version of explicitly declared dependencies and retains Kotlin's
