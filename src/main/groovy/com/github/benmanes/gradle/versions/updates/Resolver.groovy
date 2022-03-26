@@ -131,6 +131,12 @@ class Resolver {
       copy.setCanBeResolved(true)
     }
 
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/592
+    // allow resolution of dynamic latest versions regardless of the original strategy
+    if(copy.resolutionStrategy.metaClass.hasProperty(copy.resolutionStrategy, "failOnDynamicVersions")) {
+      copy.resolutionStrategy.metaClass.setProperty(copy.resolutionStrategy, "failOnDynamicVersions", false)
+    }
+
     // Resolve using the latest version of explicitly declared dependencies and retains Kotlin's
     // inherited stdlib dependencies from the super configurations. This is required for variant
     // resolution, but the full set can break consumer capability matching.

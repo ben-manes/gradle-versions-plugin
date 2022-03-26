@@ -136,6 +136,30 @@ final class DependencyUpdatesSpec extends Specification {
     checkUndeclaredVersions(reporter)
   }
 
+  @Issue("https://github.com/ben-manes/gradle-versions-plugin/issues/592")
+  def 'Project configurations failOnDynamicVersions'() {
+    given:
+    def project = singleProject()
+    addRepositoryTo(project)
+    addDependenciesTo(project)
+    project.configurations.all {
+      resolutionStrategy {
+        failOnDynamicVersions()
+      }
+    }
+
+    when:
+    def reporter = evaluate(project)
+    reporter.write()
+
+    then:
+    checkUnresolvedVersions(reporter)
+    checkUpgradeVersions(reporter)
+    checkUpToDateVersions(reporter)
+    checkDowngradeVersions(reporter)
+    checkUndeclaredVersions(reporter)
+  }
+
   @Unroll
   def 'Single project (#revision, #outputFormat)'() {
     given:
