@@ -41,9 +41,6 @@ import org.gradle.api.artifacts.result.ComponentArtifactsResult
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.attributes.HasConfigurableAttributes
 import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
-import org.gradle.api.internal.artifacts.configurations.DefaultConfiguration
-import org.gradle.api.internal.artifacts.configurations.ResolutionStrategyInternal
-import org.gradle.api.internal.artifacts.ivyservice.resolutionstrategy.DefaultResolutionStrategy
 import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier
 import org.gradle.maven.MavenModule
 import org.gradle.maven.MavenPomArtifact
