@@ -47,7 +47,7 @@ task createClasspathManifest {
 
 // Add the classpath file to the test runtime classpath
 dependencies {
-  implementation 'com.thoughtworks.xstream:xstream:1.4.17'
+  implementation 'com.thoughtworks.xstream:xstream:1.4.19'
 
   testRuntimeOnly files(createClasspathManifest)
 
