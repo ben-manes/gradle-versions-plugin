@@ -33,7 +33,7 @@ jobs:
           arguments: clean build -s --scan
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: always()
         with:
           name: gradle-versions-plugin-${{ github.workflow }}-${{ github.run_id }}
