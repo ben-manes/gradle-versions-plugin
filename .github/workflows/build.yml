@@ -23,7 +23,7 @@ jobs:
       - name: Configure JDK
         uses: actions/setup-java@v3
         with:
-          distribution: 'adopt'
+          distribution: 'zulu'
           java-version: ${{ matrix.java-version }}
 
       - name: Run build with caching enabled
