@@ -23,13 +23,12 @@ jobs:
       - name: Configure JDK
         uses: actions/setup-java@v3
         with:
-          distribution: 'adopt'
+          distribution: 'zulu'
           java-version: ${{ matrix.java-version }}
 
       - name: Run build with caching enabled
-        uses: burrunan/gradle-cache-action@v1.10
+        uses: gradle/gradle-build-action@v2
         with:
-          remote-build-cache-proxy-enabled: false
           arguments: clean build -s --scan
 
       - name: Upload Artifacts

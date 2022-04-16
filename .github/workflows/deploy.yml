@@ -2,7 +2,7 @@ name: deploy
 
 on:
   release:
-    types: [created]
+    types: [ created ]
 
 jobs:
   publish:
@@ -18,14 +18,13 @@ jobs:
       - name: Configure JDK
         uses: actions/setup-java@v3
         with:
-          distribution: 'adopt'
+          distribution: 'zulu'
           java-version: 8
 
       - name: Publish
-        uses: burrunan/gradle-cache-action@v1
+        uses: gradle/gradle-build-action@v2
         with:
-          remote-build-cache-proxy-enabled: false
-          properties: |
-            gradle.publish.key=${{ secrets.GRADLE_PUBLISH_KEY }}
-            gradle.publish.secret=${{ secrets.GRADLE_PUBLISH_SECRET }}
-          arguments: publishPlugins -s --scan
+          arguments: |
+            publishPlugins -s --scan
+            -Pgradle.publish.key=${{ secrets.GRADLE_PUBLISH_KEY }}
+            -Pgradle.publish.secret=${{ secrets.GRADLE_PUBLISH_SECRET }}
