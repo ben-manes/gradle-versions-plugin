@@ -1,5 +1,5 @@
 plugins {
-  id 'com.gradle.plugin-publish' version '0.15.0'
+  id 'com.gradle.plugin-publish' version '0.21.0'
   id 'java-gradle-plugin'
   id 'maven-publish'
   id 'codenarc'
@@ -10,8 +10,8 @@ repositories {
   mavenCentral()
 }
 
-group = 'com.github.ben-manes'
-version = '0.42.0'
+group = GROUP
+version = VERSION_NAME
 
 sourceCompatibility = JavaVersion.VERSION_1_8
 
@@ -60,8 +60,8 @@ dependencies {
 jar {
   manifest {
     attributes(
-      'Implementation-Title': 'Gradle Versions plugin',
-      'Implementation-Version': archiveVersion,
+      'Implementation-Title': POM_NAME,
+      'Implementation-Version': VERSION_NAME,
       'Built-By': System.getProperty('user.name'),
       'Built-JDK': System.getProperty('java.version'),
       'Built-Gradle': gradle.gradleVersion
@@ -82,7 +82,7 @@ tasks.withType(Test) {
 task docsJar(type: Jar, dependsOn: groovydoc) {
   group = 'Publications'
   description = 'Create jar of documentation.'
-  archiveClassifier = 'docs'
+  archiveClassifier = 'javadoc'
   from groovydoc.destinationDir
 }
 
@@ -107,7 +107,7 @@ task reportsZip(type: Zip, dependsOn: check) {
   from reporting.baseDir
 }
 
-// Local published to ~/.m2 - mavenLocal()
+// Local published to ~/.m2 - mavenLocal() for testing
 publishing {
   repositories {
     mavenLocal()
@@ -122,16 +122,16 @@ publishing {
 
       pom {
         resolveStrategy = Closure.DELEGATE_FIRST
-        name = 'Gradle Versions plugin'
-        description = 'Gradle plugin that provides tasks for discovering dependency updates.'
-        url = 'https://github.com/ben-manes/gradle-versions-plugin'
-        inceptionYear = '2012'
+        name = POM_NAME
+        description = POM_DESCRIPTION
+        url = POM_URL
+        inceptionYear = POM_INCEPTION_YEAR
 
         licenses {
           license {
-            name = 'The Apache Software License, Version 2.0'
-            url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
-            distribution = 'repo'
+            name = POM_LICENSE_NAME
+            url = POM_LICENSE_URL
+            distribution = POM_LICENSE_DIST
           }
         }
 
@@ -152,15 +152,15 @@ publishing {
           }
         }
 
-        issueManagement {
-          system = 'github'
-          url = 'https://github.com/ben-manes/gradle-versions-plugin/issues'
+        scm {
+          url = POM_SCM_URL
+          connection = POM_SCM_CONNECTION
+          developerConnection = POM_SCM_DEV_CONNECTION
         }
 
-        scm {
-          url = 'https://github.com/ben-manes/gradle-versions-plugin'
-          connection = 'scm:https://ben-manes@github.com/ben-manes/gradle-versions-plugin.git'
-          developerConnection = 'scm:git://github.com/ben-manes/gradle-versions-plugin.git'
+        issueManagement {
+          system = POM_ISSUE_SYSTEM
+          url = POM_ISSUE_URL
         }
       }
     }
@@ -169,19 +169,18 @@ publishing {
 publish.dependsOn jar, docsJar, sourcesJar, testsJar, reportsZip
 publish.dependsOn 'generatePomFileForPluginMavenPublication'
 
+pluginBundle {
+  website = POM_URL
+  vcsUrl = POM_SCM_URL
+  tags = ['dependencies', 'versions', 'updates']
+}
 gradlePlugin {
   plugins {
     versionsPlugin {
       id = 'com.github.ben-manes.versions'
-      displayName = 'Gradle Versions Plugin'
+      displayName = POM_NAME
       implementationClass = 'com.github.benmanes.gradle.versions.VersionsPlugin'
-      description = 'Gradle plugin that provides tasks for discovering dependency updates.'
+      description = POM_DESCRIPTION
     }
   }
-}
-
-pluginBundle {
-  website = 'https://github.com/ben-manes/gradle-versions-plugin'
-  vcsUrl = 'https://github.com/ben-manes/gradle-versions-plugin'
-  tags = ['dependencies', 'versions', 'updates']
 }
