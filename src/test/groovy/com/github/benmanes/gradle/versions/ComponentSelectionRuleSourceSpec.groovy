@@ -54,7 +54,7 @@ final class ComponentSelectionRuleSourceSpec extends Specification {
         }
 
         dependencies {
-          compile 'com.google.inject:guice:2.0'
+          implementation 'com.google.inject:guice:2.0'
         }
 
         dependencyUpdates.resolutionStrategy ${assignment} {
