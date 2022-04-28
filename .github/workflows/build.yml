@@ -1,6 +1,11 @@
 name: build
 
-on: [ push, pull_request ]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [ opened, labeled, unlabeled, synchronize ]
 
 jobs:
   jvm:
@@ -18,18 +23,18 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Validate Gradle Wrapper
-        uses: gradle/wrapper-validation-action@v1
+        uses: gradle/wrapper-validation-action@v1.0.4
 
       - name: Configure JDK
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v3.1.0
         with:
-          distribution: 'zulu'
+          distribution: temurin
           java-version: ${{ matrix.java-version }}
 
       - name: Run build with caching enabled
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: clean build -s --scan
+          arguments: clean build -s
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
