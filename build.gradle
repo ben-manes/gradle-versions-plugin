@@ -46,6 +46,7 @@ dependencies {
   implementation 'com.thoughtworks.xstream:xstream:1.4.19'
   implementation 'com.squareup.okhttp3:okhttp:4.9.3'
   implementation 'com.squareup.moshi:moshi-kotlin:1.12.0'
+  implementation 'org.apache.maven:maven-model:3.8.5'
 
   testRuntimeOnly files(createClasspathManifest)
 

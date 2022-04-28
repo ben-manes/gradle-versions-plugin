@@ -25,6 +25,9 @@ import groovy.util.slurpersupport.GPathResult
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import javax.annotation.Nullable
+import org.apache.maven.model.Model
+import org.apache.maven.model.Parent
+import org.apache.maven.model.io.xpp3.MavenXpp3Reader
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ComponentMetadata
@@ -406,25 +409,25 @@ class Resolver {
     }
   }
 
-  @TypeChecked(SKIP) // GPathResult
   private static String getUrlFromPom(File file) {
-    GPathResult pom = new XmlSlurper(/* validating */ false, /* namespaceAware */ false).parse(file)
-    if (pom.url) {
-      return pom.url
+    MavenXpp3Reader mavenReader = new MavenXpp3Reader()
+    Model model = mavenReader.read(new FileReader(file), false)
+    String url = model.url
+    if (url != null) {
+      return url
     }
-    return pom.scm.url
+    return model.scm.url
   }
 
-  @TypeChecked(SKIP) // GPathResult
-  @Nullable
   private static ModuleVersionIdentifier getParentFromPom(File file) {
-    GPathResult pom = new XmlSlurper(/* validating */ false, /* namespaceAware */ false).parse(file)
-    GPathResult parent = pom.children().find { child -> child.name() == "parent" }
-    if (parent) {
+    MavenXpp3Reader mavenReader = new MavenXpp3Reader()
+    Model model = mavenReader.read(new FileReader(file), false)
+    Parent parent = model.parent
+    if (parent != null) {
       String groupId = parent.groupId
       String artifactId = parent.artifactId
       String version = parent.version
-      if (groupId && artifactId && version) {
+      if (groupId != null && artifactId != null && version != null) {
         return DefaultModuleVersionIdentifier.newId(groupId, artifactId, version)
       }
     }
