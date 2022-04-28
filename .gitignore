@@ -31,7 +31,6 @@
 # Gradle files
 .gradle/
 build/
-buildSrc/
 out/
 
 # Local configuration file (sdk path, etc)
@@ -69,9 +68,6 @@ gradle-app.setting
 # Cache of project
 .gradletasknamecache
 
-# # Work around https://youtrack.jetbrains.com/issue/IDEA-116898
-# gradle/wrapper/gradle-wrapper.properties
-
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
@@ -85,7 +81,6 @@ hs_err_pid*
 
 # Other
 bin
-build
 out
 .java-version
 .classpath
