@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
+
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentFilter
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionRulesWithCurrent
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
@@ -27,8 +29,6 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.util.ConfigureUtil
-
-import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 
 /**
  * A task that reports which dependencies have later versions.
@@ -89,7 +89,7 @@ class DependencyUpdatesTask extends DefaultTask {
 
     outputs.upToDateWhen { false }
 
-    if(supportsIncompatibleWithConfigurationCache()) {
+    if (supportsIncompatibleWithConfigurationCache()) {
       callIncompatibleWithConfigurationCache()
     }
   }
@@ -105,7 +105,7 @@ class DependencyUpdatesTask extends DefaultTask {
   }
 
   @TaskAction
-  def dependencyUpdates() {
+  void dependencyUpdates() {
     project.evaluationDependsOnChildren()
 
     if (resolutionStrategy != null) {
@@ -114,7 +114,7 @@ class DependencyUpdatesTask extends DefaultTask {
         'Remove the assignment operator, \'=\', when setting this task property')
     }
 
-    def evaluator = new DependencyUpdates(project, resolutionStrategyAction, revisionLevel(),
+    DependencyUpdates evaluator = new DependencyUpdates(project, resolutionStrategyAction, revisionLevel(),
       outputFormatterProp(), outputDirectory(), getReportfileName(), checkForGradleUpdate, gradleReleaseChannelLevel(),
       checkConstraints, checkBuildEnvironmentConstraints)
     DependencyUpdatesReporter reporter = evaluator.run()
@@ -125,16 +125,16 @@ class DependencyUpdatesTask extends DefaultTask {
    * Sets the {@link #resolutionStrategy} to the provided strategy.
    * @param resolutionStrategy the resolution strategy
    */
-  void resolutionStrategy(final Action<? super ResolutionStrategyWithCurrent> resolutionStrategy) {
+  void resolutionStrategy(Action<? super ResolutionStrategyWithCurrent> resolutionStrategy) {
     this.resolutionStrategyAction = resolutionStrategy
     this.resolutionStrategy = null
   }
 
-  void rejectVersionIf(final ComponentFilter filter) {
+  void rejectVersionIf(ComponentFilter filter) {
     resolutionStrategy { ResolutionStrategyWithCurrent strategy ->
       strategy.componentSelection { ComponentSelectionRulesWithCurrent selection ->
         selection.all { ComponentSelectionWithCurrent current ->
-          def isNotNull = current.currentVersion != null && current.candidate.version != null
+          boolean isNotNull = current.currentVersion != null && current.candidate.version != null
           if (isNotNull && filter.reject(current)) {
             current.reject("Rejected by rejectVersionIf ")
           }

@@ -12,12 +12,13 @@ import groovy.transform.TupleConstructor
 @TupleConstructor(callSuper = true, includeSuperProperties = true, includeSuperFields = true)
 class JsonReporter extends AbstractReporter {
 
-  def write(printStream, Result result) {
-    printStream.println new JsonBuilder(result).toPrettyString().stripMargin()
+  @Override
+  void write(Appendable printStream, Result result) {
+    printStream.println(new JsonBuilder(result).toPrettyString().stripMargin())
   }
 
   @Override
-  def getFileExtension() {
+  String getFileExtension() {
     return 'json'
   }
 }

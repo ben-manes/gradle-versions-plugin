@@ -34,8 +34,10 @@ class GradleUpdateChecker {
   private void fetch() {
     GradleReleaseChannel.values().each {
       try {
-        def versionObject = new JsonSlurper().parse(new URL(API_BASE_URL + it.id), [
-          'connectTimeout': TIMEOUT_MS, 'readTimeout': TIMEOUT_MS])
+        Map<String, Long> params = new HashMap<String, Long>()
+        params.put("connectTimeout", TIMEOUT_MS)
+        params.put("readTimeout", TIMEOUT_MS)
+        Object versionObject = new JsonSlurper().parse(new URL(API_BASE_URL + it.id), params)
         if (versionObject.version) {
           cacheMap.put(it, new ReleaseStatus.Available(GradleVersion.version(versionObject.version as String)))
         } else {
@@ -117,7 +119,7 @@ class GradleUpdateChecker {
     static class Failure extends ReleaseStatus {
       final String reason
 
-      private Failure(reason) {
+      private Failure(String reason) {
         this.reason = reason
       }
     }

@@ -13,7 +13,6 @@ class ComponentSelectionWithCurrent {
   @Delegate
   private final ComponentSelection delegate
 
-
   @Override
   String toString() {
     return """\
