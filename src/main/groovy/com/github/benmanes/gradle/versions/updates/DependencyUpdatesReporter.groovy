@@ -15,11 +15,15 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.NIGHTLY
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
+
+import com.github.benmanes.gradle.versions.reporter.AbstractReporter
+import com.github.benmanes.gradle.versions.reporter.HtmlReporter
 import com.github.benmanes.gradle.versions.reporter.JsonReporter
 import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
 import com.github.benmanes.gradle.versions.reporter.Reporter
 import com.github.benmanes.gradle.versions.reporter.XmlReporter
-import com.github.benmanes.gradle.versions.reporter.HtmlReporter
 import com.github.benmanes.gradle.versions.reporter.result.DependenciesGroup
 import com.github.benmanes.gradle.versions.reporter.result.Dependency
 import com.github.benmanes.gradle.versions.reporter.result.DependencyLatest
@@ -35,9 +39,6 @@ import groovy.transform.TupleConstructor
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ModuleVersionSelector
 import org.gradle.api.artifacts.UnresolvedDependency
-
-import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.NIGHTLY
-import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 
 /**
  * A reporter for the dependency updates results.
@@ -83,7 +84,7 @@ class DependencyUpdatesReporter {
 
   private static final Object MUTEX = new Object()
 
-  def write() {
+  void write() {
     synchronized (MUTEX) {
       if (!(outputFormatter instanceof Closure)) {
         PlainTextReporter plainTextReporter = new PlainTextReporter(project, revision, gradleReleaseChannel)
@@ -111,12 +112,12 @@ class DependencyUpdatesReporter {
     }
   }
 
-  def generateFileReport(Reporter reporter) {
+  void generateFileReport(Reporter reporter) {
     File filename = new File(outputDir, reportfileName + '.' + reporter.getFileExtension())
     project.file(outputDir).mkdirs()
     File outputFile = project.file(filename)
     outputFile.withPrintWriter { PrintWriter pw ->
-      def result = buildBaseObject()
+      Result result = buildBaseObject()
       reporter.write(pw, result)
     }
 
@@ -124,8 +125,8 @@ class DependencyUpdatesReporter {
   }
 
   Reporter getOutputReporter(String formatterOriginal) {
-    String formatter =  formatterOriginal.replaceAll("\\s", "")
-    def reporter
+    String formatter = formatterOriginal.replaceAll("\\s", "")
+    AbstractReporter reporter
 
     switch (formatter) {
       case 'json':
@@ -151,7 +152,7 @@ class DependencyUpdatesReporter {
     SortedSet SortedUndeclared = buildUndeclaredGroup()
     SortedSet sortedUnresolved = buildUnresolvedGroup()
 
-    def count = sortedCurrent.size() + sortedOutdated.size() + sortedExceeded.size() + SortedUndeclared.size() + sortedUnresolved.size()
+    int count = sortedCurrent.size() + sortedOutdated.size() + sortedExceeded.size() + SortedUndeclared.size() + sortedUnresolved.size()
 
     buildObject(
       count,
@@ -206,16 +207,16 @@ class DependencyUpdatesReporter {
   }
 
   protected SortedSet buildUndeclaredGroup() {
-    return undeclared.collect { Coordinate coordinate -> new Dependency(coordinate.groupId, coordinate.artifactId)} as SortedSet
+    return undeclared.collect { Coordinate coordinate -> new Dependency(coordinate.groupId, coordinate.artifactId) } as SortedSet
   }
 
   protected SortedSet<DependencyUnresolved> buildUnresolvedGroup() {
     unresolved.sort { UnresolvedDependency a, UnresolvedDependency b ->
       compareKeys(keyOf(a.selector), keyOf(b.selector))
     }.collect { UnresolvedDependency dep ->
-      def stringWriter = new StringWriter()
+      StringWriter stringWriter = new StringWriter()
       dep.problem.printStackTrace(new PrintWriter(stringWriter))
-      def message = stringWriter.toString()
+      String message = stringWriter.toString()
 
       buildUnresolvedDependency(dep.selector, message)
     } as SortedSet
@@ -236,17 +237,17 @@ class DependencyUpdatesReporter {
     new DependenciesGroup<T>(dependencies.size(), dependencies)
   }
 
-  protected def buildDependency(Coordinate coordinate, Map<String, String> key) {
+  protected Dependency buildDependency(Coordinate coordinate, Map<String, String> key) {
     new Dependency(key['group'], key['name'], coordinate.getVersion(), projectUrls[key],
       coordinate.getUserReason())
   }
 
-  protected def buildExceededDependency(Coordinate coordinate, Map<String, String> key) {
+  protected DependencyLatest buildExceededDependency(Coordinate coordinate, Map<String, String> key) {
     new DependencyLatest(key['group'], key['name'], coordinate?.getVersion(), projectUrls[key],
       coordinate?.getUserReason(), latestVersions[key]?.getVersion())
   }
 
-  protected def buildUnresolvedDependency(ModuleVersionSelector selector, String message) {
+  protected DependencyUnresolved buildUnresolvedDependency(ModuleVersionSelector selector, String message) {
     new DependencyUnresolved(selector.group, selector.name,
       currentVersions[keyOf(selector)]?.getVersion(),
       latestVersions[keyOf(selector)]?.getVersion(),
@@ -254,8 +255,8 @@ class DependencyUpdatesReporter {
       message)
   }
 
-  protected def buildOutdatedDependency(Coordinate coordinate, Map<String, String> key) {
-    def available
+  protected DependencyOutdated buildOutdatedDependency(Coordinate coordinate, Map<String, String> key) {
+    VersionAvailable available
 
     String laterVersion = latestVersions[key]?.getVersion()
     switch (revision) {
@@ -275,12 +276,12 @@ class DependencyUpdatesReporter {
 
   static Map<Map<String, String>, Coordinate> sortByGroupAndName(Map<Map<String, String>, Coordinate> dependencies) {
     dependencies.sort { Map.Entry<Map<String, String>, Coordinate> a,
-      Map.Entry<Map<String, String>, Coordinate> b -> compareKeys(a.key, b.key)
+                        Map.Entry<Map<String, String>, Coordinate> b -> compareKeys(a.key, b.key)
     }
   }
 
   /** Compares the dependency keys. */
-  protected static def compareKeys(Map<String, String> a, Map<String, String> b) {
+  protected static int compareKeys(Map<String, String> a, Map<String, String> b) {
     (a['group'] == b['group']) ? a['name'] <=> b['name'] : a['group'] <=> b['group']
   }
 

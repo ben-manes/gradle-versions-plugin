@@ -15,7 +15,7 @@ interface Reporter {
    * @param result the result of the dependency update analysis
    * @see Result
    */
-  def write(target, Result result)
+  void write(Appendable target, Result result)
 
-  def getFileExtension()
+  String getFileExtension()
 }

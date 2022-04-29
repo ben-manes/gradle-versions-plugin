@@ -18,6 +18,7 @@ package com.github.benmanes.gradle.versions.updates
 import groovy.transform.CompileStatic
 import org.gradle.api.Project
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionComparator
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.Version
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
 
 /**
@@ -77,9 +78,9 @@ class VersionMapping {
     }
   }
 
-  private Comparator<String> makeVersionComparator() {
-    def baseComparator = new DefaultVersionComparator().asVersionComparator()
-    def versionParser = new VersionParser()
+  private static Comparator<String> makeVersionComparator() {
+    Comparator<Version> baseComparator = new DefaultVersionComparator().asVersionComparator()
+    VersionParser versionParser = new VersionParser()
     return new Comparator<String>() {
       int compare(String string1, String string2) {
         return baseComparator.compare(

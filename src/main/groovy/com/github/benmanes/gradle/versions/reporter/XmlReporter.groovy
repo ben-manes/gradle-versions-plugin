@@ -19,7 +19,7 @@ import groovy.transform.TupleConstructor
 class XmlReporter extends AbstractReporter {
 
   @Override
-  def write(printStream, Result result) {
+  void write(Appendable printStream, Result result) {
 
     XStream xstream = new XStream()
     xstream.with {
@@ -32,12 +32,12 @@ class XmlReporter extends AbstractReporter {
       alias('group', DependenciesGroup)
     }
 
-    printStream.println '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-    printStream.println xstream.toXML(result).stripMargin()
+    printStream.println('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+    printStream.println(xstream.toXML(result).stripMargin())
   }
 
   @Override
-  def getFileExtension() {
+  String getFileExtension() {
     return 'xml'
   }
 }

@@ -17,6 +17,7 @@ package com.github.benmanes.gradle.versions.updates
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import javax.annotation.Nullable
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
@@ -32,9 +33,9 @@ class Coordinate implements Comparable<Coordinate> {
   final String groupId
   final String artifactId
   final String version
-  final String userReason
+  @Nullable final String userReason
 
-  Coordinate(String groupId, String artifactId, String version, String userReason) {
+  Coordinate(String groupId, String artifactId, String version, @Nullable String userReason) {
     this.groupId = groupId ?: 'none'
     this.artifactId = artifactId ?: 'none'
     this.version = version ?: 'none'

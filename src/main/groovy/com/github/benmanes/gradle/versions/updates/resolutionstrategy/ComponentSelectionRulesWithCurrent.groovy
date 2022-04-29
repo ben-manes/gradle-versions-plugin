@@ -3,6 +3,7 @@ package com.github.benmanes.gradle.versions.updates.resolutionstrategy
 import com.github.benmanes.gradle.versions.updates.Coordinate
 import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
+import javax.annotation.Nullable
 import org.gradle.api.Action
 import org.gradle.api.artifacts.ComponentSelection
 import org.gradle.api.artifacts.ComponentSelectionRules
@@ -19,6 +20,7 @@ class ComponentSelectionRulesWithCurrent {
   ComponentSelectionRulesWithCurrent all(
       Action<? super ComponentSelectionWithCurrent> selectionAction) {
     delegate.all(new Action<ComponentSelection>() {
+      @Override
       void execute(ComponentSelection inner) {
         ComponentSelectionWithCurrent wrapped = wrapComponentSelection(inner)
         if (wrapped != null) {
@@ -31,6 +33,7 @@ class ComponentSelectionRulesWithCurrent {
 
   ComponentSelectionRulesWithCurrent all(Closure<?> closure) {
     delegate.all(new Action<ComponentSelection>() {
+      @Override
       void execute(ComponentSelection inner) {
         ComponentSelectionWithCurrent wrapped = wrapComponentSelection(inner)
         if (wrapped != null) {
@@ -46,10 +49,11 @@ class ComponentSelectionRulesWithCurrent {
     RuleSourceBackedRuleAction<Object, ComponentSelectionWithCurrent> ruleAction = RuleSourceBackedRuleAction.create(
       ModelType.of(ComponentSelectionWithCurrent), ruleSource)
     delegate.all(new Action<ComponentSelection>() {
+      @Override
       void execute(ComponentSelection inner) {
         ComponentSelectionWithCurrent wrapped = wrapComponentSelection(inner)
         if (wrapped != null) {
-          ruleAction.execute(wrapped, [])
+          ruleAction.execute(wrapped, new ArrayList<Object>())
         }
       }
     })
@@ -59,6 +63,7 @@ class ComponentSelectionRulesWithCurrent {
   ComponentSelectionRulesWithCurrent withModule(Object id,
       Action<? super ComponentSelectionWithCurrent> selectionAction) {
     delegate.withModule(id, new Action<ComponentSelection>() {
+      @Override
       void execute(ComponentSelection inner) {
         ComponentSelectionWithCurrent wrapped = wrapComponentSelection(inner)
         if (wrapped != null) {
@@ -71,6 +76,7 @@ class ComponentSelectionRulesWithCurrent {
 
   ComponentSelectionRulesWithCurrent withModule(Object id, Closure<?> closure) {
     delegate.withModule(id, new Action<ComponentSelection>() {
+      @Override
       void execute(ComponentSelection inner) {
         ComponentSelectionWithCurrent wrapped = wrapComponentSelection(inner)
         if (wrapped != null) {
@@ -86,20 +92,24 @@ class ComponentSelectionRulesWithCurrent {
     RuleSourceBackedRuleAction<Object, ComponentSelectionWithCurrent> ruleAction = RuleSourceBackedRuleAction.create(
       ModelType.of(ComponentSelectionWithCurrent), ruleSource)
     delegate.withModule(id, new Action<ComponentSelection>() {
+      @Override
       void execute(ComponentSelection inner) {
         ComponentSelectionWithCurrent wrapped = wrapComponentSelection(inner)
         if (wrapped != null) {
-          ruleAction.execute(wrapped, [])
+          ruleAction.execute(wrapped, new ArrayList<Object>())
         }
       }
     })
     return this
   }
 
+  @Nullable
   private ComponentSelectionWithCurrent wrapComponentSelection(ComponentSelection inner) {
     Coordinate candidateCoordinate = Coordinate.from(inner.candidate)
     Coordinate current = currentCoordinates.get(candidateCoordinate.key)
-    if (current == null) return null
+    if (current == null) {
+      return null
+    }
 
     return new ComponentSelectionWithCurrent(current?.version, inner)
   }

@@ -15,9 +15,16 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
+import static groovy.transform.TypeCheckingMode.SKIP
+import static org.gradle.api.specs.Specs.SATISFIES_ALL
+
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.transform.CompileStatic
 import groovy.transform.TypeChecked
+import groovy.util.slurpersupport.GPathResult
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
+import javax.annotation.Nullable
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ComponentMetadata
@@ -39,17 +46,12 @@ import org.gradle.api.artifacts.result.ArtifactResolutionResult
 import org.gradle.api.artifacts.result.ArtifactResult
 import org.gradle.api.artifacts.result.ComponentArtifactsResult
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
+import org.gradle.api.attributes.Attribute
 import org.gradle.api.attributes.HasConfigurableAttributes
 import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
 import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier
 import org.gradle.maven.MavenModule
 import org.gradle.maven.MavenPomArtifact
-
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentMap
-
-import static groovy.transform.TypeCheckingMode.SKIP
-import static org.gradle.api.specs.Specs.SATISFIES_ALL
 
 /**
  * Resolves the configuration to determine the version status of its dependencies.
@@ -85,7 +87,7 @@ class Resolver {
 
   /** Returns the version status of the configuration's dependencies. */
   private Set<DependencyStatus> getStatus(Map<Coordinate.Key, Coordinate> coordinates,
-    Set<ResolvedDependency> resolved, Set<UnresolvedDependency> unresolved) {
+                                          Set<ResolvedDependency> resolved, Set<UnresolvedDependency> unresolved) {
     Set<DependencyStatus> result = new HashSet<>()
 
     resolved.each { dependency ->
@@ -110,7 +112,7 @@ class Resolver {
 
   /** Returns a copy of the configuration where dependencies will be resolved up to the revision. */
   private Configuration createLatestConfiguration(Configuration configuration, String revision,
-      Map<Coordinate.Key, Coordinate> currentCoordinates) {
+                                                  Map<Coordinate.Key, Coordinate> currentCoordinates) {
     List<Dependency> latest = configuration.dependencies.findAll { dependency ->
       dependency instanceof ExternalDependency
     }.collect { dependency ->
@@ -133,7 +135,7 @@ class Resolver {
 
     // https://github.com/ben-manes/gradle-versions-plugin/issues/592
     // allow resolution of dynamic latest versions regardless of the original strategy
-    if(copy.resolutionStrategy.metaClass.hasProperty(copy.resolutionStrategy, "failOnDynamicVersions")) {
+    if (copy.resolutionStrategy.metaClass.hasProperty(copy.resolutionStrategy, "failOnDynamicVersions")) {
       copy.resolutionStrategy.metaClass.setProperty(copy.resolutionStrategy, "failOnDynamicVersions", false)
     }
 
@@ -175,8 +177,8 @@ class Resolver {
     // In the case of another plugin we use '+' in the hope that the plugin will not restrict the
     // query (see issue #97). Otherwise if its a file then use 'none' to pass it through.
     String version = (dependency.version == null)
-        ? (dependency.artifacts.empty ? '+' : 'none')
-        : '+'
+      ? (dependency.artifacts.empty ? '+' : 'none')
+      : '+'
 
     // Format the query with an optional classifier and extension
     String query = "${dependency.group}:${dependency.name}:${version}"
@@ -189,7 +191,7 @@ class Resolver {
       }
     }
 
-    def latest = project.dependencies.create(query) {
+    Dependency latest = project.dependencies.create(query) {
       transitive = false
     }
 
@@ -213,12 +215,13 @@ class Resolver {
   }
 
   /** Adds the attributes from the source to the target. */
+  @TypeChecked(SKIP)
   private static void addAttributes(HasConfigurableAttributes target,
-      HasConfigurableAttributes source, Closure filter = { String key -> true }) {
+                                    HasConfigurableAttributes source, Closure filter = { String key -> true }) {
     target.attributes { container ->
-      for (def key : source.attributes.keySet()) {
+      for (Attribute<?> key : source.attributes.keySet()) {
         if (filter.call(key.name)) {
-          def value = source.attributes.getAttribute(key)
+          Object value = source.attributes.getAttribute(key)
           container.attribute(key, value)
         }
       }
@@ -230,25 +233,25 @@ class Resolver {
   private static void addRevisionFilter(Configuration configuration, String revision) {
     configuration.resolutionStrategy { ResolutionStrategy componentSelection ->
       componentSelection.componentSelection { rules ->
-        def revisionFilter = { ComponentSelection selection, ComponentMetadata metadata ->
+        Closure revisionFilter = { ComponentSelection selection, ComponentMetadata metadata ->
           boolean accepted = (metadata == null) ||
-              ((revision == 'release') && (metadata.status == 'release')) ||
-              ((revision == 'milestone') && (metadata.status != 'integration')) ||
-              (revision == 'integration') || (selection.candidate.version == 'none')
+            ((revision == 'release') && (metadata.status == 'release')) ||
+            ((revision == 'milestone') && (metadata.status != 'integration')) ||
+            (revision == 'integration') || (selection.candidate.version == 'none')
           if (!accepted) {
             selection.reject("Component status ${metadata.status} rejected by revision ${revision}")
           }
         }
         rules.all ComponentSelection.methods.any { it.name == 'getMetadata' }
-            ? { revisionFilter(it, it.metadata) }
-            : revisionFilter
+          ? { revisionFilter(it, it.metadata) }
+          : revisionFilter
       }
     }
   }
 
   /** Adds a custom resolution strategy only applicable for the dependency updates task. */
   private void addCustomResolutionStrategy(Configuration configuration,
-      Map<Coordinate.Key, Coordinate> currentCoordinates) {
+                                           Map<Coordinate.Key, Coordinate> currentCoordinates) {
     if (resolutionStrategy != null) {
       configuration.resolutionStrategy(new Action<ResolutionStrategy>() {
         @Override
@@ -285,7 +288,7 @@ class Resolver {
 
     Set<ResolvedDependency> resolved = lenient.getFirstLevelModuleDependencies(SATISFIES_ALL)
     for (ResolvedDependency dependency : resolved) {
-        Coordinate coordinate = Coordinate.from(dependency.module.id, declared)
+      Coordinate coordinate = Coordinate.from(dependency.module.id, declared)
       coordinates.put(coordinate.key, coordinate)
     }
 
@@ -339,6 +342,7 @@ class Resolver {
     }
   }
 
+  @Nullable
   private String getProjectUrl(ModuleVersionIdentifier id) {
     if (project.getGradle().startParameter.isOffline()) {
       return null
@@ -358,6 +362,7 @@ class Resolver {
     }
   }
 
+  @Nullable
   private String resolveProjectUrl(ModuleVersionIdentifier id) {
     try {
       ArtifactResolutionResult resolutionResult = project.dependencies.createArtifactResolutionQuery()
@@ -399,7 +404,7 @@ class Resolver {
 
   @TypeChecked(SKIP)
   private static String getUrlFromPom(File file) {
-    def pom = new XmlSlurper(/* validating */ false, /* namespaceAware */ false).parse(file)
+    GPathResult pom = new XmlSlurper(/* validating */ false, /* namespaceAware */ false).parse(file)
     if (pom.url) {
       return pom.url
     }
@@ -407,9 +412,10 @@ class Resolver {
   }
 
   @TypeChecked(SKIP)
+  @Nullable
   private static ModuleVersionIdentifier getParentFromPom(File file) {
-    def pom = new XmlSlurper(/* validating */ false, /* namespaceAware */ false).parse(file)
-    def parent = pom.children().find { child -> child.name() == 'parent' }
+    GPathResult pom = new XmlSlurper(/* validating */ false, /* namespaceAware */ false).parse(file)
+    GPathResult parent = pom.children().find { child -> child.name() == 'parent' }
     if (parent) {
       String groupId = parent.groupId
       String artifactId = parent.artifactId
@@ -423,7 +429,7 @@ class Resolver {
 
   private boolean supportsConstraints(Configuration configuration) {
     return checkConstraints &&
-        configuration.metaClass.respondsTo(configuration, "getDependencyConstraints")
+      configuration.metaClass.respondsTo(configuration, "getDependencyConstraints")
   }
 
   private List<Coordinate> getResolvableDependencies(Configuration configuration) {

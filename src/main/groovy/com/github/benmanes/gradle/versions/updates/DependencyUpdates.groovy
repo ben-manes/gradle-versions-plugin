@@ -54,15 +54,15 @@ class DependencyUpdates {
    */
   DependencyUpdatesReporter run() {
     Map<Project, Set<Configuration>> projectConfigs = project.allprojects
-      .collectEntries { proj -> [proj, new LinkedHashSet<>(proj.configurations) ] }
+      .collectEntries { proj -> [proj, new LinkedHashSet<>(proj.configurations)] }
     Set<DependencyStatus> status = resolveProjects(projectConfigs, checkConstraints)
 
     Map<Project, Set<Configuration>> buildscriptProjectConfigs = project.allprojects
-      .collectEntries { proj -> [proj, new LinkedHashSet<>(proj.buildscript.configurations) ] }
+      .collectEntries { proj -> [proj, new LinkedHashSet<>(proj.buildscript.configurations)] }
     Set<DependencyStatus> buildscriptStatus = resolveProjects(
       buildscriptProjectConfigs, checkBuildEnvironmentConstraints)
 
-    def statuses = status + buildscriptStatus
+    Set<DependencyStatus> statuses = status + buildscriptStatus
     VersionMapping versions = new VersionMapping(project, statuses)
     Set<UnresolvedDependency> unresolved =
       statuses.findAll { it.unresolved != null }.collect { it.unresolved } as Set
@@ -75,12 +75,12 @@ class DependencyUpdates {
   }
 
   private Set<DependencyStatus> resolveProjects(
-      Map<Project, Set<Configuration>> projectConfigs, boolean checkConstraints) {
+    Map<Project, Set<Configuration>> projectConfigs, boolean checkConstraints) {
     Set<DependencyStatus> resultStatus = []
     projectConfigs.each { currentProject, currentConfigurations ->
       Resolver resolver = new Resolver(currentProject, resolutionStrategy, checkConstraints)
       for (Configuration currentConfiguration : currentConfigurations) {
-        for(DependencyStatus newStatus : resolve(resolver, currentProject, currentConfiguration)) {
+        for (DependencyStatus newStatus : resolve(resolver, currentProject, currentConfiguration)) {
           addValidatedDependencyStatus(resultStatus, newStatus)
         }
       }
@@ -97,15 +97,15 @@ class DependencyUpdates {
    * </ol>
    */
   private static void addValidatedDependencyStatus(
-      Collection<DependencyStatus> statusCollection, DependencyStatus status) {
+    Collection<DependencyStatus> statusCollection, DependencyStatus status) {
     DependencyStatus statusWithSameCoordinateKey = statusCollection.find {
-        DependencyStatus it -> it.coordinate.key == status.coordinate.key}
-    if( !statusWithSameCoordinateKey) {
-      statusCollection.add(status)
+      DependencyStatus it -> it.coordinate.key == status.coordinate.key
     }
-    else if(status.coordinate.version != 'none') {
+    if (!statusWithSameCoordinateKey) {
       statusCollection.add(status)
-      if(statusWithSameCoordinateKey.coordinate.version == 'none') {
+    } else if (status.coordinate.version != 'none') {
+      statusCollection.add(status)
+      if (statusWithSameCoordinateKey.coordinate.version == 'none') {
         statusCollection.remove(statusWithSameCoordinateKey)
       }
     }
@@ -121,7 +121,7 @@ class DependencyUpdates {
   }
 
   private DependencyUpdatesReporter createReporter(VersionMapping versions,
-      Set<UnresolvedDependency> unresolved, Map<Map<String, String>, String> projectUrls) {
+                                                   Set<UnresolvedDependency> unresolved, Map<Map<String, String>, String> projectUrls) {
     Map<Map<String, String>, Coordinate> currentVersions =
       versions.current.collectEntries { [[group: it.groupId, name: it.artifactId]: it] }
     Map<Map<String, String>, Coordinate> latestVersions =
@@ -145,7 +145,7 @@ class DependencyUpdates {
     for (Coordinate coordinate : coordinates) {
       for (int i = 0; ; i++) {
         String artifactId = coordinate.artifactId + ((i == 0) ? '' : "[${i + 1}]")
-        def key = [group: coordinate.groupId, name: artifactId]
+        LinkedHashMap<String, String> key = [group: coordinate.groupId, name: artifactId]
         if (!map.containsKey(key)) {
           map.put(key, coordinate)
           break

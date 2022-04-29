@@ -15,6 +15,10 @@
  */
 package com.github.benmanes.gradle.versions.reporter
 
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.CURRENT
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.NIGHTLY
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
+
 import com.github.benmanes.gradle.versions.reporter.result.Dependency
 import com.github.benmanes.gradle.versions.reporter.result.DependencyLatest
 import com.github.benmanes.gradle.versions.reporter.result.DependencyOutdated
@@ -22,10 +26,6 @@ import com.github.benmanes.gradle.versions.reporter.result.DependencyUnresolved
 import com.github.benmanes.gradle.versions.reporter.result.Result
 import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
-
-import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.CURRENT
-import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.NIGHTLY
-import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 
 /**
  * A plain text reporter for the dependency updates results.
@@ -35,17 +35,18 @@ import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseCh
 class PlainTextReporter extends AbstractReporter {
 
   /** Writes the report to the print stream. The stream is not automatically closed. */
-  def write(printStream, Result result) {
+  @Override
+  void write(Appendable printStream, Result result) {
     writeHeader(printStream)
 
     if (result.count == 0) {
       printStream.println()
-      printStream.println 'No dependencies found.'
+      printStream.println('No dependencies found.')
     } else {
       writeUpToDate(printStream, result)
       writeExceedLatestFound(printStream, result)
       writeUpgrades(printStream, result)
-      writeUndeclared(printStream,result)
+      writeUndeclared(printStream, result)
       writeUnresolved(printStream, result)
     }
 
@@ -53,18 +54,18 @@ class PlainTextReporter extends AbstractReporter {
   }
 
   @Override
-  def getFileExtension() {
+  String getFileExtension() {
     return 'txt'
   }
 
-  private def writeHeader(printStream) {
+  private void writeHeader(Appendable printStream) {
     printStream.println()
     printStream.println("------------------------------------------------------------")
     printStream.println("${project.path} Project Dependency Updates (report to plain text file)")
     printStream.println("------------------------------------------------------------")
   }
 
-  private def writeGradleUpdates(printStream, Result result) {
+  private void writeGradleUpdates(Appendable printStream, Result result) {
     if (!result.gradle.isEnabled()) {
       return
     }
@@ -105,85 +106,87 @@ class PlainTextReporter extends AbstractReporter {
     }
   }
 
-  private def writeUpToDate(printStream, Result result) {
+  private void writeUpToDate(Appendable printStream, Result result) {
     SortedSet<Dependency> upToDateVersions = result.current.dependencies
     if (!upToDateVersions.isEmpty()) {
       printStream.println()
       printStream.println(
         "The following dependencies are using the latest ${revision} version:")
-      upToDateVersions.each { printStream.println " - ${label(it)}:${it.version}"
-      if (it.getUserReason()) {
-        printStream.println("     ${it.getUserReason()}")
-      }}
+      upToDateVersions.each {
+        printStream.println(" - ${label(it)}:${it.version}")
+        if (it.getUserReason()) {
+          printStream.println("     ${it.getUserReason()}")
+        }
+      }
     }
   }
 
-  private def writeExceedLatestFound(printStream, Result result) {
-    def downgradeVersions = result.exceeded.dependencies
+  private void writeExceedLatestFound(Appendable printStream, Result result) {
+    SortedSet<DependencyLatest> downgradeVersions = result.exceeded.dependencies
     if (!downgradeVersions.isEmpty()) {
       printStream.println()
       printStream.println("The following dependencies exceed the version found at the ${revision} revision level:")
       downgradeVersions.each { DependencyLatest dep ->
-        def currentVersion = dep.version
-        printStream.println " - ${label(dep)} [${currentVersion} <- ${dep.latest}]"
+        String currentVersion = dep.version
+        printStream.println(" - ${label(dep)} [${currentVersion} <- ${dep.latest}]")
         if (dep.getUserReason()) {
           printStream.println("     ${dep.getUserReason()}")
         }
         if (dep.projectUrl != null) {
-          printStream.println "     ${dep.projectUrl}"
+          printStream.println("     ${dep.projectUrl}")
         }
       }
     }
   }
 
-  private def writeUpgrades(printStream, Result result) {
-    def upgradeVersions = result.outdated.dependencies
+  private void writeUpgrades(Appendable printStream, Result result) {
+    SortedSet<DependencyOutdated> upgradeVersions = result.outdated.dependencies
     if (!upgradeVersions.isEmpty()) {
       printStream.println()
-      printStream.println "The following dependencies have later ${revision} versions:"
+      printStream.println("The following dependencies have later ${revision} versions:")
       upgradeVersions.each { DependencyOutdated dep ->
-        def currentVersion = dep.version
-        printStream.println " - ${label(dep)} [${currentVersion} -> ${dep.available[revision]}]"
+        String currentVersion = dep.version
+        printStream.println(" - ${label(dep)} [${currentVersion} -> ${dep.available[revision]}]")
         if (dep.getUserReason()) {
           printStream.println("     ${dep.getUserReason()}")
         }
         if (dep.projectUrl != null) {
-          printStream.println "     ${dep.projectUrl}"
+          printStream.println("     ${dep.projectUrl}")
         }
       }
     }
   }
 
-  private void writeUndeclared(Object printStream, Result result) {
+  private static void writeUndeclared(Appendable printStream, Result result) {
     Collection<Dependency> undeclaredVersions = result.undeclared.dependencies
-    if(!undeclaredVersions.empty) {
+    if (!undeclaredVersions.empty) {
       printStream.println()
-      printStream.println( 'Failed to compare versions for the following dependencies because they were declared without version:')
-      undeclaredVersions.each { Dependency dependency -> printStream.println( " - ${label(dependency)}")}
+      printStream.println("Failed to compare versions for the following dependencies because they were declared without version:")
+      undeclaredVersions.each { Dependency dependency -> printStream.println(" - ${label(dependency)}") }
     }
   }
 
-  private def writeUnresolved(printStream, Result result) {
-    def unresolved = result.unresolved.dependencies
+  private void writeUnresolved(Appendable printStream, Result result) {
+    SortedSet<DependencyUnresolved> unresolved = result.unresolved.dependencies
     if (!unresolved.isEmpty()) {
       printStream.println()
       printStream.println(
-        'Failed to determine the latest version for the following dependencies (use --info for details):')
+        "Failed to determine the latest version for the following dependencies (use --info for details):")
       unresolved.each { DependencyUnresolved dep ->
-        printStream.println ' - ' + label(dep)
+        printStream.println(' - ' + label(dep))
         if (dep.getUserReason()) {
           printStream.println("     ${dep.getUserReason()}")
         }
         if (dep.projectUrl != null) {
-          printStream.println "     ${dep.projectUrl}"
+          printStream.println("     ${dep.projectUrl}")
         }
-        project.logger.info 'The exception that is the cause of unresolved state: {}', dep.reason
+        project.logger.info('The exception that is the cause of unresolved state: {}', dep.reason)
       }
     }
   }
 
   /** Returns the dependency key as a stringified label. */
-  private static def label(Dependency dependency) {
-    dependency.group + ':' + dependency.name
+  private static String label(Dependency dependency) {
+    return dependency.group + ':' + dependency.name
   }
 }
