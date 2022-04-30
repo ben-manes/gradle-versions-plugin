@@ -23,21 +23,21 @@ class XmlReporter extends AbstractReporter {
 
     XStream xstream = new XStream()
     xstream.with {
-      alias('response', Result)
-      alias('available', VersionAvailable)
-      alias('exceededDependency', DependencyLatest)
-      alias('outdatedDependency', DependencyOutdated)
-      alias('unresolvedDependency', DependencyUnresolved)
-      alias('dependency', Dependency)
-      alias('group', DependenciesGroup)
+      alias("response", Result)
+      alias("available", VersionAvailable)
+      alias("exceededDependency", DependencyLatest)
+      alias("outdatedDependency", DependencyOutdated)
+      alias("unresolvedDependency", DependencyUnresolved)
+      alias("dependency", Dependency)
+      alias("group", DependenciesGroup)
     }
 
-    printStream.println('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
+    printStream.println("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>")
     printStream.println(xstream.toXML(result).stripMargin())
   }
 
   @Override
   String getFileExtension() {
-    return 'xml'
+    return "xml"
   }
 }

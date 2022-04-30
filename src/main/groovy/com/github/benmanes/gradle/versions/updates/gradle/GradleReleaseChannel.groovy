@@ -7,9 +7,9 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 enum GradleReleaseChannel {
-  CURRENT('current'),
-  RELEASE_CANDIDATE('release-candidate'),
-  NIGHTLY('nightly')
+  CURRENT("current"),
+  RELEASE_CANDIDATE("release-candidate"),
+  NIGHTLY("nightly")
 
   final String id
 

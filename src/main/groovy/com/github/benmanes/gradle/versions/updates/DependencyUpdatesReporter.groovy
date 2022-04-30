@@ -36,6 +36,7 @@ import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResult
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
 import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
+import javax.annotation.Nullable
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ModuleVersionSelector
 import org.gradle.api.artifacts.UnresolvedDependency
@@ -51,7 +52,7 @@ class DependencyUpdatesReporter {
   /** The revision strategy evaluated with. */
   String revision
   /** The output formatter strategy evaluated with. */
-  Object outputFormatter
+  @Nullable Object outputFormatter
   /** The outputDir for report. */
   String outputDir
   /** The filename of the report file. */
