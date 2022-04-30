@@ -11,3 +11,5 @@ gradleEnterprise {
 }
 
 rootProject.name = "gradle-versions-plugin"
+
+include(":api")

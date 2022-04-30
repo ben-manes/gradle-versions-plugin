@@ -47,14 +47,17 @@ task createClasspathManifest {
 
 // Add the classpath file to the test runtime classpath
 dependencies {
+  compileOnly gradleApi()
+
+  implementation localGroovy()
+  implementation project(':api')
   implementation 'com.thoughtworks.xstream:xstream:1.4.19'
 
   testRuntimeOnly files(createClasspathManifest)
 
+  testImplementation localGroovy()
   testImplementation gradleTestKit()
-  testImplementation('org.spockframework:spock-core:1.3-groovy-2.5') {
-    exclude(module: 'groovy-all')
-  }
+  testImplementation 'org.spockframework:spock-core:1.3-groovy-2.5', { exclude module: 'groovy-all' } // Use localGroovy()
 }
 
 jar {
