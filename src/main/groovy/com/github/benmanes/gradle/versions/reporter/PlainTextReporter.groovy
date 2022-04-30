@@ -72,38 +72,48 @@ class PlainTextReporter extends AbstractReporter {
 
     printStream.println()
     printStream.println("Gradle ${gradleReleaseChannel} updates:")
-    result.gradle.with {
-      // Log Gradle update checking failures.
-      if (current.isFailure) {
-        printStream.println("[ERROR] [release channel: ${CURRENT.id}] " + current.reason)
-      }
-      if ((gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id) && releaseCandidate.isFailure) {
-        printStream.println("[ERROR] [release channel: ${RELEASE_CANDIDATE.id}] " + releaseCandidate.reason)
-      }
-      if (gradleReleaseChannel == NIGHTLY.id && nightly.isFailure) {
-        printStream.println("[ERROR] [release channel: ${NIGHTLY.id}] " + nightly.reason)
-      }
-
-      // print Gradle updates in breadcrumb format
-      printStream.print(" - Gradle: [" + running.version)
-      boolean updatePrinted = false
-      if (current.isUpdateAvailable && current > running) {
-        updatePrinted = true
-        printStream.print(" -> " + current.version)
-      }
-      if ((gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id) && releaseCandidate.isUpdateAvailable && releaseCandidate > current) {
-        updatePrinted = true
-        printStream.print(" -> " + releaseCandidate.version)
-      }
-      if (gradleReleaseChannel == NIGHTLY.id && nightly.isUpdateAvailable && nightly > current) {
-        updatePrinted = true
-        printStream.print(" -> " + nightly.version)
-      }
-      if (!updatePrinted) {
-        printStream.print(": UP-TO-DATE")
-      }
-      printStream.println("]")
+    // Log Gradle update checking failures.
+    if (result.gradle.current.isFailure) {
+      printStream
+        .println("[ERROR] [release channel: ${CURRENT.id}] " + result.gradle.current.reason)
     }
+    if ((gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id) &&
+      result.gradle.releaseCandidate.isFailure) {
+      printStream
+        .println(
+          "[ERROR] [release channel: ${RELEASE_CANDIDATE.id}] " + result
+            .gradle.releaseCandidate.reason)
+    }
+    if (gradleReleaseChannel == NIGHTLY.id && result.gradle.nightly.isFailure) {
+      printStream
+        .println("[ERROR] [release channel: ${NIGHTLY.id}] " + result.gradle.nightly.reason)
+    }
+
+    // print Gradle updates in breadcrumb format
+    printStream.print(" - Gradle: [" + result.gradle.running.version)
+    boolean updatePrinted = false
+    if (result.gradle.current.isUpdateAvailable && result.gradle.current > result.gradle.running) {
+      updatePrinted = true
+      printStream.print(" -> " + result.gradle.current.version)
+    }
+    if ((gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id) &&
+      result.gradle.releaseCandidate.isUpdateAvailable &&
+      result.gradle.releaseCandidate >
+      result.gradle.current) {
+      updatePrinted = true
+      printStream.print(" -> " + result.gradle.releaseCandidate.version)
+    }
+    if (gradleReleaseChannel == NIGHTLY.id &&
+      result.gradle.nightly.isUpdateAvailable &&
+      result.gradle.nightly >
+      result.gradle.current) {
+      updatePrinted = true
+      printStream.print(" -> " + result.gradle.nightly.version)
+    }
+    if (!updatePrinted) {
+      printStream.print(": UP-TO-DATE")
+    }
+    printStream.println("]")
   }
 
   private void writeUpToDate(Appendable printStream, Result result) {
@@ -112,7 +122,7 @@ class PlainTextReporter extends AbstractReporter {
       printStream.println()
       printStream.println(
         "The following dependencies are using the latest ${revision} version:")
-      upToDateVersions.each {
+      for (it in upToDateVersions) {
         printStream.println(" - ${label(it)}:${it.version}")
         if (it.getUserReason()) {
           printStream.println("     ${it.getUserReason()}")
@@ -125,8 +135,9 @@ class PlainTextReporter extends AbstractReporter {
     SortedSet<DependencyLatest> downgradeVersions = result.exceeded.dependencies
     if (!downgradeVersions.isEmpty()) {
       printStream.println()
-      printStream.println("The following dependencies exceed the version found at the ${revision} revision level:")
-      downgradeVersions.each { DependencyLatest dep ->
+      printStream.println(
+        "The following dependencies exceed the version found at the ${revision} revision level:")
+      for (DependencyLatest dep in downgradeVersions) {
         String currentVersion = dep.version
         printStream.println(" - ${label(dep)} [${currentVersion} <- ${dep.latest}]")
         if (dep.getUserReason()) {
@@ -144,7 +155,7 @@ class PlainTextReporter extends AbstractReporter {
     if (!upgradeVersions.isEmpty()) {
       printStream.println()
       printStream.println("The following dependencies have later ${revision} versions:")
-      upgradeVersions.each { DependencyOutdated dep ->
+      for (DependencyOutdated dep in upgradeVersions) {
         String currentVersion = dep.version
         printStream.println(" - ${label(dep)} [${currentVersion} -> ${dep.available[revision]}]")
         if (dep.getUserReason()) {
@@ -161,8 +172,11 @@ class PlainTextReporter extends AbstractReporter {
     Collection<Dependency> undeclaredVersions = result.undeclared.dependencies
     if (!undeclaredVersions.empty) {
       printStream.println()
-      printStream.println("Failed to compare versions for the following dependencies because they were declared without version:")
-      undeclaredVersions.each { Dependency dependency -> printStream.println(" - ${label(dependency)}") }
+      printStream.println(
+        "Failed to compare versions for the following dependencies because they were declared without version:")
+      for (Dependency dependency in undeclaredVersions) {
+        printStream.println(" - ${label(dependency)}")
+      }
     }
   }
 
@@ -172,7 +186,7 @@ class PlainTextReporter extends AbstractReporter {
       printStream.println()
       printStream.println(
         "Failed to determine the latest version for the following dependencies (use --info for details):")
-      unresolved.each { DependencyUnresolved dep ->
+      for (DependencyUnresolved dep in unresolved) {
         printStream.println(" - " + label(dep))
         if (dep.getUserReason()) {
           printStream.println("     ${dep.getUserReason()}")

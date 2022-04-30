@@ -22,6 +22,7 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentS
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.transform.CompileStatic
+import javax.annotation.Nullable
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
@@ -37,17 +38,17 @@ import org.gradle.util.ConfigureUtil
 class DependencyUpdatesTask extends DefaultTask {
 
   @Input
-  String revision = 'milestone'
+  String revision = "milestone"
 
   @Input
   String gradleReleaseChannel = RELEASE_CANDIDATE.id
 
   @Input
   String outputDir =
-    "${project.buildDir.path.replace(project.projectDir.path + '/', '')}/dependencyUpdates"
+    "${project.buildDir.path.replace(project.projectDir.path + "/", "")}/dependencyUpdates"
 
   @Input @Optional
-  String reportfileName = 'report'
+  String reportfileName = "report"
 
   @Input @Optional
   String getOutputFormatterName() {
@@ -77,15 +78,14 @@ class DependencyUpdatesTask extends DefaultTask {
   }
 
   @Internal
-  Object outputFormatter = 'plain'
+  Object outputFormatter = "plain"
 
-  @Internal
-  Closure resolutionStrategy = null
-  private Action<? super ResolutionStrategyWithCurrent> resolutionStrategyAction = null
+  @Internal @Nullable Closure resolutionStrategy = null
+  @Nullable private Action<? super ResolutionStrategyWithCurrent> resolutionStrategyAction = null
 
   DependencyUpdatesTask() {
-    description = 'Displays the dependency updates for the project.'
-    group = 'Help'
+    description = "Displays the dependency updates for the project."
+    group = "Help"
 
     outputs.upToDateWhen { false }
 
@@ -110,8 +110,8 @@ class DependencyUpdatesTask extends DefaultTask {
 
     if (resolutionStrategy != null) {
       resolutionStrategy(ConfigureUtil.configureUsing(resolutionStrategy))
-      logger.warn('dependencyUpdates.resolutionStrategy: ' +
-        'Remove the assignment operator, \'=\', when setting this task property')
+      logger.warn("dependencyUpdates.resolutionStrategy: " +
+        "Remove the assignment operator, \"=\", when setting this task property")
     }
 
     DependencyUpdates evaluator = new DependencyUpdates(project, resolutionStrategyAction, revisionLevel(),
@@ -144,19 +144,19 @@ class DependencyUpdatesTask extends DefaultTask {
   }
 
   /** Returns the resolution revision level. */
-  String revisionLevel() { System.properties['revision'] ?: revision }
+  String revisionLevel() { System.properties["revision"] ?: revision }
 
   /** Returns the resolution revision level. */
   String gradleReleaseChannelLevel() {
-    System.properties['gradleReleaseChannel'] ?: gradleReleaseChannel
+    System.properties["gradleReleaseChannel"] ?: gradleReleaseChannel
   }
 
   /** Returns the outputDir format. */
-  Object outputFormatterProp() { System.properties['outputFormatter'] ?: outputFormatter }
+  Object outputFormatterProp() { System.properties["outputFormatter"] ?: outputFormatter }
 
   /** Returns the outputDir destination. */
-  String outputDirectory() { System.properties['outputDir'] ?: outputDir }
+  String outputDirectory() { System.properties["outputDir"] ?: outputDir }
 
   /** Returns the filename of the report. */
-  String getReportfileName() { System.properties.get('reportfileName', reportfileName) }
+  String getReportfileName() { System.properties.get("reportfileName", reportfileName) }
 }

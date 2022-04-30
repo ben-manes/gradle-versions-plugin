@@ -3,6 +3,7 @@ package com.github.benmanes.gradle.versions.reporter.result
 import groovy.transform.CompileStatic
 import groovy.transform.Sortable
 import groovy.transform.TupleConstructor
+import javax.annotation.Nullable
 
 /**
  * A project's dependency
@@ -13,7 +14,7 @@ import groovy.transform.TupleConstructor
 class Dependency {
   String group
   String name
-  String version
-  String projectUrl
-  String userReason
+  @Nullable String version
+  @Nullable String projectUrl
+  @Nullable String userReason
 }

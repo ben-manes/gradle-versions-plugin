@@ -12,7 +12,7 @@ import org.gradle.api.artifacts.ResolutionStrategy
 @TupleConstructor(includeFields = true)
 class ResolutionStrategyWithCurrent {
 
-  @Delegate(interfaces = false, excludes = ['componentSelection', 'getComponentSelection'])
+  @Delegate(interfaces = false, excludes = ["componentSelection", "getComponentSelection"])
   private ResolutionStrategy delegate
 
   private Map<Coordinate.Key, Coordinate> currentCoordinates

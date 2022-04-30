@@ -41,7 +41,7 @@ class VersionMapping {
   VersionMapping(Project project, Set<DependencyStatus> statuses) {
     this.project = project
     this.comparator = makeVersionComparator()
-    statuses.each { status ->
+    for (status in statuses) {
       current.add(status.coordinate)
       if (status.unresolved == null) {
         latest.add(status.latestCoordinate)

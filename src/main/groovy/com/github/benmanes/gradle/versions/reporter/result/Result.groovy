@@ -14,7 +14,6 @@ class Result {
    * the overall number of dependencies in the project
    */
   int count
-
   /**
    * The up-to-date dependencies
    */
