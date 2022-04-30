@@ -5,9 +5,8 @@ import groovy.json.JsonSlurper
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-import org.gradle.util.GradleVersion
-
 import java.util.concurrent.TimeUnit
+import org.gradle.util.GradleVersion
 
 /**
  * Facade class that provides information about the running gradle version and the latest versions of the different
@@ -20,7 +19,8 @@ class GradleUpdateChecker {
   private static final long TIMEOUT_MS = TimeUnit.SECONDS.toMillis(15)
   private static final String API_BASE_URL = "https://services.gradle.org/versions/"
 
-  private final Map<GradleReleaseChannel, ReleaseStatus> cacheMap = new EnumMap<>(GradleReleaseChannel.class)
+  private final Map<GradleReleaseChannel, ReleaseStatus> cacheMap = new EnumMap<>(
+    GradleReleaseChannel.class)
   private final boolean enabled
 
   GradleUpdateChecker(boolean enabled) {
@@ -32,14 +32,15 @@ class GradleUpdateChecker {
 
   @CompileDynamic
   private void fetch() {
-    GradleReleaseChannel.values().each {
+    for (it in GradleReleaseChannel.values()) {
       try {
         Map<String, Long> params = new HashMap<String, Long>()
         params.put("connectTimeout", TIMEOUT_MS)
         params.put("readTimeout", TIMEOUT_MS)
         Object versionObject = new JsonSlurper().parse(new URL(API_BASE_URL + it.id), params)
         if (versionObject.version) {
-          cacheMap.put(it, new ReleaseStatus.Available(GradleVersion.version(versionObject.version as String)))
+          cacheMap.put(it,
+            new ReleaseStatus.Available(GradleVersion.version(versionObject.version as String)))
         } else {
           cacheMap.put(it, new ReleaseStatus.Unavailable())
         }
@@ -59,7 +60,7 @@ class GradleUpdateChecker {
     return new ReleaseStatus.Available(GradleVersion.current())
   }
 
-  /** @return if the check for Gradle updates was enabled and, if so, the versions were fetched. */
+  /** @return if the check for Gradle updates was enabled and, if so, the versions were fetched.  */
   boolean isEnabled() {
     return enabled
   }

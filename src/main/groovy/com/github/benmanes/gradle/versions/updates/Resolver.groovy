@@ -59,7 +59,7 @@ import org.gradle.maven.MavenPomArtifact
 @CompileStatic
 class Resolver {
   final Project project
-  final Action<? super ResolutionStrategyWithCurrent> resolutionStrategy
+  @Nullable final Action<? super ResolutionStrategyWithCurrent> resolutionStrategy
   final boolean checkConstraints
   final ConcurrentMap<ModuleVersionIdentifier, ProjectUrl> projectUrls
 

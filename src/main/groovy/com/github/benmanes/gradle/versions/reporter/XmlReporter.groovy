@@ -22,15 +22,13 @@ class XmlReporter extends AbstractReporter {
   void write(Appendable printStream, Result result) {
 
     XStream xstream = new XStream()
-    xstream.with {
-      alias("response", Result)
-      alias("available", VersionAvailable)
-      alias("exceededDependency", DependencyLatest)
-      alias("outdatedDependency", DependencyOutdated)
-      alias("unresolvedDependency", DependencyUnresolved)
-      alias("dependency", Dependency)
-      alias("group", DependenciesGroup)
-    }
+    xstream.alias("response", Result)
+    xstream.alias("available", VersionAvailable)
+    xstream.alias("exceededDependency", DependencyLatest)
+    xstream.alias("outdatedDependency", DependencyOutdated)
+    xstream.alias("unresolvedDependency", DependencyUnresolved)
+    xstream.alias("dependency", Dependency)
+    xstream.alias("group", DependenciesGroup)
 
     printStream.println("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>")
     printStream.println(xstream.toXML(result).stripMargin())

@@ -2,13 +2,14 @@ package com.github.benmanes.gradle.versions.updates.resolutionstrategy
 
 import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
+import javax.annotation.Nullable
 import org.gradle.api.artifacts.ComponentSelection
 
 @CompileStatic
 @TupleConstructor(includeFields = true)
 class ComponentSelectionWithCurrent {
 
-  final String currentVersion
+  @Nullable final String currentVersion
 
   @Delegate
   private final ComponentSelection delegate

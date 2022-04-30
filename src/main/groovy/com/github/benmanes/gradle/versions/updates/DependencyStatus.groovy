@@ -45,7 +45,7 @@ class DependencyStatus {
   DependencyStatus(Coordinate coordinate, UnresolvedDependency unresolved) {
     this.coordinate = coordinate
     this.unresolved = unresolved
-    this.latestVersion = 'none'
+    this.latestVersion = "none"
     this.projectUrl = null
   }
 

@@ -94,11 +94,11 @@ class DependencyUpdatesReporter {
 
       if (outputFormatter == null ||
         (outputFormatter instanceof String && ((String) outputFormatter).isEmpty())) {
-        project.logger.lifecycle('Skip generating report to file (outputFormatter is empty)')
+        project.logger.lifecycle("Skip generating report to file (outputFormatter is empty)")
         return
       }
       if (outputFormatter instanceof String) {
-        ((String) outputFormatter).split(',').each {
+        ((String) outputFormatter).split(",").each {
           generateFileReport(getOutputReporter(it))
         }
       } else if (outputFormatter instanceof Reporter) {
@@ -114,7 +114,7 @@ class DependencyUpdatesReporter {
   }
 
   void generateFileReport(Reporter reporter) {
-    File filename = new File(outputDir, reportfileName + '.' + reporter.getFileExtension())
+    File filename = new File(outputDir, reportfileName + "." + reporter.getFileExtension())
     project.file(outputDir).mkdirs()
     File outputFile = project.file(filename)
     outputFile.withPrintWriter { PrintWriter pw ->
@@ -122,7 +122,7 @@ class DependencyUpdatesReporter {
       reporter.write(pw, result)
     }
 
-    project.logger.lifecycle '\nGenerated report file ' + filename
+    project.logger.lifecycle("\nGenerated report file " + filename)
   }
 
   Reporter getOutputReporter(String formatterOriginal) {
@@ -130,13 +130,13 @@ class DependencyUpdatesReporter {
     AbstractReporter reporter
 
     switch (formatter) {
-      case 'json':
+      case "json":
         reporter = new JsonReporter(project, revision, gradleReleaseChannel)
         break
-      case 'xml':
+      case "xml":
         reporter = new XmlReporter(project, revision, gradleReleaseChannel)
         break
-      case 'html':
+      case "html":
         reporter = new HtmlReporter(project, revision, gradleReleaseChannel)
         break
       default:
@@ -182,8 +182,8 @@ class DependencyUpdatesReporter {
   }
 
   private static void updateKey(Map<String, String> existingKey) {
-    int index = existingKey['name'].lastIndexOf('[')
-    existingKey['name'] = (index == -1) ? existingKey['name'] : existingKey['name'].substring(0, index)
+    int index = existingKey["name"].lastIndexOf("[")
+    existingKey["name"] = (index == -1) ? existingKey["name"] : existingKey["name"].substring(0, index)
   }
 
   protected SortedSet buildCurrentGroup() {
@@ -239,12 +239,12 @@ class DependencyUpdatesReporter {
   }
 
   protected Dependency buildDependency(Coordinate coordinate, Map<String, String> key) {
-    new Dependency(key['group'], key['name'], coordinate.getVersion(), projectUrls[key],
+    new Dependency(key["group"], key["name"], coordinate.getVersion(), projectUrls[key],
       coordinate.getUserReason())
   }
 
   protected DependencyLatest buildExceededDependency(Coordinate coordinate, Map<String, String> key) {
-    new DependencyLatest(key['group'], key['name'], coordinate?.getVersion(), projectUrls[key],
+    new DependencyLatest(key["group"], key["name"], coordinate?.getVersion(), projectUrls[key],
       coordinate?.getUserReason(), latestVersions[key]?.getVersion())
   }
 
@@ -261,17 +261,17 @@ class DependencyUpdatesReporter {
 
     String laterVersion = latestVersions[key]?.getVersion()
     switch (revision) {
-      case 'milestone':
+      case "milestone":
         available = new VersionAvailable(null, laterVersion)
         break
-      case 'integration':
+      case "integration":
         available = new VersionAvailable(null, null, laterVersion)
         break
       default:
         available = new VersionAvailable(laterVersion)
     }
 
-    new DependencyOutdated(key['group'], key['name'], coordinate?.getVersion(),
+    new DependencyOutdated(key["group"], key["name"], coordinate?.getVersion(),
       projectUrls[key], coordinate?.getUserReason(), available)
   }
 
@@ -283,7 +283,7 @@ class DependencyUpdatesReporter {
 
   /** Compares the dependency keys. */
   protected static int compareKeys(Map<String, String> a, Map<String, String> b) {
-    (a['group'] == b['group']) ? a['name'] <=> b['name'] : a['group'] <=> b['group']
+    (a["group"] == b["group"]) ? a["name"] <=> b["name"] : a["group"] <=> b["group"]
   }
 
   static Map<String, String> keyOf(ModuleVersionSelector dependency) {

@@ -103,9 +103,9 @@ class DependencyUpdates {
     }
     if (!statusWithSameCoordinateKey) {
       statusCollection.add(status)
-    } else if (status.coordinate.version != 'none') {
+    } else if (status.coordinate.version != "none") {
       statusCollection.add(status)
-      if (statusWithSameCoordinateKey.coordinate.version == 'none') {
+      if (statusWithSameCoordinateKey.coordinate.version == "none") {
         statusCollection.remove(statusWithSameCoordinateKey)
       }
     }
@@ -144,7 +144,7 @@ class DependencyUpdates {
     Map<Map<String, String>, Coordinate> map = [:]
     for (Coordinate coordinate : coordinates) {
       for (int i = 0; ; i++) {
-        String artifactId = coordinate.artifactId + ((i == 0) ? '' : "[${i + 1}]")
+        String artifactId = coordinate.artifactId + ((i == 0) ? "" : "[${i + 1}]")
         LinkedHashMap<String, String> key = [group: coordinate.groupId, name: artifactId]
         if (!map.containsKey(key)) {
           map.put(key, coordinate)

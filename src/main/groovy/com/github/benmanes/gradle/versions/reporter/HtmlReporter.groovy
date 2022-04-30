@@ -119,9 +119,12 @@ class HtmlReporter extends AbstractReporter {
     SortedSet<Dependency> versions = result.getCurrent().getDependencies()
     if (!versions.isEmpty()) {
       printStream.println("<H2>Current dependencies</H2>")
-      printStream.println("<p>The following dependencies are using the latest ${revision} version:<p>")
+      printStream
+        .println("<p>The following dependencies are using the latest ${revision} version:<p>")
       printStream.println("<table class=\"currentInfo\">")
-      getCurrentRows(result).each { printStream.println(it) }
+      for (it in getCurrentRows(result)) {
+        printStream.println(it)
+      }
       printStream.println("</table>")
       printStream.println("<br>")
     }
@@ -131,13 +134,16 @@ class HtmlReporter extends AbstractReporter {
     List<String> rows = new ArrayList<>()
     // The following dependencies are using the latest milestone version:
     DependenciesGroup<Dependency> list = result.getCurrent()
-    rows.add("<tr class=\"header\" id = \"currentId\" ><th colspan=\"4\"><b>Current dependencies<span>(Click to expand)</span></b></th></tr>")
-    rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Reason</b></td></tr>")
+    rows.add(
+      "<tr class=\"header\" id = \"currentId\" ><th colspan=\"4\"><b>Current dependencies<span>(Click to expand)</span></b></th></tr>")
+    rows.add(
+      "<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Reason</b></td></tr>")
     for (Dependency item : list.dependencies) {
       String rowString
       String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
       rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
-        getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), item.getVersion()),
+        getUrlString(item.getProjectUrl()),
+        getVersionString(item.getGroup(), item.getName(), item.getVersion()),
         item.getUserReason() ?: "")
       rows.add(rowString)
     }
@@ -150,9 +156,12 @@ class HtmlReporter extends AbstractReporter {
       // The following dependencies exceed the version found at the "
       //        + revision + " revision level:
       printStream.println("<H2>Exceeded dependencies</H2>")
-      printStream.println("<p>The following dependencies exceed the version found at the ${revision} revision level:<p>")
+      printStream.println(
+        "<p>The following dependencies exceed the version found at the ${revision} revision level:<p>")
       printStream.println("<table class=\"warningInfo\">")
-      getExceededRows(result).each { printStream.println(it) }
+      for (it in getExceededRows(result)) {
+        printStream.println(it)
+      }
       printStream.println("</table>")
       printStream.println("<br>")
     }
@@ -162,13 +171,16 @@ class HtmlReporter extends AbstractReporter {
     List<String> rows = new ArrayList<>()
     // The following dependencies are using the latest milestone version:
     DependenciesGroup<DependencyLatest> list = result.getExceeded()
-    rows.add("<tr class=\"header\"><th colspan=\"5\"><b>Exceeded dependencies<span>(Click to collapse)</span></b></th></tr>")
-    rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Latest Version</b></td><td><b>Reason</b></td></tr>")
+    rows.add(
+      "<tr class=\"header\"><th colspan=\"5\"><b>Exceeded dependencies<span>(Click to collapse)</span></b></th></tr>")
+    rows.add(
+      "<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Latest Version</b></td><td><b>Reason</b></td></tr>")
     for (DependencyLatest item : list.dependencies) {
       String rowString
       String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
       rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
-        getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), item.getVersion()),
+        getUrlString(item.getProjectUrl()),
+        getVersionString(item.getGroup(), item.getName(), item.getVersion()),
         getVersionString(item.getGroup(), item.getName(), item.getVersion()),
         item.getUserReason() ?: "")
       rows.add(rowString)
@@ -182,7 +194,9 @@ class HtmlReporter extends AbstractReporter {
       printStream.println("<H2>Later dependencies</H2>")
       printStream.println("<p>The following dependencies have later ${revision} versions:<p>")
       printStream.println("<table class=\"warningInfo\">")
-      getUpgradesRows(result).each { printStream.println(it) }
+      for (it in getUpgradesRows(result)) {
+        printStream.println(it)
+      }
       printStream.println("</table>")
       printStream.println("<br>")
     }
@@ -191,14 +205,18 @@ class HtmlReporter extends AbstractReporter {
   private List<String> getUpgradesRows(Result result) {
     List<String> rows = new ArrayList<>()
     DependenciesGroup<DependencyOutdated> list = result.getOutdated()
-    rows.add("<tr class=\"header\"><th colspan=\"5\"><b>Later dependencies<span>(Click to collapse)</span></b></th></tr>")
-    rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Latest Version</b></td><td><b>Reason</b></td></tr>")
+    rows.add(
+      "<tr class=\"header\"><th colspan=\"5\"><b>Later dependencies<span>(Click to collapse)</span></b></th></tr>")
+    rows.add(
+      "<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Latest Version</b></td><td><b>Reason</b></td></tr>")
     for (DependencyOutdated item : list.dependencies) {
       String rowString
       String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
       rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
-        getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), item.getVersion()),
-        getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item.getAvailable())),
+        getUrlString(item.getProjectUrl()),
+        getVersionString(item.getGroup(), item.getName(), item.getVersion()),
+        getVersionString(item.getGroup(), item.getName(),
+          getDisplayableVersion(item.getAvailable())),
         item.getUserReason() ?: "")
       rows.add(rowString)
     }
@@ -209,9 +227,12 @@ class HtmlReporter extends AbstractReporter {
     SortedSet<Dependency> versions = result.undeclared.dependencies
     if (!versions.empty) {
       printStream.println("<H2>Undeclared dependencies</H2>")
-      printStream.println("<p>Failed to compare versions for the following dependencies because they were declared without version:<p>")
+      printStream.println(
+        "<p>Failed to compare versions for the following dependencies because they were declared without version:<p>")
       printStream.println("<table class=\"warningInfo\">")
-      getUndeclaredRows(result).each { String row -> printStream.println(row) }
+      for (String row in getUndeclaredRows(result)) {
+        printStream.println(row)
+      }
       printStream.println("</table>")
       printStream.println("<br>")
     }
@@ -219,7 +240,8 @@ class HtmlReporter extends AbstractReporter {
 
   private static List<String> getUndeclaredRows(Result result) {
     List<String> rows = new ArrayList<>()
-    rows.add("<tr class=\"header\"><th colspan=\"2\"><b>Undeclared dependencies<span>(Click to collapse)</span></b></th></tr>")
+    rows.add(
+      "<tr class=\"header\"><th colspan=\"2\"><b>Undeclared dependencies<span>(Click to collapse)</span></b></th></tr>")
     rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td></tr>")
     for (Dependency item : result.undeclared.dependencies) {
       String rowString
@@ -245,9 +267,12 @@ class HtmlReporter extends AbstractReporter {
     SortedSet<DependencyUnresolved> versions = result.getUnresolved().getDependencies()
     if (!versions.isEmpty()) {
       printStream.println("<H2>Unresolved dependencies</H2>")
-      printStream.println("<p>Failed to determine the latest version for the following dependencies:<p>")
+      printStream
+        .println("<p>Failed to determine the latest version for the following dependencies:<p>")
       printStream.println("<table class=\"warningInfo\">")
-      getUnresolvedRows(result).each { printStream.println(it) }
+      for (it in getUnresolvedRows(result)) {
+        printStream.println(it)
+      }
       printStream.println("</table>")
       printStream.println("<br>")
     }
@@ -256,13 +281,16 @@ class HtmlReporter extends AbstractReporter {
   private static List<String> getUnresolvedRows(Result result) {
     List<String> rows = new ArrayList<>()
     DependenciesGroup<DependencyUnresolved> list = result.getUnresolved()
-    rows.add("<tr class=\"header\"><th colspan=\"4\"><b>Unresolved dependencies<span>(Click to collapse)</span></b></th></tr>")
-    rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td>Reason</td></tr>")
+    rows.add(
+      "<tr class=\"header\"><th colspan=\"4\"><b>Unresolved dependencies<span>(Click to collapse)</span></b></th></tr>")
+    rows.add(
+      "<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td>Reason</td></tr>")
     for (DependencyUnresolved item : list.dependencies) {
       String rowString
       String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
       rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
-        getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), item.getVersion()),
+        getUrlString(item.getProjectUrl()),
+        getVersionString(item.getGroup(), item.getName(), item.getVersion()),
         item.getUserReason() ?: "")
       rows.add(rowString)
     }
@@ -277,39 +305,48 @@ class HtmlReporter extends AbstractReporter {
     printStream.println("<H2>Gradle ${gradleReleaseChannel} updates</H2>")
 
     printStream.println("Gradle ${gradleReleaseChannel} updates:")
-    result.gradle.with {
-      // Log Gradle update checking failures.
-      if (current.isFailure) {
-        printStream.println("<P>[ERROR] [release channel: ${CURRENT.id}] " + current.reason + "</P>")
-      }
-      if ((gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id) && releaseCandidate.isFailure) {
-        printStream.println("<P>[ERROR] [release channel: ${RELEASE_CANDIDATE.id}] " + releaseCandidate.reason + "</P>")
-      }
-      if (gradleReleaseChannel == NIGHTLY.id && nightly.isFailure) {
-        printStream.println("<P>[ERROR] [release channel: ${NIGHTLY.id}] " + nightly.reason + "</P>")
-      }
-
-      // print Gradle updates in breadcrumb format
-      printStream.print("<P>Gradle: [" + getGradleVersionUrl(running.version))
-      boolean updatePrinted = false
-      if (current.isUpdateAvailable && current > running) {
-        updatePrinted = true
-        printStream.print(" -> " + getGradleVersionUrl(current.version))
-      }
-      if ((gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id) && releaseCandidate.isUpdateAvailable && releaseCandidate > current) {
-        updatePrinted = true
-        printStream.print(" -> " + getGradleVersionUrl(releaseCandidate.version))
-      }
-      if (gradleReleaseChannel == NIGHTLY.id && nightly.isUpdateAvailable && nightly > current) {
-        updatePrinted = true
-        printStream.print(" -> " + getGradleVersionUrl(nightly.version))
-      }
-      if (!updatePrinted) {
-        printStream.print(": UP-TO-DATE")
-      }
-      printStream.println("]<P>")
-      printStream.println(getGradleUrl())
+    // Log Gradle update checking failures.
+    if (result.gradle.current.isFailure) {
+      printStream.println(
+        "<P>[ERROR] [release channel: ${CURRENT.id}] " + result.gradle.current.reason + "</P>")
     }
+    if ((gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id) &&
+      result.gradle.releaseCandidate.isFailure) {
+      printStream.println(
+        "<P>[ERROR] [release channel: ${RELEASE_CANDIDATE.id}] " + result
+          .gradle.releaseCandidate.reason + "</P>")
+    }
+    if (gradleReleaseChannel == NIGHTLY.id && result.gradle.nightly.isFailure) {
+      printStream.println(
+        "<P>[ERROR] [release channel: ${NIGHTLY.id}] " + result.gradle.nightly.reason + "</P>")
+    }
+
+    // print Gradle updates in breadcrumb format
+    printStream.print("<P>Gradle: [" + getGradleVersionUrl(result.gradle.running.version))
+    boolean updatePrinted = false
+    if (result.gradle.current.isUpdateAvailable && result.gradle.current > result.gradle.running) {
+      updatePrinted = true
+      printStream.print(" -> " + getGradleVersionUrl(result.gradle.current.version))
+    }
+    if ((gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id) &&
+      result.gradle.releaseCandidate.isUpdateAvailable &&
+      result.gradle.releaseCandidate >
+      result.gradle.current) {
+      updatePrinted = true
+      printStream.print(" -> " + getGradleVersionUrl(result.gradle.releaseCandidate.version))
+    }
+    if (gradleReleaseChannel == NIGHTLY.id &&
+      result.gradle.nightly.isUpdateAvailable &&
+      result.gradle.nightly >
+      result.gradle.current) {
+      updatePrinted = true
+      printStream.print(" -> " + getGradleVersionUrl(result.gradle.nightly.version))
+    }
+    if (!updatePrinted) {
+      printStream.print(": UP-TO-DATE")
+    }
+    printStream.println("]<P>")
+    printStream.println(getGradleUrl())
   }
 
   private static String getGradleUrl() {
@@ -320,7 +357,9 @@ class HtmlReporter extends AbstractReporter {
     if (version == null) {
       return "https://gradle.org/releases/"
     }
-    return String.format("<a target=\"_blank\" href=\"https://docs.gradle.org/%s/release-notes.html\">%s</a>", version, version)
+    return String
+      .format("<a target=\"_blank\" href=\"https://docs.gradle.org/%s/release-notes.html\">%s</a>",
+        version, version)
   }
 
   private static String getUrlString(@Nullable String url) {
@@ -330,7 +369,7 @@ class HtmlReporter extends AbstractReporter {
     return String.format("<a target=\"_blank\" href=\"%s\">%s</a>", url, url)
   }
 
-  private static String getVersionString(String group, String name, String version) {
+  private static String getVersionString(String group, String name, @Nullable String version) {
     String mvn = getMvnVersionString(group, name, version)
     return String.format("%s %s", version, mvn)
   }
@@ -340,7 +379,8 @@ class HtmlReporter extends AbstractReporter {
     if (version == null) {
       return ""
     }
-    String versionUrl = String.format("https://search.maven.org/artifact/%s/%s/%s/bundle", group, name, version)
+    String versionUrl = String
+      .format("https://search.maven.org/artifact/%s/%s/%s/bundle", group, name, version)
     return String.format("<a target=\"_blank\" href=\"%s\">%s</a>", versionUrl, "Sonatype")
   }
 
