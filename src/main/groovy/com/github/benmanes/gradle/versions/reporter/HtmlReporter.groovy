@@ -13,6 +13,7 @@ import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.reporter.result.VersionAvailable
 import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
+import javax.annotation.Nullable
 
 /**
  * An html reporter for the dependency updates results.
@@ -98,7 +99,7 @@ class HtmlReporter extends AbstractReporter {
     writeHeader(printStream)
 
     if (result.count == 0) {
-      printStream.println('<P>No dependencies found.</P>')
+      printStream.println("<P>No dependencies found.</P>")
     } else {
       writeUpToDate(printStream, result)
       writeExceedLatestFound(printStream, result)
@@ -137,7 +138,7 @@ class HtmlReporter extends AbstractReporter {
       String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
       rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
         getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), item.getVersion()),
-        item.getUserReason() ?: '')
+        item.getUserReason() ?: "")
       rows.add(rowString)
     }
     return rows
@@ -146,8 +147,8 @@ class HtmlReporter extends AbstractReporter {
   private void writeExceedLatestFound(Appendable printStream, Result result) {
     SortedSet<DependencyLatest> versions = result.getExceeded().getDependencies()
     if (!versions.isEmpty()) {
-      // The following dependencies exceed the version found at the '
-      //        + revision + ' revision level:
+      // The following dependencies exceed the version found at the "
+      //        + revision + " revision level:
       printStream.println("<H2>Exceeded dependencies</H2>")
       printStream.println("<p>The following dependencies exceed the version found at the ${revision} revision level:<p>")
       printStream.println("<table class=\"warningInfo\">")
@@ -169,7 +170,7 @@ class HtmlReporter extends AbstractReporter {
       rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
         getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), item.getVersion()),
         getVersionString(item.getGroup(), item.getName(), item.getVersion()),
-        item.getUserReason() ?: '')
+        item.getUserReason() ?: "")
       rows.add(rowString)
     }
     return rows
@@ -198,7 +199,7 @@ class HtmlReporter extends AbstractReporter {
       rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
         getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), item.getVersion()),
         getVersionString(item.getGroup(), item.getName(), getDisplayableVersion(item.getAvailable())),
-        item.getUserReason() ?: '')
+        item.getUserReason() ?: "")
       rows.add(rowString)
     }
     return rows
@@ -228,6 +229,7 @@ class HtmlReporter extends AbstractReporter {
     return rows
   }
 
+  @Nullable
   private String getDisplayableVersion(VersionAvailable versionAvailable) {
     if (getRevision().equalsIgnoreCase("milestone")) {
       return versionAvailable.getMilestone()
@@ -261,7 +263,7 @@ class HtmlReporter extends AbstractReporter {
       String rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
       rowString = String.format(rowStringFmt, item.getName(), item.getGroup(),
         getUrlString(item.getProjectUrl()), getVersionString(item.getGroup(), item.getName(), item.getVersion()),
-        item.getUserReason() ?: '')
+        item.getUserReason() ?: "")
       rows.add(rowString)
     }
     return rows
@@ -314,14 +316,14 @@ class HtmlReporter extends AbstractReporter {
     return "<P>For information about Gradle releases click <a target=\"_blank\" href=\"https://gradle.org/releases/\">here</a>."
   }
 
-  private static String getGradleVersionUrl(String version) {
+  private static String getGradleVersionUrl(@Nullable String version) {
     if (version == null) {
       return "https://gradle.org/releases/"
     }
     return String.format("<a target=\"_blank\" href=\"https://docs.gradle.org/%s/release-notes.html\">%s</a>", version, version)
   }
 
-  private static String getUrlString(String url) {
+  private static String getUrlString(@Nullable String url) {
     if (url == null) {
       return ""
     }
@@ -333,7 +335,7 @@ class HtmlReporter extends AbstractReporter {
     return String.format("%s %s", version, mvn)
   }
 
-  private static String getMvnVersionString(String group, String name, String version) {
+  private static String getMvnVersionString(String group, String name, @Nullable String version) {
     // https://search.maven.org/artifact/com.azure/azure-core-http-netty/1.5.4
     if (version == null) {
       return ""
@@ -344,6 +346,6 @@ class HtmlReporter extends AbstractReporter {
 
   @Override
   String getFileExtension() {
-    return 'html'
+    return "html"
   }
 }

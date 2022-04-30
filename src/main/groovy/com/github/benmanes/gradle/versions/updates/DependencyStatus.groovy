@@ -18,6 +18,7 @@ package com.github.benmanes.gradle.versions.updates
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import javax.annotation.Nullable
 import org.gradle.api.artifacts.UnresolvedDependency
 
 /**
@@ -30,10 +31,10 @@ import org.gradle.api.artifacts.UnresolvedDependency
 @CompileStatic
 @EqualsAndHashCode
 class DependencyStatus {
-  final UnresolvedDependency unresolved
+  @Nullable final UnresolvedDependency unresolved
   final Coordinate coordinate
   final String latestVersion
-  final String projectUrl
+  @Nullable final String projectUrl
 
   DependencyStatus(Coordinate coordinate, String latestVersion, String projectUrl) {
     this.latestVersion = latestVersion

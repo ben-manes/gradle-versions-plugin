@@ -28,7 +28,7 @@ import org.gradle.api.artifacts.component.ModuleComponentIdentifier
  * The dependency's coordinate.
  */
 @CompileStatic
-@EqualsAndHashCode(excludes = 'userReason')
+@EqualsAndHashCode(excludes = "userReason")
 class Coordinate implements Comparable<Coordinate> {
   final String groupId
   final String artifactId
@@ -36,9 +36,9 @@ class Coordinate implements Comparable<Coordinate> {
   @Nullable final String userReason
 
   Coordinate(String groupId, String artifactId, String version, @Nullable String userReason) {
-    this.groupId = groupId ?: 'none'
-    this.artifactId = artifactId ?: 'none'
-    this.version = version ?: 'none'
+    this.groupId = groupId ?: "none"
+    this.artifactId = artifactId ?: "none"
+    this.version = version ?: "none"
     this.userReason = userReason
   }
 
@@ -48,7 +48,7 @@ class Coordinate implements Comparable<Coordinate> {
 
   @Override
   String toString() {
-    return groupId + ':' + artifactId + ':' + version
+    return groupId + ":" + artifactId + ":" + version
   }
 
   @Override
@@ -106,7 +106,7 @@ class Coordinate implements Comparable<Coordinate> {
 
     @Override
     String toString() {
-      return groupId + ':' + artifactId
+      return groupId + ":" + artifactId
     }
 
     @Override

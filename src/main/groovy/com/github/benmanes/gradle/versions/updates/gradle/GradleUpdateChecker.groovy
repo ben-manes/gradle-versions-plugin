@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit
 @CompileStatic
 class GradleUpdateChecker {
   private static final long TIMEOUT_MS = TimeUnit.SECONDS.toMillis(15)
-  private static final String API_BASE_URL = 'https://services.gradle.org/versions/'
+  private static final String API_BASE_URL = "https://services.gradle.org/versions/"
 
   private final Map<GradleReleaseChannel, ReleaseStatus> cacheMap = new EnumMap<>(GradleReleaseChannel.class)
   private final boolean enabled
@@ -65,7 +65,7 @@ class GradleUpdateChecker {
   }
 
   /**
-   * @return An instance of {@link ReleaseStatus} explaining the update check for the latest version on the 'current'
+   * @return An instance of {@link ReleaseStatus} explaining the update check for the latest version on the "current"
    * gradle release channel.
    */
   ReleaseStatus getCurrentGradleVersion() {
@@ -74,14 +74,14 @@ class GradleUpdateChecker {
 
   /**
    * @return An instance of {@link ReleaseStatus} explaining the update check for the latest version on the
-   * 'release-candidate' gradle release channel.
+   * "release-candidate" gradle release channel.
    */
   ReleaseStatus getReleaseCandidateGradleVersion() {
     return cacheMap.get(GradleReleaseChannel.RELEASE_CANDIDATE)
   }
 
   /**
-   * @return An instance of {@link ReleaseStatus} explaining the update check for the latest version on the 'nightly'
+   * @return An instance of {@link ReleaseStatus} explaining the update check for the latest version on the "nightly"
    * gradle release channel.
    */
   ReleaseStatus getNightlyGradleVersion() {

@@ -19,6 +19,6 @@ class JsonReporter extends AbstractReporter {
 
   @Override
   String getFileExtension() {
-    return 'json'
+    return "json"
   }
 }

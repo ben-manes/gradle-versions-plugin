@@ -41,7 +41,7 @@ class PlainTextReporter extends AbstractReporter {
 
     if (result.count == 0) {
       printStream.println()
-      printStream.println('No dependencies found.')
+      printStream.println("No dependencies found.")
     } else {
       writeUpToDate(printStream, result)
       writeExceedLatestFound(printStream, result)
@@ -55,7 +55,7 @@ class PlainTextReporter extends AbstractReporter {
 
   @Override
   String getFileExtension() {
-    return 'txt'
+    return "txt"
   }
 
   private void writeHeader(Appendable printStream) {
@@ -173,20 +173,20 @@ class PlainTextReporter extends AbstractReporter {
       printStream.println(
         "Failed to determine the latest version for the following dependencies (use --info for details):")
       unresolved.each { DependencyUnresolved dep ->
-        printStream.println(' - ' + label(dep))
+        printStream.println(" - " + label(dep))
         if (dep.getUserReason()) {
           printStream.println("     ${dep.getUserReason()}")
         }
         if (dep.projectUrl != null) {
           printStream.println("     ${dep.projectUrl}")
         }
-        project.logger.info('The exception that is the cause of unresolved state: {}', dep.reason)
+        project.logger.info("The exception that is the cause of unresolved state: {}", dep.reason)
       }
     }
   }
 
   /** Returns the dependency key as a stringified label. */
   private static String label(Dependency dependency) {
-    return dependency.group + ':' + dependency.name
+    return dependency.group + ":" + dependency.name
   }
 }

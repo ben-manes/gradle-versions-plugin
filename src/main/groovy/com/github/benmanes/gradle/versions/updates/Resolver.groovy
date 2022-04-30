@@ -94,7 +94,7 @@ class Resolver {
       Coordinate resolvedCoordinate = Coordinate.from(dependency.module.id)
       Coordinate originalCoordinate = coordinates.get(resolvedCoordinate.key)
       Coordinate coord = originalCoordinate ?: resolvedCoordinate
-      if ((originalCoordinate == null) && (resolvedCoordinate.groupId != 'null')) {
+      if ((originalCoordinate == null) && (resolvedCoordinate.groupId != "null")) {
         project.logger.info("Skipping hidden dependency: ${resolvedCoordinate}")
       } else {
         String projectUrl = getProjectUrl(dependency.module.id)
@@ -144,16 +144,16 @@ class Resolver {
     // resolution, but the full set can break consumer capability matching.
     Set<Dependency> inherited = configuration.allDependencies.findAll { dependency ->
       (dependency instanceof ExternalDependency) &&
-        (dependency.group == 'org.jetbrains.kotlin') &&
+        (dependency.group == "org.jetbrains.kotlin") &&
         (dependency.version != null)
     } - configuration.dependencies
 
     // Adds the Kotlin 1.2.x legacy metadata to assist in variant selection
-    Configuration metadata = project.configurations.findByName('commonMainMetadataElements')
+    Configuration metadata = project.configurations.findByName("commonMainMetadataElements")
     if (metadata == null) {
       Configuration compile = project.configurations.findByName("compile")
       if (compile != null) {
-        addAttributes(copy, compile, { String key -> key.contains('kotlin') })
+        addAttributes(copy, compile, { String key -> key.contains("kotlin") })
       }
     } else {
       addAttributes(copy, metadata)
@@ -174,11 +174,11 @@ class Resolver {
   private Dependency createQueryDependency(Dependency dependency, String revision) {
     // If no version was specified then it may be intended to be resolved by another plugin
     // (e.g. the dependency-management-plugin for BOMs) or is an explicit file (e.g. libs/*.jar).
-    // In the case of another plugin we use '+' in the hope that the plugin will not restrict the
-    // query (see issue #97). Otherwise if its a file then use 'none' to pass it through.
+    // In the case of another plugin we use "+" in the hope that the plugin will not restrict the
+    // query (see issue #97). Otherwise if its a file then use "none" to pass it through.
     String version = (dependency.version == null)
-      ? (dependency.artifacts.empty ? '+' : 'none')
-      : '+'
+      ? (dependency.artifacts.empty ? "+" : "none")
+      : "+"
 
     // Format the query with an optional classifier and extension
     String query = "${dependency.group}:${dependency.name}:${version}"
@@ -206,8 +206,8 @@ class Resolver {
   /** Returns a variant of the provided dependency used for querying the latest version. */
   @TypeChecked(SKIP)
   private Dependency createQueryDependency(DependencyConstraint dependency, String revision) {
-    // If no version was specified then use 'none' to pass it through.
-    String version = dependency.version == null ? 'none' : '+'
+    // If no version was specified then use "none" to pass it through.
+    String version = dependency.version == null ? "none" : "+"
 
     return project.dependencies.create("${dependency.group}:${dependency.name}:${version}") {
       transitive = false
@@ -235,14 +235,14 @@ class Resolver {
       componentSelection.componentSelection { rules ->
         Closure revisionFilter = { ComponentSelection selection, ComponentMetadata metadata ->
           boolean accepted = (metadata == null) ||
-            ((revision == 'release') && (metadata.status == 'release')) ||
-            ((revision == 'milestone') && (metadata.status != 'integration')) ||
-            (revision == 'integration') || (selection.candidate.version == 'none')
+            ((revision == "release") && (metadata.status == "release")) ||
+            ((revision == "milestone") && (metadata.status != "integration")) ||
+            (revision == "integration") || (selection.candidate.version == "none")
           if (!accepted) {
             selection.reject("Component status ${metadata.status} rejected by revision ${revision}")
           }
         }
-        rules.all ComponentSelection.methods.any { it.name == 'getMetadata' }
+        rules.all ComponentSelection.methods.any { it.name == "getMetadata" }
           ? { revisionFilter(it, it.metadata) }
           : revisionFilter
       }
@@ -276,7 +276,7 @@ class Resolver {
     }
 
     // https://github.com/ben-manes/gradle-versions-plugin/issues/231
-    boolean transitive = declared.values().any { it.version == 'none' }
+    boolean transitive = declared.values().any { it.version == "none" }
 
     Map<Coordinate.Key, Coordinate> coordinates = [:]
     Configuration copy = configuration.copyRecursive().setTransitive(transitive)
@@ -317,7 +317,7 @@ class Resolver {
 
   private void logRepositories() {
     boolean root = (project.rootProject == project)
-    String label = "${root ? project.name : project.path} project${root ? ' (root)' : ''}"
+    String label = "${root ? project.name : project.path} project${root ? " (root)" : ""}"
     if (!project.buildscript.configurations*.dependencies.isEmpty()) {
       project.logger.info("Resolving ${label} buildscript with repositories:")
       for (ArtifactRepository repository : project.buildscript.repositories) {
@@ -330,7 +330,6 @@ class Resolver {
     }
   }
 
-  @TypeChecked(SKIP)
   private void logRepository(ArtifactRepository repository) {
     if (repository instanceof FlatDirectoryArtifactRepository) {
       project.logger.info(" - ${repository.name}: ${repository.dirs}")
@@ -402,7 +401,7 @@ class Resolver {
     }
   }
 
-  @TypeChecked(SKIP)
+  @TypeChecked(SKIP) // GPathResult
   private static String getUrlFromPom(File file) {
     GPathResult pom = new XmlSlurper(/* validating */ false, /* namespaceAware */ false).parse(file)
     if (pom.url) {
@@ -411,11 +410,11 @@ class Resolver {
     return pom.scm.url
   }
 
-  @TypeChecked(SKIP)
+  @TypeChecked(SKIP) // GPathResult
   @Nullable
   private static ModuleVersionIdentifier getParentFromPom(File file) {
     GPathResult pom = new XmlSlurper(/* validating */ false, /* namespaceAware */ false).parse(file)
-    GPathResult parent = pom.children().find { child -> child.name() == 'parent' }
+    GPathResult parent = pom.children().find { child -> child.name() == "parent" }
     if (parent) {
       String groupId = parent.groupId
       String artifactId = parent.artifactId

@@ -58,12 +58,12 @@ class VersionMapping {
 
     for (Coordinate coordinate : current) {
       Coordinate latestCoordinate = latestByKey[coordinate.key]
-      project.logger.info('Comparing dependency (current: {}, latest: {})',
-        coordinate, latestCoordinate?.version ?: 'unresolved')
+      project.logger.info("Comparing dependency (current: {}, latest: {})",
+        coordinate, latestCoordinate?.version ?: "unresolved")
 
       if (unresolved.contains(coordinate)) {
         continue
-      } else if (coordinate.version == 'none') {
+      } else if (coordinate.version == "none") {
         undeclared.add(coordinate)
         continue
       }
