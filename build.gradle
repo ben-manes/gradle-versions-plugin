@@ -13,11 +13,6 @@ repositories {
 group = GROUP
 version = VERSION_NAME
 
-buildScan {
-  termsOfServiceUrl = 'https://gradle.com/terms-of-service'
-  termsOfServiceAgree = 'yes'
-}
-
 codenarcMain {
   configFile = file('config/codenarc/rules.groovy')
 }
