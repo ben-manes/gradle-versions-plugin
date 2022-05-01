@@ -26,15 +26,24 @@ tasks.withType(CodeNarc) { codeNarcTask ->
 }
 
 // Write the plugin's classpath to a file to share with the tests
-task createClasspathManifest {
-  def outputDir = file("$buildDir/$name")
+task createClasspathManifest() {
+  def outputDir = new File(buildDir, name)
 
   inputs.files sourceSets.main.runtimeClasspath
   outputs.dir outputDir
 
   doLast {
     outputDir.mkdirs()
-    file("$outputDir/plugin-classpath.txt").text = sourceSets.main.runtimeClasspath.join("\n")
+    // Combine both main and test plugin classpaths
+    def set = new HashSet<String>()
+    sourceSets.main.runtimeClasspath.files.forEach {
+      set.add(it.path)
+    }
+    sourceSets.test.runtimeClasspath.files.forEach {
+      set.add(it.path)
+    }
+    def list = new ArrayList<String>(set)
+    file("$outputDir/plugin-classpath.txt").text = String.join("\n", list)
   }
 }
 
