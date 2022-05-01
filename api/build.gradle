@@ -11,3 +11,9 @@ dependencies {
 
   implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.6.21'
 }
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+  kotlinOptions {
+    jvmTarget = JavaVersion.VERSION_1_8
+  }
+}

@@ -13,8 +13,6 @@ repositories {
 group = GROUP
 version = VERSION_NAME
 
-sourceCompatibility = JavaVersion.VERSION_1_8
-
 buildScan {
   termsOfServiceUrl = 'https://gradle.com/terms-of-service'
   termsOfServiceAgree = 'yes'
@@ -69,6 +67,30 @@ jar {
       'Built-JDK': System.getProperty('java.version'),
       'Built-Gradle': gradle.gradleVersion
     )
+  }
+}
+
+tasks.withType(JavaCompile).configureEach {
+  sourceCompatibility = JavaVersion.VERSION_1_8
+  targetCompatibility = JavaVersion.VERSION_1_8
+
+  configure(options) {
+    compilerArgs << '-Xlint:all'
+    compilerArgs << '-Xlint:-options'
+    encoding = 'utf-8'
+    fork = true
+  }
+}
+
+tasks.withType(GroovyCompile).configureEach {
+  sourceCompatibility = JavaVersion.VERSION_1_8
+  targetCompatibility = JavaVersion.VERSION_1_8
+
+  configure(options) {
+    compilerArgs << '-Xlint:all'
+    compilerArgs << '-Xlint:-options'
+    encoding = 'utf-8'
+    fork = true
   }
 }
 
