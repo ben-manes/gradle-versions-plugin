@@ -19,6 +19,7 @@ import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
+import javax.annotation.Nullable
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -38,8 +39,10 @@ import org.gradle.api.artifacts.UnresolvedDependency
 @TupleConstructor
 class DependencyUpdates {
   Project project
+  @Nullable
   Action<? super ResolutionStrategyWithCurrent> resolutionStrategy
   String revision
+  @Nullable
   Object outputFormatter
   String outputDir
   String reportfileName
@@ -121,7 +124,7 @@ class DependencyUpdates {
   }
 
   private DependencyUpdatesReporter createReporter(VersionMapping versions,
-                                                   Set<UnresolvedDependency> unresolved, Map<Map<String, String>, String> projectUrls) {
+    Set<UnresolvedDependency> unresolved, Map<Map<String, String>, String> projectUrls) {
     Map<Map<String, String>, Coordinate> currentVersions =
       versions.current.collectEntries { [[group: it.groupId, name: it.artifactId]: it] }
     Map<Map<String, String>, Coordinate> latestVersions =

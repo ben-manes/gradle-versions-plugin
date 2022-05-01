@@ -6,6 +6,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import javax.annotation.Nullable
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -33,6 +34,7 @@ class GradleUpdateChecker {
     .build()
   // TODO: convert this to Map<String?, String?> and remove kotlin-reflect/moshi-kotlin?
   private static final class VersionSite {
+    @Nullable
     String version = null
   }
   private final boolean enabled
@@ -44,7 +46,7 @@ class GradleUpdateChecker {
     }
   }
 
-  private void fetch() {
+  private static void fetch() {
     for (it in GradleReleaseChannel.values()) {
       Response response
       try {
@@ -78,7 +80,7 @@ class GradleUpdateChecker {
     return new ReleaseStatus.Available(GradleVersion.current())
   }
 
-  /** @return if the check for Gradle updates was enabled and, if so, the versions were fetched. */
+  /** @return if the check for Gradle updates was enabled and, if so, the versions were fetched.   */
   boolean isEnabled() {
     return enabled
   }
@@ -87,7 +89,7 @@ class GradleUpdateChecker {
    * @return An instance of {@link ReleaseStatus} explaining the update check for the latest version on the "current"
    * gradle release channel.
    */
-  ReleaseStatus getCurrentGradleVersion() {
+  static ReleaseStatus getCurrentGradleVersion() {
     return cacheMap.get(GradleReleaseChannel.CURRENT)
   }
 
@@ -95,7 +97,7 @@ class GradleUpdateChecker {
    * @return An instance of {@link ReleaseStatus} explaining the update check for the latest version on the
    * "release-candidate" gradle release channel.
    */
-  ReleaseStatus getReleaseCandidateGradleVersion() {
+  static ReleaseStatus getReleaseCandidateGradleVersion() {
     return cacheMap.get(GradleReleaseChannel.RELEASE_CANDIDATE)
   }
 
@@ -103,7 +105,7 @@ class GradleUpdateChecker {
    * @return An instance of {@link ReleaseStatus} explaining the update check for the latest version on the "nightly"
    * gradle release channel.
    */
-  ReleaseStatus getNightlyGradleVersion() {
+  static ReleaseStatus getNightlyGradleVersion() {
     return cacheMap.get(GradleReleaseChannel.NIGHTLY)
   }
 

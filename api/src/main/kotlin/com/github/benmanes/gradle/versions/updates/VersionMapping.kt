@@ -3,20 +3,18 @@ package com.github.benmanes.gradle.versions.updates
 import org.gradle.api.Project
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionComparator
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
-import java.util.SortedSet
-import java.util.TreeSet
 
 /**
  * A mapping of which versions are out of date, up to date, undeclared, or exceed the latest found.
  */
 class VersionMapping(val project: Project, statuses: Set<DependencyStatus>) {
-  val downgrade: SortedSet<Coordinate> = TreeSet()
-  val upToDate: SortedSet<Coordinate> = TreeSet()
-  val upgrade: SortedSet<Coordinate> = TreeSet()
-  val undeclared: SortedSet<Coordinate> = TreeSet()
-  val unresolved: SortedSet<Coordinate> = TreeSet()
-  val current: SortedSet<Coordinate> = TreeSet()
-  val latest: SortedSet<Coordinate> = TreeSet()
+  val downgrade = sortedSetOf<Coordinate>()
+  val upToDate = sortedSetOf<Coordinate>()
+  val upgrade = sortedSetOf<Coordinate>()
+  val undeclared = sortedSetOf<Coordinate>()
+  val unresolved = sortedSetOf<Coordinate>()
+  val current = sortedSetOf<Coordinate>()
+  val latest = sortedSetOf<Coordinate>()
   private var comparator = makeVersionComparator()
 
   init {

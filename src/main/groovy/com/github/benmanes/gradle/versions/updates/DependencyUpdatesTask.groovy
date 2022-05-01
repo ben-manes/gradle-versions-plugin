@@ -47,10 +47,13 @@ class DependencyUpdatesTask extends DefaultTask {
   String outputDir =
     "${project.buildDir.path.replace(project.projectDir.path + "/", "")}/dependencyUpdates"
 
-  @Input @Optional
+  @Input
+  @Optional
   String reportfileName = "report"
 
-  @Input @Optional
+  @Input
+  @Optional
+  @Nullable
   String getOutputFormatterName() {
     return (outputFormatter instanceof String) ? ((String) outputFormatter) : null
   }
@@ -58,7 +61,6 @@ class DependencyUpdatesTask extends DefaultTask {
   // Groovy generates both get/is accessors for boolean properties unless we manually define some.
   // Gradle will reject this behavior starting in 7.0 so we make sure to define accessors ourselves.
   boolean checkForGradleUpdate = true
-
   boolean checkConstraints = false
   boolean checkBuildEnvironmentConstraints = false
 
@@ -80,8 +82,12 @@ class DependencyUpdatesTask extends DefaultTask {
   @Internal
   Object outputFormatter = "plain"
 
-  @Internal @Nullable Closure resolutionStrategy = null
-  @Nullable private Action<? super ResolutionStrategyWithCurrent> resolutionStrategyAction = null
+  @Internal
+  @Nullable
+  Closure resolutionStrategy = null
+
+  @Nullable
+  private Action<? super ResolutionStrategyWithCurrent> resolutionStrategyAction = null
 
   DependencyUpdatesTask() {
     description = "Displays the dependency updates for the project."
@@ -114,8 +120,10 @@ class DependencyUpdatesTask extends DefaultTask {
         "Remove the assignment operator, \"=\", when setting this task property")
     }
 
-    DependencyUpdates evaluator = new DependencyUpdates(project, resolutionStrategyAction, revisionLevel(),
-      outputFormatterProp(), outputDirectory(), getReportfileName(), checkForGradleUpdate, gradleReleaseChannelLevel(),
+    DependencyUpdates evaluator = new DependencyUpdates(project, resolutionStrategyAction,
+      revisionLevel(),
+      outputFormatterProp(), outputDirectory(), getReportfileName(), checkForGradleUpdate,
+      gradleReleaseChannelLevel(),
       checkConstraints, checkBuildEnvironmentConstraints)
     DependencyUpdatesReporter reporter = evaluator.run()
     reporter?.write()
@@ -144,19 +152,27 @@ class DependencyUpdatesTask extends DefaultTask {
   }
 
   /** Returns the resolution revision level. */
-  String revisionLevel() { System.properties["revision"] ?: revision }
+  String revisionLevel() {
+    return System.properties["revision"] ?: revision
+  }
 
   /** Returns the resolution revision level. */
   String gradleReleaseChannelLevel() {
-    System.properties["gradleReleaseChannel"] ?: gradleReleaseChannel
+    return System.properties["gradleReleaseChannel"] ?: gradleReleaseChannel
   }
 
   /** Returns the outputDir format. */
-  Object outputFormatterProp() { System.properties["outputFormatter"] ?: outputFormatter }
+  Object outputFormatterProp() {
+    return System.properties["outputFormatter"] ?: outputFormatter
+  }
 
   /** Returns the outputDir destination. */
-  String outputDirectory() { System.properties["outputDir"] ?: outputDir }
+  String outputDirectory() {
+    return System.properties["outputDir"] ?: outputDir
+  }
 
   /** Returns the filename of the report. */
-  String getReportfileName() { System.properties.get("reportfileName", reportfileName) }
+  String getReportfileName() {
+    return System.properties.get("reportfileName", reportfileName)
+  }
 }
