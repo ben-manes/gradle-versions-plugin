@@ -1,11 +1,14 @@
 package com.github.benmanes.gradle.versions.updates.gradle
 
-import groovy.json.JsonException
-import groovy.json.JsonSlurper
-import groovy.transform.CompileDynamic
+import static java.util.concurrent.TimeUnit.SECONDS
+
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-import java.util.concurrent.TimeUnit
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
 import org.gradle.util.GradleVersion
 
 /**
@@ -16,11 +19,22 @@ import org.gradle.util.GradleVersion
  */
 @CompileStatic
 class GradleUpdateChecker {
-  private static final long TIMEOUT_MS = TimeUnit.SECONDS.toMillis(15)
-  private static final String API_BASE_URL = "https://services.gradle.org/versions/"
-
-  private final Map<GradleReleaseChannel, ReleaseStatus> cacheMap = new EnumMap<>(
+  private static final Map<GradleReleaseChannel, ReleaseStatus> cacheMap = new EnumMap<>(
     GradleReleaseChannel.class)
+  private static final String API_BASE_URL = "https://services.gradle.org/versions/"
+  private static final long CLIENT_TIME_OUT = 15_000L // milliseconds
+  private static final OkHttpClient client = new OkHttpClient.Builder()
+    .connectTimeout(CLIENT_TIME_OUT, SECONDS)
+    .writeTimeout(CLIENT_TIME_OUT, SECONDS)
+    .readTimeout(CLIENT_TIME_OUT, SECONDS)
+    .build()
+  private static final Moshi moshi = new Moshi.Builder()
+    .addLast(new KotlinJsonAdapterFactory())
+    .build()
+  // TODO: convert this to Map<String?, String?> and remove kotlin-reflect/moshi-kotlin?
+  private static final class VersionSite {
+    String version = null
+  }
   private final boolean enabled
 
   GradleUpdateChecker(boolean enabled) {
@@ -30,23 +44,27 @@ class GradleUpdateChecker {
     }
   }
 
-  @CompileDynamic
   private void fetch() {
     for (it in GradleReleaseChannel.values()) {
+      Response response
       try {
-        Map<String, Long> params = new HashMap<String, Long>()
-        params.put("connectTimeout", TIMEOUT_MS)
-        params.put("readTimeout", TIMEOUT_MS)
-        Object versionObject = new JsonSlurper().parse(new URL(API_BASE_URL + it.id), params)
-        if (versionObject.version) {
-          cacheMap.put(it,
-            new ReleaseStatus.Available(GradleVersion.version(versionObject.version as String)))
+        response = client.newCall(
+          new Request.Builder()
+            .url(API_BASE_URL + it.id)
+            .build()
+        ).execute()
+        VersionSite version = moshi.adapter(VersionSite.class).fromJson(response.body().source())
+        if (version.version != null) {
+          cacheMap[it] = new ReleaseStatus.Available(GradleVersion.version(version.version ?: ""))
         } else {
-          cacheMap.put(it, new ReleaseStatus.Unavailable())
+          cacheMap[it] = new ReleaseStatus.Unavailable()
         }
-      } catch (JsonException e) {
-        // JsonSlurper throws JsonException for all types of parsing failures (including I/O exceptions).
-        cacheMap.put(it, new ReleaseStatus.Failure(e.getMessage()))
+      } catch (Exception e) {
+        cacheMap[it] = new ReleaseStatus.Failure(e.message ?: "")
+      } finally {
+        if (response != null) {
+          response.close()
+        }
       }
     }
   }
@@ -60,7 +78,7 @@ class GradleUpdateChecker {
     return new ReleaseStatus.Available(GradleVersion.current())
   }
 
-  /** @return if the check for Gradle updates was enabled and, if so, the versions were fetched.  */
+  /** @return if the check for Gradle updates was enabled and, if so, the versions were fetched. */
   boolean isEnabled() {
     return enabled
   }
