@@ -7,6 +7,9 @@ on:
   pull_request:
     types: [ opened, labeled, unlabeled, synchronize ]
 
+env:
+  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.daemon=false -Dkotlin.incremental=false"
+
 jobs:
   jvm:
     runs-on: ubuntu-latest
