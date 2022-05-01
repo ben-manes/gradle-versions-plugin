@@ -59,12 +59,14 @@ import org.gradle.maven.MavenPomArtifact
 @CompileStatic
 class Resolver {
   final Project project
-  @Nullable final Action<? super ResolutionStrategyWithCurrent> resolutionStrategy
+  @Nullable
+  final Action<? super ResolutionStrategyWithCurrent> resolutionStrategy
   final boolean checkConstraints
   final ConcurrentMap<ModuleVersionIdentifier, ProjectUrl> projectUrls
 
-  Resolver(Project project, Action<? super ResolutionStrategyWithCurrent> resolutionStrategy,
-           boolean checkConstraints) {
+  Resolver(Project project,
+    @Nullable Action<? super ResolutionStrategyWithCurrent> resolutionStrategy,
+    boolean checkConstraints) {
     this.projectUrls = new ConcurrentHashMap<>()
     this.resolutionStrategy = resolutionStrategy
     this.project = project
@@ -87,7 +89,7 @@ class Resolver {
 
   /** Returns the version status of the configuration's dependencies. */
   private Set<DependencyStatus> getStatus(Map<Coordinate.Key, Coordinate> coordinates,
-                                          Set<ResolvedDependency> resolved, Set<UnresolvedDependency> unresolved) {
+    Set<ResolvedDependency> resolved, Set<UnresolvedDependency> unresolved) {
     Set<DependencyStatus> result = new HashSet<>()
 
     resolved.each { dependency ->
@@ -112,7 +114,7 @@ class Resolver {
 
   /** Returns a copy of the configuration where dependencies will be resolved up to the revision. */
   private Configuration createLatestConfiguration(Configuration configuration, String revision,
-                                                  Map<Coordinate.Key, Coordinate> currentCoordinates) {
+    Map<Coordinate.Key, Coordinate> currentCoordinates) {
     List<Dependency> latest = configuration.dependencies.findAll { dependency ->
       dependency instanceof ExternalDependency
     }.collect { dependency ->
@@ -135,8 +137,10 @@ class Resolver {
 
     // https://github.com/ben-manes/gradle-versions-plugin/issues/592
     // allow resolution of dynamic latest versions regardless of the original strategy
-    if (copy.resolutionStrategy.metaClass.hasProperty(copy.resolutionStrategy, "failOnDynamicVersions")) {
-      copy.resolutionStrategy.metaClass.setProperty(copy.resolutionStrategy, "failOnDynamicVersions", false)
+    if (copy.resolutionStrategy.metaClass.hasProperty(copy.resolutionStrategy,
+      "failOnDynamicVersions")) {
+      copy.resolutionStrategy.metaClass.setProperty(copy.resolutionStrategy,
+        "failOnDynamicVersions", false)
     }
 
     // Resolve using the latest version of explicitly declared dependencies and retains Kotlin's
@@ -217,7 +221,7 @@ class Resolver {
   /** Adds the attributes from the source to the target. */
   @TypeChecked(SKIP)
   private static void addAttributes(HasConfigurableAttributes target,
-                                    HasConfigurableAttributes source, Closure filter = { String key -> true }) {
+    HasConfigurableAttributes source, Closure filter = { String key -> true }) {
     target.attributes { container ->
       for (Attribute<?> key : source.attributes.keySet()) {
         if (filter.call(key.name)) {
@@ -251,7 +255,7 @@ class Resolver {
 
   /** Adds a custom resolution strategy only applicable for the dependency updates task. */
   private void addCustomResolutionStrategy(Configuration configuration,
-                                           Map<Coordinate.Key, Coordinate> currentCoordinates) {
+    Map<Coordinate.Key, Coordinate> currentCoordinates) {
     if (resolutionStrategy != null) {
       configuration.resolutionStrategy(new Action<ResolutionStrategy>() {
         @Override
@@ -364,7 +368,8 @@ class Resolver {
   @Nullable
   private String resolveProjectUrl(ModuleVersionIdentifier id) {
     try {
-      ArtifactResolutionResult resolutionResult = project.dependencies.createArtifactResolutionQuery()
+      ArtifactResolutionResult resolutionResult = project
+        .dependencies.createArtifactResolutionQuery()
         .forComponents(DefaultModuleComponentIdentifier.newId(id))
         .withArtifacts(MavenModule, MavenPomArtifact)
         .execute()

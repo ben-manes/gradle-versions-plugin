@@ -35,7 +35,8 @@ class GradleUpdateResult implements Comparable<GradleUpdateResult> {
    */
   final String reason
 
-  GradleUpdateResult(boolean enabled, GradleUpdateChecker.ReleaseStatus.Available running, GradleUpdateChecker.ReleaseStatus release) {
+  GradleUpdateResult(boolean enabled, GradleUpdateChecker.ReleaseStatus.Available running,
+    GradleUpdateChecker.ReleaseStatus release) {
     if (!enabled) {
       this.version = ""
       this.isUpdateAvailable = false
@@ -57,7 +58,8 @@ class GradleUpdateResult implements Comparable<GradleUpdateResult> {
       this.isFailure = true
       this.reason = release.reason
     } else {
-      throw new IllegalStateException("ReleaseStatus subtype [" + release.class + "] not yet implemented")
+      throw new IllegalStateException(
+        "ReleaseStatus subtype [" + release.class + "] not yet implemented")
     }
   }
 

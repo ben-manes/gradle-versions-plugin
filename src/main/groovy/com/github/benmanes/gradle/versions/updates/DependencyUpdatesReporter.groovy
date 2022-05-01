@@ -52,7 +52,8 @@ class DependencyUpdatesReporter {
   /** The revision strategy evaluated with. */
   String revision
   /** The output formatter strategy evaluated with. */
-  @Nullable Object outputFormatter
+  @Nullable
+  Object outputFormatter
   /** The outputDir for report. */
   String outputDir
   /** The filename of the report file. */
@@ -155,7 +156,7 @@ class DependencyUpdatesReporter {
 
     int count = sortedCurrent.size() + sortedOutdated.size() + sortedExceeded.size() + SortedUndeclared.size() + sortedUnresolved.size()
 
-    buildObject(
+    return buildObject(
       count,
       buildDependenciesGroup(sortedCurrent),
       buildDependenciesGroup(sortedOutdated),
@@ -186,33 +187,33 @@ class DependencyUpdatesReporter {
     existingKey["name"] = (index == -1) ? existingKey["name"] : existingKey["name"].substring(0, index)
   }
 
-  protected SortedSet buildCurrentGroup() {
-    sortByGroupAndName(upToDateVersions).collect { Map.Entry<Map<String, String>, Coordinate> dep ->
+  protected SortedSet<Dependency> buildCurrentGroup() {
+    return sortByGroupAndName(upToDateVersions).collect { Map.Entry<Map<String, String>, Coordinate> dep ->
       updateKey(dep.key)
       buildDependency(dep.value, dep.key)
-    } as SortedSet
+    } as SortedSet<Dependency>
   }
 
-  protected SortedSet buildOutdatedGroup() {
-    sortByGroupAndName(upgradeVersions).collect { Map.Entry<Map<String, String>, Coordinate> dep ->
+  protected SortedSet<Dependency> buildOutdatedGroup() {
+    return sortByGroupAndName(upgradeVersions).collect { Map.Entry<Map<String, String>, Coordinate> dep ->
       updateKey(dep.key)
       buildOutdatedDependency(dep.value, dep.key)
-    } as SortedSet
+    } as SortedSet<Dependency>
   }
 
-  protected SortedSet buildExceededGroup() {
-    sortByGroupAndName(downgradeVersions).collect { Map.Entry<Map<String, String>, Coordinate> dep ->
+  protected SortedSet<Dependency> buildExceededGroup() {
+    return sortByGroupAndName(downgradeVersions).collect { Map.Entry<Map<String, String>, Coordinate> dep ->
       updateKey(dep.key)
       buildExceededDependency(dep.value, dep.key)
-    } as SortedSet
+    } as SortedSet<Dependency>
   }
 
-  protected SortedSet buildUndeclaredGroup() {
+  protected SortedSet<Dependency> buildUndeclaredGroup() {
     return undeclared.collect { Coordinate coordinate -> new Dependency(coordinate.groupId, coordinate.artifactId) } as SortedSet
   }
 
   protected SortedSet<DependencyUnresolved> buildUnresolvedGroup() {
-    unresolved.sort { UnresolvedDependency a, UnresolvedDependency b ->
+    return unresolved.sort { UnresolvedDependency a, UnresolvedDependency b ->
       compareKeys(keyOf(a.selector), keyOf(b.selector))
     }.collect { UnresolvedDependency dep ->
       StringWriter stringWriter = new StringWriter()
@@ -220,7 +221,7 @@ class DependencyUpdatesReporter {
       String message = stringWriter.toString()
 
       buildUnresolvedDependency(dep.selector, message)
-    } as SortedSet
+    } as SortedSet<DependencyUnresolved>
   }
 
   protected static Result buildObject(int count,
@@ -230,26 +231,26 @@ class DependencyUpdatesReporter {
                                       DependenciesGroup undeclaredGroup,
                                       DependenciesGroup unresolvedGroup,
                                       GradleUpdateResults gradleUpdateResults) {
-    new Result(count, currentGroup, outdatedGroup, exceededGroup, undeclaredGroup, unresolvedGroup, gradleUpdateResults)
+    return new Result(count, currentGroup, outdatedGroup, exceededGroup, undeclaredGroup, unresolvedGroup, gradleUpdateResults)
   }
 
   protected static <T extends Dependency> DependenciesGroup<T> buildDependenciesGroup(
     SortedSet<T> dependencies) {
-    new DependenciesGroup<T>(dependencies.size(), dependencies)
+    return new DependenciesGroup<T>(dependencies.size(), dependencies)
   }
 
   protected Dependency buildDependency(Coordinate coordinate, Map<String, String> key) {
-    new Dependency(key["group"], key["name"], coordinate.getVersion(), projectUrls[key],
+    return new Dependency(key["group"], key["name"], coordinate.getVersion(), projectUrls[key],
       coordinate.getUserReason())
   }
 
   protected DependencyLatest buildExceededDependency(Coordinate coordinate, Map<String, String> key) {
-    new DependencyLatest(key["group"], key["name"], coordinate?.getVersion(), projectUrls[key],
+    return new DependencyLatest(key["group"], key["name"], coordinate?.getVersion(), projectUrls[key],
       coordinate?.getUserReason(), latestVersions[key]?.getVersion())
   }
 
   protected DependencyUnresolved buildUnresolvedDependency(ModuleVersionSelector selector, String message) {
-    new DependencyUnresolved(selector.group, selector.name,
+    return new DependencyUnresolved(selector.group, selector.name,
       currentVersions[keyOf(selector)]?.getVersion(),
       latestVersions[keyOf(selector)]?.getVersion(),
       currentVersions[keyOf(selector)]?.getUserReason(),
@@ -271,22 +272,22 @@ class DependencyUpdatesReporter {
         available = new VersionAvailable(laterVersion)
     }
 
-    new DependencyOutdated(key["group"], key["name"], coordinate?.getVersion(),
+    return new DependencyOutdated(key["group"], key["name"], coordinate?.getVersion(),
       projectUrls[key], coordinate?.getUserReason(), available)
   }
 
   static Map<Map<String, String>, Coordinate> sortByGroupAndName(Map<Map<String, String>, Coordinate> dependencies) {
-    dependencies.sort { Map.Entry<Map<String, String>, Coordinate> a,
+    return dependencies.sort { Map.Entry<Map<String, String>, Coordinate> a,
                         Map.Entry<Map<String, String>, Coordinate> b -> compareKeys(a.key, b.key)
     }
   }
 
   /** Compares the dependency keys. */
   protected static int compareKeys(Map<String, String> a, Map<String, String> b) {
-    (a["group"] == b["group"]) ? a["name"] <=> b["name"] : a["group"] <=> b["group"]
+    return (a["group"] == b["group"]) ? a["name"] <=> b["name"] : a["group"] <=> b["group"]
   }
 
   static Map<String, String> keyOf(ModuleVersionSelector dependency) {
-    [group: dependency.group, name: dependency.name]
+    return [group: dependency.group, name: dependency.name]
   }
 }
