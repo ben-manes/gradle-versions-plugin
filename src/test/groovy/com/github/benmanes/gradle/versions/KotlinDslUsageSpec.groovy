@@ -7,9 +7,7 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 final class KotlinDslUsageSpec extends Specification {
-
-  @Rule
-  TemporaryFolder testProjectDir = new TemporaryFolder()
+  @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
   private File buildFile
 
   def 'setup'() {

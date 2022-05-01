@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.gradle.versions
 
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.CURRENT
+import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
+
 import com.github.benmanes.gradle.versions.reporter.Reporter
 import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.updates.Coordinate
@@ -25,9 +28,6 @@ import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Unroll
-
-import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.CURRENT
-import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 
 /**
  * A specification for the dependency updates task.
@@ -246,7 +246,8 @@ final class DependencyUpdatesSpec extends Specification {
     with(reporter) {
       unresolved.isEmpty()
       upgradeVersions.isEmpty()
-      (upToDateVersions.get(['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent'])
+      (upToDateVersions
+        .get(['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent'])
         .getVersion() == '3.1')
       downgradeVersions.isEmpty()
       undeclared.isEmpty()
@@ -273,7 +274,8 @@ final class DependencyUpdatesSpec extends Specification {
       upgradeVersions.isEmpty()
       upToDateVersions.isEmpty()
       downgradeVersions.isEmpty()
-      undeclared.contains(new Coordinate('backport-util-concurrent','backport-util-concurrent',NONE_VERSION,null))
+      undeclared.contains(
+        new Coordinate('backport-util-concurrent', 'backport-util-concurrent', NONE_VERSION, null))
     }
   }
 
@@ -357,7 +359,7 @@ final class DependencyUpdatesSpec extends Specification {
       upgradeVersions.isEmpty()
       upToDateVersions.isEmpty()
       downgradeVersions.isEmpty()
-      undeclared.contains(new Coordinate('null','guice-4.0',NONE_VERSION,null))
+      undeclared.contains(new Coordinate('null', 'guice-4.0', NONE_VERSION, null))
     }
   }
 
@@ -382,8 +384,10 @@ final class DependencyUpdatesSpec extends Specification {
     with(reporter) {
       unresolved.isEmpty()
       upgradeVersions.isEmpty()
-      (upToDateVersions.get(['group': 'com.google.guava', 'name': 'guava']).getVersion() == '16.0-rc1')
-      (downgradeVersions.get(['group': 'com.google.guava', 'name': 'guava']).getVersion() == '99.0-SNAPSHOT')
+      (upToDateVersions.get(['group': 'com.google.guava', 'name': 'guava']).getVersion() ==
+        '16.0-rc1')
+      (downgradeVersions.get(['group': 'com.google.guava', 'name': 'guava']).getVersion() ==
+        '99.0-SNAPSHOT')
       undeclared.isEmpty()
     }
   }
@@ -406,14 +410,15 @@ final class DependencyUpdatesSpec extends Specification {
       unresolved.isEmpty()
       upgradeVersions.isEmpty()
       upToDateVersions.isEmpty()
-      downgradeVersions[['group': 'com.google.guava', 'name': 'guava']].getVersion() == '99.0-SNAPSHOT'
+      downgradeVersions[['group': 'com.google.guava', 'name': 'guava']].getVersion() ==
+        '99.0-SNAPSHOT'
       undeclared.isEmpty()
     }
   }
 
   def 'Single project with component selection rule'() {
     given:
-    def project = new ProjectBuilder().withName('single').build()
+    def project = ProjectBuilder.builder().withName('single').build()
     addRepositoryTo(project)
     project.configurations {
       release
@@ -449,7 +454,7 @@ final class DependencyUpdatesSpec extends Specification {
 
   def 'Read project url from pom'() {
     given:
-    def project = new ProjectBuilder().withName('single').build()
+    def project = ProjectBuilder.builder().withName('single').build()
     addRepositoryTo(project)
     project.configurations {
       compile
@@ -464,14 +469,15 @@ final class DependencyUpdatesSpec extends Specification {
 
     then:
     with(reporter) {
-      projectUrls == [['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent']:
-                        'https://backport-jsr166.sourceforge.net/']
+      projectUrls == [
+        ['group': 'backport-util-concurrent', 'name': 'backport-util-concurrent']: 'https://backport-jsr166.sourceforge.net/'
+      ]
     }
   }
 
   def 'Read project url from direct parent pom'() {
     given:
-    def project = new ProjectBuilder().withName('single').build()
+    def project = ProjectBuilder.builder().withName('single').build()
     addRepositoryTo(project)
     project.configurations {
       compile
@@ -486,14 +492,15 @@ final class DependencyUpdatesSpec extends Specification {
 
     then:
     with(reporter) {
-      projectUrls == [['group': 'com.google.inject', 'name': 'guice']:
-                        'https://code.google.com/p/google-guice/']
+      projectUrls == [
+        ['group': 'com.google.inject', 'name': 'guice']: 'https://code.google.com/p/google-guice/'
+      ]
     }
   }
 
   def 'Read project url from indirect parent pom'() {
     given:
-    def project = new ProjectBuilder().withName('single').build()
+    def project = ProjectBuilder.builder().withName('single').build()
     addRepositoryTo(project)
     project.configurations {
       compile
@@ -510,8 +517,9 @@ final class DependencyUpdatesSpec extends Specification {
     with(reporter) {
       unresolved.isEmpty()
       upgradeVersions.isEmpty()
-      projectUrls == [['group': 'com.google.inject.extensions', 'name': 'guice-multibindings']:
-                        'https://code.google.com/p/google-guice/']
+      projectUrls == [
+        ['group': 'com.google.inject.extensions', 'name': 'guice-multibindings']: 'https://code.google.com/p/google-guice/'
+      ]
       downgradeVersions.isEmpty()
       undeclared.isEmpty()
     }
@@ -519,7 +527,7 @@ final class DependencyUpdatesSpec extends Specification {
 
   def 'Project url tag in pom does not exist'() {
     given:
-    def project = new ProjectBuilder().withName('single').build()
+    def project = ProjectBuilder.builder().withName('single').build()
     addRepositoryTo(project)
     project.configurations {
       compile
@@ -540,7 +548,7 @@ final class DependencyUpdatesSpec extends Specification {
 
   def 'Project url of sonatype oss-parent is ignored'() {
     given:
-    def project = new ProjectBuilder().withName('single').build()
+    def project = ProjectBuilder.builder().withName('single').build()
     addRepositoryTo(project)
     project.configurations {
       compile
@@ -561,7 +569,7 @@ final class DependencyUpdatesSpec extends Specification {
 
   def 'Constructor takes gradle release channel'() {
     given:
-    def project = new ProjectBuilder().withName('single').build()
+    def project = ProjectBuilder.builder().withName('single').build()
     addRepositoryTo(project)
     project.configurations {
       compile
@@ -583,7 +591,7 @@ final class DependencyUpdatesSpec extends Specification {
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/285')
   def 'checkForGradleUpdate=false does not cause an NPE'() {
     given:
-    def project = new ProjectBuilder().withName('single').build()
+    def project = ProjectBuilder.builder().withName('single').build()
     addDependenciesTo(project)
 
     when:
@@ -602,19 +610,21 @@ final class DependencyUpdatesSpec extends Specification {
   }
 
   private static def singleProject() {
-    return new ProjectBuilder().withName('single').build()
+    return ProjectBuilder.builder().withName('single').build()
   }
 
   private static def multiProject() {
-    def rootProject = new ProjectBuilder().withName('root').build()
-    def childProject = new ProjectBuilder().withName('child').withParent(rootProject).build()
-    def leafProject = new ProjectBuilder().withName('leaf').withParent(childProject).build()
+    def rootProject = ProjectBuilder.builder().withName('root').build()
+    def childProject = ProjectBuilder.builder().withName('child').withParent(rootProject).build()
+    def leafProject = ProjectBuilder.builder().withName('leaf').withParent(childProject).build()
     [rootProject, childProject, leafProject]
   }
 
   private static def evaluate(project, revision = 'milestone', outputFormatter = 'plain',
-                              outputDir = 'build', resolutionStrategy = null, reportfileName = null, checkForGradleUpdate = true, gradleReleaseChannel = RELEASE_CANDIDATE.id) {
-    new DependencyUpdates(project, resolutionStrategy, revision, outputFormatter, outputDir, reportfileName, checkForGradleUpdate, gradleReleaseChannel).run()
+    outputDir = 'build', resolutionStrategy = null, reportfileName = null,
+    checkForGradleUpdate = true, gradleReleaseChannel = RELEASE_CANDIDATE.id) {
+    new DependencyUpdates(project, resolutionStrategy, revision, outputFormatter, outputDir,
+      reportfileName, checkForGradleUpdate, gradleReleaseChannel).run()
   }
 
   private void addRepositoryTo(project) {
@@ -713,7 +723,7 @@ final class DependencyUpdatesSpec extends Specification {
   private static void checkUndeclaredVersions(def reporter) {
     assert reporter.undeclared.size() == 2
     assert reporter.undeclared.containsAll([
-      new Coordinate('com.thoughtworks.xstream','xstream',NONE_VERSION,null),
-      new Coordinate('com.jayway.jsonpath','json-path',NONE_VERSION,null)])
+      new Coordinate('com.thoughtworks.xstream', 'xstream', NONE_VERSION, null),
+      new Coordinate('com.jayway.jsonpath', 'json-path', NONE_VERSION, null)])
   }
 }

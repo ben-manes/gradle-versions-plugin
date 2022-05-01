@@ -1,9 +1,8 @@
 package com.github.benmanes.gradle.versions
 
-import org.gradle.testkit.runner.GradleRunner
-
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
+import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import spock.lang.Specification

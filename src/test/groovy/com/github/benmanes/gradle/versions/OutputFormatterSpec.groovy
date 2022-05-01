@@ -169,7 +169,7 @@ final class OutputFormatterSpec extends Specification {
 
     Failed to compare versions for the following dependencies because they were declared without version:
      - com.thoughtworks.xstream:xstream
-      """.stripIndent().replace('\r','').replace('\n', System.lineSeparator())
+      """.stripIndent().replace('\r', '').replace('\n', System.lineSeparator())
     def actual = reportFile.text
 
     then:
@@ -490,7 +490,7 @@ Failed to determine the latest version for the following dependencies (use --inf
  - com.github.ben-manes:unresolvable
      Life is hard
  - com.github.ben-manes:unresolvable2
-""".replace('\r','').replace('\n', System.lineSeparator())
+""".replace('\r', '').replace('\n', System.lineSeparator())
     def actual = reportFile.text
 
     then:

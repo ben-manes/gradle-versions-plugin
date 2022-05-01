@@ -7,13 +7,12 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 final class ComponentSelectionRuleSourceSpec extends Specification {
-
   @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
   private File buildFile
   private List<File> pluginClasspath
 
   def 'setup'() {
-    def pluginClasspathResource = getClass().classLoader.findResource('plugin-classpath.txt')
+    def pluginClasspathResource = getClass().classLoader.getResource('plugin-classpath.txt')
     if (pluginClasspathResource == null) {
       throw new IllegalStateException(
         'Did not find plugin classpath resource, run `testClasses` build task.')

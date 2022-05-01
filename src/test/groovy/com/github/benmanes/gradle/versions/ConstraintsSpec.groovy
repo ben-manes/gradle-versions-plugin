@@ -1,15 +1,14 @@
 package com.github.benmanes.gradle.versions
 
+import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
+
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import spock.lang.Specification
 import spock.lang.Unroll
 
-import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
-
 final class ConstraintsSpec extends Specification {
-
   @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
   private File buildFile
   private String mavenRepoUrl
