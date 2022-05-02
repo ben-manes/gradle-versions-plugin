@@ -116,7 +116,7 @@ class HtmlReporter extends AbstractReporter {
   }
 
   private void writeUpToDate(Appendable printStream, Result result) {
-    SortedSet<Dependency> versions = result.getCurrent().getDependencies()
+    Set<Dependency> versions = result.getCurrent().getDependencies()
     if (!versions.isEmpty()) {
       printStream.println("<H2>Current dependencies</H2>")
       printStream
@@ -151,7 +151,7 @@ class HtmlReporter extends AbstractReporter {
   }
 
   private void writeExceedLatestFound(Appendable printStream, Result result) {
-    SortedSet<DependencyLatest> versions = result.getExceeded().getDependencies()
+    Set<DependencyLatest> versions = result.getExceeded().getDependencies()
     if (!versions.isEmpty()) {
       // The following dependencies exceed the version found at the "
       //        + revision + " revision level:
@@ -189,7 +189,7 @@ class HtmlReporter extends AbstractReporter {
   }
 
   private void writeUpgrades(Appendable printStream, Result result) {
-    SortedSet<DependencyOutdated> versions = result.getOutdated().getDependencies()
+    Set<DependencyOutdated> versions = result.getOutdated().getDependencies()
     if (!versions.isEmpty()) {
       printStream.println("<H2>Later dependencies</H2>")
       printStream.println("<p>The following dependencies have later ${revision} versions:<p>")
@@ -224,7 +224,7 @@ class HtmlReporter extends AbstractReporter {
   }
 
   private static void writeUndeclared(Appendable printStream, Result result) {
-    SortedSet<Dependency> versions = result.undeclared.dependencies
+    Set<Dependency> versions = result.undeclared.dependencies
     if (!versions.empty) {
       printStream.println("<H2>Undeclared dependencies</H2>")
       printStream.println(
@@ -264,7 +264,7 @@ class HtmlReporter extends AbstractReporter {
   }
 
   private static void writeUnresolved(Appendable printStream, Result result) {
-    SortedSet<DependencyUnresolved> versions = result.getUnresolved().getDependencies()
+    Set<DependencyUnresolved> versions = result.getUnresolved().getDependencies()
     if (!versions.isEmpty()) {
       printStream.println("<H2>Unresolved dependencies</H2>")
       printStream

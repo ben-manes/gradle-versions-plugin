@@ -92,7 +92,7 @@ class Resolver {
     Set<ResolvedDependency> resolved, Set<UnresolvedDependency> unresolved) {
     Set<DependencyStatus> result = new HashSet<>()
 
-    resolved.each { dependency ->
+    for (dependency in resolved) {
       Coordinate resolvedCoordinate = Coordinate.from(dependency.module.id)
       Coordinate originalCoordinate = coordinates.get(resolvedCoordinate.key)
       Coordinate coord = originalCoordinate ?: resolvedCoordinate
@@ -124,7 +124,7 @@ class Resolver {
     // Common use case for dependency constraints is a java-platform BOM project or to control
     // version of transitive dependency.
     if (supportsConstraints(configuration)) {
-      configuration.dependencyConstraints.each { dependency ->
+      for (dependency in configuration.dependencyConstraints) {
         latest.add(createQueryDependency(dependency, revision))
       }
     }

@@ -89,7 +89,8 @@ class DependencyUpdatesReporter {
   void write() {
     synchronized (MUTEX) {
       if (!(outputFormatter instanceof Closure)) {
-        PlainTextReporter plainTextReporter = new PlainTextReporter(project, revision, gradleReleaseChannel)
+        PlainTextReporter plainTextReporter = new PlainTextReporter(project, revision,
+          gradleReleaseChannel)
         plainTextReporter.write(System.out, buildBaseObject())
       }
 
@@ -99,7 +100,7 @@ class DependencyUpdatesReporter {
         return
       }
       if (outputFormatter instanceof String) {
-        ((String) outputFormatter).split(",").each {
+        for (it in ((String) outputFormatter).split(",")) {
           generateFileReport(getOutputReporter(it))
         }
       } else if (outputFormatter instanceof Reporter) {
@@ -148,13 +149,16 @@ class DependencyUpdatesReporter {
   }
 
   Result buildBaseObject() {
-    SortedSet sortedCurrent = buildCurrentGroup()
-    SortedSet sortedOutdated = buildOutdatedGroup()
-    SortedSet sortedExceeded = buildExceededGroup()
-    SortedSet SortedUndeclared = buildUndeclaredGroup()
-    SortedSet sortedUnresolved = buildUnresolvedGroup()
+    Set<Dependency> sortedCurrent = buildCurrentGroup()
+    Set<Dependency> sortedOutdated = buildOutdatedGroup()
+    Set<Dependency> sortedExceeded = buildExceededGroup()
+    Set<Dependency> SortedUndeclared = buildUndeclaredGroup()
+    Set<DependencyUnresolved> sortedUnresolved = buildUnresolvedGroup()
 
-    int count = sortedCurrent.size() + sortedOutdated.size() + sortedExceeded.size() + SortedUndeclared.size() + sortedUnresolved.size()
+    int count = sortedCurrent.size() + sortedOutdated.size() +
+      sortedExceeded.size() +
+      SortedUndeclared.size() +
+      sortedUnresolved.size()
 
     return buildObject(
       count,
@@ -175,44 +179,56 @@ class DependencyUpdatesReporter {
     boolean enabled = gradleUpdateChecker.isEnabled()
     return new GradleUpdateResults(
       enabled: enabled,
-      running: new GradleUpdateResult(enabled, gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.runningGradleVersion),
-      current: new GradleUpdateResult(enabled, gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.currentGradleVersion),
-      releaseCandidate: new GradleUpdateResult(enabled && (gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id), gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.releaseCandidateGradleVersion),
-      nightly: new GradleUpdateResult(enabled && (gradleReleaseChannel == NIGHTLY.id), gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.nightlyGradleVersion)
+      running: new GradleUpdateResult(enabled, gradleUpdateChecker.runningGradleVersion,
+        gradleUpdateChecker.runningGradleVersion),
+      current: new GradleUpdateResult(enabled, gradleUpdateChecker.runningGradleVersion,
+        gradleUpdateChecker.currentGradleVersion),
+      releaseCandidate: new GradleUpdateResult(
+        enabled && (gradleReleaseChannel == RELEASE_CANDIDATE.id ||
+          gradleReleaseChannel ==
+          NIGHTLY.id), gradleUpdateChecker.runningGradleVersion,
+        gradleUpdateChecker.releaseCandidateGradleVersion),
+      nightly: new GradleUpdateResult(enabled && (gradleReleaseChannel == NIGHTLY.id),
+        gradleUpdateChecker.runningGradleVersion, gradleUpdateChecker.nightlyGradleVersion)
     )
   }
 
   private static void updateKey(Map<String, String> existingKey) {
     int index = existingKey["name"].lastIndexOf("[")
-    existingKey["name"] = (index == -1) ? existingKey["name"] : existingKey["name"].substring(0, index)
+    existingKey["name"] =
+      (index == -1) ? existingKey["name"] : existingKey["name"].substring(0, index)
   }
 
-  protected SortedSet<Dependency> buildCurrentGroup() {
-    return sortByGroupAndName(upToDateVersions).collect { Map.Entry<Map<String, String>, Coordinate> dep ->
-      updateKey(dep.key)
-      buildDependency(dep.value, dep.key)
-    } as SortedSet<Dependency>
+  protected Set<Dependency> buildCurrentGroup() {
+    return sortByGroupAndName(upToDateVersions)
+      .collect { Map.Entry<Map<String, String>, Coordinate> dep ->
+        updateKey(dep.key)
+        buildDependency(dep.value, dep.key)
+      } as TreeSet<Dependency>
   }
 
-  protected SortedSet<Dependency> buildOutdatedGroup() {
-    return sortByGroupAndName(upgradeVersions).collect { Map.Entry<Map<String, String>, Coordinate> dep ->
-      updateKey(dep.key)
-      buildOutdatedDependency(dep.value, dep.key)
-    } as SortedSet<Dependency>
+  protected Set<Dependency> buildOutdatedGroup() {
+    return sortByGroupAndName(upgradeVersions)
+      .collect { Map.Entry<Map<String, String>, Coordinate> dep ->
+        updateKey(dep.key)
+        buildOutdatedDependency(dep.value, dep.key)
+      } as TreeSet<Dependency>
   }
 
-  protected SortedSet<Dependency> buildExceededGroup() {
-    return sortByGroupAndName(downgradeVersions).collect { Map.Entry<Map<String, String>, Coordinate> dep ->
-      updateKey(dep.key)
-      buildExceededDependency(dep.value, dep.key)
-    } as SortedSet<Dependency>
+  protected Set<Dependency> buildExceededGroup() {
+    return sortByGroupAndName(downgradeVersions)
+      .collect { Map.Entry<Map<String, String>, Coordinate> dep ->
+        updateKey(dep.key)
+        buildExceededDependency(dep.value, dep.key)
+      } as TreeSet<Dependency>
   }
 
-  protected SortedSet<Dependency> buildUndeclaredGroup() {
-    return undeclared.collect { Coordinate coordinate -> new Dependency(coordinate.groupId, coordinate.artifactId) } as SortedSet
+  protected Set<Dependency> buildUndeclaredGroup() {
+    return undeclared
+      .collect { Coordinate coordinate -> new Dependency(coordinate.groupId, coordinate.artifactId) } as TreeSet<Dependency>
   }
 
-  protected SortedSet<DependencyUnresolved> buildUnresolvedGroup() {
+  protected Set<DependencyUnresolved> buildUnresolvedGroup() {
     return unresolved.sort { UnresolvedDependency a, UnresolvedDependency b ->
       compareKeys(keyOf(a.selector), keyOf(b.selector))
     }.collect { UnresolvedDependency dep ->
@@ -221,21 +237,22 @@ class DependencyUpdatesReporter {
       String message = stringWriter.toString()
 
       buildUnresolvedDependency(dep.selector, message)
-    } as SortedSet<DependencyUnresolved>
+    } as TreeSet<DependencyUnresolved>
   }
 
   protected static Result buildObject(int count,
-                                      DependenciesGroup currentGroup,
-                                      DependenciesGroup outdatedGroup,
-                                      DependenciesGroup exceededGroup,
-                                      DependenciesGroup undeclaredGroup,
-                                      DependenciesGroup unresolvedGroup,
-                                      GradleUpdateResults gradleUpdateResults) {
-    return new Result(count, currentGroup, outdatedGroup, exceededGroup, undeclaredGroup, unresolvedGroup, gradleUpdateResults)
+    DependenciesGroup currentGroup,
+    DependenciesGroup outdatedGroup,
+    DependenciesGroup exceededGroup,
+    DependenciesGroup undeclaredGroup,
+    DependenciesGroup unresolvedGroup,
+    GradleUpdateResults gradleUpdateResults) {
+    return new Result(count, currentGroup, outdatedGroup, exceededGroup, undeclaredGroup,
+      unresolvedGroup, gradleUpdateResults)
   }
 
   protected static <T extends Dependency> DependenciesGroup<T> buildDependenciesGroup(
-    SortedSet<T> dependencies) {
+    Set<T> dependencies) {
     return new DependenciesGroup<T>(dependencies.size(), dependencies)
   }
 
@@ -244,12 +261,15 @@ class DependencyUpdatesReporter {
       coordinate.getUserReason())
   }
 
-  protected DependencyLatest buildExceededDependency(Coordinate coordinate, Map<String, String> key) {
-    return new DependencyLatest(key["group"], key["name"], coordinate?.getVersion(), projectUrls[key],
+  protected DependencyLatest buildExceededDependency(Coordinate coordinate,
+    Map<String, String> key) {
+    return new DependencyLatest(key["group"], key["name"], coordinate?.getVersion(),
+      projectUrls[key],
       coordinate?.getUserReason(), latestVersions[key]?.getVersion())
   }
 
-  protected DependencyUnresolved buildUnresolvedDependency(ModuleVersionSelector selector, String message) {
+  protected DependencyUnresolved buildUnresolvedDependency(ModuleVersionSelector selector,
+    String message) {
     return new DependencyUnresolved(selector.group, selector.name,
       currentVersions[keyOf(selector)]?.getVersion(),
       latestVersions[keyOf(selector)]?.getVersion(),
@@ -257,7 +277,8 @@ class DependencyUpdatesReporter {
       message)
   }
 
-  protected DependencyOutdated buildOutdatedDependency(Coordinate coordinate, Map<String, String> key) {
+  protected DependencyOutdated buildOutdatedDependency(Coordinate coordinate,
+    Map<String, String> key) {
     VersionAvailable available
 
     String laterVersion = latestVersions[key]?.getVersion()
@@ -276,9 +297,10 @@ class DependencyUpdatesReporter {
       projectUrls[key], coordinate?.getUserReason(), available)
   }
 
-  static Map<Map<String, String>, Coordinate> sortByGroupAndName(Map<Map<String, String>, Coordinate> dependencies) {
+  static Map<Map<String, String>, Coordinate> sortByGroupAndName(
+    Map<Map<String, String>, Coordinate> dependencies) {
     return dependencies.sort { Map.Entry<Map<String, String>, Coordinate> a,
-                        Map.Entry<Map<String, String>, Coordinate> b -> compareKeys(a.key, b.key)
+      Map.Entry<Map<String, String>, Coordinate> b -> compareKeys(a.key, b.key)
     }
   }
 

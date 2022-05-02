@@ -117,7 +117,7 @@ class PlainTextReporter extends AbstractReporter {
   }
 
   private void writeUpToDate(Appendable printStream, Result result) {
-    SortedSet<Dependency> upToDateVersions = result.current.dependencies
+    Set<Dependency> upToDateVersions = result.current.dependencies
     if (!upToDateVersions.isEmpty()) {
       printStream.println()
       printStream.println(
@@ -132,7 +132,7 @@ class PlainTextReporter extends AbstractReporter {
   }
 
   private void writeExceedLatestFound(Appendable printStream, Result result) {
-    SortedSet<DependencyLatest> downgradeVersions = result.exceeded.dependencies
+    Set<DependencyLatest> downgradeVersions = result.exceeded.dependencies
     if (!downgradeVersions.isEmpty()) {
       printStream.println()
       printStream.println(
@@ -151,7 +151,7 @@ class PlainTextReporter extends AbstractReporter {
   }
 
   private void writeUpgrades(Appendable printStream, Result result) {
-    SortedSet<DependencyOutdated> upgradeVersions = result.outdated.dependencies
+    Set<DependencyOutdated> upgradeVersions = result.outdated.dependencies
     if (!upgradeVersions.isEmpty()) {
       printStream.println()
       printStream.println("The following dependencies have later ${revision} versions:")
@@ -181,7 +181,7 @@ class PlainTextReporter extends AbstractReporter {
   }
 
   private void writeUnresolved(Appendable printStream, Result result) {
-    SortedSet<DependencyUnresolved> unresolved = result.unresolved.dependencies
+    Set<DependencyUnresolved> unresolved = result.unresolved.dependencies
     if (!unresolved.isEmpty()) {
       printStream.println()
       printStream.println(

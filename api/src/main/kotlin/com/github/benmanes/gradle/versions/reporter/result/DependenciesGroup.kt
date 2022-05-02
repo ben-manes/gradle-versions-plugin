@@ -1,11 +1,9 @@
 package com.github.benmanes.gradle.versions.reporter.result
 
-import java.util.SortedSet
-
 /**
  * A group of dependencies
  */
-class DependenciesGroup<T : Dependency> @JvmOverloads constructor(
+data class DependenciesGroup<T : Dependency> @JvmOverloads constructor(
   /**
    * The number of dependencies in this group
    */
@@ -14,5 +12,5 @@ class DependenciesGroup<T : Dependency> @JvmOverloads constructor(
   /**
    * The dependencies that belong to this group
    */
-  val dependencies: SortedSet<T> = sortedSetOf<T>()
+  val dependencies: Set<T> = sortedSetOf(),
 )

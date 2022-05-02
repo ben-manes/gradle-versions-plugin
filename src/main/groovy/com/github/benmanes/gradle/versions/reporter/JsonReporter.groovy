@@ -1,7 +1,9 @@
 package com.github.benmanes.gradle.versions.reporter
 
 import com.github.benmanes.gradle.versions.reporter.result.Result
-import groovy.json.JsonBuilder
+import com.squareup.moshi.JsonAdapter
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
 
@@ -11,10 +13,18 @@ import groovy.transform.TupleConstructor
 @CompileStatic
 @TupleConstructor(callSuper = true, includeSuperProperties = true, includeSuperFields = true)
 class JsonReporter extends AbstractReporter {
+  private static final Moshi moshi = new Moshi.Builder()
+    .addLast(new KotlinJsonAdapterFactory())
+    .build()
 
   @Override
   void write(Appendable printStream, Result result) {
-    printStream.println(new JsonBuilder(result).toPrettyString().stripMargin())
+    JsonAdapter<Result> jsonAdapter = moshi
+      .adapter(Result.class)
+      .serializeNulls()
+      .indent(" ")
+    String json = jsonAdapter.toJson(result).stripMargin()
+    printStream.println(json)
   }
 
   @Override

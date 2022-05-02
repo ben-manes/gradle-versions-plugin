@@ -22,6 +22,7 @@ class XmlReporter extends AbstractReporter {
   void write(Appendable printStream, Result result) {
 
     XStream xstream = new XStream()
+    xstream.aliasSystemAttribute(null, "class") // Removes attributes={class=sorted-set}
     xstream.alias("response", Result)
     xstream.alias("available", VersionAvailable)
     xstream.alias("exceededDependency", DependencyLatest)
