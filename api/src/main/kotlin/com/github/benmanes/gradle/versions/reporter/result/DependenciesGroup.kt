@@ -7,7 +7,7 @@ data class DependenciesGroup<T : Dependency> @JvmOverloads constructor(
   /**
    * The number of dependencies in this group
    */
-  val count: Int,
+  val count: Int = 0,
 
   /**
    * The dependencies that belong to this group

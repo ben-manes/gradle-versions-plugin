@@ -32,7 +32,7 @@ class GradleUpdateChecker(
   /**
    * Abstract class representing the possible states of a release channel after an update check.
    */
-  abstract class ReleaseStatus {
+  sealed class ReleaseStatus {
     /**
      * Class representing an available release. Holds the release version in the
      * form of a [GradleVersion].
@@ -43,7 +43,7 @@ class GradleUpdateChecker(
      * Class representing a release channel without any releases. This may be the case with
      * pre-release channels after an update has been released to general availability.
      */
-    class Unavailable : ReleaseStatus()
+    object Unavailable : ReleaseStatus()
 
     /**
      * Class representing a failure during update checking.
@@ -120,7 +120,7 @@ class GradleUpdateChecker(
               if (version.isNotEmpty()) {
                 cacheMap[it] = ReleaseStatus.Available(GradleVersion.version(version))
               } else {
-                cacheMap[it] = ReleaseStatus.Unavailable()
+                cacheMap[it] = ReleaseStatus.Unavailable
               }
             }
           }
