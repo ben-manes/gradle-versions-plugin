@@ -1,5 +1,7 @@
 package com.github.benmanes.gradle.versions
 
+import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
+
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
@@ -29,7 +31,6 @@ final class ComponentSelectionRuleSourceSpec extends Specification {
       .collect { "'$it'" }
       .join(', ')
     def mavenRepoUrl = getClass().getResource('/maven/').toURI()
-    def srdErrWriter = new StringWriter()
 
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
@@ -76,12 +77,11 @@ final class ComponentSelectionRuleSourceSpec extends Specification {
     def result = GradleRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
-      .forwardStdError(srdErrWriter)
       .build()
 
     then:
     result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
-    srdErrWriter.toString().empty
+    result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
     assignment << [' ', '=']

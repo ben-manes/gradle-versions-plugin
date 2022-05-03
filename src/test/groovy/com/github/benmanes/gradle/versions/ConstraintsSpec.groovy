@@ -136,7 +136,6 @@ final class ConstraintsSpec extends Specification {
   def 'Do not show updates for an gradle constraint (added in 7.3.2/6.9.2) with Gradle #gradleVersion'() {
     given:
     ExpandoMetaClass.disableGlobally()
-    def srdErrWriter = new StringWriter()
     buildFile = testProjectDir.newFile('build.gradle.kts')
     buildFile <<
       """
@@ -155,13 +154,11 @@ final class ConstraintsSpec extends Specification {
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
-      .forwardStdError(srdErrWriter)
       .withPluginClasspath()
       .build()
 
     then:
     !result.output.contains('org.apache.logging.log4j:log4j-core [2.16.0 -> ')
-    srdErrWriter.toString().empty
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
@@ -176,7 +173,6 @@ final class ConstraintsSpec extends Specification {
     given:
     def mavenRepoUrl = getClass().getResource('/maven/').toURI()
     ExpandoMetaClass.disableGlobally()
-    def srdErrWriter = new StringWriter()
     buildFile = testProjectDir.newFile('build.gradle.kts')
     buildFile <<
       """
@@ -206,13 +202,11 @@ final class ConstraintsSpec extends Specification {
       .withGradleVersion('7.3.2')
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
-      .forwardStdError(srdErrWriter)
       .withPluginClasspath()
       .build()
 
     then:
     result.output.contains('org.apache.logging.log4j:log4j-core [2.16.0 -> ')
-    srdErrWriter.toString().empty
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
@@ -220,7 +214,6 @@ final class ConstraintsSpec extends Specification {
     given:
     def mavenRepoUrl = getClass().getResource('/maven/').toURI()
     ExpandoMetaClass.disableGlobally()
-    def srdErrWriter = new StringWriter()
     buildFile = testProjectDir.newFile('build.gradle.kts')
     buildFile <<
       """
@@ -243,13 +236,11 @@ final class ConstraintsSpec extends Specification {
       .withGradleVersion('7.3.2')
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
-      .forwardStdError(srdErrWriter)
       .withPluginClasspath()
       .build()
 
     then:
     result.output.contains('org.apache.logging.log4j:log4j-core [2.16.0 -> ')
-    srdErrWriter.toString().empty
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 }

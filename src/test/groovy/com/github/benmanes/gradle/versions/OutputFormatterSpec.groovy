@@ -34,8 +34,6 @@ final class OutputFormatterSpec extends Specification {
 
   def 'Does not show updates for dependencies when outputFormatter is a closure'() {
     given:
-    def srdErrWriter = new StringWriter()
-
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
       """
@@ -68,12 +66,10 @@ final class OutputFormatterSpec extends Specification {
     def result = GradleRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
-      .forwardStdError(srdErrWriter)
       .build()
 
     then:
     !result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
-    srdErrWriter.toString().empty
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
