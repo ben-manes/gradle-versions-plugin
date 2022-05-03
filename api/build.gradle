@@ -1,9 +1,6 @@
 plugins {
-  id 'org.jetbrains.kotlin.jvm' version '1.6.21'
-}
-
-repositories {
-  mavenCentral()
+  id 'org.jetbrains.kotlin.jvm'
+  id 'java-library'
 }
 
 dependencies {
@@ -12,10 +9,4 @@ dependencies {
   implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.6.21'
   implementation 'com.squareup.okhttp3:okhttp:4.9.3'
   implementation 'com.squareup.moshi:moshi-kotlin:1.12.0'
-}
-
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-  kotlinOptions {
-    jvmTarget = JavaVersion.VERSION_1_8
-  }
 }

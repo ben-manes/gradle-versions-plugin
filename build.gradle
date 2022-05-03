@@ -1,13 +1,11 @@
 plugins {
+  id 'org.jetbrains.kotlin.jvm' version '1.6.21' apply false
   id 'com.gradle.plugin-publish' version '0.21.0'
-  id 'java-gradle-plugin'
   id 'maven-publish'
-  id 'codenarc'
+  id 'java-gradle-plugin'
+  id 'java-library'
   id 'groovy'
-}
-
-repositories {
-  mavenCentral()
+  id 'codenarc'
 }
 
 group = GROUP
@@ -21,7 +19,7 @@ codenarcTest {
   configFile = file('config/codenarc/testRules.groovy')
 }
 
-tasks.withType(CodeNarc) { codeNarcTask ->
+tasks.withType(CodeNarc).configureEach { codeNarcTask ->
   codeNarcTask.ignoreFailures = true
 }
 
@@ -44,6 +42,7 @@ dependencies {
 
   implementation localGroovy()
   implementation project(':api')
+  implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.6.21'
   implementation 'com.thoughtworks.xstream:xstream:1.4.19'
   implementation 'com.squareup.okhttp3:okhttp:4.9.3'
   implementation 'com.squareup.moshi:moshi-kotlin:1.12.0'
@@ -67,37 +66,49 @@ jar {
   }
 }
 
-tasks.withType(JavaCompile).configureEach {
-  sourceCompatibility = JavaVersion.VERSION_1_8
-  targetCompatibility = JavaVersion.VERSION_1_8
-
-  configure(options) {
-    compilerArgs << '-Xlint:all'
-    compilerArgs << '-Xlint:-options'
-    encoding = 'utf-8'
-    fork = true
+allprojects {
+  repositories {
+    mavenCentral()
   }
-}
 
-tasks.withType(GroovyCompile).configureEach {
-  sourceCompatibility = JavaVersion.VERSION_1_8
-  targetCompatibility = JavaVersion.VERSION_1_8
-
-  configure(options) {
-    compilerArgs << '-Xlint:all'
-    compilerArgs << '-Xlint:-options'
-    encoding = 'utf-8'
-    fork = true
+  tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    kotlinOptions {
+      jvmTarget = JavaVersion.VERSION_1_8
+    }
   }
-}
 
-tasks.withType(Test) {
-  maxParallelForks Runtime.getRuntime().availableProcessors()
+  tasks.withType(JavaCompile).configureEach {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
 
-  testLogging {
-    events "passed", "failed", "skipped"
-    showStandardStreams true
-    exceptionFormat "full"
+    configure(options) {
+      compilerArgs << '-Xlint:all'
+      compilerArgs << '-Xlint:-options'
+      encoding = 'utf-8'
+      fork = true
+    }
+  }
+
+  tasks.withType(GroovyCompile).configureEach {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+
+    configure(options) {
+      compilerArgs << '-Xlint:all'
+      compilerArgs << '-Xlint:-options'
+      encoding = 'utf-8'
+      fork = true
+    }
+  }
+
+  tasks.withType(Test).configureEach {
+    maxParallelForks Runtime.getRuntime().availableProcessors()
+
+    testLogging {
+      events "passed", "failed", "skipped"
+      showStandardStreams true
+      exceptionFormat "full"
+    }
   }
 }
 
