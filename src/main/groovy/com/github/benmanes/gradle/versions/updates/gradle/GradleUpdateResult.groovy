@@ -1,6 +1,7 @@
 package com.github.benmanes.gradle.versions.updates.gradle
 
 import groovy.transform.CompileStatic
+import javax.annotation.Nullable
 import org.gradle.util.GradleVersion
 
 /**
@@ -35,8 +36,8 @@ class GradleUpdateResult implements Comparable<GradleUpdateResult> {
    */
   final String reason
 
-  GradleUpdateResult(boolean enabled, GradleUpdateChecker.ReleaseStatus.Available running,
-    GradleUpdateChecker.ReleaseStatus release) {
+  GradleUpdateResult(boolean enabled, @Nullable GradleUpdateChecker.ReleaseStatus.Available running,
+    @Nullable GradleUpdateChecker.ReleaseStatus release) {
     if (!enabled) {
       this.version = ""
       this.isUpdateAvailable = false

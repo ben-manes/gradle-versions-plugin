@@ -118,14 +118,14 @@ class Resolver {
     List<Dependency> latest = configuration.dependencies.findAll { dependency ->
       dependency instanceof ExternalDependency
     }.collect { dependency ->
-      createQueryDependency(dependency, revision)
+      createQueryDependency(dependency)
     }
 
     // Common use case for dependency constraints is a java-platform BOM project or to control
     // version of transitive dependency.
     if (supportsConstraints(configuration)) {
       for (dependency in configuration.dependencyConstraints) {
-        latest.add(createQueryDependency(dependency, revision))
+        latest.add(createQueryDependency(dependency))
       }
     }
 
@@ -175,7 +175,7 @@ class Resolver {
 
   /** Returns a variant of the provided dependency used for querying the latest version. */
   @TypeChecked(SKIP)
-  private Dependency createQueryDependency(Dependency dependency, String revision) {
+  private Dependency createQueryDependency(Dependency dependency) {
     // If no version was specified then it may be intended to be resolved by another plugin
     // (e.g. the dependency-management-plugin for BOMs) or is an explicit file (e.g. libs/*.jar).
     // In the case of another plugin we use "+" in the hope that the plugin will not restrict the
@@ -209,7 +209,7 @@ class Resolver {
 
   /** Returns a variant of the provided dependency used for querying the latest version. */
   @TypeChecked(SKIP)
-  private Dependency createQueryDependency(DependencyConstraint dependency, String revision) {
+  private Dependency createQueryDependency(DependencyConstraint dependency) {
     // If no version was specified then use "none" to pass it through.
     String version = dependency.version == null ? "none" : "+"
 
