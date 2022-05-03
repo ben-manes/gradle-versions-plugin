@@ -3,6 +3,7 @@ package com.github.benmanes.gradle.versions
 import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.CURRENT
 import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.NIGHTLY
 import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
+import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
@@ -36,8 +37,6 @@ final class DifferentGradleVersionsSpec extends Specification {
   @Unroll
   def 'dependencyUpdates task completes without errors with Gradle #gradleVersion'() {
     given:
-    def srdErrWriter = new StringWriter()
-
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
       """
@@ -90,12 +89,11 @@ final class DifferentGradleVersionsSpec extends Specification {
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
       .withArguments(arguments)
-      .forwardStdError(srdErrWriter)
       .build()
 
     then:
     result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
-    srdErrWriter.toString().empty
+    result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
     gradleVersion << [
@@ -124,8 +122,6 @@ final class DifferentGradleVersionsSpec extends Specification {
   @Unroll
   def 'dependencyUpdates task uses specified release channel with Gradle #gradleReleaseChannel'() {
     given:
-    def srdErrWriter = new StringWriter()
-
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
       """
@@ -157,13 +153,12 @@ final class DifferentGradleVersionsSpec extends Specification {
       .withGradleVersion('5.0')
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
-      .forwardStdError(srdErrWriter)
       .build()
 
     then:
     result.output.contains("Gradle ${gradleReleaseChannel} updates:")
     !result.output.contains("UP-TO-DATE")
-    srdErrWriter.toString().empty
+    result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
     gradleReleaseChannel << [
@@ -175,8 +170,6 @@ final class DifferentGradleVersionsSpec extends Specification {
 
   def 'dependencyUpdates task works with dependency verification enabled'() {
     given:
-    def srdErrWriter = new StringWriter()
-
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
       """
@@ -279,19 +272,16 @@ final class DifferentGradleVersionsSpec extends Specification {
       .withGradleVersion('6.2')
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
-      .forwardStdError(srdErrWriter)
       .build()
 
     then:
     result.output.contains('Dependency verification is an incubating feature.')
     result.output.contains('com.google.inject:guice [3.0 -> 3.1]')
-    srdErrWriter.toString().empty
+    result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
   def 'dependencyUpdates task completes without errors if configuration cache is enabled with Gradle 7.4'() {
     given:
-    def srdErrWriter = new StringWriter()
-
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
       """
@@ -322,12 +312,11 @@ final class DifferentGradleVersionsSpec extends Specification {
       .withGradleVersion('7.4-rc-2')
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates', '--configuration-cache')
-      .forwardStdError(srdErrWriter)
       .build()
 
     then:
     result.output.contains('BUILD SUCCESSFUL')
-    srdErrWriter.toString().empty
+    result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
   @Unroll
@@ -381,6 +370,7 @@ final class DifferentGradleVersionsSpec extends Specification {
     then:
     result.output.contains('FAILURE: Build failed with an exception.')
     result.output.contains('Configuration cache problems found in this build.')
+    result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
     gradleVersion << [

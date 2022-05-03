@@ -1,5 +1,7 @@
 package com.github.benmanes.gradle.versions
 
+import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
+
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
@@ -38,7 +40,6 @@ final class KotlinDslUsageSpec extends Specification {
   @Unroll
   def "user friendly kotlin-dsl"() {
     given:
-    def srdErrWriter = new StringWriter()
     buildFile << '''
       tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
           checkForGradleUpdate = true
@@ -63,12 +64,11 @@ final class KotlinDslUsageSpec extends Specification {
       .withPluginClasspath()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
-      .forwardStdError(srdErrWriter)
       .build()
 
     then:
     result.output.contains('''com.google.inject:guice [2.0 -> 3.0]''')
-    srdErrWriter.toString().empty
+    result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
     gradleVersion << ['5.6']
