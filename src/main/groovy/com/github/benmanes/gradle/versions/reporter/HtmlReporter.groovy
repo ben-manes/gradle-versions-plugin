@@ -306,17 +306,17 @@ class HtmlReporter extends AbstractReporter {
 
     printStream.println("Gradle ${gradleReleaseChannel} updates:")
     // Log Gradle update checking failures.
-    if (result.gradle.current.isFailure) {
+    if (result.gradle.current.failure) {
       printStream.println(
         "<P>[ERROR] [release channel: ${CURRENT.id}] " + result.gradle.current.reason + "</P>")
     }
     if ((gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id) &&
-      result.gradle.releaseCandidate.isFailure) {
+      result.gradle.releaseCandidate.failure) {
       printStream.println(
         "<P>[ERROR] [release channel: ${RELEASE_CANDIDATE.id}] " + result
           .gradle.releaseCandidate.reason + "</P>")
     }
-    if (gradleReleaseChannel == NIGHTLY.id && result.gradle.nightly.isFailure) {
+    if (gradleReleaseChannel == NIGHTLY.id && result.gradle.nightly.failure) {
       printStream.println(
         "<P>[ERROR] [release channel: ${NIGHTLY.id}] " + result.gradle.nightly.reason + "</P>")
     }
@@ -324,19 +324,19 @@ class HtmlReporter extends AbstractReporter {
     // print Gradle updates in breadcrumb format
     printStream.print("<P>Gradle: [" + getGradleVersionUrl(result.gradle.running.version))
     boolean updatePrinted = false
-    if (result.gradle.current.isUpdateAvailable && result.gradle.current > result.gradle.running) {
+    if (result.gradle.current.updateAvailable && result.gradle.current > result.gradle.running) {
       updatePrinted = true
       printStream.print(" -> " + getGradleVersionUrl(result.gradle.current.version))
     }
     if ((gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id) &&
-      result.gradle.releaseCandidate.isUpdateAvailable &&
+      result.gradle.releaseCandidate.updateAvailable &&
       result.gradle.releaseCandidate >
       result.gradle.current) {
       updatePrinted = true
       printStream.print(" -> " + getGradleVersionUrl(result.gradle.releaseCandidate.version))
     }
     if (gradleReleaseChannel == NIGHTLY.id &&
-      result.gradle.nightly.isUpdateAvailable &&
+      result.gradle.nightly.updateAvailable &&
       result.gradle.nightly >
       result.gradle.current) {
       updatePrinted = true

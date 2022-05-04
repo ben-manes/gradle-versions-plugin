@@ -20,7 +20,7 @@ class GradleUpdateChecker(
    * @return if the check for Gradle updates was enabled and, if so, the versions were fetched.
    */
   @get:JvmName("isEnabled")
-  val enabled: Boolean = true,
+  val enabled: Boolean,
 ) {
 
   init {
