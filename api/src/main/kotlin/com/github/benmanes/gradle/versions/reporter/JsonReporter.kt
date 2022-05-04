@@ -13,13 +13,13 @@ class JsonReporter @JvmOverloads constructor(
   override val revision: String,
   override val gradleReleaseChannel: String,
 ) : AbstractReporter(project, revision, gradleReleaseChannel) {
-  override fun write(target: Appendable, result: Result) {
+  override fun write(printStream: Appendable, result: Result) {
     val jsonAdapter = moshi
       .adapter(Result::class.java)
       .serializeNulls()
       .indent(" ")
     val json = jsonAdapter.toJson(result).trimMargin()
-    target.println(json)
+    printStream.println(json)
   }
 
   override fun getFileExtension(): String {

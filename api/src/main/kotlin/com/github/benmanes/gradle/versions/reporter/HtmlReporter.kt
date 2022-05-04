@@ -1,0 +1,427 @@
+package com.github.benmanes.gradle.versions.reporter
+
+import com.github.benmanes.gradle.versions.reporter.result.Result
+import com.github.benmanes.gradle.versions.reporter.result.VersionAvailable
+import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.CURRENT
+import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.NIGHTLY
+import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
+import org.gradle.api.Project
+
+/**
+ * An html reporter for the dependency updates results.
+ */
+class HtmlReporter @JvmOverloads constructor(
+  override val project: Project,
+  override val revision: String,
+  override val gradleReleaseChannel: String,
+) : AbstractReporter(project, revision, gradleReleaseChannel) {
+  override fun write(printStream: Appendable, result: Result) {
+    writeHeader(printStream)
+
+    if (result.count == 0) {
+      printStream.println("<P>No dependencies found.</P>")
+    } else {
+      writeUpToDate(printStream, result)
+      writeExceedLatestFound(printStream, result)
+      writeUpgrades(printStream, result)
+      writeUndeclared(printStream, result)
+      writeUnresolved(printStream, result)
+    }
+
+    writeGradleUpdates(printStream, result)
+  }
+
+  private fun writeHeader(printStream: Appendable) {
+    printStream.println(header.trimMargin())
+  }
+
+  private fun writeUpToDate(printStream: Appendable, result: Result) {
+    val versions = result.current.dependencies
+    if (versions.isNotEmpty()) {
+      printStream.println("<H2>Current dependencies</H2>")
+      printStream
+        .println("<p>The following dependencies are using the latest $revision version:<p>")
+      printStream.println("<table class=\"currentInfo\">")
+      for (it in getCurrentRows(result)) {
+        printStream.println(it)
+      }
+      printStream.println("</table>")
+      printStream.println("<br>")
+    }
+  }
+
+  private fun writeExceedLatestFound(printStream: Appendable, result: Result) {
+    val versions = result.exceeded.dependencies
+    if (versions.isNotEmpty()) {
+      // The following dependencies exceed the version found at the "
+      //        + revision + " revision level:
+      printStream.println("<H2>Exceeded dependencies</H2>")
+      printStream.println(
+        "<p>The following dependencies exceed the version found at the $revision revision level:<p>"
+      )
+      printStream.println("<table class=\"warningInfo\">")
+      for (it in getExceededRows(result)) {
+        printStream.println(it)
+      }
+      printStream.println("</table>")
+      printStream.println("<br>")
+    }
+  }
+
+  private fun writeUpgrades(printStream: Appendable, result: Result) {
+    val versions = result.outdated.dependencies
+    if (versions.isNotEmpty()) {
+      printStream.println("<H2>Later dependencies</H2>")
+      printStream.println("<p>The following dependencies have later $revision versions:<p>")
+      printStream.println("<table class=\"warningInfo\">")
+      for (it in getUpgradesRows(result)) {
+        printStream.println(it)
+      }
+      printStream.println("</table>")
+      printStream.println("<br>")
+    }
+  }
+
+  private fun writeUndeclared(printStream: Appendable, result: Result) {
+    val versions = result.undeclared.dependencies
+    if (versions.isNotEmpty()) {
+      printStream.println("<H2>Undeclared dependencies</H2>")
+      printStream.println(
+        "<p>Failed to compare versions for the following dependencies because they were declared without version:<p>"
+      )
+      printStream.println("<table class=\"warningInfo\">")
+      for (row in getUndeclaredRows(result)) {
+        printStream.println(row)
+      }
+      printStream.println("</table>")
+      printStream.println("<br>")
+    }
+  }
+
+  private fun writeUnresolved(printStream: Appendable, result: Result) {
+    val versions = result.unresolved.dependencies
+    if (versions.isNotEmpty()) {
+      printStream.println("<H2>Unresolved dependencies</H2>")
+      printStream
+        .println("<p>Failed to determine the latest version for the following dependencies:<p>")
+      printStream.println("<table class=\"warningInfo\">")
+      for (it in getUnresolvedRows(result)) {
+        printStream.println(it)
+      }
+      printStream.println("</table>")
+      printStream.println("<br>")
+    }
+  }
+
+  private fun writeGradleUpdates(printStream: Appendable, result: Result) {
+    if (!result.gradle.enabled) {
+      return
+    }
+
+    printStream.println("<H2>Gradle $gradleReleaseChannel updates</H2>")
+
+    printStream.println("Gradle $gradleReleaseChannel updates:")
+    // Log Gradle update checking failures.
+    if (result.gradle.current.isFailure) {
+      printStream.println(
+        "<P>[ERROR] [release channel: ${CURRENT.id}] " + result.gradle.current.reason + "</P>"
+      )
+    }
+    if ((gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id) &&
+      result.gradle.releaseCandidate.isFailure
+    ) {
+      printStream.println(
+        "<P>[ERROR] [release channel: ${RELEASE_CANDIDATE.id}] " + result
+          .gradle.releaseCandidate.reason + "</P>"
+      )
+    }
+    if (gradleReleaseChannel == NIGHTLY.id && result.gradle.nightly.isFailure) {
+      printStream.println(
+        "<P>[ERROR] [release channel: ${NIGHTLY.id}] " + result.gradle.nightly.reason + "</P>"
+      )
+    }
+
+    // print Gradle updates in breadcrumb format
+    printStream.print("<P>Gradle: [" + getGradleVersionUrl(result.gradle.running.version))
+    var updatePrinted = false
+    if (result.gradle.current.isUpdateAvailable && result.gradle.current > result.gradle.running) {
+      updatePrinted = true
+      printStream.print(" -> " + getGradleVersionUrl(result.gradle.current.version))
+    }
+    if ((gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id) &&
+      result.gradle.releaseCandidate.isUpdateAvailable &&
+      result.gradle.releaseCandidate >
+      result.gradle.current
+    ) {
+      updatePrinted = true
+      printStream.print(" -> " + getGradleVersionUrl(result.gradle.releaseCandidate.version))
+    }
+    if (gradleReleaseChannel == NIGHTLY.id &&
+      result.gradle.nightly.isUpdateAvailable &&
+      result.gradle.nightly >
+      result.gradle.current
+    ) {
+      updatePrinted = true
+      printStream.print(" -> " + getGradleVersionUrl(result.gradle.nightly.version))
+    }
+    if (!updatePrinted) {
+      printStream.print(": UP-TO-DATE")
+    }
+    printStream.println("]<P>")
+    printStream.println(getGradleUrl())
+  }
+
+  private fun getUpgradesRows(result: Result): List<String> {
+    val rows = mutableListOf<String>()
+    val list = result.outdated
+    rows.add(
+      "<tr class=\"header\"><th colspan=\"5\"><b>Later dependencies<span>(Click to collapse)</span></b></th></tr>"
+    )
+    rows.add(
+      "<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Latest Version</b></td><td><b>Reason</b></td></tr>"
+    )
+    for (dependency in list.dependencies) {
+      val rowStringFmt =
+        "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
+      val rowString = String.format(
+        rowStringFmt, dependency.name.orEmpty(), dependency.group.orEmpty(),
+        getUrlString(dependency.projectUrl),
+        getVersionString(dependency.group.orEmpty(), dependency.name.orEmpty(), dependency.version),
+        getVersionString(
+          dependency.group.orEmpty(), dependency.name.orEmpty(),
+          getDisplayableVersion(dependency.available)
+        ),
+        dependency.userReason.orEmpty()
+      )
+      rows.add(rowString)
+    }
+    return rows
+  }
+
+  private fun getDisplayableVersion(versionAvailable: VersionAvailable): String? {
+    if (revision.equals("milestone", ignoreCase = true)) {
+      return versionAvailable.milestone
+    } else if (revision.equals("release", ignoreCase = true)) {
+      return versionAvailable.release
+    } else if (revision.equals("integration", ignoreCase = true)) {
+      return versionAvailable.integration
+    }
+    return ""
+  }
+
+  override fun getFileExtension(): String {
+    return "html"
+  }
+
+  companion object {
+    private const val header = """
+    <!DOCTYPE html>
+    <HEAD><TITLE>Project Dependency Updates Report</TITLE></HEAD>
+    <style type=\"text/css\">
+       .body {
+        font:100% verdana, arial, sans-serif;
+        background-color:#fff
+        }
+       .currentInfo {
+           border-collapse: collapse;
+       }
+       .currentInfo header {
+           cursor:pointer;
+           padding: 12px 15px;
+       }
+       .currentInfo td {
+           border: 1px solid black;
+           padding: 12px 15px;
+           border-collapse: collapse;
+       }
+       .currentInfo tr:nth-child(even) {
+           background-color: #E4FFB7;
+           padding: 12px 15px;
+           border-collapse: collapse;
+       }
+       .currentInfo tr:nth-child(odd) {
+            background-color: #EFFFD2;
+           padding: 12px 15px;
+           border-collapse: collapse;
+       }
+
+       .warningInfo {
+           border-collapse: collapse;
+       }
+       .warningInfo header {
+           cursor:pointer;
+           padding: 12px 15px;
+       }
+       .warningInfo td {
+           border: 1px solid black;
+           padding: 12px 15px;
+           border-collapse: collapse;
+       }
+       .warningInfo tr:nth-child(even) {
+           background-color: #FFFF66;
+           padding: 12px 15px;
+           border-collapse: collapse;
+       }
+       .warningInfo tr:nth-child(odd) {
+            background-color: #FFFFCC;
+           padding: 12px 15px;
+           border-collapse: collapse;
+       }
+
+
+   </style>
+   <script src=\"https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js\"></script>
+
+   <script type="text/javascript">
+   \$(document).ready(function(){
+    /* set current to collapsed initially */
+    \$('#currentId').nextUntil('tr.header').slideToggle(100, function(){});
+    /* click callback to toggle tables */
+    \$('tr.header').click(function(){
+        \$(this).find('span').text(function(_, value){return value=='(Click to collapse)'?'(Click to expand)':'(Click to collapse)'});
+        \$(this).nextUntil('tr.header').slideToggle(100, function(){
+        });
+    });
+});
+   </script>
+   """
+
+    private fun getCurrentRows(result: Result): List<String> {
+      val rows = mutableListOf<String>()
+      // The following dependencies are using the latest milestone version:
+      val list = result.current
+      rows.add(
+        "<tr class=\"header\" id = \"currentId\" ><th colspan=\"4\"><b>Current dependencies<span>(Click to expand)</span></b></th></tr>"
+      )
+      rows.add(
+        "<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Reason</b></td></tr>"
+      )
+      for (dependency in list.dependencies) {
+        val rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
+        val rowString = String.format(
+          rowStringFmt, dependency.name, dependency.group,
+          getUrlString(dependency.projectUrl),
+          // TODO nullness
+          getVersionString(
+            dependency.group.orEmpty(),
+            dependency.name.orEmpty(),
+            dependency.version
+          ),
+          dependency.userReason.orEmpty()
+        )
+        rows.add(rowString)
+      }
+      return rows
+    }
+
+    private fun getExceededRows(result: Result): List<String> {
+      val rows = mutableListOf<String>()
+      // The following dependencies are using the latest milestone version:
+      val list = result.exceeded
+      rows.add(
+        "<tr class=\"header\"><th colspan=\"5\"><b>Exceeded dependencies<span>(Click to collapse)</span></b></th></tr>"
+      )
+      rows.add(
+        "<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Latest Version</b></td><td><b>Reason</b></td></tr>"
+      )
+      for (dependency in list.dependencies) {
+        val rowStringFmt =
+          "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
+        val rowString = String.format(
+          rowStringFmt, dependency.name, dependency.group,
+          getUrlString(dependency.projectUrl),
+          getVersionString(
+            dependency.group.orEmpty(),
+            dependency.name.orEmpty(),
+            dependency.version
+          ),
+          getVersionString(
+            dependency.group.orEmpty(),
+            dependency.name.orEmpty(),
+            dependency.version
+          ),
+          dependency.userReason.orEmpty()
+        )
+        rows.add(rowString)
+      }
+      return rows
+    }
+
+    private fun getUndeclaredRows(result: Result): List<String> {
+      val rows = mutableListOf<String>()
+      rows.add(
+        "<tr class=\"header\"><th colspan=\"2\"><b>Undeclared dependencies<span>(Click to collapse)</span></b></th></tr>"
+      )
+      rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td></tr>")
+      for (dependency in result.undeclared.dependencies) {
+        val rowString =
+          String.format("<tr><td>%s</td><td>%s</td></tr>", dependency.name, dependency.group)
+        rows.add(rowString)
+      }
+      return rows
+    }
+
+    private fun getUnresolvedRows(result: Result): List<String> {
+      val rows = mutableListOf<String>()
+      val list = result.unresolved
+      rows.add(
+        "<tr class=\"header\"><th colspan=\"4\"><b>Unresolved dependencies<span>(Click to collapse)</span></b></th></tr>"
+      )
+      rows.add(
+        "<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td>Reason</td></tr>"
+      )
+      for (dependency in list.dependencies) {
+        val rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
+        val rowString = String.format(
+          rowStringFmt, dependency.name, dependency.group,
+          getUrlString(dependency.projectUrl),
+          getVersionString(
+            dependency.group.orEmpty(),
+            dependency.name.orEmpty(),
+            dependency.version
+          ),
+          dependency.userReason.orEmpty()
+        )
+        rows.add(rowString)
+      }
+      return rows
+    }
+
+    private fun getGradleUrl(): String {
+      return "<P>For information about Gradle releases click <a target=\"_blank\" href=\"https://gradle.org/releases/\">here</a>."
+    }
+
+    private fun getGradleVersionUrl(version: String?): String {
+      if (version == null) {
+        return "https://gradle.org/releases/"
+      }
+      return String
+        .format(
+          "<a target=\"_blank\" href=\"https://docs.gradle.org/%s/release-notes.html\">%s</a>",
+          version, version
+        )
+    }
+
+    private fun getUrlString(url: String?): String {
+      if (url == null) {
+        return ""
+      }
+      return String.format("<a target=\"_blank\" href=\"%s\">%s</a>", url, url)
+    }
+
+    private fun getVersionString(group: String, name: String, version: String?): String {
+      val mvn = getMvnVersionString(group, name, version)
+      return String.format("%s %s", version, mvn)
+    }
+
+    private fun getMvnVersionString(group: String, name: String, version: String?): String {
+      // https://search.maven.org/artifact/com.azure/azure-core-http-netty/1.5.4
+      if (version == null) {
+        return ""
+      }
+      val versionUrl = String
+        .format("https://search.maven.org/artifact/%s/%s/%s/bundle", group, name, version)
+      return String.format("<a target=\"_blank\" href=\"%s\">%s</a>", versionUrl, "Sonatype")
+    }
+  }
+}
