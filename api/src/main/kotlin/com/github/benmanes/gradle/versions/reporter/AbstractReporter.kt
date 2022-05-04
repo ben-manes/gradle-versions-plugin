@@ -1,19 +1,15 @@
 package com.github.benmanes.gradle.versions.reporter
 
-import groovy.transform.CompileStatic
-import groovy.transform.TupleConstructor
 import org.gradle.api.Project
 
 /**
  * A base result object reporter for the dependency updates results.
  */
-@CompileStatic
-@TupleConstructor(includeFields = true)
-abstract class AbstractReporter implements Reporter {
+abstract class AbstractReporter @JvmOverloads constructor(
   /** The project evaluated against. */
-  Project project
+  val project: Project,
   /** The revision strategy evaluated with. */
-  String revision = ""
+  val revision: String,
   /** The gradle release channel to use for reporting. */
-  String gradleReleaseChannel = ""
-}
+  val gradleReleaseChannel: String,
+) : Reporter
