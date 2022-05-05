@@ -18,7 +18,7 @@ class XmlReporter @JvmOverloads constructor(
   override val revision: String,
   override val gradleReleaseChannel: String,
 ) : AbstractReporter(project, revision, gradleReleaseChannel) {
-  override fun write(target: Appendable, result: Result) {
+  override fun write(printStream: Appendable, result: Result) {
     val xStream = XStream().apply {
       aliasSystemAttribute(null, "class") // Removes attributes={class=sorted-set}
       alias("response", Result::class.java)
@@ -30,8 +30,8 @@ class XmlReporter @JvmOverloads constructor(
       alias("group", DependenciesGroup::class.java)
     }
 
-    target.println("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>")
-    target.println(xStream.toXML(result).trimMargin())
+    printStream.println("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>")
+    printStream.println(xStream.toXML(result).trimMargin())
   }
 
   override fun getFileExtension(): String {

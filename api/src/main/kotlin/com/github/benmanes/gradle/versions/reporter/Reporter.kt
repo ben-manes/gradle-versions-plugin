@@ -9,11 +9,11 @@ interface Reporter {
   /**
    * Writes the result to the output target
    *
-   * @param target The target, usually a [Appendable]
+   * @param printStream The target, usually a [Appendable]
    * @param result the result of the dependency update analysis
    * @see Result
    */
-  fun write(target: Appendable, result: Result)
+  fun write(printStream: Appendable, result: Result)
 
   fun getFileExtension(): String
 }

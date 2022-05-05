@@ -15,6 +15,10 @@ abstract class AbstractReporter @JvmOverloads constructor(
   open val gradleReleaseChannel: String,
 ) : Reporter
 
+fun Appendable.print(x: String) {
+  (this as PrintWriter).print(x)
+}
+
 fun Appendable.println(x: String) {
   (this as PrintWriter).println(x)
 }
