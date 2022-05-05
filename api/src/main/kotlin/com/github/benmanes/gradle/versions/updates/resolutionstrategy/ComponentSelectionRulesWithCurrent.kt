@@ -81,6 +81,6 @@ class ComponentSelectionRulesWithCurrent @JvmOverloads constructor(
   private fun wrapComponentSelection(inner: ComponentSelection): ComponentSelectionWithCurrent? {
     val candidateCoordinate = Coordinate.from(inner.candidate)
     val current = currentCoordinates[candidateCoordinate.key] ?: return null
-    return ComponentSelectionWithCurrent(current.version, inner)
+    return ComponentSelectionWithCurrent(inner, current.version)
   }
 }
