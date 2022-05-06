@@ -4,6 +4,7 @@ import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import org.gradle.api.Project
+import java.io.OutputStream
 
 /**
  * A json reporter for the dependency updates results.
@@ -13,7 +14,7 @@ class JsonReporter @JvmOverloads constructor(
   override val revision: String,
   override val gradleReleaseChannel: String,
 ) : AbstractReporter(project, revision, gradleReleaseChannel) {
-  override fun write(printStream: Appendable, result: Result) {
+  override fun write(printStream: OutputStream, result: Result) {
     val jsonAdapter = moshi
       .adapter(Result::class.java)
       .serializeNulls()

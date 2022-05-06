@@ -1,7 +1,8 @@
 package com.github.benmanes.gradle.versions.reporter
 
 import org.gradle.api.Project
-import java.io.PrintWriter
+import java.io.OutputStream
+import java.io.PrintStream
 
 /**
  * A base result object reporter for the dependency updates results.
@@ -15,10 +16,10 @@ abstract class AbstractReporter @JvmOverloads constructor(
   open val gradleReleaseChannel: String,
 ) : Reporter
 
-fun Appendable.print(x: String) {
-  (this as PrintWriter).print(x)
+fun OutputStream.print(x: String = "") {
+  (this as PrintStream).print(x)
 }
 
-fun Appendable.println(x: String) {
-  (this as PrintWriter).println(x)
+fun OutputStream.println(x: String = "") {
+  (this as PrintStream).println(x)
 }

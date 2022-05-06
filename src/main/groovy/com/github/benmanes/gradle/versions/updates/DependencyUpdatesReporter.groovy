@@ -119,10 +119,10 @@ class DependencyUpdatesReporter {
     File filename = new File(outputDir, reportfileName + "." + reporter.getFileExtension())
     project.file(outputDir).mkdirs()
     File outputFile = project.file(filename)
-    outputFile.withPrintWriter { PrintWriter pw ->
-      Result result = buildBaseObject()
-      reporter.write(pw, result)
-    }
+    PrintStream stream = new PrintStream(outputFile)
+    Result result = buildBaseObject()
+    reporter.write(stream, result)
+    stream.close()
 
     project.logger.lifecycle("\nGenerated report file " + filename)
   }

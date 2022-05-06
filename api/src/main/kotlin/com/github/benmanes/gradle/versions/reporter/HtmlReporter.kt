@@ -6,6 +6,7 @@ import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.C
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.NIGHTLY
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 import org.gradle.api.Project
+import java.io.OutputStream
 
 /**
  * An html reporter for the dependency updates results.
@@ -15,7 +16,7 @@ class HtmlReporter @JvmOverloads constructor(
   override val revision: String,
   override val gradleReleaseChannel: String,
 ) : AbstractReporter(project, revision, gradleReleaseChannel) {
-  override fun write(printStream: Appendable, result: Result) {
+  override fun write(printStream: OutputStream, result: Result) {
     writeHeader(printStream)
 
     if (result.count == 0) {
@@ -31,11 +32,11 @@ class HtmlReporter @JvmOverloads constructor(
     writeGradleUpdates(printStream, result)
   }
 
-  private fun writeHeader(printStream: Appendable) {
+  private fun writeHeader(printStream: OutputStream) {
     printStream.println(header.trimMargin())
   }
 
-  private fun writeUpToDate(printStream: Appendable, result: Result) {
+  private fun writeUpToDate(printStream: OutputStream, result: Result) {
     val versions = result.current.dependencies
     if (versions.isNotEmpty()) {
       printStream.println("<H2>Current dependencies</H2>")
@@ -50,7 +51,7 @@ class HtmlReporter @JvmOverloads constructor(
     }
   }
 
-  private fun writeExceedLatestFound(printStream: Appendable, result: Result) {
+  private fun writeExceedLatestFound(printStream: OutputStream, result: Result) {
     val versions = result.exceeded.dependencies
     if (versions.isNotEmpty()) {
       // The following dependencies exceed the version found at the "
@@ -68,7 +69,7 @@ class HtmlReporter @JvmOverloads constructor(
     }
   }
 
-  private fun writeUpgrades(printStream: Appendable, result: Result) {
+  private fun writeUpgrades(printStream: OutputStream, result: Result) {
     val versions = result.outdated.dependencies
     if (versions.isNotEmpty()) {
       printStream.println("<H2>Later dependencies</H2>")
@@ -82,7 +83,7 @@ class HtmlReporter @JvmOverloads constructor(
     }
   }
 
-  private fun writeUndeclared(printStream: Appendable, result: Result) {
+  private fun writeUndeclared(printStream: OutputStream, result: Result) {
     val versions = result.undeclared.dependencies
     if (versions.isNotEmpty()) {
       printStream.println("<H2>Undeclared dependencies</H2>")
@@ -98,7 +99,7 @@ class HtmlReporter @JvmOverloads constructor(
     }
   }
 
-  private fun writeUnresolved(printStream: Appendable, result: Result) {
+  private fun writeUnresolved(printStream: OutputStream, result: Result) {
     val versions = result.unresolved.dependencies
     if (versions.isNotEmpty()) {
       printStream.println("<H2>Unresolved dependencies</H2>")
@@ -113,7 +114,7 @@ class HtmlReporter @JvmOverloads constructor(
     }
   }
 
-  private fun writeGradleUpdates(printStream: Appendable, result: Result) {
+  private fun writeGradleUpdates(printStream: OutputStream, result: Result) {
     if (!result.gradle.enabled) {
       return
     }

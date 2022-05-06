@@ -9,6 +9,7 @@ import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.reporter.result.VersionAvailable
 import com.thoughtworks.xstream.XStream
 import org.gradle.api.Project
+import java.io.OutputStream
 
 /**
  * A xml reporter for the dependency updates results.
@@ -18,7 +19,7 @@ class XmlReporter @JvmOverloads constructor(
   override val revision: String,
   override val gradleReleaseChannel: String,
 ) : AbstractReporter(project, revision, gradleReleaseChannel) {
-  override fun write(printStream: Appendable, result: Result) {
+  override fun write(printStream: OutputStream, result: Result) {
     val xStream = XStream().apply {
       aliasSystemAttribute(null, "class") // Removes attributes={class=sorted-set}
       alias("response", Result::class.java)
