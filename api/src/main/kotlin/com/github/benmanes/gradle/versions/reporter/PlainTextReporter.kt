@@ -68,7 +68,7 @@ class PlainTextReporter @JvmOverloads constructor(
       )
       for (dependency in downgradeVersions) {
         val currentVersion = dependency.version
-        printStream.println(" - ${label(dependency)} [${currentVersion} <- ${dependency.latest}]")
+        printStream.println(" - ${label(dependency)} [$currentVersion <- ${dependency.latest}]")
         dependency.userReason?.let {
           printStream.println("     $it")
         }
@@ -86,7 +86,7 @@ class PlainTextReporter @JvmOverloads constructor(
       printStream.println("The following dependencies have later $revision versions:")
       for (dependency in upgradeVersions) {
         val currentVersion = dependency.version
-        printStream.println(" - ${label(dependency)} [${currentVersion} -> ${dependency.available[revision]}]")
+        printStream.println(" - ${label(dependency)} [$currentVersion -> ${dependency.available[revision]}]")
         dependency.userReason?.let {
           printStream.println("     $it")
         }
