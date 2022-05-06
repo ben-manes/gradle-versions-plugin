@@ -67,8 +67,9 @@ class DependencyUpdates {
 
     Set<DependencyStatus> statuses = status + buildscriptStatus
     VersionMapping versions = new VersionMapping(project, statuses)
-    Set<UnresolvedDependency> unresolved =
-      statuses.findAll { it.unresolved != null }.collect { it.unresolved } as Set
+    Set<UnresolvedDependency> unresolved = statuses
+      .findAll { it.unresolved != null }
+      .collect { it.unresolved } as Set
     Map<Map<String, String>, String> projectUrls = statuses
       .findAll { it.projectUrl }
       .collectEntries {
@@ -79,7 +80,7 @@ class DependencyUpdates {
 
   private Set<DependencyStatus> resolveProjects(
     Map<Project, Set<Configuration>> projectConfigs, boolean checkConstraints) {
-    Set<DependencyStatus> resultStatus = []
+    Set<DependencyStatus> resultStatus = new HashSet<>()
     projectConfigs.each { currentProject, currentConfigurations ->
       Resolver resolver = new Resolver(currentProject, resolutionStrategy, checkConstraints)
       for (Configuration currentConfiguration : currentConfigurations) {
@@ -144,7 +145,7 @@ class DependencyUpdates {
   }
 
   private static Map<Map<String, String>, Coordinate> toMap(Set<Coordinate> coordinates) {
-    Map<Map<String, String>, Coordinate> map = [:]
+    Map<Map<String, String>, Coordinate> map = new HashMap<>()
     for (Coordinate coordinate : coordinates) {
       for (int i = 0; ; i++) {
         String artifactId = coordinate.artifactId + ((i == 0) ? "" : "[${i + 1}]")

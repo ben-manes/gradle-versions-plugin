@@ -107,7 +107,7 @@ class DependencyUpdatesReporter {
         generateFileReport((Reporter) outputFormatter)
       } else if (outputFormatter instanceof Closure) {
         Result result = buildBaseObject()
-        ((Closure) outputFormatter).call(result)
+        ((Closure<?>) outputFormatter).call(result)
       } else {
         throw new IllegalArgumentException(
           "Cannot handle output formatter $outputFormatter, unsupported type")
@@ -115,7 +115,7 @@ class DependencyUpdatesReporter {
     }
   }
 
-  void generateFileReport(Reporter reporter) {
+  private void generateFileReport(Reporter reporter) {
     File filename = new File(outputDir, reportfileName + "." + reporter.getFileExtension())
     project.file(outputDir).mkdirs()
     File outputFile = project.file(filename)
@@ -127,7 +127,7 @@ class DependencyUpdatesReporter {
     project.logger.lifecycle("\nGenerated report file " + filename)
   }
 
-  Reporter getOutputReporter(String formatterOriginal) {
+  private Reporter getOutputReporter(String formatterOriginal) {
     String formatter = formatterOriginal.replaceAll("\\s", "")
     AbstractReporter reporter
 
@@ -148,7 +148,7 @@ class DependencyUpdatesReporter {
     return reporter
   }
 
-  Result buildBaseObject() {
+  private Result buildBaseObject() {
     Set<Dependency> sortedCurrent = buildCurrentGroup()
     Set<Dependency> sortedOutdated = buildOutdatedGroup()
     Set<Dependency> sortedExceeded = buildExceededGroup()
@@ -172,7 +172,9 @@ class DependencyUpdatesReporter {
   }
 
   /**
-   * Create a {@link GradleUpdateResults} object from the information provided by the {@link GradleUpdateChecker}
+   * Create a {@link GradleUpdateResults} object from the information provided by the
+   * {@link GradleUpdateChecker}
+   *
    * @return filled out object instance
    */
   private GradleUpdateResults buildGradleUpdateResults() {
@@ -198,7 +200,7 @@ class DependencyUpdatesReporter {
       (index == -1) ? existingKey["name"] : existingKey["name"].substring(0, index)
   }
 
-  protected Set<Dependency> buildCurrentGroup() {
+  private Set<Dependency> buildCurrentGroup() {
     return sortByGroupAndName(upToDateVersions)
       .collect { Map.Entry<Map<String, String>, Coordinate> dep ->
         updateKey(dep.key)
@@ -206,7 +208,7 @@ class DependencyUpdatesReporter {
       } as TreeSet<Dependency>
   }
 
-  protected Set<Dependency> buildOutdatedGroup() {
+  private Set<Dependency> buildOutdatedGroup() {
     return sortByGroupAndName(upgradeVersions)
       .collect { Map.Entry<Map<String, String>, Coordinate> dep ->
         updateKey(dep.key)
@@ -214,7 +216,7 @@ class DependencyUpdatesReporter {
       } as TreeSet<Dependency>
   }
 
-  protected Set<Dependency> buildExceededGroup() {
+  private Set<Dependency> buildExceededGroup() {
     return sortByGroupAndName(downgradeVersions)
       .collect { Map.Entry<Map<String, String>, Coordinate> dep ->
         updateKey(dep.key)
@@ -222,12 +224,14 @@ class DependencyUpdatesReporter {
       } as TreeSet<Dependency>
   }
 
-  protected Set<Dependency> buildUndeclaredGroup() {
+  private Set<Dependency> buildUndeclaredGroup() {
     return undeclared
-      .collect { Coordinate coordinate -> new Dependency(coordinate.groupId, coordinate.artifactId) } as TreeSet<Dependency>
+      .collect { Coordinate coordinate ->
+        new Dependency(coordinate.groupId, coordinate.artifactId)
+      } as TreeSet<Dependency>
   }
 
-  protected Set<DependencyUnresolved> buildUnresolvedGroup() {
+  private Set<DependencyUnresolved> buildUnresolvedGroup() {
     return unresolved.sort { UnresolvedDependency a, UnresolvedDependency b ->
       compareKeys(keyOf(a.selector), keyOf(b.selector))
     }.collect { UnresolvedDependency dep ->
@@ -239,7 +243,7 @@ class DependencyUpdatesReporter {
     } as TreeSet<DependencyUnresolved>
   }
 
-  protected static Result buildObject(int count,
+  private static Result buildObject(int count,
     DependenciesGroup currentGroup,
     DependenciesGroup outdatedGroup,
     DependenciesGroup exceededGroup,
@@ -250,24 +254,24 @@ class DependencyUpdatesReporter {
       unresolvedGroup, gradleUpdateResults)
   }
 
-  protected static <T extends Dependency> DependenciesGroup<T> buildDependenciesGroup(
+  private static <T extends Dependency> DependenciesGroup<T> buildDependenciesGroup(
     Set<T> dependencies) {
     return new DependenciesGroup<T>(dependencies.size(), dependencies)
   }
 
-  protected Dependency buildDependency(Coordinate coordinate, Map<String, String> key) {
+  private Dependency buildDependency(Coordinate coordinate, Map<String, String> key) {
     return new Dependency(key["group"], key["name"], coordinate.getVersion(), projectUrls[key],
       coordinate.getUserReason())
   }
 
-  protected DependencyLatest buildExceededDependency(Coordinate coordinate,
+  private DependencyLatest buildExceededDependency(Coordinate coordinate,
     Map<String, String> key) {
-    return new DependencyLatest(key["group"], key["name"], coordinate?.getVersion(),
+    return new DependencyLatest(key["group"], key["name"], coordinate.getVersion(),
       projectUrls[key],
-      coordinate?.getUserReason(), latestVersions[key]?.getVersion())
+      coordinate.getUserReason(), latestVersions[key]?.getVersion())
   }
 
-  protected DependencyUnresolved buildUnresolvedDependency(ModuleVersionSelector selector,
+  private DependencyUnresolved buildUnresolvedDependency(ModuleVersionSelector selector,
     String message) {
     return new DependencyUnresolved(selector.group, selector.name,
       currentVersions[keyOf(selector)]?.getVersion(),
@@ -276,7 +280,7 @@ class DependencyUpdatesReporter {
       message)
   }
 
-  protected DependencyOutdated buildOutdatedDependency(Coordinate coordinate,
+  private DependencyOutdated buildOutdatedDependency(Coordinate coordinate,
     Map<String, String> key) {
     VersionAvailable available
 
@@ -292,11 +296,11 @@ class DependencyUpdatesReporter {
         available = new VersionAvailable(laterVersion)
     }
 
-    return new DependencyOutdated(key["group"], key["name"], coordinate?.getVersion(),
-      projectUrls[key], coordinate?.getUserReason(), available)
+    return new DependencyOutdated(key["group"], key["name"], coordinate.getVersion(),
+      projectUrls[key], coordinate.getUserReason(), available)
   }
 
-  static Map<Map<String, String>, Coordinate> sortByGroupAndName(
+  private static Map<Map<String, String>, Coordinate> sortByGroupAndName(
     Map<Map<String, String>, Coordinate> dependencies) {
     return dependencies.sort { Map.Entry<Map<String, String>, Coordinate> a,
       Map.Entry<Map<String, String>, Coordinate> b -> compareKeys(a.key, b.key)
@@ -305,10 +309,14 @@ class DependencyUpdatesReporter {
 
   /** Compares the dependency keys. */
   protected static int compareKeys(Map<String, String> a, Map<String, String> b) {
-    return (a["group"] == b["group"]) ? a["name"] <=> b["name"] : a["group"] <=> b["group"]
+    return (a["group"] == b["group"]) ? a["name"].compareTo(b["name"]) :
+      a["group"].compareTo(b["group"])
   }
 
-  static Map<String, String> keyOf(ModuleVersionSelector dependency) {
-    return [group: dependency.group, name: dependency.name]
+  private static Map<String, String> keyOf(ModuleVersionSelector dependency) {
+    Map<String, String> map = new HashMap<>()
+    map.put("group", dependency.group)
+    map.put("name", dependency.name)
+    return map
   }
 }

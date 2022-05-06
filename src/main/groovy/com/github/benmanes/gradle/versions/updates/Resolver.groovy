@@ -96,7 +96,7 @@ class Resolver {
       Coordinate resolvedCoordinate = Coordinate.from(dependency.module.id)
       Coordinate originalCoordinate = coordinates.get(resolvedCoordinate.key)
       Coordinate coord = originalCoordinate ?: resolvedCoordinate
-      if ((originalCoordinate == null) && (resolvedCoordinate.groupId != "null")) {
+      if (originalCoordinate == null && resolvedCoordinate.groupId != "null") {
         project.logger.info("Skipping hidden dependency: ${resolvedCoordinate}")
       } else {
         String projectUrl = getProjectUrl(dependency.module.id)
@@ -180,7 +180,7 @@ class Resolver {
     // (e.g. the dependency-management-plugin for BOMs) or is an explicit file (e.g. libs/*.jar).
     // In the case of another plugin we use "+" in the hope that the plugin will not restrict the
     // query (see issue #97). Otherwise if its a file then use "none" to pass it through.
-    String version = (dependency.version == null)
+    String version = dependency.version == null
       ? (dependency.artifacts.empty ? "+" : "none")
       : "+"
 
@@ -221,7 +221,7 @@ class Resolver {
   /** Adds the attributes from the source to the target. */
   @TypeChecked(SKIP)
   private static void addAttributes(HasConfigurableAttributes target,
-    HasConfigurableAttributes source, Closure filter = { String key -> true }) {
+    HasConfigurableAttributes source, Closure<?> filter = { String key -> true }) {
     target.attributes { container ->
       for (Attribute<?> key : source.attributes.keySet()) {
         if (filter.call(key.name)) {
@@ -237,18 +237,20 @@ class Resolver {
   private static void addRevisionFilter(Configuration configuration, String revision) {
     configuration.resolutionStrategy { ResolutionStrategy componentSelection ->
       componentSelection.componentSelection { rules ->
-        Closure revisionFilter = { ComponentSelection selection, ComponentMetadata metadata ->
-          boolean accepted = (metadata == null) ||
-            ((revision == "release") && (metadata.status == "release")) ||
-            ((revision == "milestone") && (metadata.status != "integration")) ||
-            (revision == "integration") || (selection.candidate.version == "none")
+        Closure<?> revisionFilter = { ComponentSelection selection, ComponentMetadata metadata ->
+          boolean accepted = metadata == null ||
+            (revision == "release" && metadata.status == "release") ||
+            (revision == "milestone" && metadata.status != "integration") ||
+            revision == "integration" || selection.candidate.version == "none"
           if (!accepted) {
             selection.reject("Component status ${metadata.status} rejected by revision ${revision}")
           }
         }
-        rules.all ComponentSelection.methods.any { it.name == "getMetadata" }
-          ? { revisionFilter(it, it.metadata) }
-          : revisionFilter
+        rules.all {
+          ComponentSelection.methods.any { it.name == "getMetadata" }
+            ? { revisionFilter(it, it.metadata) }
+            : revisionFilter
+        }
       }
     }
   }
@@ -320,7 +322,7 @@ class Resolver {
   }
 
   private void logRepositories() {
-    boolean root = (project.rootProject == project)
+    boolean root = project.rootProject == project
     String label = "${root ? project.name : project.path} project${root ? " (root)" : ""}"
     if (!project.buildscript.configurations*.dependencies.isEmpty()) {
       project.logger.info("Resolving ${label} buildscript with repositories:")
@@ -383,14 +385,14 @@ class Resolver {
             project.logger.info("Pom file for ${id} is ${file}")
 
             String url = getUrlFromPom(file)
-            if (url) {
+            if (url != null) {
               project.logger.info("Found url for ${id}: ${url}")
               return url.trim()
             } else {
               ModuleVersionIdentifier parent = getParentFromPom(file)
               if (parent && "${parent.group}:${parent.name}" != "org.sonatype.oss:oss-parent") {
                 url = getProjectUrl(parent)
-                if (url) {
+                if (url != null) {
                   return url.trim()
                 }
               }
@@ -409,7 +411,7 @@ class Resolver {
   @TypeChecked(SKIP) // GPathResult
   private static String getUrlFromPom(File file) {
     GPathResult pom = new XmlSlurper(/* validating */ false, /* namespaceAware */ false).parse(file)
-    if (pom.url) {
+    if (pom.url != null) {
       return pom.url
     }
     return pom.scm.url
@@ -420,11 +422,11 @@ class Resolver {
   private static ModuleVersionIdentifier getParentFromPom(File file) {
     GPathResult pom = new XmlSlurper(/* validating */ false, /* namespaceAware */ false).parse(file)
     GPathResult parent = pom.children().find { child -> child.name() == "parent" }
-    if (parent) {
+    if (parent != null) {
       String groupId = parent.groupId
       String artifactId = parent.artifactId
       String version = parent.version
-      if (groupId && artifactId && version) {
+      if (groupId != null && artifactId != null && version != null) {
         return DefaultModuleVersionIdentifier.newId(groupId, artifactId, version)
       }
     }
@@ -444,7 +446,7 @@ class Resolver {
     }
 
     if (supportsConstraints(configuration)) {
-      configuration.dependencyConstraints.each {
+      for (it in configuration.dependencyConstraints) {
         coordinates.add(Coordinate.from(it))
       }
     }

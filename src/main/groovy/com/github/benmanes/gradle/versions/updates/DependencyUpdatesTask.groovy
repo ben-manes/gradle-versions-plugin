@@ -55,7 +55,7 @@ class DependencyUpdatesTask extends DefaultTask {
   @Optional
   @Nullable
   String getOutputFormatterName() {
-    return (outputFormatter instanceof String) ? ((String) outputFormatter) : null
+    return outputFormatter instanceof String ? (String) outputFormatter : null
   }
 
   // Groovy generates both get/is accessors for boolean properties unless we manually define some.
@@ -84,7 +84,7 @@ class DependencyUpdatesTask extends DefaultTask {
 
   @Internal
   @Nullable
-  Closure resolutionStrategy = null
+  Closure<?> resolutionStrategy = null
 
   @Nullable
   private Action<? super ResolutionStrategyWithCurrent> resolutionStrategyAction = null
@@ -98,16 +98,6 @@ class DependencyUpdatesTask extends DefaultTask {
     if (supportsIncompatibleWithConfigurationCache()) {
       callIncompatibleWithConfigurationCache()
     }
-  }
-
-  private boolean supportsIncompatibleWithConfigurationCache() {
-    return metaClass.respondsTo(this, "notCompatibleWithConfigurationCache", String)
-  }
-
-  private void callIncompatibleWithConfigurationCache() {
-    String methodName = "notCompatibleWithConfigurationCache"
-    Object[] methodArgs = ["The gradle-versions-plugin isn't compatible with the configuration cache"]
-    metaClass.invokeMethod(this, methodName, methodArgs)
   }
 
   @TaskAction
@@ -126,7 +116,7 @@ class DependencyUpdatesTask extends DefaultTask {
       gradleReleaseChannelLevel(),
       checkConstraints, checkBuildEnvironmentConstraints)
     DependencyUpdatesReporter reporter = evaluator.run()
-    reporter?.write()
+    reporter.write()
   }
 
   /**
@@ -151,28 +141,38 @@ class DependencyUpdatesTask extends DefaultTask {
     }
   }
 
+  private boolean supportsIncompatibleWithConfigurationCache() {
+    return metaClass.respondsTo(this, "notCompatibleWithConfigurationCache", String)
+  }
+
+  private void callIncompatibleWithConfigurationCache() {
+    String methodName = "notCompatibleWithConfigurationCache"
+    Object[] methodArgs = ["The gradle-versions-plugin isn't compatible with the configuration cache"]
+    metaClass.invokeMethod(this, methodName, methodArgs)
+  }
+
   /** Returns the resolution revision level. */
-  String revisionLevel() {
+  private String revisionLevel() {
     return System.properties["revision"] ?: revision
   }
 
   /** Returns the resolution revision level. */
-  String gradleReleaseChannelLevel() {
+  private String gradleReleaseChannelLevel() {
     return System.properties["gradleReleaseChannel"] ?: gradleReleaseChannel
   }
 
   /** Returns the outputDir format. */
-  Object outputFormatterProp() {
+  private Object outputFormatterProp() {
     return System.properties["outputFormatter"] ?: outputFormatter
   }
 
   /** Returns the outputDir destination. */
-  String outputDirectory() {
+  private String outputDirectory() {
     return System.properties["outputDir"] ?: outputDir
   }
 
   /** Returns the filename of the report. */
-  String getReportfileName() {
+  private String getReportfileName() {
     return System.properties.get("reportfileName", reportfileName)
   }
 }
