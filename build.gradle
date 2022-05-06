@@ -40,8 +40,13 @@ task createClasspathManifest {
 dependencies {
   compileOnly gradleApi()
 
+  // TODO: Remove this hack when plugin is fully compiled to Kotlin
+  // For compilation of ":api" module
+  compileOnly project(':api')
+  // Manually add the jar to the root project
+  implementation files("./api/build/libs/api.jar")
+
   implementation localGroovy()
-  implementation project(':api')
   implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.6.21'
   implementation 'com.thoughtworks.xstream:xstream:1.4.19'
   implementation 'com.squareup.okhttp3:okhttp:4.9.3'
@@ -63,6 +68,14 @@ jar {
       'Built-JDK': System.getProperty('java.version'),
       'Built-Gradle': gradle.gradleVersion
     )
+  }
+
+  // TODO: Remove this hack when plugin is fully compiled to Kotlin
+  from fileTree('/Users/noname/repo/gradle-versions-plugin/api/build/classes/kotlin/main/') {
+    include '**/*.class'
+  }
+  from fileTree('/Users/noname/repo/gradle-versions-plugin/build/classes/groovy/main/') {
+    include '**/*.class'
   }
 }
 
