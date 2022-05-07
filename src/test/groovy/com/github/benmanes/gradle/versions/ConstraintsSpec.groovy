@@ -164,8 +164,10 @@ final class ConstraintsSpec extends Specification {
     where:
     gradleVersion << [
       '6.9.2',
-      '7.3.2',
-      '7.3.3'
+      '7.0.2',
+      '7.1.1',
+      '7.2',
+      '7.3.3',
     ]
   }
 
