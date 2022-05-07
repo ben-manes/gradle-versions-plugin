@@ -117,13 +117,17 @@ allprojects {
   }
 
   tasks.withType(Test).configureEach {
-    maxParallelForks Runtime.getRuntime().availableProcessors()
-
     testLogging {
-      events "passed", "failed", "skipped"
+      exceptionFormat 'full'
+      showCauses true
+      showExceptions true
+      showStackTraces true
       showStandardStreams true
-      exceptionFormat "full"
+      events 'passed', 'failed', 'skipped'
     }
+
+    def maxWorkerCount = gradle.startParameter.maxWorkerCount
+    maxParallelForks = (maxWorkerCount < 2) ? 1 : maxWorkerCount / 2
   }
 }
 
@@ -141,32 +145,11 @@ task sourcesJar(type: Jar, dependsOn: classes) {
   from sourceSets.main.allSource
 }
 
-task testsJar(type: Jar) {
-  group = 'Publications'
-  description = 'Create jar of tests.'
-  archiveClassifier = 'tests'
-  from sourceSets.test.output
-}
-
-task reportsZip(type: Zip, dependsOn: check) {
-  group = 'Publications'
-  description = 'Create a zip of all reports.'
-  archiveClassifier = 'reports'
-  from reporting.baseDir
-}
-
-// Local published to ~/.m2 - mavenLocal() for testing
 publishing {
-  repositories {
-    mavenLocal()
-  }
-
   publications {
     pluginMaven(MavenPublication) {
       artifact docsJar
       artifact sourcesJar
-      artifact testsJar
-      artifact reportsZip
 
       pom {
         resolveStrategy = Closure.DELEGATE_FIRST
@@ -214,8 +197,6 @@ publishing {
     }
   }
 }
-publish.dependsOn jar, docsJar, sourcesJar, testsJar, reportsZip
-publish.dependsOn 'generatePomFileForPluginMavenPublication'
 
 pluginBundle {
   website = POM_URL
