@@ -52,10 +52,12 @@ class ResolutionStrategyWithCurrent @JvmOverloads constructor(
   }
 
   fun componentSelection(closure: Closure<*>): ResolutionStrategyWithCurrent {
-    return componentSelection(Action<ComponentSelectionRulesWithCurrent> {
-      closure.delegate = it
-      closure.call(it)
-    })
+    return componentSelection(
+      Action<ComponentSelectionRulesWithCurrent> {
+        closure.delegate = it
+        closure.call(it)
+      }
+    )
   }
 
   private fun getComponentSelectionNonDelegate(): ComponentSelectionRulesWithCurrent {
