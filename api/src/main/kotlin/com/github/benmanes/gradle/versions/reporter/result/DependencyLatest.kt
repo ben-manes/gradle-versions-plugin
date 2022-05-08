@@ -1,6 +1,6 @@
 package com.github.benmanes.gradle.versions.reporter.result
 
-data class DependencyLatest @JvmOverloads constructor(
+data class DependencyLatest(
   override val group: String? = null,
   override val name: String? = null,
   override val version: String? = null,

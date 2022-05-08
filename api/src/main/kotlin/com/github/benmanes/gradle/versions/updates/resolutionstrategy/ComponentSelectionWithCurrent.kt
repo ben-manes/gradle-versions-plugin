@@ -2,9 +2,9 @@ package com.github.benmanes.gradle.versions.updates.resolutionstrategy
 
 import org.gradle.api.artifacts.ComponentSelection
 
-class ComponentSelectionWithCurrent @JvmOverloads constructor(
+class ComponentSelectionWithCurrent(
   private val delegate: ComponentSelection,
-  val currentVersion: String?,
+  val currentVersion: String? = null,
 ) : ComponentSelection by delegate {
 
   override fun toString(): String {

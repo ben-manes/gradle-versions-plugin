@@ -11,7 +11,7 @@ import java.io.OutputStream
 /**
  * A plain text reporter for the dependency updates results.
  */
-class PlainTextReporter @JvmOverloads constructor(
+class PlainTextReporter(
   override val project: Project,
   override val revision: String,
   override val gradleReleaseChannel: String,

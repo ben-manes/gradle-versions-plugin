@@ -7,7 +7,7 @@ import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.artifacts.DependencySubstitutions
 import org.gradle.api.artifacts.ResolutionStrategy
 
-class ResolutionStrategyWithCurrent @JvmOverloads constructor(
+class ResolutionStrategyWithCurrent(
   private val delegate: ResolutionStrategy,
   private val currentCoordinates: Map<Coordinate.Key, Coordinate>,
 ) {
@@ -52,12 +52,10 @@ class ResolutionStrategyWithCurrent @JvmOverloads constructor(
   }
 
   fun componentSelection(closure: Closure<*>): ResolutionStrategyWithCurrent {
-    return componentSelection(
-      Action<ComponentSelectionRulesWithCurrent> {
-        closure.delegate = it
-        closure.call(it)
-      }
-    )
+    return componentSelection {
+      closure.delegate = it
+      closure.call(it)
+    }
   }
 
   private fun getComponentSelectionNonDelegate(): ComponentSelectionRulesWithCurrent {

@@ -3,7 +3,7 @@ package com.github.benmanes.gradle.versions.reporter.result
 /**
  * A group of dependencies
  */
-data class DependenciesGroup<T : Dependency> @JvmOverloads constructor(
+data class DependenciesGroup<T : Dependency>(
   /**
    * The number of dependencies in this group
    */

@@ -7,7 +7,7 @@ import org.gradle.util.GradleVersion
  * Holder class for gradle update results of a specific release channel (or the running version).
  * Used for reporting & serialization to JSON/XML
  */
-class GradleUpdateResult @JvmOverloads constructor(
+class GradleUpdateResult(
   enabled: Boolean = false,
   running: ReleaseStatus.Available? = null,
   release: ReleaseStatus? = null,
@@ -22,13 +22,11 @@ class GradleUpdateResult @JvmOverloads constructor(
    * Indicates whether the [version] is an update with respect to the currently running gradle
    * version.
    */
-  @get:JvmName("isIsUpdateAvailable")
   var isUpdateAvailable: Boolean
 
   /**
    * Indicates whether the check for Gradle updates on this release channel failed.
    */
-  @get:JvmName("isIsFailure")
   var isFailure: Boolean
 
   /**

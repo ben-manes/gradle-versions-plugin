@@ -5,7 +5,7 @@ import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
 /**
  * The result of a dependency update analysis
  */
-class Result @JvmOverloads constructor(
+class Result(
   /**
    * the overall number of dependencies in the project
    */

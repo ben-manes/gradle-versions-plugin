@@ -14,7 +14,7 @@ import java.io.OutputStream
 /**
  * A xml reporter for the dependency updates results.
  */
-class XmlReporter @JvmOverloads constructor(
+class XmlReporter(
   override val project: Project,
   override val revision: String,
   override val gradleReleaseChannel: String,

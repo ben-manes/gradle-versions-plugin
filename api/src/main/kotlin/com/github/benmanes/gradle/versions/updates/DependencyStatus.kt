@@ -5,8 +5,8 @@ import org.gradle.api.artifacts.UnresolvedDependency
 /**
  * The version status of a dependency.
  *
- * The <tt>latestVersion</tt> is set if the dependency was successfully resolved, otherwise the
- * <tt>unresolved</tt> contains the exception that caused the resolution to fail.
+ * The `latestVersion` is set if the dependency was successfully resolved, otherwise the
+ * `unresolved` contains the exception that caused the resolution to fail.
  */
 class DependencyStatus {
   val coordinate: Coordinate

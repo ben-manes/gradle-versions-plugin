@@ -7,7 +7,7 @@ import java.io.PrintStream
 /**
  * A base result object reporter for the dependency updates results.
  */
-abstract class AbstractReporter @JvmOverloads constructor(
+abstract class AbstractReporter(
   /** The project evaluated against. */
   open val project: Project,
   /** The revision strategy evaluated with. */
@@ -16,10 +16,10 @@ abstract class AbstractReporter @JvmOverloads constructor(
   open val gradleReleaseChannel: String,
 ) : Reporter
 
-fun OutputStream.print(x: String = "") {
-  (this as PrintStream).print(x)
+fun OutputStream.print(s: String = "") {
+  (this as PrintStream).print(s)
 }
 
-fun OutputStream.println(x: String = "") {
-  (this as PrintStream).println(x)
+fun OutputStream.println(s: String = "") {
+  (this as PrintStream).println(s)
 }

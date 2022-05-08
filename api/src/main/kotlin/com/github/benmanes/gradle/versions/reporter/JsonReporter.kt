@@ -9,7 +9,7 @@ import java.io.OutputStream
 /**
  * A json reporter for the dependency updates results.
  */
-class JsonReporter @JvmOverloads constructor(
+class JsonReporter(
   override val project: Project,
   override val revision: String,
   override val gradleReleaseChannel: String,
