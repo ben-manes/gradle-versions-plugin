@@ -11,7 +11,7 @@ import java.io.OutputStream
 /**
  * An html reporter for the dependency updates results.
  */
-class HtmlReporter @JvmOverloads constructor(
+class HtmlReporter(
   override val project: Project,
   override val revision: String,
   override val gradleReleaseChannel: String,

@@ -1,6 +1,6 @@
 package com.github.benmanes.gradle.versions.reporter.result
 
-data class DependencyOutdated @JvmOverloads constructor(
+data class DependencyOutdated(
   override val group: String? = null,
   override val name: String? = null,
   override val version: String? = null,

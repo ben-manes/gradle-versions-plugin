@@ -8,7 +8,7 @@ import org.gradle.api.artifacts.ComponentSelectionRules
 import org.gradle.internal.rules.RuleSourceBackedRuleAction
 import org.gradle.model.internal.type.ModelType
 
-class ComponentSelectionRulesWithCurrent @JvmOverloads constructor(
+class ComponentSelectionRulesWithCurrent(
   private val delegate: ComponentSelectionRules,
   private val currentCoordinates: Map<Coordinate.Key, Coordinate>,
 ) {

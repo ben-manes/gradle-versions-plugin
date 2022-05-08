@@ -11,17 +11,16 @@ import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 /**
  * The dependency's coordinate.
  */
-class Coordinate @JvmOverloads constructor(
+class Coordinate(
   groupId: String?,
   artifactId: String?,
   version: String?,
-  userReason: String?
+  userReason: String? = null,
 ) : Comparable<Coordinate> {
   val groupId: String
   val artifactId: String
   val version: String
   val userReason: String?
-
   val key: Key
     get() = Key(groupId, artifactId)
 
@@ -87,12 +86,12 @@ class Coordinate @JvmOverloads constructor(
 
     @JvmStatic
     fun from(selector: ModuleVersionSelector): Coordinate {
-      return Coordinate(selector.group, selector.name, selector.version, userReason = null)
+      return Coordinate(selector.group, selector.name, selector.version)
     }
 
     @JvmStatic
     fun from(identifier: ModuleVersionIdentifier): Coordinate {
-      return Coordinate(identifier.group, identifier.name, identifier.version, userReason = null)
+      return Coordinate(identifier.group, identifier.name, identifier.version)
     }
 
     @JvmStatic
@@ -119,7 +118,7 @@ class Coordinate @JvmOverloads constructor(
 
     @JvmStatic
     fun from(identifier: ModuleComponentIdentifier): Coordinate {
-      return Coordinate(identifier.group, identifier.module, identifier.version, userReason = null)
+      return Coordinate(identifier.group, identifier.module, identifier.version)
     }
   }
 }
