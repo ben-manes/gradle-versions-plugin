@@ -12,7 +12,6 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 final class DifferentGradleVersionsSpec extends Specification {
-
   @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
   private File buildFile
   private List<File> pluginClasspath

@@ -18,7 +18,6 @@ package com.github.benmanes.gradle.versions.updates
 import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.NIGHTLY
 import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 
-import com.github.benmanes.gradle.versions.reporter.AbstractReporter
 import com.github.benmanes.gradle.versions.reporter.HtmlReporter
 import com.github.benmanes.gradle.versions.reporter.JsonReporter
 import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
@@ -129,23 +128,20 @@ class DependencyUpdatesReporter {
 
   private Reporter getOutputReporter(String formatterOriginal) {
     String formatter = formatterOriginal.replaceAll("\\s", "")
-    AbstractReporter reporter
 
     switch (formatter) {
       case "json":
-        reporter = new JsonReporter(project, revision, gradleReleaseChannel)
+        return new JsonReporter(project, revision, gradleReleaseChannel)
         break
       case "xml":
-        reporter = new XmlReporter(project, revision, gradleReleaseChannel)
+        return new XmlReporter(project, revision, gradleReleaseChannel)
         break
       case "html":
-        reporter = new HtmlReporter(project, revision, gradleReleaseChannel)
+        return new HtmlReporter(project, revision, gradleReleaseChannel)
         break
       default:
-        reporter = new PlainTextReporter(project, revision, gradleReleaseChannel)
+        return new PlainTextReporter(project, revision, gradleReleaseChannel)
     }
-
-    return reporter
   }
 
   private Result buildBaseObject() {
@@ -307,10 +303,14 @@ class DependencyUpdatesReporter {
 
   /** Compares the dependency keys. */
   private static int compareKeys(Map<String, String> a, Map<String, String> b) {
-    return (a["group"] == b["group"]) ? a["name"] <=> b["name"] : a["group"] <=> b["group"]
+    return (a["group"] == b["group"]) ? a["name"].compareTo(b["name"]) :
+      a["group"].compareTo(b["group"])
   }
 
   private static Map<String, String> keyOf(ModuleVersionSelector dependency) {
-    return [group: dependency.group, name: dependency.name]
+    Map<String, String> keyMap = new HashMap<>()
+    keyMap.put("group", dependency.group)
+    keyMap.put("name", dependency.name)
+    return keyMap
   }
 }

@@ -149,9 +149,11 @@ class DependencyUpdates {
     for (Coordinate coordinate : coordinates) {
       for (int i = 0; ; i++) {
         String artifactId = coordinate.artifactId + ((i == 0) ? "" : "[${i + 1}]")
-        LinkedHashMap<String, String> key = [group: coordinate.groupId, name: artifactId]
-        if (!map.containsKey(key)) {
-          map.put(key, coordinate)
+        Map<String, String> keyMap = new LinkedHashMap<>()
+        keyMap.put("group", coordinate.groupId)
+        keyMap.put("name", artifactId)
+        if (!map.containsKey(keyMap)) {
+          map.put(keyMap, coordinate)
           break
         }
       }

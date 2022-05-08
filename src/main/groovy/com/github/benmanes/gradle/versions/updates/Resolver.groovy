@@ -385,14 +385,14 @@ class Resolver {
             project.logger.info("Pom file for ${id} is ${file}")
 
             String url = getUrlFromPom(file)
-            if (url) {
+            if (url != null && !url.isEmpty()) {
               project.logger.info("Found url for ${id}: ${url}")
               return url.trim()
             } else {
               ModuleVersionIdentifier parent = getParentFromPom(file)
               if (parent && "${parent.group}:${parent.name}" != "org.sonatype.oss:oss-parent") {
                 url = getProjectUrl(parent)
-                if (url) {
+                if (url != null && !url.isEmpty()) {
                   return url.trim()
                 }
               }

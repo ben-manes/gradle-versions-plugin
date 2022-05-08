@@ -12,26 +12,27 @@ final class ComponentSelectionRuleSourceSpec extends Specification {
   @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
   private File buildFile
   private List<File> pluginClasspath
+  private String classpathString
+  private String mavenRepoUrl
 
   def 'setup'() {
-    def pluginClasspathResource = getClass().classLoader.getResource('plugin-classpath.txt')
+    def pluginClasspathResource = getClass().classLoader.getResource("plugin-classpath.txt")
     if (pluginClasspathResource == null) {
       throw new IllegalStateException(
-        'Did not find plugin classpath resource, run `testClasses` build task.')
+        "Did not find plugin classpath resource, run `testClasses` build task.")
     }
 
     pluginClasspath = pluginClasspathResource.readLines().collect { new File(it) }
+    classpathString = pluginClasspath
+      .collect { it.absolutePath.replace('\\', '\\\\') } // escape backslashes in Windows paths
+      .collect { "'$it'" }
+      .join(", ")
+    mavenRepoUrl = getClass().getResource('/maven/').toURI()
   }
 
   @Unroll
   def 'component selection works with rule-source (#assignment)'() {
     given:
-    def classpathString = pluginClasspath
-      .collect { it.absolutePath.replace('\\', '\\\\') } // escape backslashes in Windows paths
-      .collect { "'$it'" }
-      .join(', ')
-    def mavenRepoUrl = getClass().getResource('/maven/').toURI()
-
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
       """
