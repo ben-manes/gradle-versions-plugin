@@ -19,6 +19,7 @@ import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import groovy.transform.CompileStatic
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.tasks.TaskContainer
 import org.gradle.util.GradleVersion
 
 /**
@@ -34,8 +35,9 @@ class VersionsPlugin implements Plugin<Project> {
       return
     }
 
-    if (!project.tasks.findByName("dependencyUpdates")) {
-      project.tasks.register("dependencyUpdates", DependencyUpdatesTask)
+    TaskContainer tasks = project.getTasks()
+    if (tasks.findByName("dependencyUpdates") == null) {
+      tasks.register("dependencyUpdates", DependencyUpdatesTask.class)
     }
   }
 }

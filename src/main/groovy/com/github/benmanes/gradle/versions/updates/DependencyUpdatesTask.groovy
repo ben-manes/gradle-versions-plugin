@@ -84,7 +84,7 @@ class DependencyUpdatesTask extends DefaultTask {
 
   @Internal
   @Nullable
-  Closure resolutionStrategy = null
+  Closure<?> resolutionStrategy = null
 
   @Nullable
   private Action<? super ResolutionStrategyWithCurrent> resolutionStrategyAction = null
@@ -126,7 +126,7 @@ class DependencyUpdatesTask extends DefaultTask {
       gradleReleaseChannelLevel(),
       checkConstraints, checkBuildEnvironmentConstraints)
     DependencyUpdatesReporter reporter = evaluator.run()
-    reporter?.write()
+    reporter.write()
   }
 
   /**

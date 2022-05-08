@@ -58,19 +58,19 @@ import org.gradle.maven.MavenPomArtifact
  */
 @CompileStatic
 class Resolver {
-  final Project project
+  private final Project project
   @Nullable
-  final Action<? super ResolutionStrategyWithCurrent> resolutionStrategy
-  final boolean checkConstraints
-  final ConcurrentMap<ModuleVersionIdentifier, ProjectUrl> projectUrls
+  private final Action<? super ResolutionStrategyWithCurrent> resolutionStrategy
+  private final boolean checkConstraints
+  private final ConcurrentMap<ModuleVersionIdentifier, ProjectUrl> projectUrls
 
   Resolver(Project project,
     @Nullable Action<? super ResolutionStrategyWithCurrent> resolutionStrategy,
     boolean checkConstraints) {
-    this.projectUrls = new ConcurrentHashMap<>()
-    this.resolutionStrategy = resolutionStrategy
     this.project = project
+    this.resolutionStrategy = resolutionStrategy
     this.checkConstraints = checkConstraints
+    this.projectUrls = new ConcurrentHashMap<>()
 
     logRepositories()
   }
@@ -103,6 +103,7 @@ class Resolver {
         result.add(new DependencyStatus(coord, resolvedCoordinate.version, projectUrl))
       }
     }
+
     for (UnresolvedDependency dependency : unresolved) {
       Coordinate resolvedCoordinate = Coordinate.from(dependency.selector)
       Coordinate originalCoordinate = coordinates.get(resolvedCoordinate.key)
@@ -221,7 +222,7 @@ class Resolver {
   /** Adds the attributes from the source to the target. */
   @TypeChecked(SKIP)
   private static void addAttributes(HasConfigurableAttributes target,
-    HasConfigurableAttributes source, Closure filter = { String key -> true }) {
+    HasConfigurableAttributes source, Closure<?> filter = { String key -> true }) {
     target.attributes { container ->
       for (Attribute<?> key : source.attributes.keySet()) {
         if (filter.call(key.name)) {
@@ -237,7 +238,7 @@ class Resolver {
   private static void addRevisionFilter(Configuration configuration, String revision) {
     configuration.resolutionStrategy { ResolutionStrategy componentSelection ->
       componentSelection.componentSelection { rules ->
-        Closure revisionFilter = { ComponentSelection selection, ComponentMetadata metadata ->
+        Closure<?> revisionFilter = { ComponentSelection selection, ComponentMetadata metadata ->
           boolean accepted = (metadata == null) ||
             ((revision == "release") && (metadata.status == "release")) ||
             ((revision == "milestone") && (metadata.status != "integration")) ||
@@ -246,9 +247,11 @@ class Resolver {
             selection.reject("Component status ${metadata.status} rejected by revision ${revision}")
           }
         }
-        rules.all ComponentSelection.methods.any { it.name == "getMetadata" }
-          ? { revisionFilter(it, it.metadata) }
-          : revisionFilter
+        rules.all {
+          ComponentSelection.methods.any { it.name == "getMetadata" }
+            ? { revisionFilter(it, it.metadata) }
+            : revisionFilter
+        }
       }
     }
   }
@@ -268,7 +271,6 @@ class Resolver {
   }
 
   /** Returns the coordinates for the current (declared) dependency versions. */
-  @TypeChecked(SKIP)
   private Map<Coordinate.Key, Coordinate> getCurrentCoordinates(Configuration configuration) {
     Map<Coordinate.Key, Coordinate> declared =
       getResolvableDependencies(configuration).collectEntries {
@@ -282,7 +284,7 @@ class Resolver {
     // https://github.com/ben-manes/gradle-versions-plugin/issues/231
     boolean transitive = declared.values().any { it.version == "none" }
 
-    Map<Coordinate.Key, Coordinate> coordinates = [:]
+    Map<Coordinate.Key, Coordinate> coordinates = new HashMap<>()
     Configuration copy = configuration.copyRecursive().setTransitive(transitive)
     // https://github.com/ben-manes/gradle-versions-plugin/issues/127
     if (copy.metaClass.respondsTo(copy, "setCanBeResolved", Boolean)) {
@@ -409,8 +411,9 @@ class Resolver {
   @TypeChecked(SKIP) // GPathResult
   private static String getUrlFromPom(File file) {
     GPathResult pom = new XmlSlurper(/* validating */ false, /* namespaceAware */ false).parse(file)
-    if (pom.url) {
-      return pom.url
+    Object url = pom.url
+    if (url != null) {
+      return url
     }
     return pom.scm.url
   }
@@ -420,11 +423,11 @@ class Resolver {
   private static ModuleVersionIdentifier getParentFromPom(File file) {
     GPathResult pom = new XmlSlurper(/* validating */ false, /* namespaceAware */ false).parse(file)
     GPathResult parent = pom.children().find { child -> child.name() == "parent" }
-    if (parent) {
+    if (parent != null) {
       String groupId = parent.groupId
       String artifactId = parent.artifactId
       String version = parent.version
-      if (groupId && artifactId && version) {
+      if (groupId != null && artifactId != null && version != null) {
         return DefaultModuleVersionIdentifier.newId(groupId, artifactId, version)
       }
     }
