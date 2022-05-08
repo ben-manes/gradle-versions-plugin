@@ -8,7 +8,6 @@ import org.junit.rules.TemporaryFolder
 import spock.lang.Specification
 
 final class JavaLibrarySpec extends Specification {
-
   @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
   private File buildFile
   private String mavenRepoUrl
