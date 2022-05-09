@@ -86,5 +86,6 @@ dependencies {
   constraints {
     platform 'com.linecorp.armeria:armeria:0.90.0',
              'io.zipkin.brave:brave:5.7.0'
+
   }
 }
