@@ -7,23 +7,10 @@ plugins {
   id 'java-gradle-plugin'
   id 'java-library'
   id 'groovy'
-  id 'codenarc'
 }
 
 group = GROUP
 version = VERSION_NAME
-
-codenarcMain {
-  configFile = file('config/codenarc/rules.groovy')
-}
-
-codenarcTest {
-  configFile = file('config/codenarc/testRules.groovy')
-}
-
-tasks.withType(CodeNarc).configureEach { codeNarcTask ->
-  codeNarcTask.ignoreFailures = true
-}
 
 // Write the plugin's classpath to a file to share with the tests
 task createClasspathManifest {
