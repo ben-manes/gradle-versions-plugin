@@ -60,11 +60,13 @@ jar {
   }
 
   // TODO: Remove this hack when plugin is fully compiled to Kotlin
-  from fileTree('/Users/noname/repo/gradle-versions-plugin/api/build/classes/kotlin/main/') {
+  from fileTree('./api/build/classes/kotlin/main/') {
     include '**/*.class'
+    duplicatesStrategy DuplicatesStrategy.INCLUDE
   }
-  from fileTree('/Users/noname/repo/gradle-versions-plugin/build/classes/groovy/main/') {
+  from fileTree('./build/classes/groovy/main/') {
     include '**/*.class'
+    duplicatesStrategy DuplicatesStrategy.INCLUDE
   }
 }
 
