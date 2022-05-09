@@ -30,6 +30,38 @@ class GradleUpdateChecker(
   }
 
   /**
+   * @return An instance of [ReleaseStatus.Available] containing a [GradleVersion]
+   * representing the version of the running gradle instance
+   */
+  fun getRunningGradleVersion(): ReleaseStatus.Available {
+    return ReleaseStatus.Available(GradleVersion.current())
+  }
+
+  /**
+   * @return An instance of [ReleaseStatus] explaining the update check for the latest version
+   * on the "current" gradle release channel.
+   */
+  fun getCurrentGradleVersion(): ReleaseStatus? {
+    return cacheMap[GradleReleaseChannel.CURRENT]
+  }
+
+  /**
+   * @return An instance of [ReleaseStatus] explaining the update check for the latest version
+   * on the "release-candidate" gradle release channel.
+   */
+  fun getReleaseCandidateGradleVersion(): ReleaseStatus? {
+    return cacheMap[GradleReleaseChannel.RELEASE_CANDIDATE]
+  }
+
+  /**
+   * @return An instance of [ReleaseStatus] explaining the update check for the latest version
+   * on the "nightly" gradle release channel.
+   */
+  fun getNightlyGradleVersion(): ReleaseStatus? {
+    return cacheMap[GradleReleaseChannel.NIGHTLY]
+  }
+
+  /**
    * Abstract class representing the possible states of a release channel after an update check.
    */
   sealed class ReleaseStatus {
@@ -65,42 +97,6 @@ class GradleUpdateChecker(
     private val moshi = Moshi.Builder()
       .addLast(KotlinJsonAdapterFactory())
       .build()
-
-    /**
-     * @return An instance of [ReleaseStatus.Available] containing a [GradleVersion]
-     * representing the version of the running gradle instance
-     */
-    @JvmStatic
-    fun getRunningGradleVersion(): ReleaseStatus.Available {
-      return ReleaseStatus.Available(GradleVersion.current())
-    }
-
-    /**
-     * @return An instance of [ReleaseStatus] explaining the update check for the latest version
-     * on the "current" gradle release channel.
-     */
-    @JvmStatic
-    fun getCurrentGradleVersion(): ReleaseStatus? {
-      return cacheMap[GradleReleaseChannel.CURRENT]
-    }
-
-    /**
-     * @return An instance of [ReleaseStatus] explaining the update check for the latest version
-     * on the "release-candidate" gradle release channel.
-     */
-    @JvmStatic
-    fun getReleaseCandidateGradleVersion(): ReleaseStatus? {
-      return cacheMap[GradleReleaseChannel.RELEASE_CANDIDATE]
-    }
-
-    /**
-     * @return An instance of [ReleaseStatus] explaining the update check for the latest version
-     * on the "nightly" gradle release channel.
-     */
-    @JvmStatic
-    fun getNightlyGradleVersion(): ReleaseStatus? {
-      return cacheMap[GradleReleaseChannel.NIGHTLY]
-    }
 
     /** Represents the XML from [API_BASE_URL] */
     private class VersionSite {
