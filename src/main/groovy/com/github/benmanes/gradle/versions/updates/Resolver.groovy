@@ -390,7 +390,9 @@ class Resolver {
               return url.trim()
             } else {
               ModuleVersionIdentifier parent = getParentFromPom(file)
-              if (parent && "${parent.group}:${parent.name}" != "org.sonatype.oss:oss-parent") {
+              if (parent != null &&
+                "${parent.group}:${parent.name}" !=
+                "org.sonatype.oss:oss-parent") {
                 url = getProjectUrl(parent)
                 if (url != null && !url.isEmpty()) {
                   return url.trim()

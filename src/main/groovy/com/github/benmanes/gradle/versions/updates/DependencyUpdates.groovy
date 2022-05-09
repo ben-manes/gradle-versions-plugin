@@ -45,6 +45,7 @@ class DependencyUpdates {
   @Nullable
   Object outputFormatter
   String outputDir
+  @Nullable
   String reportfileName
   boolean checkForGradleUpdate
   String gradleReleaseChannel
