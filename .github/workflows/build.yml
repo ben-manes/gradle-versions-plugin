@@ -43,7 +43,7 @@ jobs:
         run: |
           export VERSION_NAME=$(cat gradle.properties | grep -w "VERSION_NAME" | cut -d'=' -f2)
           rm -rf ~/.m2/repository/com/github/ben-manes/gradle-versions-plugin/$VERSION_NAME
-          gradlew publishToMavenLocal -x test -s
+          ./gradlew publishToMavenLocal -x test -s
           cat ~/.m2/repository/com/github/ben-manes/gradle-versions-plugin/$VERSION_NAME/gradle-versions-plugin-$VERSION_NAME.pom
           cd examples/groovy/ && ../../gradlew && cd -
 #          cd examples/kotlin/ && ../../gradlew && cd -
