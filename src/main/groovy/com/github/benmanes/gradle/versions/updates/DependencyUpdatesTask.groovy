@@ -60,24 +60,14 @@ class DependencyUpdatesTask extends DefaultTask {
 
   // Groovy generates both get/is accessors for boolean properties unless we manually define some.
   // Gradle will reject this behavior starting in 7.0 so we make sure to define accessors ourselves.
+  @Input
   boolean checkForGradleUpdate = true
+
+  @Input
   boolean checkConstraints = false
+
+  @Input
   boolean checkBuildEnvironmentConstraints = false
-
-  @Input
-  boolean getCheckForGradleUpdate() {
-    return checkForGradleUpdate
-  }
-
-  @Input
-  boolean getCheckConstraints() {
-    return checkConstraints
-  }
-
-  @Input
-  boolean getCheckBuildEnvironmentConstraints() {
-    return checkBuildEnvironmentConstraints
-  }
 
   @Internal
   Object outputFormatter = "plain"
@@ -100,16 +90,6 @@ class DependencyUpdatesTask extends DefaultTask {
     }
   }
 
-  private boolean supportsIncompatibleWithConfigurationCache() {
-    return metaClass.respondsTo(this, "notCompatibleWithConfigurationCache", String)
-  }
-
-  private void callIncompatibleWithConfigurationCache() {
-    String methodName = "notCompatibleWithConfigurationCache"
-    Object[] methodArgs = ["The gradle-versions-plugin isn't compatible with the configuration cache"]
-    metaClass.invokeMethod(this, methodName, methodArgs)
-  }
-
   @TaskAction
   void dependencyUpdates() {
     project.evaluationDependsOnChildren()
@@ -121,9 +101,9 @@ class DependencyUpdatesTask extends DefaultTask {
     }
 
     DependencyUpdates evaluator = new DependencyUpdates(project, resolutionStrategyAction,
-      revisionLevel(),
-      outputFormatterProp(), outputDirectory(), getReportfileName(), checkForGradleUpdate,
-      gradleReleaseChannelLevel(),
+      revision(),
+      outputFormatter(), outputDir(), reportFileName(), checkForGradleUpdate,
+      gradleReleaseChannel(),
       checkConstraints, checkBuildEnvironmentConstraints)
     DependencyUpdatesReporter reporter = evaluator.run()
     reporter.write()
@@ -152,27 +132,37 @@ class DependencyUpdatesTask extends DefaultTask {
   }
 
   /** Returns the resolution revision level. */
-  String revisionLevel() {
-    return System.properties["revision"] ?: revision
+  private String revision() {
+    return System.properties.get("revision", revision)
   }
 
   /** Returns the resolution revision level. */
-  String gradleReleaseChannelLevel() {
-    return System.properties["gradleReleaseChannel"] ?: gradleReleaseChannel
+  private String gradleReleaseChannel() {
+    return System.properties.get("gradleReleaseChannel", gradleReleaseChannel)
   }
 
   /** Returns the outputDir format. */
-  Object outputFormatterProp() {
-    return System.properties["outputFormatter"] ?: outputFormatter
+  private Object outputFormatter() {
+    return System.properties.get("outputFormatter", outputFormatter)
   }
 
   /** Returns the outputDir destination. */
-  String outputDirectory() {
-    return System.properties["outputDir"] ?: outputDir
+  private String outputDir() {
+    return System.properties.get("outputDir", outputDir)
   }
 
   /** Returns the filename of the report. */
-  String getReportfileName() {
+  private String reportFileName() {
     return System.properties.get("reportfileName", reportfileName)
+  }
+
+  private boolean supportsIncompatibleWithConfigurationCache() {
+    return metaClass.respondsTo(this, "notCompatibleWithConfigurationCache", String)
+  }
+
+  private void callIncompatibleWithConfigurationCache() {
+    String methodName = "notCompatibleWithConfigurationCache"
+    Object[] methodArgs = ["The gradle-versions-plugin isn't compatible with the configuration cache"]
+    metaClass.invokeMethod(this, methodName, methodArgs)
   }
 }
