@@ -26,36 +26,42 @@ import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.TreeSet
 
-class DependencyUpdatesReporter @JvmOverloads constructor(
-  /** The project evaluated against. */
+/**
+ * Sorts and writes the resolved dependency reports.
+ *
+ * @property project The project evaluated against.
+ * @property revision The revision strategy evaluated with.
+ * @property outputFormatter The output formatter strategy evaluated with.
+ * @property outputDir The outputDir for report.
+ * @property reportfileName The filename of the report file.
+ * @property currentVersions The current versions of each dependency declared in the project(s).
+ * @property latestVersions The latest versions of each dependency (as scoped by the revision level).
+ * @property upToDateVersions The dependencies that are up to date (same as latest found).
+ * @property downgradeVersions The dependencies that exceed the latest found (e.g. may not want SNAPSHOTs).
+ * @property upgradeVersions The dependencies where upgrades were found (below latest found).
+ * @property undeclared The dependencies that were declared without version.
+ * @property unresolved The dependencies that could not be resolved.
+ * @property projectUrls Project urls of maven dependencies.
+ * @property gradleUpdateChecker Facade object to access information about running gradle versions
+ * and gradle updates.
+ * @property gradleReleaseChannel The gradle release channel to use for reporting.
+ *
+ */
+class DependencyUpdatesReporter(
   val project: Project,
-  /** The revision strategy evaluated with. */
   val revision: String,
-  /** The output formatter strategy evaluated with. */
   val outputFormatter: Any?,
-  /** The outputDir for report. */
   val outputDir: String,
-  /** The filename of the report file. */
   val reportfileName: String?,
-  /** The current versions of each dependency declared in the project(s). */
   val currentVersions: Map<Map<String, String>, Coordinate>,
-  /** The latest versions of each dependency (as scoped by the revision level). */
   val latestVersions: Map<Map<String, String>, Coordinate>,
-  /** The dependencies that are up to date (same as latest found). */
   val upToDateVersions: Map<Map<String, String>, Coordinate>,
-  /** The dependencies that exceed the latest found (e.g. may not want SNAPSHOTs). */
   val downgradeVersions: Map<Map<String, String>, Coordinate>,
-  /** The dependencies where upgrades were found (below latest found). */
   val upgradeVersions: Map<Map<String, String>, Coordinate>,
-  /** The dependencies that were declared without version. */
   val undeclared: Set<Coordinate>,
-  /** The dependencies that could not be resolved. */
   val unresolved: Set<UnresolvedDependency>,
-  /** Project urls of maven dependencies  */
   val projectUrls: Map<Map<String, String>, String>,
-  /** facade object to access information about running gradle versions and gradle updates */
   val gradleUpdateChecker: GradleUpdateChecker,
-  /** The gradle release channel to use for reporting. */
   val gradleReleaseChannel: String,
 ) {
 

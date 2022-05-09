@@ -6,13 +6,14 @@ import java.io.PrintStream
 
 /**
  * A base result object reporter for the dependency updates results.
+ *
+ * @property project The project evaluated against.
+ * @property revision The revision strategy evaluated with.
+ * @property gradleReleaseChannel The gradle release channel to use for reporting.
  */
 abstract class AbstractReporter(
-  /** The project evaluated against. */
   open val project: Project,
-  /** The revision strategy evaluated with. */
   open val revision: String,
-  /** The gradle release channel to use for reporting. */
   open val gradleReleaseChannel: String,
 ) : Reporter
 
