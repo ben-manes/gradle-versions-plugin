@@ -53,7 +53,7 @@ final class OutputFormatterSpec extends Specification {
         }
 
         dependencies {
-          compile 'com.google.inject:guice:2.0'
+          implementation 'com.google.inject:guice:2.0'
         }
 
         dependencyUpdates {
@@ -95,7 +95,7 @@ final class OutputFormatterSpec extends Specification {
         }
 
         dependencies {
-          compile 'com.google.inject:guice:2.0'
+          implementation 'com.google.inject:guice:2.0'
         }
 
         dependencyUpdates {
@@ -137,7 +137,7 @@ final class OutputFormatterSpec extends Specification {
         }
 
         dependencies {
-          compile 'com.google.inject:guice:2.0'
+          implementation 'com.google.inject:guice:2.0'
           implementation 'com.thoughtworks.xstream:xstream'
         }
 
@@ -197,7 +197,7 @@ final class OutputFormatterSpec extends Specification {
         }
 
         dependencies {
-          compile 'com.google.inject:guice:2.0'
+          implementation 'com.google.inject:guice:2.0'
           implementation 'com.thoughtworks.xstream:xstream'
         }
 
@@ -324,7 +324,7 @@ final class OutputFormatterSpec extends Specification {
         }
 
         dependencies {
-          compile 'com.google.inject:guice:2.0'
+          implementation 'com.google.inject:guice:2.0'
           implementation 'com.thoughtworks.xstream:xstream'
         }
 
@@ -438,14 +438,14 @@ final class OutputFormatterSpec extends Specification {
         }
 
         dependencies {
-          compile('backport-util-concurrent:backport-util-concurrent:3.1') { because 'I said so' }
-          compile('backport-util-concurrent:backport-util-concurrent-java12:3.1')
-          compile('com.google.guava:guava:99.0-SNAPSHOT') { because 'I know the future' }
-          compile('com.google.guava:guava-tests:99.0-SNAPSHOT')
-          compile('com.google.inject:guice:2.0') { because 'That\\'s just the way it is' }
-          compile('com.google.inject.extensions:guice-multibindings:2.0')
-          compile('com.github.ben-manes:unresolvable:1.0') { because 'Life is hard' }
-          compile('com.github.ben-manes:unresolvable2:1.0')
+          implementation('backport-util-concurrent:backport-util-concurrent:3.1') { because 'I said so' }
+          implementation('backport-util-concurrent:backport-util-concurrent-java12:3.1')
+          implementation('com.google.guava:guava:99.0-SNAPSHOT') { because 'I know the future' }
+          implementation('com.google.guava:guava-tests:99.0-SNAPSHOT')
+          implementation('com.google.inject:guice:2.0') { because 'That\\'s just the way it is' }
+          implementation('com.google.inject.extensions:guice-multibindings:2.0')
+          implementation('com.github.ben-manes:unresolvable:1.0') { because 'Life is hard' }
+          implementation('com.github.ben-manes:unresolvable2:1.0')
         }
 
         dependencyUpdates {

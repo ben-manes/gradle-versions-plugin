@@ -138,7 +138,7 @@ final class DifferentGradleVersionsSpec extends Specification {
         }
 
         dependencies {
-          compile 'com.google.inject:guice:2.0'
+          implementation 'com.google.inject:guice:2.0'
         }
 
         dependencyUpdates.gradleReleaseChannel="${gradleReleaseChannel}"
@@ -186,7 +186,7 @@ final class DifferentGradleVersionsSpec extends Specification {
         }
 
         dependencies {
-          compile 'com.google.inject:guice:3.0'
+          implementation 'com.google.inject:guice:3.0'
         }
         """.stripIndent()
 
