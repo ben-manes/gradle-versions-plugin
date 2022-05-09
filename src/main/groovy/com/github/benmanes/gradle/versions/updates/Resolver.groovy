@@ -35,6 +35,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyConstraint
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.LenientConfiguration
+import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ResolutionStrategy
 import org.gradle.api.artifacts.ResolvedDependency
@@ -120,7 +121,9 @@ class Resolver {
     List<Dependency> latest = configuration.dependencies.findAll { dependency ->
       dependency instanceof ExternalDependency
     }.collect { dependency ->
-      createQueryDependency(dependency)
+      if (dependency instanceof ModuleDependency) {
+        createQueryDependency(dependency)
+      }
     }
 
     // Common use case for dependency constraints is a java-platform BOM project or to control
@@ -176,8 +179,7 @@ class Resolver {
   }
 
   /** Returns a variant of the provided dependency used for querying the latest version. */
-  @TypeChecked(SKIP)
-  private Dependency createQueryDependency(Dependency dependency) {
+  private Dependency createQueryDependency(ModuleDependency dependency) {
     // If no version was specified then it may be intended to be resolved by another plugin
     // (e.g. the dependency-management-plugin for BOMs) or is an explicit file (e.g. libs/*.jar).
     // In the case of another plugin we use "+" in the hope that the plugin will not restrict the
@@ -197,9 +199,8 @@ class Resolver {
       }
     }
 
-    Dependency latest = project.dependencies.create(query) {
-      transitive = false
-    }
+    Dependency latest = project.dependencies.create(query) as ModuleDependency
+    latest.transitive = false
 
     // Copy selection qualifiers if the artifact was not explicitly set
     if (dependency.artifacts.isEmpty()) {
@@ -210,20 +211,20 @@ class Resolver {
   }
 
   /** Returns a variant of the provided dependency used for querying the latest version. */
-  @TypeChecked(SKIP)
   private Dependency createQueryDependency(DependencyConstraint dependency) {
     // If no version was specified then use "none" to pass it through.
     String version = dependency.version == null ? "none" : "+"
 
-    return project.dependencies.create("${dependency.group}:${dependency.name}:${version}") {
-      transitive = false
-    }
+    Dependency nonTransitiveDependency = project.dependencies.create(
+      "${dependency.group}:${dependency.name}:${version}") as ModuleDependency
+    nonTransitiveDependency.transitive = false
+    return nonTransitiveDependency
   }
 
   /** Adds the attributes from the source to the target. */
   @TypeChecked(SKIP)
   private static void addAttributes(HasConfigurableAttributes<?> target,
-    HasConfigurableAttributes<?> source, Closure<?> filter = { String key -> true }) {
+    HasConfigurableAttributes<?> source, Closure<Boolean> filter = { String key -> true }) {
     target.attributes { container ->
       for (Attribute<?> key : source.attributes.keySet()) {
         if (filter.call(key.name)) {
