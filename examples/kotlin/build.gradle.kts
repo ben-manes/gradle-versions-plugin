@@ -4,7 +4,7 @@ buildscript {
   repositories {
     // Use 'gradle install' to install latest
     mavenLocal()
-    jcenter()
+    mavenCentral()
   }
 
   dependencies {
@@ -15,7 +15,7 @@ buildscript {
 apply(plugin = "com.github.ben-manes.versions")
 
 repositories {
-  jcenter()
+  mavenCentral()
 }
 
 configurations {
