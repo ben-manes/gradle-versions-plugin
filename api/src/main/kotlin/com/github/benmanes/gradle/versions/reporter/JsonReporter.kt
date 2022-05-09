@@ -7,7 +7,7 @@ import org.gradle.api.Project
 import java.io.OutputStream
 
 /**
- * A json reporter for the dependency updates results.
+ * A JSON reporter for the dependency updates results.
  */
 class JsonReporter(
   override val project: Project,

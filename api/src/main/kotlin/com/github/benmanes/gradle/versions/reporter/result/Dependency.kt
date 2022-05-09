@@ -1,7 +1,7 @@
 package com.github.benmanes.gradle.versions.reporter.result
 
 /**
- * A project's dependency
+ * A project's dependency.
  */
 open class Dependency @JvmOverloads constructor(
   open val group: String? = null,

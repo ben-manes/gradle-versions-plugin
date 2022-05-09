@@ -13,13 +13,10 @@ import java.util.concurrent.TimeUnit
  * of the different gradle release channels. The information is queried from the official gradle api
  * via HTTPS during object construction.
  *
+ * @property enabled The check for Gradle updates was enabled and, if so, the versions were fetched.
  * @see GradleReleaseChannel
  */
 class GradleUpdateChecker(
-  /**
-   * @return if the check for Gradle updates was enabled and, if so, the versions were fetched.
-   */
-  @get:JvmName("isEnabled")
   val enabled: Boolean = true,
 ) {
 

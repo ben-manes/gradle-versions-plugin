@@ -5,7 +5,7 @@ import org.gradle.util.GradleVersion
 
 /**
  * Holder class for gradle update results of a specific release channel (or the running version).
- * Used for reporting & serialization to JSON/XML
+ * Used for reporting & serialization to JSON/XML.
  */
 class GradleUpdateResult(
   enabled: Boolean = false,

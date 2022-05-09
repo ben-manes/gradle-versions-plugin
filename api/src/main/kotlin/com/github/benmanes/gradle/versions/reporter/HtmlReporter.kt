@@ -9,7 +9,7 @@ import org.gradle.api.Project
 import java.io.OutputStream
 
 /**
- * An html reporter for the dependency updates results.
+ * A HTML reporter for the dependency updates results.
  */
 class HtmlReporter(
   override val project: Project,

@@ -1,16 +1,12 @@
 package com.github.benmanes.gradle.versions.reporter.result
 
 /**
- * A group of dependencies
+ * A group of dependencies.
+ *
+ * @property count The number of dependencies in this group.
+ * @property dependencies The dependencies that belong to this group.
  */
 data class DependenciesGroup<T : Dependency>(
-  /**
-   * The number of dependencies in this group
-   */
   val count: Int,
-
-  /**
-   * The dependencies that belong to this group
-   */
   val dependencies: Set<T> = sortedSetOf(),
 )

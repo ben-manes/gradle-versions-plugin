@@ -12,7 +12,7 @@ import org.gradle.api.Project
 import java.io.OutputStream
 
 /**
- * A xml reporter for the dependency updates results.
+ * A XML reporter for the dependency updates results.
  */
 class XmlReporter(
   override val project: Project,
