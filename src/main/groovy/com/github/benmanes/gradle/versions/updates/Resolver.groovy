@@ -22,6 +22,7 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.Resolution
 import groovy.transform.CompileStatic
 import groovy.transform.TypeChecked
 import groovy.util.slurpersupport.GPathResult
+import groovy.util.slurpersupport.NodeChildren
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import javax.annotation.Nullable
@@ -221,8 +222,8 @@ class Resolver {
 
   /** Adds the attributes from the source to the target. */
   @TypeChecked(SKIP)
-  private static void addAttributes(HasConfigurableAttributes target,
-    HasConfigurableAttributes source, Closure<?> filter = { String key -> true }) {
+  private static void addAttributes(HasConfigurableAttributes<?> target,
+    HasConfigurableAttributes<?> source, Closure<?> filter = { String key -> true }) {
     target.attributes { container ->
       for (Attribute<?> key : source.attributes.keySet()) {
         if (filter.call(key.name)) {
@@ -410,25 +411,26 @@ class Resolver {
     }
   }
 
-  @TypeChecked(SKIP) // GPathResult
+  @Nullable
   private static String getUrlFromPom(File file) {
-    GPathResult pom = new XmlSlurper(/* validating */ false, /* namespaceAware */ false).parse(file)
-    Object url = pom.url
+    GPathResult pom = new XmlSlurper(/* validating = */ false, /* namespaceAware = */ false)
+      .parse(file)
+    String url = (pom.getProperty("url") as NodeChildren)?.text()
     if (url != null) {
       return url
     }
-    return pom.scm.url
+    return ((pom.getProperty("scm") as NodeChildren)?.getProperty("url") as NodeChildren)?.text()
   }
 
-  @TypeChecked(SKIP) // GPathResult
   @Nullable
   private static ModuleVersionIdentifier getParentFromPom(File file) {
-    GPathResult pom = new XmlSlurper(/* validating */ false, /* namespaceAware */ false).parse(file)
-    GPathResult parent = pom.children().find { child -> child.name() == "parent" }
+    GPathResult pom = new XmlSlurper(/* validating = */ false, /* namespaceAware = */ false)
+      .parse(file)
+    GPathResult parent = pom.getProperty("parent") as NodeChildren
     if (parent != null) {
-      String groupId = parent.groupId
-      String artifactId = parent.artifactId
-      String version = parent.version
+      String groupId = (parent.getProperty("groupId") as NodeChildren)?.text()
+      String artifactId = (parent.getProperty("artifactId") as NodeChildren)?.text()
+      String version = (parent.getProperty("version") as NodeChildren)?.text()
       if (groupId != null && artifactId != null && version != null) {
         return DefaultModuleVersionIdentifier.newId(groupId, artifactId, version)
       }
