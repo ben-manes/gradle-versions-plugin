@@ -25,6 +25,7 @@ import groovy.transform.TypeChecked
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import javax.annotation.Nullable
+import kotlin.jvm.functions.Function1
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -36,10 +37,6 @@ import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.artifacts.UnresolvedDependency
-import org.gradle.api.artifacts.repositories.ArtifactRepository
-import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
-import org.gradle.api.artifacts.repositories.IvyArtifactRepository
-import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.artifacts.result.ArtifactResolutionResult
 import org.gradle.api.artifacts.result.ArtifactResult
 import org.gradle.api.artifacts.result.ComponentArtifactsResult
@@ -72,46 +69,9 @@ class Resolver extends BaseResolver {
     logRepositories()
   }
 
-  /** Returns the version status of the configuration's dependencies at the given revision. */
-  Set<DependencyStatus> resolve(Configuration configuration, String revision) {
-    Map<Coordinate.Key, Coordinate> coordinates = getCurrentCoordinates(configuration)
-    Configuration latestConfiguration = createLatestConfiguration(configuration, revision,
-      coordinates)
-
-    LenientConfiguration lenient = latestConfiguration.resolvedConfiguration.lenientConfiguration
-    Set<ResolvedDependency> resolved = lenient.getFirstLevelModuleDependencies(SATISFIES_ALL)
-    Set<UnresolvedDependency> unresolved = lenient.getUnresolvedModuleDependencies()
-    return getStatus(coordinates, resolved, unresolved)
-  }
-
-  /** Returns the version status of the configuration's dependencies. */
-  private Set<DependencyStatus> getStatus(Map<Coordinate.Key, Coordinate> coordinates,
-    Set<ResolvedDependency> resolved, Set<UnresolvedDependency> unresolved) {
-    Set<DependencyStatus> result = new HashSet<>()
-
-    for (dependency in resolved) {
-      Coordinate resolvedCoordinate = Coordinate.from(dependency.module.id)
-      Coordinate originalCoordinate = coordinates.get(resolvedCoordinate.key)
-      Coordinate coord = originalCoordinate ?: resolvedCoordinate
-      if ((originalCoordinate == null) && (resolvedCoordinate.groupId != "null")) {
-        project.logger.info("Skipping hidden dependency: ${resolvedCoordinate}")
-      } else {
-        String projectUrl = getProjectUrl(dependency.module.id)
-        result.add(new DependencyStatus(coord, resolvedCoordinate.version, projectUrl))
-      }
-    }
-
-    for (UnresolvedDependency dependency : unresolved) {
-      Coordinate resolvedCoordinate = Coordinate.from(dependency.selector)
-      Coordinate originalCoordinate = coordinates.get(resolvedCoordinate.key)
-      Coordinate coord = originalCoordinate ?: resolvedCoordinate
-      result.add(new DependencyStatus(coord, dependency))
-    }
-    return result
-  }
-
   /** Returns a copy of the configuration where dependencies will be resolved up to the revision. */
-  private Configuration createLatestConfiguration(Configuration configuration, String revision,
+  @Override
+  Configuration createLatestConfiguration(Configuration configuration, String revision,
     Map<Coordinate.Key, Coordinate> currentCoordinates) {
     List<Dependency> latest = configuration.dependencies.findAll { dependency ->
       dependency instanceof ExternalDependency
@@ -174,7 +134,8 @@ class Resolver extends BaseResolver {
   }
 
   /** Returns a variant of the provided dependency used for querying the latest version. */
-  private Dependency createQueryDependency(ModuleDependency dependency) {
+  @Override
+  Dependency createQueryDependency(ModuleDependency dependency) {
     // If no version was specified then it may be intended to be resolved by another plugin
     // (e.g. the dependency-management-plugin for BOMs) or is an explicit file (e.g. libs/*.jar).
     // In the case of another plugin we use "+" in the hope that the plugin will not restrict the
@@ -208,10 +169,11 @@ class Resolver extends BaseResolver {
   /** Adds the attributes from the source to the target. */
   @TypeChecked(SKIP)
   private static void addAttributes(HasConfigurableAttributes<?> target,
-    HasConfigurableAttributes<?> source, Closure<Boolean> filter = { String key -> true }) {
+    HasConfigurableAttributes<?> source,
+    Function1<? super String, Boolean> filter = { String key -> true }) {
     target.attributes { container ->
       for (Attribute<?> key : source.attributes.keySet()) {
-        if (filter.call(key.name)) {
+        if (filter.invoke(key.name)) {
           Object value = source.attributes.getAttribute(key)
           container.attribute(key, value)
         }
@@ -220,8 +182,8 @@ class Resolver extends BaseResolver {
   }
 
   /** Returns the coordinates for the current (declared) dependency versions. */
-  // TODO needs conversion
-  private Map<Coordinate.Key, Coordinate> getCurrentCoordinates(Configuration configuration) {
+  @Override
+  Map<Coordinate.Key, Coordinate> getCurrentCoordinates(Configuration configuration) {
     Map<Coordinate.Key, Coordinate> declared =
       getResolvableDependencies(configuration).collectEntries {
         return [it.key, it]
@@ -271,34 +233,9 @@ class Resolver extends BaseResolver {
     return coordinates
   }
 
-  private void logRepositories() {
-    boolean root = (project.rootProject == project)
-    String label = "${root ? project.name : project.path} project${root ? " (root)" : ""}"
-    if (!project.buildscript.configurations*.dependencies.isEmpty()) {
-      project.logger.info("Resolving ${label} buildscript with repositories:")
-      for (ArtifactRepository repository : project.buildscript.repositories) {
-        logRepository(repository)
-      }
-    }
-    project.logger.info("Resolving ${label} configurations with repositories:")
-    for (ArtifactRepository repository : project.repositories) {
-      logRepository(repository)
-    }
-  }
-
-  private void logRepository(ArtifactRepository repository) {
-    if (repository instanceof FlatDirectoryArtifactRepository) {
-      project.logger.info(" - ${repository.name}: ${repository.dirs}")
-    } else if (repository instanceof MavenArtifactRepository ||
-      repository instanceof IvyArtifactRepository) {
-      project.logger.info(" - ${repository.name}: ${repository.url}")
-    } else {
-      project.logger.info(" - ${repository.name}: ${repository.getClass().simpleName}")
-    }
-  }
-
   @Nullable
-  private String getProjectUrl(ModuleVersionIdentifier id) {
+  @Override
+  String getProjectUrl(ModuleVersionIdentifier id) {
     if (project.getGradle().startParameter.isOffline()) {
       return null
     }
@@ -318,7 +255,8 @@ class Resolver extends BaseResolver {
   }
 
   @Nullable
-  private String resolveProjectUrl(ModuleVersionIdentifier id) {
+  @Override
+  String resolveProjectUrl(ModuleVersionIdentifier id) {
     try {
       ArtifactResolutionResult resolutionResult = project
         .dependencies.createArtifactResolutionQuery()

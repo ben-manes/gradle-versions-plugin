@@ -14,7 +14,14 @@ import org.gradle.api.artifacts.DependencyConstraint
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.ResolvedDependency
+import org.gradle.api.artifacts.UnresolvedDependency
+import org.gradle.api.artifacts.repositories.ArtifactRepository
+import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
+import org.gradle.api.artifacts.repositories.IvyArtifactRepository
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
+import org.gradle.api.specs.Specs.SATISFIES_ALL
 import java.io.File
 
 abstract class BaseResolver {
@@ -24,6 +31,105 @@ abstract class BaseResolver {
   abstract val resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?
 
   abstract fun supportsConstraints(configuration: Configuration): Boolean
+
+  abstract fun getProjectUrl(id: ModuleVersionIdentifier): String?
+
+  abstract fun resolveProjectUrl(id: ModuleVersionIdentifier): String?
+
+  abstract fun getCurrentCoordinates(configuration: Configuration): Map<Coordinate.Key, Coordinate>
+
+  abstract fun createQueryDependency(dependency: ModuleDependency): Dependency
+
+  abstract fun createLatestConfiguration(
+    configuration: Configuration,
+    revision: String,
+    currentCoordinates: Map<Coordinate.Key, Coordinate>,
+  ): Configuration
+
+  /** Returns the version status of the configuration's dependencies at the given revision. */
+  fun resolve(configuration: Configuration, revision: String): Set<DependencyStatus> {
+    val coordinates = getCurrentCoordinates(configuration)
+    val latestConfiguration = createLatestConfiguration(configuration, revision, coordinates)
+    val lenient = latestConfiguration.resolvedConfiguration.lenientConfiguration
+    val resolved = lenient.getFirstLevelModuleDependencies(SATISFIES_ALL)
+    val unresolved = lenient.unresolvedModuleDependencies
+    return getStatus(coordinates, resolved, unresolved)
+  }
+
+  /** Returns the version status of the configuration's dependencies. */
+  fun getStatus(
+    coordinates: Map<Coordinate.Key, Coordinate>,
+    resolved: Set<ResolvedDependency>,
+    unresolved: Set<UnresolvedDependency>
+  ): Set<DependencyStatus> {
+    val result = hashSetOf<DependencyStatus>()
+    for (dependency in resolved) {
+      val resolvedCoordinate = Coordinate.from(dependency.module.id)
+      val originalCoordinate = coordinates[resolvedCoordinate.key]
+      val coord = originalCoordinate ?: resolvedCoordinate
+      if (originalCoordinate == null && resolvedCoordinate.groupId != "null") {
+        project.logger.info("Skipping hidden dependency: $resolvedCoordinate")
+      } else {
+        val projectUrl = getProjectUrl(dependency.module.id)
+        result.add(DependencyStatus(coord, resolvedCoordinate.version, projectUrl))
+      }
+    }
+
+    for (dependency in unresolved) {
+      val resolvedCoordinate = Coordinate.from(dependency.selector)
+      val originalCoordinate = coordinates[resolvedCoordinate.key]
+      val coord = originalCoordinate ?: resolvedCoordinate
+      result.add(DependencyStatus(coord, dependency))
+    }
+    return result
+  }
+
+  fun logRepositories() {
+    val root = project.rootProject == project
+    val label = "${
+    if (root) {
+      project.name
+    } else {
+      project.path
+    }
+    } project ${
+    if (root) {
+      " (root)"
+    } else {
+      ""
+    }
+    }"
+    if (!project.buildscript.configurations
+      .flatMap { config -> config.dependencies }
+      .any()
+    ) {
+      project.logger.info("Resolving $label buildscript with repositories:")
+      for (repository in project.buildscript.repositories) {
+        logRepository(repository)
+      }
+    }
+    project.logger.info("Resolving $label configurations with repositories:")
+    for (repository in project.repositories) {
+      logRepository(repository)
+    }
+  }
+
+  fun logRepository(repository: ArtifactRepository) {
+    when (repository) {
+      is FlatDirectoryArtifactRepository -> {
+        project.logger.info(" - ${repository.name}: ${repository.dirs}")
+      }
+      is IvyArtifactRepository -> {
+        project.logger.info(" - ${repository.name}: ${repository.url}")
+      }
+      is MavenArtifactRepository -> {
+        project.logger.info(" - ${repository.name}: ${repository.url}")
+      }
+      else -> {
+        project.logger.info(" - ${repository.name}: ${repository.javaClass.simpleName}")
+      }
+    }
+  }
 
   /** Returns a variant of the provided dependency used for querying the latest version.  */
   fun createQueryDependency(dependency: DependencyConstraint): Dependency {
