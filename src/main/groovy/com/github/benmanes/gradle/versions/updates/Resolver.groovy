@@ -29,11 +29,8 @@ import kotlin.jvm.functions.Function1
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyConstraint
-import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.LenientConfiguration
-import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.artifacts.UnresolvedDependency
@@ -60,70 +57,6 @@ class Resolver extends BaseResolver {
     this.projectUrls = new ConcurrentHashMap<>()
 
     logRepositories()
-  }
-
-  /** Returns a copy of the configuration where dependencies will be resolved up to the revision. */
-  @Override
-  Configuration createLatestConfiguration(Configuration configuration, String revision,
-    Map<Coordinate.Key, Coordinate> currentCoordinates) {
-    List<Dependency> latest = configuration.dependencies.findAll { dependency ->
-      dependency instanceof ExternalDependency
-    }.collect { dependency ->
-      if (dependency instanceof ModuleDependency) {
-        createQueryDependency(dependency)
-      }
-    }
-
-    // Common use case for dependency constraints is a java-platform BOM project or to control
-    // version of transitive dependency.
-    if (supportsConstraints(configuration)) {
-      for (dependency in configuration.dependencyConstraints) {
-        latest.add(createQueryDependency(dependency))
-      }
-    }
-
-    Configuration copy = configuration.copyRecursive().setTransitive(false)
-    // https://github.com/ben-manes/gradle-versions-plugin/issues/127
-    if (copy.metaClass.respondsTo(copy, "setCanBeResolved", Boolean)) {
-      copy.setCanBeResolved(true)
-    }
-
-    // https://github.com/ben-manes/gradle-versions-plugin/issues/592
-    // allow resolution of dynamic latest versions regardless of the original strategy
-    if (copy.resolutionStrategy.metaClass.hasProperty(copy.resolutionStrategy,
-      "failOnDynamicVersions")) {
-      copy.resolutionStrategy.metaClass.setProperty(copy.resolutionStrategy,
-        "failOnDynamicVersions", false)
-    }
-
-    // Resolve using the latest version of explicitly declared dependencies and retains Kotlin's
-    // inherited stdlib dependencies from the super configurations. This is required for variant
-    // resolution, but the full set can break consumer capability matching.
-    Set<Dependency> inherited = configuration.allDependencies.findAll { dependency ->
-      (dependency instanceof ExternalDependency) &&
-        (dependency.group == "org.jetbrains.kotlin") &&
-        (dependency.version != null)
-    } - configuration.dependencies
-
-    // Adds the Kotlin 1.2.x legacy metadata to assist in variant selection
-    Configuration metadata = project.configurations.findByName("commonMainMetadataElements")
-    if (metadata == null) {
-      Configuration compile = project.configurations.findByName("compile")
-      if (compile != null) {
-        addAttributes(copy, compile, { String key -> key.contains("kotlin") })
-      }
-    } else {
-      addAttributes(copy, metadata)
-    }
-
-    copy.dependencies.clear()
-    copy.dependencies.addAll(latest)
-    copy.dependencies.addAll(inherited)
-
-    addRevisionFilter(copy, revision)
-    addAttributes(copy, configuration)
-    addCustomResolutionStrategy(copy, currentCoordinates)
-    return copy
   }
 
   /** Adds the attributes from the source to the target. */

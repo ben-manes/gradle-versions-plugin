@@ -4,6 +4,8 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.Resolution
 import groovy.util.XmlSlurper
 import groovy.util.slurpersupport.GPathResult
 import groovy.util.slurpersupport.NodeChildren
+import org.codehaus.groovy.runtime.DefaultGroovyMethods.asBoolean
+import org.codehaus.groovy.runtime.DefaultGroovyMethods.getMetaClass
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ComponentMetadata
@@ -76,14 +78,79 @@ abstract class BaseResolver {
     return result
   }
 
-  abstract fun createLatestConfiguration(
+  /** Returns a copy of the configuration where dependencies will be resolved up to the revision.  */
+  private fun createLatestConfiguration(
     configuration: Configuration,
     revision: String,
-    currentCoordinates: Map<Coordinate.Key, Coordinate>,
-  ): Configuration
+    currentCoordinates: Map<Coordinate.Key, Coordinate>
+  ): Configuration {
+    val latest = configuration.dependencies
+      .filter { dependency -> dependency is ExternalDependency }
+      .map { dependency ->
+        createQueryDependency(dependency as ModuleDependency)
+      } as MutableList<Dependency>
+
+    // Common use case for dependency constraints is a java-platform BOM project or to control
+    // version of transitive dependency.
+    if (supportsConstraints(configuration)) {
+      for (dependency in configuration.dependencyConstraints) {
+        latest.add(createQueryDependency(dependency))
+      }
+    }
+
+    val copy = configuration.copyRecursive().setTransitive(false)
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/127
+    if (asBoolean(
+        getMetaClass(copy)
+          .respondsTo(copy, "setCanBeResolved", arrayOf<Any>(Boolean::class.java))
+      )
+    ) {
+      copy.isCanBeResolved = true
+    }
+
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/592
+    // allow resolution of dynamic latest versions regardless of the original strategy
+    if (asBoolean(
+        getMetaClass(copy.resolutionStrategy)
+          .hasProperty(copy.resolutionStrategy, "failOnDynamicVersions")
+      )
+    ) {
+      getMetaClass(copy.resolutionStrategy)
+        .setProperty(copy.resolutionStrategy, "failOnDynamicVersions", false)
+    }
+
+    // Resolve using the latest version of explicitly declared dependencies and retains Kotlin's
+    // inherited stdlib dependencies from the super configurations. This is required for variant
+    // resolution, but the full set can break consumer capability matching.
+    val inherited = configuration.allDependencies
+      .filter { dependency -> dependency is ExternalDependency }
+      .filter { dependency -> dependency.group == "org.jetbrains.kotlin" }
+      .filter { dependency -> dependency.version != null } -
+      configuration.dependencies
+
+    // Adds the Kotlin 1.2.x legacy metadata to assist in variant selection
+    val metadata = project.configurations.findByName("commonMainMetadataElements")
+    if (metadata == null) {
+      val compile = project.configurations.findByName("compile")
+      if (compile != null) {
+        addAttributes(copy, compile) { key -> key.contains("kotlin") }
+      }
+    } else {
+      addAttributes(copy, metadata)
+    }
+
+    copy.dependencies.clear()
+    copy.dependencies.addAll(latest)
+    copy.dependencies.addAll(inherited)
+
+    addRevisionFilter(copy, revision)
+    addAttributes(copy, configuration)
+    addCustomResolutionStrategy(copy, currentCoordinates)
+    return copy
+  }
 
   /** Returns a variant of the provided dependency used for querying the latest version.  */
-  fun createQueryDependency(dependency: ModuleDependency): Dependency {
+  private fun createQueryDependency(dependency: ModuleDependency): Dependency {
     // If no version was specified then it may be intended to be resolved by another plugin
     // (e.g. the dependency-management-plugin for BOMs) or is an explicit file (e.g. libs/*.jar).
     // In the case of another plugin we use "+" in the hope that the plugin will not restrict the
@@ -119,7 +186,7 @@ abstract class BaseResolver {
   }
 
   /** Returns a variant of the provided dependency used for querying the latest version.  */
-  fun createQueryDependency(dependency: DependencyConstraint): Dependency {
+  private fun createQueryDependency(dependency: DependencyConstraint): Dependency {
     // If no version was specified then use "none" to pass it through.
     val version = if (dependency.version == null) "none" else "+"
     val nonTransitiveDependency =
@@ -134,32 +201,8 @@ abstract class BaseResolver {
     filter: (String) -> Boolean = { key: String -> true },
   )
 
-  /** Adds a revision filter by rejecting candidates using a component selection rule.  */
-  fun addRevisionFilter(configuration: Configuration, revision: String) {
-    configuration.resolutionStrategy { componentSelection ->
-      componentSelection.componentSelection { rules ->
-        val revisionFilter = { selection: ComponentSelection, metadata: ComponentMetadata? ->
-          val accepted = (metadata == null) ||
-            ((revision == "release") && (metadata.status == "release")) ||
-            ((revision == "milestone") && (metadata.status != "integration")) ||
-            (revision == "integration") || (selection.candidate.version == "none")
-          if (!accepted) {
-            selection.reject("Component status ${metadata?.status} rejected by revision $revision")
-          }
-        }
-        rules.all { selectionAction ->
-          if (ComponentSelection::class.members.any { it.name == "getMetadata" }) {
-            revisionFilter(selectionAction, selectionAction.metadata)
-          } else {
-            revisionFilter
-          }
-        }
-      }
-    }
-  }
-
   /** Adds a custom resolution strategy only applicable for the dependency updates task.  */
-  fun addCustomResolutionStrategy(
+  private fun addCustomResolutionStrategy(
     configuration: Configuration,
     currentCoordinates: Map<Coordinate.Key, Coordinate>
   ) {
@@ -294,6 +337,30 @@ abstract class BaseResolver {
   }
 
   companion object {
+    /** Adds a revision filter by rejecting candidates using a component selection rule.  */
+    private fun addRevisionFilter(configuration: Configuration, revision: String) {
+      configuration.resolutionStrategy { componentSelection ->
+        componentSelection.componentSelection { rules ->
+          val revisionFilter = { selection: ComponentSelection, metadata: ComponentMetadata? ->
+            val accepted = (metadata == null) ||
+              ((revision == "release") && (metadata.status == "release")) ||
+              ((revision == "milestone") && (metadata.status != "integration")) ||
+              (revision == "integration") || (selection.candidate.version == "none")
+            if (!accepted) {
+              selection.reject("Component status ${metadata?.status} rejected by revision $revision")
+            }
+          }
+          rules.all { selectionAction ->
+            if (ComponentSelection::class.members.any { it.name == "getMetadata" }) {
+              revisionFilter(selectionAction, selectionAction.metadata)
+            } else {
+              revisionFilter
+            }
+          }
+        }
+      }
+    }
+
     @JvmStatic
     fun getUrlFromPom(file: File): String? {
       val pom = XmlSlurper(false, false).parse(file)
