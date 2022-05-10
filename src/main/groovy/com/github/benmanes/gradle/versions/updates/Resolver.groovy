@@ -326,7 +326,8 @@ class Resolver {
   private void logRepositories() {
     boolean root = (project.rootProject == project)
     String label = "${root ? project.name : project.path} project${root ? " (root)" : ""}"
-    if (!project.buildscript.configurations*.dependencies.isEmpty()) {
+    if (!project.buildscript.configurations.stream()
+      .map(config -> config.dependencies).any()) {
       project.logger.info("Resolving ${label} buildscript with repositories:")
       for (ArtifactRepository repository : project.buildscript.repositories) {
         logRepository(repository)
