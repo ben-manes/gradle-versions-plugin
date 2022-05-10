@@ -18,11 +18,10 @@ package com.github.benmanes.gradle.versions.updates
 import static groovy.transform.TypeCheckingMode.SKIP
 import static org.gradle.api.specs.Specs.SATISFIES_ALL
 
+import com.github.benmanes.gradle.versions.updates.BaseResolver.Companion.ProjectUrl
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.transform.CompileStatic
 import groovy.transform.TypeChecked
-import groovy.util.slurpersupport.GPathResult
-import groovy.util.slurpersupport.NodeChildren
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import javax.annotation.Nullable
@@ -50,7 +49,6 @@ import org.gradle.api.artifacts.result.ComponentArtifactsResult
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.attributes.HasConfigurableAttributes
-import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
 import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier
 import org.gradle.maven.MavenModule
 import org.gradle.maven.MavenPomArtifact
@@ -59,7 +57,7 @@ import org.gradle.maven.MavenPomArtifact
  * Resolves the configuration to determine the version status of its dependencies.
  */
 @CompileStatic
-class Resolver {
+class Resolver extends BaseResolver {
   private final Project project
   @Nullable
   private final Action<? super ResolutionStrategyWithCurrent> resolutionStrategy
@@ -361,8 +359,8 @@ class Resolver {
       projectUrl = cached
     }
     synchronized (projectUrl) {
-      if (!projectUrl.isResolved) {
-        projectUrl.isResolved = true
+      if (!projectUrl.resolved) {
+        projectUrl.resolved = true
         projectUrl.url = resolveProjectUrl(id)
       }
       return projectUrl.url
@@ -412,56 +410,9 @@ class Resolver {
     }
   }
 
-  @Nullable
-  private static String getUrlFromPom(File file) {
-    GPathResult pom = new XmlSlurper(/* validating = */ false, /* namespaceAware = */ false)
-      .parse(file)
-    String url = (pom.getProperty("url") as NodeChildren)?.text()
-    if (url != null) {
-      return url
-    }
-    return ((pom.getProperty("scm") as NodeChildren)?.getProperty("url") as NodeChildren)?.text()
-  }
-
-  @Nullable
-  private static ModuleVersionIdentifier getParentFromPom(File file) {
-    GPathResult pom = new XmlSlurper(/* validating = */ false, /* namespaceAware = */ false)
-      .parse(file)
-    GPathResult parent = pom.getProperty("parent") as NodeChildren
-    if (parent != null) {
-      String groupId = (parent.getProperty("groupId") as NodeChildren)?.text()
-      String artifactId = (parent.getProperty("artifactId") as NodeChildren)?.text()
-      String version = (parent.getProperty("version") as NodeChildren)?.text()
-      if (groupId != null && artifactId != null && version != null) {
-        return DefaultModuleVersionIdentifier.newId(groupId, artifactId, version)
-      }
-    }
-    return null
-  }
-
-  private boolean supportsConstraints(Configuration configuration) {
+  @Override
+  boolean supportsConstraints(Configuration configuration) {
     return checkConstraints &&
       configuration.metaClass.respondsTo(configuration, "getDependencyConstraints")
-  }
-
-  private List<Coordinate> getResolvableDependencies(Configuration configuration) {
-    List<Coordinate> coordinates = configuration.dependencies.findAll { dependency ->
-      dependency instanceof ExternalDependency
-    }.collect { dependency ->
-      Coordinate.from(dependency)
-    }
-
-    if (supportsConstraints(configuration)) {
-      configuration.dependencyConstraints.each {
-        coordinates.add(Coordinate.from(it))
-      }
-    }
-
-    return coordinates
-  }
-
-  private static final class ProjectUrl {
-    boolean isResolved
-    String url
   }
 }
