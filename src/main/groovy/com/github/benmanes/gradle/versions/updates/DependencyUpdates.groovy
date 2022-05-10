@@ -103,9 +103,8 @@ class DependencyUpdates {
    */
   private static void addValidatedDependencyStatus(
     Collection<DependencyStatus> statusCollection, DependencyStatus status) {
-    DependencyStatus statusWithSameCoordinateKey = statusCollection.find {
-      DependencyStatus it -> it.coordinate.key == status.coordinate.key
-    }
+    DependencyStatus statusWithSameCoordinateKey = statusCollection
+      .find(it -> { it.coordinate.key == status.coordinate.key })
     if (!statusWithSameCoordinateKey) {
       statusCollection.add(status)
     } else if (status.coordinate.version != "none") {
