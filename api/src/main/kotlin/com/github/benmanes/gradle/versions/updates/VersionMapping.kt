@@ -31,7 +31,7 @@ class VersionMapping(val project: Project, statuses: Set<DependencyStatus>) {
 
   /** Groups the dependencies into up-to-date, upgrades available, or downgrade buckets.  */
   private fun organize() {
-    val latestByKey: Map<Coordinate.Key, Coordinate> = latest.associateBy({ it.key }, { it })
+    val latestByKey = latest.associateBy({ it.key }, { it })
     for (coordinate in current) {
       val latestCoordinate = latestByKey[coordinate.key]
       val version = latestCoordinate?.version

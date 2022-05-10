@@ -38,6 +38,8 @@ abstract class BaseResolver {
 
   abstract val resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?
 
+  abstract val checkConstraints: Boolean
+
   abstract val projectUrls: ConcurrentMap<ModuleVersionIdentifier, ProjectUrl>
 
   /** Returns the version status of the configuration's dependencies at the given revision. */
@@ -201,6 +203,30 @@ abstract class BaseResolver {
     filter: (String) -> Boolean = { key: String -> true },
   )
 
+  /** Adds a revision filter by rejecting candidates using a component selection rule.  */
+  private fun addRevisionFilter(configuration: Configuration, revision: String) {
+    configuration.resolutionStrategy { componentSelection ->
+      componentSelection.componentSelection { rules ->
+        val revisionFilter = { selection: ComponentSelection, metadata: ComponentMetadata? ->
+          val accepted = (metadata == null) ||
+            ((revision == "release") && (metadata.status == "release")) ||
+            ((revision == "milestone") && (metadata.status != "integration")) ||
+            (revision == "integration") || (selection.candidate.version == "none")
+          if (!accepted) {
+            selection.reject("Component status ${metadata?.status} rejected by revision $revision")
+          }
+        }
+        rules.all { selectionAction ->
+          if (ComponentSelection::class.members.any { it.name == "getMetadata" }) {
+            revisionFilter(selectionAction, selectionAction.metadata)
+          } else {
+            revisionFilter
+          }
+        }
+      }
+    }
+  }
+
   /** Adds a custom resolution strategy only applicable for the dependency updates task.  */
   private fun addCustomResolutionStrategy(
     configuration: Configuration,
@@ -319,7 +345,10 @@ abstract class BaseResolver {
     }
   }
 
-  abstract fun supportsConstraints(configuration: Configuration): Boolean
+  fun supportsConstraints(configuration: Configuration): Boolean {
+    return checkConstraints && !getMetaClass(configuration)
+      .respondsTo(configuration, "getDependencyConstraints").isNullOrEmpty()
+  }
 
   fun getResolvableDependencies(configuration: Configuration): List<Coordinate> {
     val coordinates = configuration.dependencies
@@ -337,30 +366,6 @@ abstract class BaseResolver {
   }
 
   companion object {
-    /** Adds a revision filter by rejecting candidates using a component selection rule.  */
-    private fun addRevisionFilter(configuration: Configuration, revision: String) {
-      configuration.resolutionStrategy { componentSelection ->
-        componentSelection.componentSelection { rules ->
-          val revisionFilter = { selection: ComponentSelection, metadata: ComponentMetadata? ->
-            val accepted = (metadata == null) ||
-              ((revision == "release") && (metadata.status == "release")) ||
-              ((revision == "milestone") && (metadata.status != "integration")) ||
-              (revision == "integration") || (selection.candidate.version == "none")
-            if (!accepted) {
-              selection.reject("Component status ${metadata?.status} rejected by revision $revision")
-            }
-          }
-          rules.all { selectionAction ->
-            if (ComponentSelection::class.members.any { it.name == "getMetadata" }) {
-              revisionFilter(selectionAction, selectionAction.metadata)
-            } else {
-              revisionFilter
-            }
-          }
-        }
-      }
-    }
-
     @JvmStatic
     fun getUrlFromPom(file: File): String? {
       val pom = XmlSlurper(false, false).parse(file)

@@ -128,12 +128,6 @@ class Resolver extends BaseResolver {
   }
 
   @Override
-  boolean supportsConstraints(Configuration configuration) {
-    return checkConstraints &&
-      configuration.metaClass.respondsTo(configuration, "getDependencyConstraints")
-  }
-
-  @Override
   Project getProject() {
     return project
   }
@@ -142,6 +136,11 @@ class Resolver extends BaseResolver {
   @Override
   Action<? super ResolutionStrategyWithCurrent> getResolutionStrategy() {
     return resolutionStrategy
+  }
+
+  @Override
+  boolean getCheckConstraints() {
+    return checkConstraints
   }
 
   @Override
