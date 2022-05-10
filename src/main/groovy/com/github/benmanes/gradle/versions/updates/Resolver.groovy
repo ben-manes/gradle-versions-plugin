@@ -37,15 +37,8 @@ import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.artifacts.UnresolvedDependency
-import org.gradle.api.artifacts.result.ArtifactResolutionResult
-import org.gradle.api.artifacts.result.ArtifactResult
-import org.gradle.api.artifacts.result.ComponentArtifactsResult
-import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.attributes.HasConfigurableAttributes
-import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier
-import org.gradle.maven.MavenModule
-import org.gradle.maven.MavenPomArtifact
 
 /**
  * Resolves the configuration to determine the version status of its dependencies.
@@ -133,42 +126,10 @@ class Resolver extends BaseResolver {
     return copy
   }
 
-  /** Returns a variant of the provided dependency used for querying the latest version. */
-  @Override
-  Dependency createQueryDependency(ModuleDependency dependency) {
-    // If no version was specified then it may be intended to be resolved by another plugin
-    // (e.g. the dependency-management-plugin for BOMs) or is an explicit file (e.g. libs/*.jar).
-    // In the case of another plugin we use "+" in the hope that the plugin will not restrict the
-    // query (see issue #97). Otherwise if its a file then use "none" to pass it through.
-    String version = (dependency.version == null)
-      ? (dependency.artifacts.empty ? "+" : "none")
-      : "+"
-
-    // Format the query with an optional classifier and extension
-    String query = "${dependency.group}:${dependency.name}:${version}"
-    if (!dependency.artifacts.isEmpty()) {
-      if (dependency.artifacts[0].classifier) {
-        query += ":${dependency.artifacts[0].classifier}"
-      }
-      if (dependency.artifacts[0].extension) {
-        query += "@${dependency.artifacts[0].extension}"
-      }
-    }
-
-    Dependency latest = project.dependencies.create(query) as ModuleDependency
-    latest.transitive = false
-
-    // Copy selection qualifiers if the artifact was not explicitly set
-    if (dependency.artifacts.isEmpty()) {
-      addAttributes(latest, dependency)
-    }
-
-    return latest
-  }
-
   /** Adds the attributes from the source to the target. */
   @TypeChecked(SKIP)
-  private static void addAttributes(HasConfigurableAttributes<?> target,
+  @Override
+  void addAttributes(HasConfigurableAttributes<?> target,
     HasConfigurableAttributes<?> source,
     Function1<? super String, Boolean> filter = { String key -> true }) {
     target.attributes { container ->
@@ -233,71 +194,6 @@ class Resolver extends BaseResolver {
     return coordinates
   }
 
-  @Nullable
-  @Override
-  String getProjectUrl(ModuleVersionIdentifier id) {
-    if (project.getGradle().startParameter.isOffline()) {
-      return null
-    }
-
-    ProjectUrl projectUrl = new ProjectUrl()
-    ProjectUrl cached = projectUrls.putIfAbsent(id, projectUrl)
-    if (cached != null) {
-      projectUrl = cached
-    }
-    synchronized (projectUrl) {
-      if (!projectUrl.resolved) {
-        projectUrl.resolved = true
-        projectUrl.url = resolveProjectUrl(id)
-      }
-      return projectUrl.url
-    }
-  }
-
-  @Nullable
-  @Override
-  String resolveProjectUrl(ModuleVersionIdentifier id) {
-    try {
-      ArtifactResolutionResult resolutionResult = project
-        .dependencies.createArtifactResolutionQuery()
-        .forComponents(DefaultModuleComponentIdentifier.newId(id))
-        .withArtifacts(MavenModule, MavenPomArtifact)
-        .execute()
-
-      // size is 0 for gradle plugins, 1 for normal dependencies
-      for (ComponentArtifactsResult result : resolutionResult.resolvedComponents) {
-        // size should always be 1
-        for (ArtifactResult artifact : result.getArtifacts(MavenPomArtifact)) {
-          if (artifact instanceof ResolvedArtifactResult) {
-            File file = ((ResolvedArtifactResult) artifact).file
-            project.logger.info("Pom file for ${id} is ${file}")
-
-            String url = getUrlFromPom(file)
-            if (url != null && !url.isEmpty()) {
-              project.logger.info("Found url for ${id}: ${url}")
-              return url.trim()
-            } else {
-              ModuleVersionIdentifier parent = getParentFromPom(file)
-              if (parent != null &&
-                "${parent.group}:${parent.name}" !=
-                "org.sonatype.oss:oss-parent") {
-                url = getProjectUrl(parent)
-                if (url != null && !url.isEmpty()) {
-                  return url.trim()
-                }
-              }
-            }
-          }
-        }
-      }
-      project.logger.info("Did not find url for ${id}")
-      return null
-    } catch (Exception e) {
-      project.logger.info("Failed to resolve the project's url", e)
-      return null
-    }
-  }
-
   @Override
   boolean supportsConstraints(Configuration configuration) {
     return checkConstraints &&
@@ -313,5 +209,10 @@ class Resolver extends BaseResolver {
   @Override
   Action<? super ResolutionStrategyWithCurrent> getResolutionStrategy() {
     return resolutionStrategy
+  }
+
+  @Override
+  ConcurrentMap<ModuleVersionIdentifier, ProjectUrl> getProjectUrls() {
+    return projectUrls
   }
 }

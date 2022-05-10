@@ -20,9 +20,15 @@ import org.gradle.api.artifacts.repositories.ArtifactRepository
 import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
 import org.gradle.api.artifacts.repositories.IvyArtifactRepository
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.artifacts.result.ResolvedArtifactResult
+import org.gradle.api.attributes.HasConfigurableAttributes
 import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
 import org.gradle.api.specs.Specs.SATISFIES_ALL
+import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier
+import org.gradle.maven.MavenModule
+import org.gradle.maven.MavenPomArtifact
 import java.io.File
+import java.util.concurrent.ConcurrentMap
 
 abstract class BaseResolver {
 
@@ -30,21 +36,118 @@ abstract class BaseResolver {
 
   abstract val resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?
 
+  abstract val projectUrls: ConcurrentMap<ModuleVersionIdentifier, ProjectUrl>
+
   abstract fun supportsConstraints(configuration: Configuration): Boolean
 
-  abstract fun getProjectUrl(id: ModuleVersionIdentifier): String?
-
-  abstract fun resolveProjectUrl(id: ModuleVersionIdentifier): String?
-
   abstract fun getCurrentCoordinates(configuration: Configuration): Map<Coordinate.Key, Coordinate>
-
-  abstract fun createQueryDependency(dependency: ModuleDependency): Dependency
 
   abstract fun createLatestConfiguration(
     configuration: Configuration,
     revision: String,
     currentCoordinates: Map<Coordinate.Key, Coordinate>,
   ): Configuration
+
+  abstract fun addAttributes(
+    target: HasConfigurableAttributes<*>,
+    source: HasConfigurableAttributes<*>,
+    filter: (String) -> Boolean = { key: String -> true },
+  )
+
+  fun resolveProjectUrl(id: ModuleVersionIdentifier): String? {
+    return try {
+      val resolutionResult = project.dependencies
+        .createArtifactResolutionQuery()
+        .forComponents(DefaultModuleComponentIdentifier.newId(id))
+        .withArtifacts(MavenModule::class.java, MavenPomArtifact::class.java)
+        .execute()
+
+      // size is 0 for gradle plugins, 1 for normal dependencies
+      for (result in resolutionResult.resolvedComponents) {
+        // size should always be 1
+        for (artifact in result.getArtifacts(MavenPomArtifact::class.java)) {
+          if (artifact is ResolvedArtifactResult) {
+            val file = artifact.file
+            project.logger.info("Pom file for $id is $file")
+            var url = getUrlFromPom(file)
+            if (!url.isNullOrEmpty()) {
+              project.logger.info("Found url for $id: $url")
+              return url.trim()
+            } else {
+              val parent = getParentFromPom(file)
+              if (parent != null &&
+                "${parent.group}:${parent.name}" != "org.sonatype.oss:oss-parent"
+              ) {
+                url = getProjectUrl(parent)
+                if (!url.isNullOrEmpty()) {
+                  return url.trim()
+                }
+              }
+            }
+          }
+        }
+      }
+      project.logger.info("Did not find url for $id")
+      null
+    } catch (e: Exception) {
+      project.logger.info("Failed to resolve the project's url", e)
+      null
+    }
+  }
+
+  /** Returns a variant of the provided dependency used for querying the latest version.  */
+  fun createQueryDependency(dependency: ModuleDependency): Dependency {
+    // If no version was specified then it may be intended to be resolved by another plugin
+    // (e.g. the dependency-management-plugin for BOMs) or is an explicit file (e.g. libs/*.jar).
+    // In the case of another plugin we use "+" in the hope that the plugin will not restrict the
+    // query (see issue #97). Otherwise if its a file then use "none" to pass it through.
+    val version = if (dependency.version == null) {
+      if (dependency.artifacts.isEmpty()) {
+        "+"
+      } else {
+        "none"
+      }
+    } else {
+      "+"
+    }
+
+    // Format the query with an optional classifier and extension
+    var query = "${dependency.group}:${dependency.name}:$version"
+    if (dependency.artifacts.isNotEmpty()) {
+      dependency.artifacts.firstOrNull()?.classifier?.let { classifier ->
+        query += ":$classifier"
+      }
+      dependency.artifacts.firstOrNull()?.extension?.let { extension ->
+        query += "@$extension"
+      }
+    }
+    val latest = project.dependencies.create(query) as ModuleDependency
+    latest.isTransitive = false
+
+    // Copy selection qualifiers if the artifact was not explicitly set
+    if (dependency.artifacts.isEmpty()) {
+      addAttributes(latest, dependency)
+    }
+    return latest
+  }
+
+  fun getProjectUrl(id: ModuleVersionIdentifier): String? {
+    if (project.gradle.startParameter.isOffline) {
+      return null
+    }
+    var projectUrl = ProjectUrl()
+    val cached = projectUrls.putIfAbsent(id, projectUrl)
+    if (cached != null) {
+      projectUrl = cached
+    }
+    synchronized(projectUrl) {
+      if (!projectUrl.resolved) {
+        projectUrl.resolved = true
+        projectUrl.url = resolveProjectUrl(id)
+      }
+      return projectUrl.url
+    }
+  }
 
   /** Returns the version status of the configuration's dependencies at the given revision. */
   fun resolve(configuration: Configuration, revision: String): Set<DependencyStatus> {
