@@ -21,10 +21,12 @@ import static org.gradle.api.specs.Specs.SATISFIES_ALL
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.transform.CompileStatic
 import groovy.transform.TypeChecked
-import groovy.util.slurpersupport.GPathResult
-import groovy.util.slurpersupport.NodeChildren
+import groovy.xml.XmlSlurper
+import groovy.xml.slurpersupport.GPathResult
+import groovy.xml.slurpersupport.NodeChildren
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
+import java.util.stream.Collectors
 import javax.annotation.Nullable
 import org.gradle.api.Action
 import org.gradle.api.Project
@@ -118,13 +120,13 @@ class Resolver {
   /** Returns a copy of the configuration where dependencies will be resolved up to the revision. */
   private Configuration createLatestConfiguration(Configuration configuration, String revision,
     Map<Coordinate.Key, Coordinate> currentCoordinates) {
-    List<Dependency> latest = configuration.dependencies.findAll { dependency ->
+    List<Dependency> latest = configuration.dependencies.stream().filter(dependency -> {
       dependency instanceof ExternalDependency
-    }.collect { dependency ->
+    }).map(dependency -> {
       if (dependency instanceof ModuleDependency) {
         createQueryDependency(dependency)
       }
-    }
+    }).collect(Collectors.toList())
 
     // Common use case for dependency constraints is a java-platform BOM project or to control
     // version of transitive dependency.
@@ -151,11 +153,12 @@ class Resolver {
     // Resolve using the latest version of explicitly declared dependencies and retains Kotlin's
     // inherited stdlib dependencies from the super configurations. This is required for variant
     // resolution, but the full set can break consumer capability matching.
-    Set<Dependency> inherited = configuration.allDependencies.findAll { dependency ->
-      (dependency instanceof ExternalDependency) &&
-        (dependency.group == "org.jetbrains.kotlin") &&
-        (dependency.version != null)
-    } - configuration.dependencies
+    Set<Dependency> inherited = configuration.allDependencies.stream()
+      .filter { dependency -> dependency instanceof ExternalDependency }
+      .filter { dependency -> dependency.group == "org.jetbrains.kotlin" }
+      .filter { dependency -> dependency.version != null }
+      .filter { dependency -> !configuration.dependencies.contains(dependency) }
+      .collect(Collectors.toSet())
 
     // Adds the Kotlin 1.2.x legacy metadata to assist in variant selection
     Configuration metadata = project.configurations.findByName("commonMainMetadataElements")
@@ -191,11 +194,13 @@ class Resolver {
     // Format the query with an optional classifier and extension
     String query = "${dependency.group}:${dependency.name}:${version}"
     if (!dependency.artifacts.isEmpty()) {
-      if (dependency.artifacts[0].classifier) {
-        query += ":${dependency.artifacts[0].classifier}"
+      String classifier = dependency.artifacts[0]?.classifier
+      if (classifier != null) {
+        query += ":${classifier}"
       }
-      if (dependency.artifacts[0].extension) {
-        query += "@${dependency.artifacts[0].extension}"
+      String extension = dependency.artifacts[0]?.extension
+      if (extension != null) {
+        query += "@${extension}"
       }
     }
 
@@ -240,18 +245,20 @@ class Resolver {
   private static void addRevisionFilter(Configuration configuration, String revision) {
     configuration.resolutionStrategy { ResolutionStrategy componentSelection ->
       componentSelection.componentSelection { rules ->
-        Closure<?> revisionFilter = { ComponentSelection selection, ComponentMetadata metadata ->
-          boolean accepted = (metadata == null) ||
-            ((revision == "release") && (metadata.status == "release")) ||
-            ((revision == "milestone") && (metadata.status != "integration")) ||
-            (revision == "integration") || (selection.candidate.version == "none")
-          if (!accepted) {
-            selection.reject("Component status ${metadata.status} rejected by revision ${revision}")
-          }
+        Closure<?> revisionFilter = {
+          ComponentSelection selection, @Nullable ComponentMetadata metadata ->
+            boolean accepted = (metadata == null) ||
+              ((revision == "release") && (metadata.status == "release")) ||
+              ((revision == "milestone") && (metadata.status != "integration")) ||
+              (revision == "integration") || (selection.candidate.version == "none")
+            if (!accepted) {
+              selection
+                .reject("Component status ${metadata?.status} rejected by revision ${revision}")
+            }
         }
-        rules.all {
+        rules.all { selectionAction ->
           ComponentSelection.methods.any { it.name == "getMetadata" }
-            ? { revisionFilter(it, it.metadata) }
+            ? { revisionFilter(selectionAction, selectionAction.metadata) }
             : revisionFilter
         }
       }
@@ -261,15 +268,12 @@ class Resolver {
   /** Adds a custom resolution strategy only applicable for the dependency updates task. */
   private void addCustomResolutionStrategy(Configuration configuration,
     Map<Coordinate.Key, Coordinate> currentCoordinates) {
-    if (resolutionStrategy != null) {
-      configuration.resolutionStrategy(new Action<ResolutionStrategy>() {
-        @Override
-        void execute(ResolutionStrategy inner) {
-          resolutionStrategy.execute(new ResolutionStrategyWithCurrent(inner as ResolutionStrategy,
-            currentCoordinates))
-        }
-      })
-    }
+    configuration.resolutionStrategy(new Action<ResolutionStrategy>() {
+      @Override
+      void execute(ResolutionStrategy inner) {
+        resolutionStrategy?.execute(new ResolutionStrategyWithCurrent(inner, currentCoordinates))
+      }
+    })
   }
 
   /** Returns the coordinates for the current (declared) dependency versions. */
@@ -326,7 +330,8 @@ class Resolver {
   private void logRepositories() {
     boolean root = (project.rootProject == project)
     String label = "${root ? project.name : project.path} project${root ? " (root)" : ""}"
-    if (!project.buildscript.configurations*.dependencies.isEmpty()) {
+    if (!project.buildscript.configurations.stream()
+      .map(config -> config.dependencies).any()) {
       project.logger.info("Resolving ${label} buildscript with repositories:")
       for (ArtifactRepository repository : project.buildscript.repositories) {
         logRepository(repository)
@@ -414,8 +419,7 @@ class Resolver {
 
   @Nullable
   private static String getUrlFromPom(File file) {
-    GPathResult pom = new XmlSlurper(/* validating = */ false, /* namespaceAware = */ false)
-      .parse(file)
+    GPathResult pom = new XmlSlurper(false, false).parse(file)
     String url = (pom.getProperty("url") as NodeChildren)?.text()
     if (url != null) {
       return url
@@ -425,8 +429,7 @@ class Resolver {
 
   @Nullable
   private static ModuleVersionIdentifier getParentFromPom(File file) {
-    GPathResult pom = new XmlSlurper(/* validating = */ false, /* namespaceAware = */ false)
-      .parse(file)
+    GPathResult pom = new XmlSlurper(false, false).parse(file)
     GPathResult parent = pom.getProperty("parent") as NodeChildren
     if (parent != null) {
       String groupId = (parent.getProperty("groupId") as NodeChildren)?.text()
@@ -445,23 +448,24 @@ class Resolver {
   }
 
   private List<Coordinate> getResolvableDependencies(Configuration configuration) {
-    List<Coordinate> coordinates = configuration.dependencies.findAll { dependency ->
+    List<Coordinate> coordinates = configuration.dependencies.stream().filter(dependency -> {
       dependency instanceof ExternalDependency
-    }.collect { dependency ->
+    }).map(dependency -> {
       Coordinate.from(dependency)
-    }
+    }).collect(Collectors.toList())
 
     if (supportsConstraints(configuration)) {
-      configuration.dependencyConstraints.each {
-        coordinates.add(Coordinate.from(it))
-      }
+      configuration.dependencyConstraints.stream().forEach(constraint -> {
+        coordinates.add(Coordinate.from(constraint))
+      })
     }
 
     return coordinates
   }
 
   private static final class ProjectUrl {
-    boolean isResolved
+    boolean isResolved = false
+    @Nullable
     String url
   }
 }

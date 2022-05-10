@@ -19,6 +19,7 @@ import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
+import java.util.stream.Collectors
 import javax.annotation.Nullable
 import org.gradle.api.Action
 import org.gradle.api.Project
@@ -68,9 +69,10 @@ class DependencyUpdates {
 
     Set<DependencyStatus> statuses = status + buildscriptStatus
     VersionMapping versions = new VersionMapping(project, statuses)
-    Set<UnresolvedDependency> unresolved =
-      statuses.findAll { it.unresolved != null }
-        .collect { it.unresolved } as Set
+    Set<UnresolvedDependency> unresolved = statuses.stream()
+      .filter(it -> { it.unresolved != null })
+      .map(it -> { it.unresolved })
+      .collect(Collectors.toSet())
     Map<Map<String, String>, String> projectUrls = statuses
       .findAll { it.projectUrl }
       .collectEntries {
@@ -103,9 +105,8 @@ class DependencyUpdates {
    */
   private static void addValidatedDependencyStatus(
     Collection<DependencyStatus> statusCollection, DependencyStatus status) {
-    DependencyStatus statusWithSameCoordinateKey = statusCollection.find {
-      DependencyStatus it -> it.coordinate.key == status.coordinate.key
-    }
+    DependencyStatus statusWithSameCoordinateKey = statusCollection
+      .find(it -> { it.coordinate.key == status.coordinate.key })
     if (!statusWithSameCoordinateKey) {
       statusCollection.add(status)
     } else if (status.coordinate.version != "none") {
