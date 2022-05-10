@@ -452,9 +452,9 @@ class Resolver {
     }
 
     if (supportsConstraints(configuration)) {
-      configuration.dependencyConstraints.each {
-        coordinates.add(Coordinate.from(it))
-      }
+      configuration.dependencyConstraints.stream().forEach(constraint -> {
+        coordinates.add(Coordinate.from(constraint))
+      })
     }
 
     return coordinates
