@@ -1,9 +1,9 @@
 package com.github.benmanes.gradle.versions.updates
 
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
-import groovy.util.XmlSlurper
-import groovy.util.slurpersupport.GPathResult
-import groovy.util.slurpersupport.NodeChildren
+import groovy.xml.XmlSlurper
+import groovy.xml.slurpersupport.GPathResult
+import groovy.xml.slurpersupport.NodeChildren
 import org.codehaus.groovy.runtime.DefaultGroovyMethods.asBoolean
 import org.codehaus.groovy.runtime.DefaultGroovyMethods.getMetaClass
 import org.gradle.api.Action

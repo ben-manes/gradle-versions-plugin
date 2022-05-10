@@ -38,7 +38,7 @@ final class KotlinDslUsageSpec extends Specification {
   }
 
   @Unroll
-  def "user friendly kotlin-dsl with"() {
+  def "user friendly kotlin-dsl"() {
     given:
     buildFile << '''
       tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
