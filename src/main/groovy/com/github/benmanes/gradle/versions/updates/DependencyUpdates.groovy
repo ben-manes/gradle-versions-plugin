@@ -59,12 +59,13 @@ class DependencyUpdates {
   DependencyUpdatesReporter run() {
     Map<Project, Set<Configuration>> projectConfigs = project.allprojects
       .collectEntries { proj -> [proj, new LinkedHashSet<>(proj.configurations)] }
-    Set<DependencyStatus> status = resolveProjects(projectConfigs, checkConstraints)
+    Set<DependencyStatus> status = resolveProjects(projectConfigs, checkConstraints,
+      resolutionStrategy, revision)
 
     Map<Project, Set<Configuration>> buildscriptProjectConfigs = project.allprojects
       .collectEntries { proj -> [proj, new LinkedHashSet<>(proj.buildscript.configurations)] }
     Set<DependencyStatus> buildscriptStatus = resolveProjects(
-      buildscriptProjectConfigs, checkBuildEnvironmentConstraints)
+      buildscriptProjectConfigs, checkBuildEnvironmentConstraints, resolutionStrategy, revision)
 
     Set<DependencyStatus> statuses = status + buildscriptStatus
     VersionMapping versions = new VersionMapping(project, statuses)
@@ -80,12 +81,13 @@ class DependencyUpdates {
   }
 
   private Set<DependencyStatus> resolveProjects(
-    Map<Project, Set<Configuration>> projectConfigs, boolean checkConstraints) {
+    Map<Project, Set<Configuration>> projectConfigs, boolean checkConstraints,
+    Action<? super ResolutionStrategyWithCurrent> resolutionStrategy, String revision) {
     Set<DependencyStatus> resultStatus = new HashSet<>()
     projectConfigs.each { currentProject, currentConfigurations ->
       Resolver resolver = new Resolver(currentProject, resolutionStrategy, checkConstraints)
       for (Configuration currentConfiguration : currentConfigurations) {
-        for (DependencyStatus newStatus : resolve(resolver, currentProject, currentConfiguration)) {
+        for (DependencyStatus newStatus: resolve(resolver, currentProject, currentConfiguration, revision)) {
           addValidatedDependencyStatus(resultStatus, newStatus)
         }
       }
@@ -115,7 +117,8 @@ class DependencyUpdates {
     }
   }
 
-  private Set<DependencyStatus> resolve(Resolver resolver, Project proj, Configuration config) {
+  private Set<DependencyStatus> resolve(Resolver resolver, Project proj, Configuration config,
+    String revision) {
     try {
       return resolver.resolve(config, revision)
     } catch (Exception e) {
