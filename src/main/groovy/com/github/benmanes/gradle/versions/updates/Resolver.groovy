@@ -27,8 +27,6 @@ import java.util.concurrent.ConcurrentMap
 import javax.annotation.Nullable
 import org.gradle.api.Action
 import org.gradle.api.Project
-import org.gradle.api.artifacts.ComponentMetadata
-import org.gradle.api.artifacts.ComponentSelection
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyConstraint
@@ -36,7 +34,6 @@ import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.LenientConfiguration
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
-import org.gradle.api.artifacts.ResolutionStrategy
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.artifacts.UnresolvedDependency
 import org.gradle.api.artifacts.repositories.ArtifactRepository
@@ -208,17 +205,6 @@ class Resolver extends BaseResolver {
     return latest
   }
 
-  /** Returns a variant of the provided dependency used for querying the latest version. */
-  private Dependency createQueryDependency(DependencyConstraint dependency) {
-    // If no version was specified then use "none" to pass it through.
-    String version = dependency.version == null ? "none" : "+"
-
-    Dependency nonTransitiveDependency = project.dependencies.create(
-      "${dependency.group}:${dependency.name}:${version}") as ModuleDependency
-    nonTransitiveDependency.transitive = false
-    return nonTransitiveDependency
-  }
-
   /** Adds the attributes from the source to the target. */
   @TypeChecked(SKIP)
   private static void addAttributes(HasConfigurableAttributes<?> target,
@@ -233,44 +219,8 @@ class Resolver extends BaseResolver {
     }
   }
 
-  /** Adds a revision filter by rejecting candidates using a component selection rule. */
-  @TypeChecked(SKIP)
-  private static void addRevisionFilter(Configuration configuration, String revision) {
-    configuration.resolutionStrategy { ResolutionStrategy componentSelection ->
-      componentSelection.componentSelection { rules ->
-        Closure<?> revisionFilter = { ComponentSelection selection, ComponentMetadata metadata ->
-          boolean accepted = (metadata == null) ||
-            ((revision == "release") && (metadata.status == "release")) ||
-            ((revision == "milestone") && (metadata.status != "integration")) ||
-            (revision == "integration") || (selection.candidate.version == "none")
-          if (!accepted) {
-            selection.reject("Component status ${metadata.status} rejected by revision ${revision}")
-          }
-        }
-        rules.all {
-          ComponentSelection.methods.any { it.name == "getMetadata" }
-            ? { revisionFilter(it, it.metadata) }
-            : revisionFilter
-        }
-      }
-    }
-  }
-
-  /** Adds a custom resolution strategy only applicable for the dependency updates task. */
-  private void addCustomResolutionStrategy(Configuration configuration,
-    Map<Coordinate.Key, Coordinate> currentCoordinates) {
-    if (resolutionStrategy != null) {
-      configuration.resolutionStrategy(new Action<ResolutionStrategy>() {
-        @Override
-        void execute(ResolutionStrategy inner) {
-          resolutionStrategy.execute(new ResolutionStrategyWithCurrent(inner as ResolutionStrategy,
-            currentCoordinates))
-        }
-      })
-    }
-  }
-
   /** Returns the coordinates for the current (declared) dependency versions. */
+  // TODO needs conversion
   private Map<Coordinate.Key, Coordinate> getCurrentCoordinates(Configuration configuration) {
     Map<Coordinate.Key, Coordinate> declared =
       getResolvableDependencies(configuration).collectEntries {
@@ -414,5 +364,16 @@ class Resolver extends BaseResolver {
   boolean supportsConstraints(Configuration configuration) {
     return checkConstraints &&
       configuration.metaClass.respondsTo(configuration, "getDependencyConstraints")
+  }
+
+  @Override
+  Project getProject() {
+    return project
+  }
+
+  @Nullable
+  @Override
+  Action<? super ResolutionStrategyWithCurrent> getResolutionStrategy() {
+    return resolutionStrategy
   }
 }
