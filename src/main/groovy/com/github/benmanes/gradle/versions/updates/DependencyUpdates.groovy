@@ -19,6 +19,7 @@ import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
+import java.util.stream.Collectors
 import javax.annotation.Nullable
 import org.gradle.api.Action
 import org.gradle.api.Project
@@ -68,9 +69,10 @@ class DependencyUpdates {
 
     Set<DependencyStatus> statuses = status + buildscriptStatus
     VersionMapping versions = new VersionMapping(project, statuses)
-    Set<UnresolvedDependency> unresolved =
-      statuses.findAll { it.unresolved != null }
-        .collect { it.unresolved } as Set
+    Set<UnresolvedDependency> unresolved = statuses.stream()
+      .filter(it -> { it.unresolved != null })
+      .map(it -> { it.unresolved })
+      .collect(Collectors.toSet())
     Map<Map<String, String>, String> projectUrls = statuses
       .findAll { it.projectUrl }
       .collectEntries {

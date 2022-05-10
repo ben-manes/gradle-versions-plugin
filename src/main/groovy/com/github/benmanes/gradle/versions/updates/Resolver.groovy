@@ -25,6 +25,7 @@ import groovy.util.slurpersupport.GPathResult
 import groovy.util.slurpersupport.NodeChildren
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
+import java.util.stream.Collectors
 import javax.annotation.Nullable
 import org.gradle.api.Action
 import org.gradle.api.Project
@@ -118,13 +119,13 @@ class Resolver {
   /** Returns a copy of the configuration where dependencies will be resolved up to the revision. */
   private Configuration createLatestConfiguration(Configuration configuration, String revision,
     Map<Coordinate.Key, Coordinate> currentCoordinates) {
-    List<Dependency> latest = configuration.dependencies.findAll { dependency ->
+    List<Dependency> latest = configuration.dependencies.stream().filter(dependency -> {
       dependency instanceof ExternalDependency
-    }.collect { dependency ->
+    }).map(dependency -> {
       if (dependency instanceof ModuleDependency) {
         createQueryDependency(dependency)
       }
-    }
+    }).collect(Collectors.toList())
 
     // Common use case for dependency constraints is a java-platform BOM project or to control
     // version of transitive dependency.
@@ -151,11 +152,12 @@ class Resolver {
     // Resolve using the latest version of explicitly declared dependencies and retains Kotlin's
     // inherited stdlib dependencies from the super configurations. This is required for variant
     // resolution, but the full set can break consumer capability matching.
-    Set<Dependency> inherited = configuration.allDependencies.findAll { dependency ->
-      (dependency instanceof ExternalDependency) &&
-        (dependency.group == "org.jetbrains.kotlin") &&
-        (dependency.version != null)
-    } - configuration.dependencies
+    Set<Dependency> inherited = configuration.allDependencies.stream()
+      .filter { dependency -> dependency instanceof ExternalDependency }
+      .filter { dependency -> dependency.group == "org.jetbrains.kotlin" }
+      .filter { dependency -> dependency.version != null }
+      .filter { dependency -> !configuration.dependencies.contains(dependency) }
+      .collect(Collectors.toSet())
 
     // Adds the Kotlin 1.2.x legacy metadata to assist in variant selection
     Configuration metadata = project.configurations.findByName("commonMainMetadataElements")
@@ -445,16 +447,16 @@ class Resolver {
   }
 
   private List<Coordinate> getResolvableDependencies(Configuration configuration) {
-    List<Coordinate> coordinates = configuration.dependencies.findAll { dependency ->
+    List<Coordinate> coordinates = configuration.dependencies.stream().filter(dependency -> {
       dependency instanceof ExternalDependency
-    }.collect { dependency ->
+    }).map(dependency -> {
       Coordinate.from(dependency)
-    }
+    }).collect(Collectors.toList())
 
     if (supportsConstraints(configuration)) {
-      configuration.dependencyConstraints.each {
-        coordinates.add(Coordinate.from(it))
-      }
+      configuration.dependencyConstraints.stream().forEach(constraint -> {
+        coordinates.add(Coordinate.from(constraint))
+      })
     }
 
     return coordinates
