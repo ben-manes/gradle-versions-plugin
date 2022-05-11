@@ -37,7 +37,7 @@ import org.gradle.api.artifacts.UnresolvedDependency
  */
 @CompileStatic
 @TupleConstructor
-class DependencyUpdates {
+class DependencyUpdates extends BaseDependencyUpdates {
   Project project
   @Nullable
   Action<? super ResolutionStrategyWithCurrent> resolutionStrategy
@@ -59,12 +59,13 @@ class DependencyUpdates {
   DependencyUpdatesReporter run() {
     Map<Project, Set<Configuration>> projectConfigs = project.allprojects
       .collectEntries { proj -> [proj, new LinkedHashSet<>(proj.configurations)] }
-    Set<DependencyStatus> status = resolveProjects(projectConfigs, checkConstraints)
+    Set<DependencyStatus> status = resolveProjects(projectConfigs, checkConstraints,
+      resolutionStrategy, revision)
 
     Map<Project, Set<Configuration>> buildscriptProjectConfigs = project.allprojects
       .collectEntries { proj -> [proj, new LinkedHashSet<>(proj.buildscript.configurations)] }
     Set<DependencyStatus> buildscriptStatus = resolveProjects(
-      buildscriptProjectConfigs, checkBuildEnvironmentConstraints)
+      buildscriptProjectConfigs, checkBuildEnvironmentConstraints, resolutionStrategy, revision)
 
     Set<DependencyStatus> statuses = status + buildscriptStatus
     VersionMapping versions = new VersionMapping(project, statuses)
@@ -76,16 +77,20 @@ class DependencyUpdates {
       .collectEntries {
         [[group: it.coordinate.groupId, name: it.coordinate.artifactId]: it.projectUrl]
       }
-    return createReporter(versions, unresolved, projectUrls)
+    return createReporter(project, revision, outputFormatter, outputDir, reportfileName, versions,
+      unresolved, projectUrls, gradleReleaseChannel, checkForGradleUpdate)
   }
 
   private Set<DependencyStatus> resolveProjects(
-    Map<Project, Set<Configuration>> projectConfigs, boolean checkConstraints) {
-    Set<DependencyStatus> resultStatus = new HashSet<>()
+    Map<Project, Set<Configuration>> projectConfigs, boolean checkConstraints,
+    Action<? super ResolutionStrategyWithCurrent> resolutionStrategy, String revision) {
+    HashSet<DependencyStatus> resultStatus = new HashSet<>()
     projectConfigs.each { currentProject, currentConfigurations ->
       Resolver resolver = new Resolver(currentProject, resolutionStrategy, checkConstraints)
       for (Configuration currentConfiguration : currentConfigurations) {
-        for (DependencyStatus newStatus : resolve(resolver, currentProject, currentConfiguration)) {
+        for (DependencyStatus newStatus : resolve(
+          resolver, currentProject, currentConfiguration, revision
+        )) {
           addValidatedDependencyStatus(resultStatus, newStatus)
         }
       }
@@ -93,39 +98,11 @@ class DependencyUpdates {
     return resultStatus
   }
 
-  /**
-   * A new status will be added if either,
-   * <ol>
-   *   <li>{@link Coordinate.Key} of new status is not yet present in status collection
-   *   <li>new status has concrete version (not {@code none}); the old status will then be removed
-   *       if its coordinate is {@code none} versioned</li>
-   * </ol>
-   */
-  private static void addValidatedDependencyStatus(
-    Collection<DependencyStatus> statusCollection, DependencyStatus status) {
-    DependencyStatus statusWithSameCoordinateKey = statusCollection
-      .find(it -> { it.coordinate.key == status.coordinate.key })
-    if (!statusWithSameCoordinateKey) {
-      statusCollection.add(status)
-    } else if (status.coordinate.version != "none") {
-      statusCollection.add(status)
-      if (statusWithSameCoordinateKey.coordinate.version == "none") {
-        statusCollection.remove(statusWithSameCoordinateKey)
-      }
-    }
-  }
-
-  private Set<DependencyStatus> resolve(Resolver resolver, Project proj, Configuration config) {
-    try {
-      return resolver.resolve(config, revision)
-    } catch (Exception e) {
-      project.logger.info("Skipping configuration ${proj.path}:${config.name}", e)
-      return Collections.emptySet()
-    }
-  }
-
-  private DependencyUpdatesReporter createReporter(VersionMapping versions,
-    Set<UnresolvedDependency> unresolved, Map<Map<String, String>, String> projectUrls) {
+  private static DependencyUpdatesReporter createReporter(Project project, String revision,
+    @Nullable Object outputFormatter, String outputDir, @Nullable String reportfileName,
+    VersionMapping versions, Set<UnresolvedDependency> unresolved,
+    Map<Map<String, String>, String> projectUrls, String gradleReleaseChannel,
+    boolean checkForGradleUpdate) {
     Map<Map<String, String>, Coordinate> currentVersions =
       versions.current.collectEntries { [[group: it.groupId, name: it.artifactId]: it] }
     Map<Map<String, String>, Coordinate> latestVersions =
@@ -142,22 +119,5 @@ class DependencyUpdates {
       reportfileName, currentVersions, latestVersions, upToDateVersions, downgradeVersions,
       upgradeVersions, versions.undeclared, unresolved, projectUrls, gradleUpdateChecker,
       gradleReleaseChannel)
-  }
-
-  private static Map<Map<String, String>, Coordinate> toMap(Set<Coordinate> coordinates) {
-    Map<Map<String, String>, Coordinate> map = new HashMap<>()
-    for (Coordinate coordinate : coordinates) {
-      for (int i = 0; ; i++) {
-        String artifactId = coordinate.artifactId + ((i == 0) ? "" : "[${i + 1}]")
-        Map<String, String> keyMap = new LinkedHashMap<>()
-        keyMap.put("group", coordinate.groupId)
-        keyMap.put("name", artifactId)
-        if (!map.containsKey(keyMap)) {
-          map.put(keyMap, coordinate)
-          break
-        }
-      }
-    }
-    return map
   }
 }
