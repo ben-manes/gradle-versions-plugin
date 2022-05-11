@@ -1,9 +1,14 @@
 package com.github.benmanes.gradle.versions.updates
 
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
+import groovy.lang.Closure
+import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
+import javax.annotation.Nullable
 
 open class BaseDependencyUpdatesTask : DefaultTask() {
 
@@ -29,6 +34,9 @@ open class BaseDependencyUpdatesTask : DefaultTask() {
   var reportfileName: String = "report"
     get() = (System.getProperties()["reportfileName"] ?: field) as String
 
+  @Internal
+  var outputFormatter: Any = "plain"
+
   // Groovy generates both get/is accessors for boolean properties unless we manually define some.
   // Gradle will reject this behavior starting in 7.0 so we make sure to define accessors ourselves.
   @Input
@@ -39,4 +47,12 @@ open class BaseDependencyUpdatesTask : DefaultTask() {
 
   @Input
   var checkBuildEnvironmentConstraints: Boolean = false
+
+  @Internal
+  @Nullable
+  var resolutionStrategy: Closure<*>? = null
+
+  @Nullable
+  @Internal // TODO remove
+  protected var resolutionStrategyAction: Action<in ResolutionStrategyWithCurrent>? = null
 }

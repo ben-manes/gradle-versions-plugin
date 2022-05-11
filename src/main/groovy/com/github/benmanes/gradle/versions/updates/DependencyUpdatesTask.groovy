@@ -23,7 +23,6 @@ import groovy.transform.CompileStatic
 import javax.annotation.Nullable
 import org.gradle.api.Action
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.util.ConfigureUtil
@@ -40,16 +39,6 @@ class DependencyUpdatesTask extends BaseDependencyUpdatesTask {
   String getOutputFormatterName() {
     return (outputFormatter instanceof String) ? ((String) outputFormatter) : null
   }
-
-  @Internal
-  Object outputFormatter = "plain"
-
-  @Internal
-  @Nullable
-  Closure<?> resolutionStrategy = null
-
-  @Nullable
-  private Action<? super ResolutionStrategyWithCurrent> resolutionStrategyAction = null
 
   DependencyUpdatesTask() {
     description = "Displays the dependency updates for the project."
