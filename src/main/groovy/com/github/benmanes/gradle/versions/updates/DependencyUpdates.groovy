@@ -37,7 +37,7 @@ import org.gradle.api.artifacts.UnresolvedDependency
  */
 @CompileStatic
 @TupleConstructor
-class DependencyUpdates {
+class DependencyUpdates extends BaseDependencyUpdates {
   Project project
   @Nullable
   Action<? super ResolutionStrategyWithCurrent> resolutionStrategy
@@ -83,7 +83,7 @@ class DependencyUpdates {
   private Set<DependencyStatus> resolveProjects(
     Map<Project, Set<Configuration>> projectConfigs, boolean checkConstraints,
     Action<? super ResolutionStrategyWithCurrent> resolutionStrategy, String revision) {
-    Set<DependencyStatus> resultStatus = new HashSet<>()
+    HashSet<DependencyStatus> resultStatus = new HashSet<>()
     projectConfigs.each { currentProject, currentConfigurations ->
       Resolver resolver = new Resolver(currentProject, resolutionStrategy, checkConstraints)
       for (Configuration currentConfiguration : currentConfigurations) {
@@ -93,38 +93,6 @@ class DependencyUpdates {
       }
     }
     return resultStatus
-  }
-
-  /**
-   * A new status will be added if either,
-   * <ol>
-   *   <li>{@link Coordinate.Key} of new status is not yet present in status collection
-   *   <li>new status has concrete version (not {@code none}); the old status will then be removed
-   *       if its coordinate is {@code none} versioned</li>
-   * </ol>
-   */
-  private static void addValidatedDependencyStatus(
-    Collection<DependencyStatus> statusCollection, DependencyStatus status) {
-    DependencyStatus statusWithSameCoordinateKey = statusCollection
-      .find(it -> { it.coordinate.key == status.coordinate.key })
-    if (!statusWithSameCoordinateKey) {
-      statusCollection.add(status)
-    } else if (status.coordinate.version != "none") {
-      statusCollection.add(status)
-      if (statusWithSameCoordinateKey.coordinate.version == "none") {
-        statusCollection.remove(statusWithSameCoordinateKey)
-      }
-    }
-  }
-
-  private Set<DependencyStatus> resolve(Resolver resolver, Project proj, Configuration config,
-    String revision) {
-    try {
-      return resolver.resolve(config, revision)
-    } catch (Exception e) {
-      project.logger.info("Skipping configuration ${proj.path}:${config.name}", e)
-      return Collections.emptySet()
-    }
   }
 
   private DependencyUpdatesReporter createReporter(VersionMapping versions,
@@ -145,22 +113,5 @@ class DependencyUpdates {
       reportfileName, currentVersions, latestVersions, upToDateVersions, downgradeVersions,
       upgradeVersions, versions.undeclared, unresolved, projectUrls, gradleUpdateChecker,
       gradleReleaseChannel)
-  }
-
-  private static Map<Map<String, String>, Coordinate> toMap(Set<Coordinate> coordinates) {
-    Map<Map<String, String>, Coordinate> map = new HashMap<>()
-    for (Coordinate coordinate : coordinates) {
-      for (int i = 0; ; i++) {
-        String artifactId = coordinate.artifactId + ((i == 0) ? "" : "[${i + 1}]")
-        Map<String, String> keyMap = new LinkedHashMap<>()
-        keyMap.put("group", coordinate.groupId)
-        keyMap.put("name", artifactId)
-        if (!map.containsKey(keyMap)) {
-          map.put(keyMap, coordinate)
-          break
-        }
-      }
-    }
-    return map
   }
 }
