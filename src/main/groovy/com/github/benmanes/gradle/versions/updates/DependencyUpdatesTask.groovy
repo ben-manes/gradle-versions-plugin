@@ -15,19 +15,11 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
-import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
-
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentFilter
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionRulesWithCurrent
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.transform.CompileStatic
-import javax.annotation.Nullable
-import org.gradle.api.Action
-import org.gradle.api.DefaultTask
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.util.ConfigureUtil
 
@@ -35,49 +27,7 @@ import org.gradle.util.ConfigureUtil
  * A task that reports which dependencies have later versions.
  */
 @CompileStatic
-class DependencyUpdatesTask extends DefaultTask {
-
-  @Input
-  String revision = "milestone"
-
-  @Input
-  String gradleReleaseChannel = RELEASE_CANDIDATE.id
-
-  @Input
-  String outputDir =
-    "${project.buildDir.path.replace(project.projectDir.path + "/", "")}/dependencyUpdates"
-
-  @Input
-  @Optional
-  String reportfileName = "report"
-
-  @Input
-  @Optional
-  @Nullable
-  String getOutputFormatterName() {
-    return (outputFormatter instanceof String) ? ((String) outputFormatter) : null
-  }
-
-  // Groovy generates both get/is accessors for boolean properties unless we manually define some.
-  // Gradle will reject this behavior starting in 7.0 so we make sure to define accessors ourselves.
-  @Input
-  boolean checkForGradleUpdate = true
-
-  @Input
-  boolean checkConstraints = false
-
-  @Input
-  boolean checkBuildEnvironmentConstraints = false
-
-  @Internal
-  Object outputFormatter = "plain"
-
-  @Internal
-  @Nullable
-  Closure<?> resolutionStrategy = null
-
-  @Nullable
-  private Action<? super ResolutionStrategyWithCurrent> resolutionStrategyAction = null
+class DependencyUpdatesTask extends BaseDependencyUpdatesTask {
 
   DependencyUpdatesTask() {
     description = "Displays the dependency updates for the project."
@@ -101,21 +51,12 @@ class DependencyUpdatesTask extends DefaultTask {
     }
 
     DependencyUpdates evaluator = new DependencyUpdates(project, resolutionStrategyAction,
-      revision(),
-      outputFormatter(), outputDir(), reportFileName(), checkForGradleUpdate,
-      gradleReleaseChannel(),
+      revision,
+      outputFormatter(), outputDir, reportfileName, checkForGradleUpdate,
+      gradleReleaseChannel,
       checkConstraints, checkBuildEnvironmentConstraints)
     DependencyUpdatesReporter reporter = evaluator.run()
     reporter.write()
-  }
-
-  /**
-   * Sets the {@link #resolutionStrategy} to the provided strategy.
-   * @param resolutionStrategy the resolution strategy
-   */
-  void resolutionStrategy(Action<? super ResolutionStrategyWithCurrent> resolutionStrategy) {
-    this.resolutionStrategyAction = resolutionStrategy
-    this.resolutionStrategy = null
   }
 
   void rejectVersionIf(ComponentFilter filter) {
@@ -131,38 +72,13 @@ class DependencyUpdatesTask extends DefaultTask {
     }
   }
 
-  /** Returns the resolution revision level. */
-  private String revision() {
-    return System.properties.get("revision", revision)
-  }
-
-  /** Returns the resolution revision level. */
-  private String gradleReleaseChannel() {
-    return System.properties.get("gradleReleaseChannel", gradleReleaseChannel)
-  }
-
-  /** Returns the outputDir format. */
-  private Object outputFormatter() {
-    return System.properties.get("outputFormatter", outputFormatter)
-  }
-
-  /** Returns the outputDir destination. */
-  private String outputDir() {
-    return System.properties.get("outputDir", outputDir)
-  }
-
-  /** Returns the filename of the report. */
-  private String reportFileName() {
-    return System.properties.get("reportfileName", reportfileName)
-  }
-
   private boolean supportsIncompatibleWithConfigurationCache() {
-    return metaClass.respondsTo(this, "notCompatibleWithConfigurationCache", String)
+    return getMetaClass().respondsTo(this, "notCompatibleWithConfigurationCache", String)
   }
 
   private void callIncompatibleWithConfigurationCache() {
     String methodName = "notCompatibleWithConfigurationCache"
     Object[] methodArgs = ["The gradle-versions-plugin isn't compatible with the configuration cache"]
-    metaClass.invokeMethod(this, methodName, methodArgs)
+    getMetaClass().invokeMethod(this, methodName, methodArgs)
   }
 }
