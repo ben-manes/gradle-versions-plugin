@@ -20,9 +20,6 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentS
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.transform.CompileStatic
-import javax.annotation.Nullable
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.util.ConfigureUtil
 
@@ -31,13 +28,6 @@ import org.gradle.util.ConfigureUtil
  */
 @CompileStatic
 class DependencyUpdatesTask extends BaseDependencyUpdatesTask {
-
-//  @Input
-//  @Optional
-//  @Nullable
-//  String getOutputFormatterName() {
-//    return (outputFormatter instanceof String) ? ((String) outputFormatter) : null
-//  }
 
   DependencyUpdatesTask() {
     description = "Displays the dependency updates for the project."
