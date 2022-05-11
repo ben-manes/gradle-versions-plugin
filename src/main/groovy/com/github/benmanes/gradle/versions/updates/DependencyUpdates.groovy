@@ -77,7 +77,8 @@ class DependencyUpdates extends BaseDependencyUpdates {
       .collectEntries {
         [[group: it.coordinate.groupId, name: it.coordinate.artifactId]: it.projectUrl]
       }
-    return createReporter(versions, unresolved, projectUrls)
+    return createReporter(project, revision, outputFormatter, outputDir, reportfileName, versions,
+      unresolved, projectUrls, gradleReleaseChannel, checkForGradleUpdate)
   }
 
   private Set<DependencyStatus> resolveProjects(
@@ -87,7 +88,9 @@ class DependencyUpdates extends BaseDependencyUpdates {
     projectConfigs.each { currentProject, currentConfigurations ->
       Resolver resolver = new Resolver(currentProject, resolutionStrategy, checkConstraints)
       for (Configuration currentConfiguration : currentConfigurations) {
-        for (DependencyStatus newStatus: resolve(resolver, currentProject, currentConfiguration, revision)) {
+        for (DependencyStatus newStatus : resolve(
+          resolver, currentProject, currentConfiguration, revision
+        )) {
           addValidatedDependencyStatus(resultStatus, newStatus)
         }
       }
@@ -95,8 +98,11 @@ class DependencyUpdates extends BaseDependencyUpdates {
     return resultStatus
   }
 
-  private DependencyUpdatesReporter createReporter(VersionMapping versions,
-    Set<UnresolvedDependency> unresolved, Map<Map<String, String>, String> projectUrls) {
+  private static DependencyUpdatesReporter createReporter(Project project, String revision,
+    @Nullable Object outputFormatter, String outputDir, @Nullable String reportfileName,
+    VersionMapping versions, Set<UnresolvedDependency> unresolved,
+    Map<Map<String, String>, String> projectUrls, String gradleReleaseChannel,
+    boolean checkForGradleUpdate) {
     Map<Map<String, String>, Coordinate> currentVersions =
       versions.current.collectEntries { [[group: it.groupId, name: it.artifactId]: it] }
     Map<Map<String, String>, Coordinate> latestVersions =

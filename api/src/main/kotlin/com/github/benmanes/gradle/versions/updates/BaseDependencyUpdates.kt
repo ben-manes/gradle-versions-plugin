@@ -29,7 +29,10 @@ open class BaseDependencyUpdates {
      * </ol>
      */
     @JvmStatic
-    fun addValidatedDependencyStatus(statusCollection: HashSet<DependencyStatus>, status: DependencyStatus) {
+    fun addValidatedDependencyStatus(
+      statusCollection: HashSet<DependencyStatus>,
+      status: DependencyStatus
+    ) {
       val statusWithSameCoordinateKey = statusCollection.find {
         it.coordinate.key == status.coordinate.key
       }
