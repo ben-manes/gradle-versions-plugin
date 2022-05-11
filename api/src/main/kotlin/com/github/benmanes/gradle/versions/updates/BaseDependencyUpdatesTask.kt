@@ -37,6 +37,16 @@ open class BaseDependencyUpdatesTask : DefaultTask() {
   @Internal
   var outputFormatter: Any = "plain"
 
+  @Input
+  @Optional
+  fun getOutputFormatterName(): String? {
+    return if (outputFormatter is String) {
+      outputFormatter as String
+    } else {
+      null
+    }
+  }
+
   // Groovy generates both get/is accessors for boolean properties unless we manually define some.
   // Gradle will reject this behavior starting in 7.0 so we make sure to define accessors ourselves.
   @Input
@@ -55,4 +65,19 @@ open class BaseDependencyUpdatesTask : DefaultTask() {
   @Nullable
   @Internal // TODO remove
   protected var resolutionStrategyAction: Action<in ResolutionStrategyWithCurrent>? = null
+
+  /**
+   * Sets the [resolutionStrategy] to the provided strategy.
+   *
+   * @param resolutionStrategy the resolution strategy
+   */
+  fun resolutionStrategy(resolutionStrategy: Action<in ResolutionStrategyWithCurrent>? = null) {
+    this.resolutionStrategyAction = resolutionStrategy
+    this.resolutionStrategy = null
+  }
+
+  /** Returns the outputDir format. */
+  fun outputFormatter(): Any {
+    return (System.getProperties()["outputFormatter"] ?: outputFormatter)
+  }
 }

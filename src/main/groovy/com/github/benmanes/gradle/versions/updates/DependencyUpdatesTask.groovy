@@ -21,7 +21,6 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentS
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.transform.CompileStatic
 import javax.annotation.Nullable
-import org.gradle.api.Action
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
@@ -33,12 +32,12 @@ import org.gradle.util.ConfigureUtil
 @CompileStatic
 class DependencyUpdatesTask extends BaseDependencyUpdatesTask {
 
-  @Input
-  @Optional
-  @Nullable
-  String getOutputFormatterName() {
-    return (outputFormatter instanceof String) ? ((String) outputFormatter) : null
-  }
+//  @Input
+//  @Optional
+//  @Nullable
+//  String getOutputFormatterName() {
+//    return (outputFormatter instanceof String) ? ((String) outputFormatter) : null
+//  }
 
   DependencyUpdatesTask() {
     description = "Displays the dependency updates for the project."
@@ -70,16 +69,6 @@ class DependencyUpdatesTask extends BaseDependencyUpdatesTask {
     reporter.write()
   }
 
-  /**
-   * Sets the {@link #resolutionStrategy} to the provided strategy.
-   * @param resolutionStrategy the resolution strategy
-   */
-  void resolutionStrategy(
-    @Nullable Action<? super ResolutionStrategyWithCurrent> resolutionStrategy) {
-    this.resolutionStrategyAction = resolutionStrategy
-    this.resolutionStrategy = null
-  }
-
   void rejectVersionIf(ComponentFilter filter) {
     resolutionStrategy { ResolutionStrategyWithCurrent strategy ->
       strategy.componentSelection { ComponentSelectionRulesWithCurrent selection ->
@@ -93,18 +82,13 @@ class DependencyUpdatesTask extends BaseDependencyUpdatesTask {
     }
   }
 
-  /** Returns the outputDir format. */
-  private Object outputFormatter() {
-    return System.properties.get("outputFormatter", outputFormatter)
-  }
-
   private boolean supportsIncompatibleWithConfigurationCache() {
-    return metaClass.respondsTo(this, "notCompatibleWithConfigurationCache", String)
+    return getMetaClass().respondsTo(this, "notCompatibleWithConfigurationCache", String)
   }
 
   private void callIncompatibleWithConfigurationCache() {
     String methodName = "notCompatibleWithConfigurationCache"
     Object[] methodArgs = ["The gradle-versions-plugin isn't compatible with the configuration cache"]
-    metaClass.invokeMethod(this, methodName, methodArgs)
+    getMetaClass().invokeMethod(this, methodName, methodArgs)
   }
 }
