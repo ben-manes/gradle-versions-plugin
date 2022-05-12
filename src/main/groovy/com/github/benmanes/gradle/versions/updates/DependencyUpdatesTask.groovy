@@ -21,7 +21,6 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentS
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.transform.CompileStatic
 import org.gradle.api.tasks.TaskAction
-import org.gradle.util.ConfigureUtil
 
 /**
  * A task that reports which dependencies have later versions.
@@ -45,7 +44,7 @@ class DependencyUpdatesTask extends BaseDependencyUpdatesTask {
     project.evaluationDependsOnChildren()
 
     if (resolutionStrategy != null) {
-      resolutionStrategy(ConfigureUtil.configureUsing(resolutionStrategy))
+      resolutionStrategy(project.configure(resolutionStrategy))
       logger.warn("dependencyUpdates.resolutionStrategy: " +
         "Remove the assignment operator, \"=\", when setting this task property")
     }
