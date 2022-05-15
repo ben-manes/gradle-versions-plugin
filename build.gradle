@@ -7,6 +7,16 @@ plugins {
   id 'groovy'
 }
 
+configurations.configureEach {
+  resolutionStrategy {
+    eachDependency { details ->
+      if (details.requested.group == 'org.jetbrains.kotlin') {
+        details.useVersion '1.6.21'
+      }
+    }
+  }
+}
+
 subprojects {
   repositories {
     mavenCentral()
