@@ -1,0 +1,126 @@
+plugins {
+  id 'org.jetbrains.kotlin.jvm'
+  id 'org.jetbrains.dokka'
+  id 'org.jlleitschuh.gradle.ktlint'
+  id 'com.gradle.plugin-publish' version '0.21.0'
+  id 'maven-publish'
+  id 'java-gradle-plugin'
+  id 'java-library'
+  id 'groovy'
+}
+
+group = GROUP
+version = VERSION_NAME
+
+// Write the plugin's classpath to a file to share with the tests
+task createClasspathManifest {
+  def outputDir = file("$buildDir/$name")
+
+  inputs.files sourceSets.main.runtimeClasspath
+  outputs.dir outputDir
+
+  doLast {
+    outputDir.mkdirs()
+    file("$outputDir/plugin-classpath.txt").text = sourceSets.main.runtimeClasspath.join("\n")
+  }
+}
+
+dependencies {
+  compileOnly gradleApi()
+
+  implementation localGroovy()
+  implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.6.21'
+  implementation 'com.squareup.okhttp3:okhttp:4.9.3'
+  implementation 'com.squareup.moshi:moshi-kotlin:1.12.0'
+  implementation 'com.thoughtworks.xstream:xstream:1.4.19'
+
+  testRuntimeOnly files(createClasspathManifest)
+
+  testImplementation localGroovy()
+  testImplementation gradleTestKit()
+  testImplementation 'org.spockframework:spock-junit4:2.1-M2-groovy-3.0', { exclude module: 'groovy-all' } // Use localGroovy()
+}
+
+task docsJar(type: Jar, dependsOn: groovydoc) {
+  group = 'Publications'
+  description = 'Create jar of documentation.'
+  archiveClassifier = 'javadoc'
+  from groovydoc.destinationDir
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+  group = 'Publications'
+  description = 'Create jar of sources.'
+  archiveClassifier = 'sources'
+  from sourceSets.main.allSource
+}
+
+publishing {
+  publications {
+    pluginMaven(MavenPublication) {
+      artifact docsJar
+      artifact sourcesJar
+
+      pom {
+        resolveStrategy = Closure.DELEGATE_FIRST
+        name = POM_NAME
+        description = POM_DESCRIPTION
+        url = POM_URL
+        inceptionYear = POM_INCEPTION_YEAR
+
+        licenses {
+          license {
+            name = POM_LICENSE_NAME
+            url = POM_LICENSE_URL
+            distribution = POM_LICENSE_DIST
+          }
+        }
+
+        developers {
+          developer {
+            id = 'ben-manes'
+            name = 'Ben Manes'
+            email = 'ben.manes@gmail.com'
+          }
+          developer {
+            id = 'zenedith'
+            name = 'Zenedith'
+            email = 'zenedith@wp.pl'
+          }
+          developer {
+            id = 'jochenberger'
+            name = 'Jochen Berger'
+          }
+        }
+
+        scm {
+          url = POM_SCM_URL
+          connection = POM_SCM_CONNECTION
+          developerConnection = POM_SCM_DEV_CONNECTION
+        }
+
+        issueManagement {
+          system = POM_ISSUE_SYSTEM
+          url = POM_ISSUE_URL
+        }
+      }
+    }
+  }
+}
+
+pluginBundle {
+  website = POM_URL
+  vcsUrl = POM_SCM_URL
+  tags = ['dependencies', 'versions', 'updates']
+}
+gradlePlugin {
+  plugins {
+    versionsPlugin {
+      id = 'com.github.ben-manes.versions'
+      displayName = POM_NAME
+      implementationClass = 'com.github.benmanes.gradle.versions.VersionsPlugin'
+      description = POM_DESCRIPTION
+    }
+  }
+}
+
