@@ -75,7 +75,6 @@ class Coordinate(
   }
 
   companion object {
-    @JvmStatic
     fun from(dependency: ExternalModuleDependency): Coordinate {
       var userReason: String? = null
       if (asBoolean(getMetaClass(dependency).respondsTo(dependency, "getReason"))) {
@@ -89,12 +88,10 @@ class Coordinate(
       return Coordinate(selector.group, selector.name, selector.version)
     }
 
-    @JvmStatic
     fun from(identifier: ModuleVersionIdentifier): Coordinate {
       return Coordinate(identifier.group, identifier.name, identifier.version)
     }
 
-    @JvmStatic
     fun from(dependency: Dependency): Coordinate {
       var userReason: String? = null
       if (asBoolean(getMetaClass(dependency).respondsTo(dependency, "getReason"))) {
@@ -116,7 +113,6 @@ class Coordinate(
       )
     }
 
-    @JvmStatic
     fun from(identifier: ModuleComponentIdentifier): Coordinate {
       return Coordinate(identifier.group, identifier.module, identifier.version)
     }

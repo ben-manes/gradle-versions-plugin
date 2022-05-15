@@ -366,16 +366,14 @@ abstract class BaseResolver {
   }
 
   companion object {
-    @JvmStatic
-    fun getUrlFromPom(file: File): String? {
+    private fun getUrlFromPom(file: File): String? {
       val pom = XmlSlurper(false, false).parse(file)
       val url = (pom.getProperty("url") as NodeChildren?)?.text()
       return url
         ?: ((pom.getProperty("scm") as NodeChildren?)?.getProperty("url") as NodeChildren?)?.text()
     }
 
-    @JvmStatic
-    fun getParentFromPom(file: File): ModuleVersionIdentifier? {
+    private fun getParentFromPom(file: File): ModuleVersionIdentifier? {
       val pom = XmlSlurper(false, false).parse(file)
       val parent: GPathResult? = pom.getProperty("parent") as NodeChildren?
       if (parent != null) {
