@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
+import static org.codehaus.groovy.runtime.DefaultGroovyMethods.asBoolean
+import static org.codehaus.groovy.runtime.DefaultGroovyMethods.getMetaClass
+
 import groovy.transform.CompileStatic
 import org.gradle.api.tasks.TaskAction
 import org.gradle.util.ConfigureUtil
@@ -56,12 +59,13 @@ class DependencyUpdatesTask extends BaseDependencyUpdatesTask {
   }
 
   private boolean supportsIncompatibleWithConfigurationCache() {
-    return getMetaClass().respondsTo(this, "notCompatibleWithConfigurationCache", String)
+    return asBoolean(
+      getMetaClass(this).respondsTo(this, "notCompatibleWithConfigurationCache", String))
   }
 
   private void callIncompatibleWithConfigurationCache() {
     String methodName = "notCompatibleWithConfigurationCache"
     Object[] methodArgs = ["The gradle-versions-plugin isn't compatible with the configuration cache"]
-    getMetaClass().invokeMethod(this, methodName, methodArgs)
+    getMetaClass(this).invokeMethod(this, methodName, methodArgs)
   }
 }
