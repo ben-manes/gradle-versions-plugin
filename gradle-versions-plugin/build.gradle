@@ -91,6 +91,11 @@ publishing {
             id = 'jochenberger'
             name = 'Jochen Berger'
           }
+          developer {
+            id = 'jaredsburrows'
+            name = 'Jared Burrows'
+            email = 'jaredsburrows@gmail.com'
+          }
         }
 
         scm {
