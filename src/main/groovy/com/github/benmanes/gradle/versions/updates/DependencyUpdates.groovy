@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
-import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
@@ -96,28 +95,5 @@ class DependencyUpdates extends BaseDependencyUpdates {
       }
     }
     return resultStatus
-  }
-
-  private static DependencyUpdatesReporter createReporter(Project project, String revision,
-    @Nullable Object outputFormatter, String outputDir, @Nullable String reportfileName,
-    VersionMapping versions, Set<UnresolvedDependency> unresolved,
-    Map<Map<String, String>, String> projectUrls, String gradleReleaseChannel,
-    boolean checkForGradleUpdate) {
-    Map<Map<String, String>, Coordinate> currentVersions =
-      versions.current.collectEntries { [[group: it.groupId, name: it.artifactId]: it] }
-    Map<Map<String, String>, Coordinate> latestVersions =
-      versions.latest.collectEntries { [[group: it.groupId, name: it.artifactId]: it] }
-    Map<Map<String, String>, Coordinate> upToDateVersions =
-      versions.upToDate.collectEntries { [[group: it.groupId, name: it.artifactId]: it] }
-    Map<Map<String, String>, Coordinate> downgradeVersions = toMap(versions.downgrade)
-    Map<Map<String, String>, Coordinate> upgradeVersions = toMap(versions.upgrade)
-
-    // Check for Gradle updates.
-    GradleUpdateChecker gradleUpdateChecker = new GradleUpdateChecker(checkForGradleUpdate)
-
-    return new DependencyUpdatesReporter(project, revision, outputFormatter, outputDir,
-      reportfileName, currentVersions, latestVersions, upToDateVersions, downgradeVersions,
-      upgradeVersions, versions.undeclared, unresolved, projectUrls, gradleUpdateChecker,
-      gradleReleaseChannel)
   }
 }

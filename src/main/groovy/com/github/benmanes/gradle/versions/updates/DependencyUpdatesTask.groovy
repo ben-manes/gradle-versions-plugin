@@ -15,10 +15,6 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
-import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentFilter
-import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionRulesWithCurrent
-import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
-import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.transform.CompileStatic
 import org.gradle.api.tasks.TaskAction
 import org.gradle.util.ConfigureUtil
@@ -57,19 +53,6 @@ class DependencyUpdatesTask extends BaseDependencyUpdatesTask {
       checkConstraints, checkBuildEnvironmentConstraints)
     DependencyUpdatesReporter reporter = evaluator.run()
     reporter.write()
-  }
-
-  void rejectVersionIf(ComponentFilter filter) {
-    resolutionStrategy { ResolutionStrategyWithCurrent strategy ->
-      strategy.componentSelection { ComponentSelectionRulesWithCurrent selection ->
-        selection.all { ComponentSelectionWithCurrent current ->
-          boolean isNotNull = current.currentVersion != null && current.candidate.version != null
-          if (isNotNull && filter.reject(current)) {
-            current.reject("Rejected by rejectVersionIf ")
-          }
-        }
-      }
-    }
   }
 
   private boolean supportsIncompatibleWithConfigurationCache() {
