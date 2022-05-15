@@ -1,6 +1,8 @@
 package com.github.benmanes.gradle.versions.updates
 
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentFilter
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.lang.Closure
 import org.gradle.api.Action
@@ -65,6 +67,21 @@ open class BaseDependencyUpdatesTask : DefaultTask() {
   @Nullable
   @Internal // TODO remove
   protected var resolutionStrategyAction: Action<in ResolutionStrategyWithCurrent>? = null
+
+  fun rejectVersionIf(filter: ComponentFilter) {
+    resolutionStrategy { strategy ->
+      strategy.componentSelection { selection ->
+        selection.all(
+          Action<ComponentSelectionWithCurrent> { current ->
+            val isNotNull = current.currentVersion != null && current.candidate.version != null
+            if (isNotNull && filter.reject(current)) {
+              current.reject("Rejected by rejectVersionIf ")
+            }
+          }
+        )
+      }
+    }
+  }
 
   /**
    * Sets the [resolutionStrategy] to the provided strategy.

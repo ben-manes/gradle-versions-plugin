@@ -1,7 +1,9 @@
 package com.github.benmanes.gradle.versions.updates
 
+import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.UnresolvedDependency
 
 open class BaseDependencyUpdates {
 
@@ -20,6 +22,39 @@ open class BaseDependencyUpdates {
   }
 
   companion object {
+    @JvmStatic
+    fun createReporter(
+      project: Project,
+      revision: String,
+      outputFormatter: Any?,
+      outputDir: String,
+      reportfileName: String?,
+      versions: VersionMapping,
+      unresolved: Set<UnresolvedDependency>,
+      projectUrls: Map<Map<String, String>, String>,
+      gradleReleaseChannel: String,
+      checkForGradleUpdate: Boolean
+    ): DependencyUpdatesReporter {
+      val currentVersions = versions.current
+        .associateBy({ mapOf("group" to it.groupId, "name" to it.artifactId) }, { it })
+      val latestVersions = versions.latest
+        .associateBy({ mapOf("group" to it.groupId, "name" to it.artifactId) }, { it })
+      val upToDateVersions = versions.upToDate
+        .associateBy({ mapOf("group" to it.groupId, "name" to it.artifactId) }, { it })
+      val downgradeVersions = toMap(versions.downgrade)
+      val upgradeVersions = toMap(versions.upgrade)
+
+      // Check for Gradle updates.
+      val gradleUpdateChecker = GradleUpdateChecker(checkForGradleUpdate)
+
+      return DependencyUpdatesReporter(
+        project, revision, outputFormatter, outputDir,
+        reportfileName, currentVersions, latestVersions, upToDateVersions, downgradeVersions,
+        upgradeVersions, versions.undeclared, unresolved, projectUrls, gradleUpdateChecker,
+        gradleReleaseChannel
+      )
+    }
+
     /**
      * A new status will be added if either,
      * <ol>
