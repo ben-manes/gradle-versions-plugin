@@ -15,13 +15,11 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
-import static groovy.transform.TypeCheckingMode.SKIP
 import static org.gradle.api.specs.Specs.SATISFIES_ALL
 
 import com.github.benmanes.gradle.versions.updates.BaseResolver.Companion.ProjectUrl
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.transform.CompileStatic
-import groovy.transform.TypeChecked
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import javax.annotation.Nullable
@@ -60,7 +58,6 @@ class Resolver extends BaseResolver {
   }
 
   /** Adds the attributes from the source to the target. */
-  @TypeChecked(SKIP)
   @Override
   void addAttributes(HasConfigurableAttributes<?> target,
     HasConfigurableAttributes<?> source,
@@ -68,8 +65,8 @@ class Resolver extends BaseResolver {
     target.attributes { container ->
       for (Attribute<?> key : source.attributes.keySet()) {
         if (filter.invoke(key.name)) {
-          Object value = source.attributes.getAttribute(key)
-          container.attribute(key, value)
+          Object value = source.attributes.getAttribute(key as Attribute<Object>)
+          container.attribute(key as Attribute<Object>, value)
         }
       }
     }

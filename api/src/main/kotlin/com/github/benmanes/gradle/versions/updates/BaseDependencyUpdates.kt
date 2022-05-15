@@ -81,8 +81,7 @@ open class BaseDependencyUpdates {
       }
     }
 
-    @JvmStatic
-    fun toMap(coordinates: Set<Coordinate>): Map<Map<String, String>, Coordinate> {
+    private fun toMap(coordinates: Set<Coordinate>): Map<Map<String, String>, Coordinate> {
       val map = HashMap<Map<String, String>, Coordinate>()
       for (coordinate in coordinates) {
         var i = 0
