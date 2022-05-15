@@ -31,17 +31,21 @@ import org.gradle.internal.component.external.model.DefaultModuleComponentIdenti
 import org.gradle.maven.MavenModule
 import org.gradle.maven.MavenPomArtifact
 import java.io.File
-import java.util.concurrent.ConcurrentMap
+import java.util.concurrent.ConcurrentHashMap
 
-abstract class BaseResolver {
+/**
+ * Resolves the configuration to determine the version status of its dependencies.
+ */
+class Resolver(
+  private val project: Project,
+  private val resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?,
+  private val checkConstraints: Boolean
+) {
+  private var projectUrls = ConcurrentHashMap<ModuleVersionIdentifier, ProjectUrl>()
 
-  abstract val project: Project
-
-  abstract val resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?
-
-  abstract val checkConstraints: Boolean
-
-  abstract val projectUrls: ConcurrentMap<ModuleVersionIdentifier, ProjectUrl>
+  init {
+    logRepositories()
+  }
 
   /** Returns the version status of the configuration's dependencies at the given revision. */
   fun resolve(configuration: Configuration, revision: String): Set<DependencyStatus> {
@@ -248,9 +252,59 @@ abstract class BaseResolver {
     }
   }
 
-  abstract fun getCurrentCoordinates(configuration: Configuration): Map<Coordinate.Key, Coordinate>
+  /** Returns the coordinates for the current (declared) dependency versions. */
+  private fun getCurrentCoordinates(configuration: Configuration): Map<Coordinate.Key, Coordinate> {
+    val declared = getResolvableDependencies(configuration)
+      .associateBy({ it.key }, { it })
+    if (declared.isEmpty()) {
+      return emptyMap()
+    }
 
-  fun logRepositories() {
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/231
+    val transitive = declared.values.any { it.version == "none" }
+
+    val coordinates = hashMapOf<Coordinate.Key, Coordinate>()
+    val copy = configuration.copyRecursive().setTransitive(transitive)
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/127
+    if (asBoolean(
+        getMetaClass(copy)
+          .respondsTo(copy, "setCanBeResolved", arrayOf<Any>(Boolean::class.java))
+      )
+    ) {
+      copy.isCanBeResolved = true
+    }
+    val lenient = copy.resolvedConfiguration.lenientConfiguration
+
+    val resolved = lenient.getFirstLevelModuleDependencies(SATISFIES_ALL)
+    for (dependency in resolved) {
+      val coordinate = Coordinate.from(dependency.module.id, declared)
+      coordinates[coordinate.key] = coordinate
+    }
+
+    val unresolved = lenient.unresolvedModuleDependencies
+    for (dependency in unresolved) {
+      val key = Coordinate.keyFrom(dependency.selector)
+      declared[key]?.let { coordinates.put(key, it) }
+    }
+
+    if (supportsConstraints(copy)) {
+      for (constraint in copy.dependencyConstraints) {
+        val coordinate = Coordinate.from(constraint)
+        // Only add a constraint to the report if there is no dependency matching it, this means it
+        // is targeting a transitive dependency or is part of a platform.
+        if (!coordinates.containsKey(coordinate.key)) {
+          declared[coordinate.key]?.let { coordinates.put(coordinate.key, it) }
+        }
+      }
+    }
+
+    // Ignore undeclared (hidden) dependencies that appear when resolving a configuration
+    coordinates.keys.retainAll(declared.keys)
+
+    return coordinates
+  }
+
+  private fun logRepositories() {
     val root = project.rootProject == project
     val label = "${
     if (root) {
@@ -356,12 +410,12 @@ abstract class BaseResolver {
     }
   }
 
-  fun supportsConstraints(configuration: Configuration): Boolean {
+  private fun supportsConstraints(configuration: Configuration): Boolean {
     return checkConstraints && !getMetaClass(configuration)
       .respondsTo(configuration, "getDependencyConstraints").isNullOrEmpty()
   }
 
-  fun getResolvableDependencies(configuration: Configuration): List<Coordinate> {
+  private fun getResolvableDependencies(configuration: Configuration): List<Coordinate> {
     val coordinates = configuration.dependencies
       .filter { dependency -> dependency is ExternalDependency }
       .map { dependency ->
