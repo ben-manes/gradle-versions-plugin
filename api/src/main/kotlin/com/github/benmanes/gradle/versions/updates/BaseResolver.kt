@@ -23,6 +23,7 @@ import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
 import org.gradle.api.artifacts.repositories.IvyArtifactRepository
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
+import org.gradle.api.attributes.Attribute
 import org.gradle.api.attributes.HasConfigurableAttributes
 import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
 import org.gradle.api.specs.Specs.SATISFIES_ALL
@@ -197,11 +198,21 @@ abstract class BaseResolver {
     return nonTransitiveDependency
   }
 
-  abstract fun addAttributes(
+  /** Adds the attributes from the source to the target. */
+  private fun addAttributes(
     target: HasConfigurableAttributes<*>,
     source: HasConfigurableAttributes<*>,
     filter: (String) -> Boolean = { key: String -> true },
-  )
+  ) {
+    target.attributes { container ->
+      for (key in source.attributes.keySet()) {
+        if (filter.invoke(key.name)) {
+          val value = source.attributes.getAttribute(key as Attribute<Any>)
+          container.attribute(key, value)
+        }
+      }
+    }
+  }
 
   /** Adds a revision filter by rejecting candidates using a component selection rule.  */
   private fun addRevisionFilter(configuration: Configuration, revision: String) {

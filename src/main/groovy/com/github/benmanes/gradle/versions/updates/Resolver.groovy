@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.gradle.versions.updates
 
+import static org.codehaus.groovy.runtime.DefaultGroovyMethods.asBoolean
+import static org.codehaus.groovy.runtime.DefaultGroovyMethods.getMetaClass
 import static org.gradle.api.specs.Specs.SATISFIES_ALL
 
 import com.github.benmanes.gradle.versions.updates.BaseResolver.Companion.ProjectUrl
@@ -23,7 +25,6 @@ import groovy.transform.CompileStatic
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import javax.annotation.Nullable
-import kotlin.jvm.functions.Function1
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -32,8 +33,6 @@ import org.gradle.api.artifacts.LenientConfiguration
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.artifacts.UnresolvedDependency
-import org.gradle.api.attributes.Attribute
-import org.gradle.api.attributes.HasConfigurableAttributes
 
 /**
  * Resolves the configuration to determine the version status of its dependencies.
@@ -57,21 +56,6 @@ class Resolver extends BaseResolver {
     logRepositories()
   }
 
-  /** Adds the attributes from the source to the target. */
-  @Override
-  void addAttributes(HasConfigurableAttributes<?> target,
-    HasConfigurableAttributes<?> source,
-    Function1<? super String, Boolean> filter = { String key -> true }) {
-    target.attributes { container ->
-      for (Attribute<?> key : source.attributes.keySet()) {
-        if (filter.invoke(key.name)) {
-          Object value = source.attributes.getAttribute(key as Attribute<Object>)
-          container.attribute(key as Attribute<Object>, value)
-        }
-      }
-    }
-  }
-
   /** Returns the coordinates for the current (declared) dependency versions. */
   @Override
   Map<Coordinate.Key, Coordinate> getCurrentCoordinates(Configuration configuration) {
@@ -90,9 +74,11 @@ class Resolver extends BaseResolver {
     Map<Coordinate.Key, Coordinate> coordinates = new HashMap<>()
     Configuration copy = configuration.copyRecursive().setTransitive(transitive)
     // https://github.com/ben-manes/gradle-versions-plugin/issues/127
-    if (copy.metaClass.respondsTo(copy, "setCanBeResolved", Boolean)) {
+    if (asBoolean(getMetaClass(copy).respondsTo(copy, "setCanBeResolved", Boolean))
+    ) {
       copy.setCanBeResolved(true)
     }
+
     LenientConfiguration lenient = copy.resolvedConfiguration.lenientConfiguration
 
     Set<ResolvedDependency> resolved = lenient.getFirstLevelModuleDependencies(SATISFIES_ALL)
