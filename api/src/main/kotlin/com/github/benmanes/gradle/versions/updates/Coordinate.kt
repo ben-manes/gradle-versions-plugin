@@ -83,7 +83,6 @@ class Coordinate(
       return Coordinate(dependency.group, dependency.name, dependency.version, userReason)
     }
 
-    @JvmStatic
     fun from(selector: ModuleVersionSelector): Coordinate {
       return Coordinate(selector.group, selector.name, selector.version)
     }
@@ -100,12 +99,10 @@ class Coordinate(
       return Coordinate(dependency.group, dependency.name, dependency.version, userReason)
     }
 
-    @JvmStatic
     fun keyFrom(selector: ModuleVersionSelector): Key {
       return Key(selector.group, selector.name)
     }
 
-    @JvmStatic
     fun from(identifier: ModuleVersionIdentifier, declared: Map<Key, Coordinate?>): Coordinate {
       return Coordinate(
         identifier.group, identifier.name, identifier.version,

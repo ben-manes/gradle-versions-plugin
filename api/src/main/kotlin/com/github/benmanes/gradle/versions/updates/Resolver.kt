@@ -39,7 +39,7 @@ import java.util.concurrent.ConcurrentHashMap
 class Resolver(
   private val project: Project,
   private val resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?,
-  private val checkConstraints: Boolean
+  private val checkConstraints: Boolean,
 ) {
   private var projectUrls = ConcurrentHashMap<ModuleVersionIdentifier, ProjectUrl>()
 
@@ -61,7 +61,7 @@ class Resolver(
   private fun getStatus(
     coordinates: Map<Coordinate.Key, Coordinate>,
     resolved: Set<ResolvedDependency>,
-    unresolved: Set<UnresolvedDependency>
+    unresolved: Set<UnresolvedDependency>,
   ): Set<DependencyStatus> {
     val result = hashSetOf<DependencyStatus>()
     for (dependency in resolved) {
@@ -89,7 +89,7 @@ class Resolver(
   private fun createLatestConfiguration(
     configuration: Configuration,
     revision: String,
-    currentCoordinates: Map<Coordinate.Key, Coordinate>
+    currentCoordinates: Map<Coordinate.Key, Coordinate>,
   ): Configuration {
     val latest = configuration.dependencies
       .filter { dependency -> dependency is ExternalDependency }

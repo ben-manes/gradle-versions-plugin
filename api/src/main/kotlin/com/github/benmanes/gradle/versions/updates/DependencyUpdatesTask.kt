@@ -5,14 +5,21 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentF
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.lang.Closure
+import org.codehaus.groovy.runtime.DefaultGroovyMethods
+import org.codehaus.groovy.runtime.DefaultGroovyMethods.getMetaClass
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.TaskAction
+import org.gradle.util.ConfigureUtil
 import javax.annotation.Nullable
 
-open class BaseDependencyUpdatesTask : DefaultTask() {
+/**
+ * A task that reports which dependencies have later versions.
+ */
+open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
   /** Returns the resolution revision level. */
   @Input
@@ -65,8 +72,36 @@ open class BaseDependencyUpdatesTask : DefaultTask() {
   var resolutionStrategy: Closure<*>? = null
 
   @Nullable
-  @Internal // TODO remove
-  protected var resolutionStrategyAction: Action<in ResolutionStrategyWithCurrent>? = null
+  private var resolutionStrategyAction: Action<in ResolutionStrategyWithCurrent>? = null
+
+  init {
+    description = "Displays the dependency updates for the project."
+    group = "Help"
+    outputs.upToDateWhen { false }
+
+    if (supportsIncompatibleWithConfigurationCache()) {
+      callIncompatibleWithConfigurationCache()
+    }
+  }
+
+  @TaskAction
+  fun dependencyUpdates() {
+    project.evaluationDependsOnChildren()
+    if (resolutionStrategy != null) {
+      resolutionStrategy(ConfigureUtil.configureUsing(resolutionStrategy))
+      logger.warn(
+        "dependencyUpdates.resolutionStrategy: " +
+          "Remove the assignment operator, \"=\", when setting this task property"
+      )
+    }
+    val evaluator = DependencyUpdates(
+      project, resolutionStrategyAction, revision,
+      outputFormatter(), outputDir, reportfileName, checkForGradleUpdate,
+      gradleReleaseChannel, checkConstraints, checkBuildEnvironmentConstraints
+    )
+    val reporter = evaluator.run()
+    reporter.write()
+  }
 
   fun rejectVersionIf(filter: ComponentFilter) {
     resolutionStrategy { strategy ->
@@ -94,7 +129,21 @@ open class BaseDependencyUpdatesTask : DefaultTask() {
   }
 
   /** Returns the outputDir format. */
-  fun outputFormatter(): Any {
+  private fun outputFormatter(): Any {
     return (System.getProperties()["outputFormatter"] ?: outputFormatter)
+  }
+
+  private fun supportsIncompatibleWithConfigurationCache(): Boolean {
+    return DefaultGroovyMethods.asBoolean(
+      getMetaClass(this)
+        .respondsTo(this, "notCompatibleWithConfigurationCache", arrayOf<Any>(String::class.java))
+    )
+  }
+
+  private fun callIncompatibleWithConfigurationCache() {
+    val methodName = "notCompatibleWithConfigurationCache"
+    val methodArgs =
+      arrayOf<Any>("The gradle-versions-plugin isn't compatible with the configuration cache")
+    getMetaClass(this).invokeMethod(this, methodName, methodArgs)
   }
 }
