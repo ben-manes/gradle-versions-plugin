@@ -8,7 +8,7 @@ import org.gradle.api.artifacts.UnresolvedDependency
 open class BaseDependencyUpdates {
 
   fun resolve(
-    resolver: BaseResolver,
+    resolver: Resolver,
     project: Project,
     config: Configuration,
     revision: String
