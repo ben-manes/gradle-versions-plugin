@@ -1,7 +1,5 @@
 package com.github.benmanes.gradle.versions.updates
 
-import org.codehaus.groovy.runtime.DefaultGroovyMethods.asBoolean
-import org.codehaus.groovy.runtime.DefaultGroovyMethods.getMetaClass
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
@@ -76,11 +74,7 @@ class Coordinate(
 
   companion object {
     fun from(dependency: ExternalModuleDependency): Coordinate {
-      var userReason: String? = null
-      if (asBoolean(getMetaClass(dependency).respondsTo(dependency, "getReason"))) {
-        userReason = dependency.reason
-      }
-      return Coordinate(dependency.group, dependency.name, dependency.version, userReason)
+      return Coordinate(dependency.group, dependency.name, dependency.version, dependency.reason)
     }
 
     fun from(selector: ModuleVersionSelector): Coordinate {
@@ -92,11 +86,7 @@ class Coordinate(
     }
 
     fun from(dependency: Dependency): Coordinate {
-      var userReason: String? = null
-      if (asBoolean(getMetaClass(dependency).respondsTo(dependency, "getReason"))) {
-        userReason = dependency.reason
-      }
-      return Coordinate(dependency.group, dependency.name, dependency.version, userReason)
+      return Coordinate(dependency.group, dependency.name, dependency.version, dependency.reason)
     }
 
     fun keyFrom(selector: ModuleVersionSelector): Key {
