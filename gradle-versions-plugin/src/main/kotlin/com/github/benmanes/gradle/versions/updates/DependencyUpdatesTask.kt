@@ -5,8 +5,6 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentF
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.lang.Closure
-import org.codehaus.groovy.runtime.DefaultGroovyMethods
-import org.codehaus.groovy.runtime.DefaultGroovyMethods.getMetaClass
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
@@ -79,9 +77,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
     group = "Help"
     outputs.upToDateWhen { false }
 
-    if (supportsIncompatibleWithConfigurationCache()) {
-      callIncompatibleWithConfigurationCache()
-    }
+    callIncompatibleWithConfigurationCache()
   }
 
   @TaskAction
@@ -133,17 +129,8 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
     return (System.getProperties()["outputFormatter"] ?: outputFormatter)
   }
 
-  private fun supportsIncompatibleWithConfigurationCache(): Boolean {
-    return DefaultGroovyMethods.asBoolean(
-      getMetaClass(this)
-        .respondsTo(this, "notCompatibleWithConfigurationCache", arrayOf<Any>(String::class.java))
-    )
-  }
-
   private fun callIncompatibleWithConfigurationCache() {
-    val methodName = "notCompatibleWithConfigurationCache"
-    val methodArgs =
-      arrayOf<Any>("The gradle-versions-plugin isn't compatible with the configuration cache")
-    getMetaClass(this).invokeMethod(this, methodName, methodArgs)
+    this::class.members.find { it.name == "notCompatibleWithConfigurationCache" }
+      ?.call(this, "The gradle-versions-plugin isn't compatible with the configuration cache")
   }
 }
