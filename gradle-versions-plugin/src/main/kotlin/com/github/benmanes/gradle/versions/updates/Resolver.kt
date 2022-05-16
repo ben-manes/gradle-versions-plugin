@@ -411,8 +411,7 @@ class Resolver(
   }
 
   private fun supportsConstraints(configuration: Configuration): Boolean {
-    return checkConstraints && !getMetaClass(configuration)
-      .respondsTo(configuration, "getDependencyConstraints").isNullOrEmpty()
+    return checkConstraints && !configuration.dependencyConstraints.isNullOrEmpty()
   }
 
   private fun getResolvableDependencies(configuration: Configuration): List<Coordinate> {
