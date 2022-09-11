@@ -16,7 +16,6 @@ import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResult
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
-import groovy.lang.Closure
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ModuleVersionSelector
 import org.gradle.api.artifacts.UnresolvedDependency
@@ -31,7 +30,7 @@ import java.util.TreeSet
  *
  * @property project The project evaluated against.
  * @property revision The revision strategy evaluated with.
- * @property outputFormatter The output formatter strategy evaluated with.
+ * @property outputFormatterArgument The output formatter strategy evaluated with.
  * @property outputDir The outputDir for report.
  * @property reportfileName The filename of the report file.
  * @property currentVersions The current versions of each dependency declared in the project(s).
@@ -47,10 +46,10 @@ import java.util.TreeSet
  * @property gradleReleaseChannel The gradle release channel to use for reporting.
  *
  */
-class DependencyUpdatesReporter(
+internal class DependencyUpdatesReporter(
   val project: Project,
   val revision: String,
-  val outputFormatter: Any?,
+  private val outputFormatterArgument: OutputFormatterArgument,
   val outputDir: String,
   val reportfileName: String?,
   val currentVersions: Map<Map<String, String>, Coordinate>,
@@ -67,34 +66,32 @@ class DependencyUpdatesReporter(
 
   @Synchronized
   fun write() {
-    if (outputFormatter !is Closure<*>) {
+    if (outputFormatterArgument !is OutputFormatterArgument.CustomAction) {
       val plainTextReporter = PlainTextReporter(
         project, revision, gradleReleaseChannel
       )
       plainTextReporter.write(System.out, buildBaseObject())
     }
 
-    if (outputFormatter == null || (outputFormatter is String && outputFormatter.isEmpty())) {
+    if (outputFormatterArgument is OutputFormatterArgument.BuiltIn && outputFormatterArgument.formatterNames.isEmpty()) {
       project.logger.lifecycle("Skip generating report to file (outputFormatter is empty)")
       return
     }
-    when (outputFormatter) {
-      is String -> {
-        for (it in outputFormatter.split(",")) {
+
+    when (outputFormatterArgument) {
+      is OutputFormatterArgument.BuiltIn -> {
+        for (it in outputFormatterArgument.formatterNames.split(",")) {
           generateFileReport(getOutputReporter(it))
         }
       }
-      is Reporter -> {
-        generateFileReport(outputFormatter)
+
+      is OutputFormatterArgument.CustomReporter -> {
+        generateFileReport(outputFormatterArgument.reporter)
       }
-      is Closure<*> -> {
+
+      is OutputFormatterArgument.CustomAction -> {
         val result = buildBaseObject()
-        outputFormatter.call(result)
-      }
-      else -> {
-        throw IllegalArgumentException(
-          "Cannot handle output formatter $outputFormatter, unsupported type"
-        )
+        outputFormatterArgument.action.execute(result)
       }
     }
   }

@@ -73,4 +73,48 @@ final class KotlinDslUsageSpec extends Specification {
     where:
     gradleVersion << ['5.6']
   }
+
+  @Unroll
+  def "user friendly kotlin-dsl with #outputFormatter produces #expectedOutput"() {
+    given:
+    buildFile << """
+      tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+          checkForGradleUpdate = true
+          $outputFormatter
+          outputDir = "build/dependencyUpdates"
+          reportfileName = "report"
+          resolutionStrategy {
+            componentSelection {
+              all {
+                if (candidate.version == "3.1" && currentVersion != "") {
+                  reject("Guice 3.1 not allowed")
+                }
+              }
+            }
+          }
+        }
+    """
+
+    when:
+    def result = GradleRunner.create()
+      .withGradleVersion('5.6')
+      .withPluginClasspath()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .build()
+
+    then:
+    result.output.contains(expectedOutput)
+    result.task(':dependencyUpdates').outcome == SUCCESS
+
+    where:
+    outputFormatter << [
+      'outputFormatter = "json"',
+      'outputFormatter { print("Custom report") }'
+    ]
+    expectedOutput << [
+      'com.google.inject:guice [2.0 -> 3.0]',
+      'Custom report'
+    ]
+  }
 }

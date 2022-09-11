@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.gradle.versions
 
+import com.github.benmanes.gradle.versions.updates.OutputFormatterArgument
+import org.gradle.api.Action
+
 import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.CURRENT
 import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 
@@ -300,7 +303,7 @@ final class DependencyUpdatesSpec extends Specification {
     }
   }
 
-  def 'Single project with a Closure as Reporter'() {
+  def 'Single project with an Action<Result> as Reporter'() {
     given:
     def project = singleProject()
     addRepositoryTo(project)
@@ -311,13 +314,13 @@ final class DependencyUpdatesSpec extends Specification {
     int undeclared = -1
     int unresolved = -1
 
-    def customReporter = { result ->
+    def customReporter = [execute: { result ->
       current = result.current.count
       outdated = result.outdated.count
       exceeded = result.exceeded.count
       undeclared = result.undeclared.count
       unresolved = result.unresolved.count
-    }
+    }] as Action<Result>
 
     when:
     def reporter = evaluate(project, 'release', customReporter)
@@ -620,11 +623,23 @@ final class DependencyUpdatesSpec extends Specification {
     [rootProject, childProject, leafProject]
   }
 
-  private static def evaluate(project, revision = 'milestone', outputFormatter = 'plain',
+  private static def evaluate(project, revision = 'milestone', outputFormatter = null,
     outputDir = 'build', resolutionStrategy = null, reportfileName = null,
     checkForGradleUpdate = true, gradleReleaseChannel = RELEASE_CANDIDATE.id) {
-    new DependencyUpdates(project, resolutionStrategy, revision, outputFormatter, outputDir,
+    new DependencyUpdates(project, resolutionStrategy, revision, buildOutputFormatter(outputFormatter), outputDir,
       reportfileName, checkForGradleUpdate, gradleReleaseChannel).run()
+  }
+
+  private static OutputFormatterArgument buildOutputFormatter(outputFormatter) {
+    if (outputFormatter instanceof String) {
+      return new OutputFormatterArgument.BuiltIn(outputFormatter)
+    } else if (outputFormatter instanceof Reporter) {
+      return new OutputFormatterArgument.CustomReporter(outputFormatter)
+    } else if (outputFormatter instanceof Action<Result>) {
+      return new OutputFormatterArgument.CustomAction(outputFormatter)
+    } else {
+      return OutputFormatterArgument.DEFAULT
+    }
   }
 
   private void addRepositoryTo(project) {
