@@ -14,7 +14,6 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.util.ConfigureUtil
-import java.lang.IllegalArgumentException
 import javax.annotation.Nullable
 
 /**
