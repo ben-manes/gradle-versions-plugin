@@ -21,7 +21,7 @@ class DependencyUpdates @JvmOverloads constructor(
   val project: Project,
   val resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?,
   val revision: String,
-  val outputFormatter: Any?,
+  private val outputFormatterArgument: OutputFormatterArgument,
   val outputDir: String,
   val reportfileName: String?,
   val checkForGradleUpdate: Boolean,
@@ -108,7 +108,7 @@ class DependencyUpdates @JvmOverloads constructor(
     val gradleUpdateChecker = GradleUpdateChecker(checkForGradleUpdate)
 
     return DependencyUpdatesReporter(
-      project, revision, outputFormatter, outputDir,
+      project, revision, outputFormatterArgument, outputDir,
       reportfileName, currentVersions, latestVersions, upToDateVersions, downgradeVersions,
       upgradeVersions, versions.undeclared, unresolved, projectUrls, gradleUpdateChecker,
       gradleReleaseChannel

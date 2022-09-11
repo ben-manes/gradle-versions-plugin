@@ -1,5 +1,7 @@
 package com.github.benmanes.gradle.versions.updates
 
+import com.github.benmanes.gradle.versions.reporter.Reporter
+import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentFilter
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
@@ -41,16 +43,45 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   var reportfileName: String = "report"
     get() = (System.getProperties()["reportfileName"] ?: field) as String
 
-  @Internal
-  var outputFormatter: Any = "plain"
+  /**
+   * Sets an output formatting for the task result. It can either be a [String] referencing one of
+   * the existing output formatters (i.e. "text", "xml", "json" or "html"), a [String] containing a
+   * comma-separated list with any combination of the existing output formatters (e.g. "xml,json"),
+   * or a [Reporter]/a [Closure] with a custom output formatting implementation.
+   *
+   * Use the [outputFormatter] function as an alternative to set a custom output formatting using
+   * the trailing closure/lambda syntax.
+   */
+  var outputFormatter: Any?
+    @Internal get() = null
+    set(value) {
+      outputFormatterArgument = when (value) {
+        is String -> OutputFormatterArgument.BuiltIn(value)
+        is Reporter -> OutputFormatterArgument.CustomReporter(value)
+        // Kept for retro-compatibility with "outputFormatter = {}" usages.
+        is Closure<*> -> OutputFormatterArgument.CustomAction { value.call(it) }
+        else -> throw IllegalArgumentException(
+          "Unsupported output formatter provided $value. Please use a String, a Reporter/Closure, " +
+            "or alternatively provide a function using the `outputFormatter(Action<Result>)` API."
+        )
+      }
+    }
+
+  /**
+   * Keeps a reference to the latest [OutputFormatterArgument] provided either via the [outputFormatter]
+   * property or the [outputFormatter] function.
+   */
+  private var outputFormatterArgument: OutputFormatterArgument = OutputFormatterArgument.DEFAULT
 
   @Input
   @Optional
   fun getOutputFormatterName(): String? {
-    return if (outputFormatter is String) {
-      outputFormatter as String
-    } else {
-      null
+    return with(outputFormatterArgument) {
+      if (this is OutputFormatterArgument.BuiltIn) {
+        formatterNames
+      } else {
+        null
+      }
     }
   }
 
@@ -125,8 +156,20 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   }
 
   /** Returns the outputDir format. */
-  private fun outputFormatter(): Any {
-    return (System.getProperties()["outputFormatter"] ?: outputFormatter)
+  private fun outputFormatter(): OutputFormatterArgument {
+    val outputFormatterProperty = System.getProperties()["outputFormatter"] as? String
+
+    return outputFormatterProperty?.let { OutputFormatterArgument.BuiltIn(it) }
+      ?: outputFormatterArgument
+  }
+
+  /**
+   * Sets a custom output formatting for the task result.
+   *
+   * @param action [Action] implementing the desired custom output formatting.
+   */
+  fun outputFormatter(action: Action<Result>) {
+    outputFormatterArgument = OutputFormatterArgument.CustomAction(action)
   }
 
   private fun callIncompatibleWithConfigurationCache() {

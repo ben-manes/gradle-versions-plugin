@@ -73,6 +73,45 @@ final class OutputFormatterSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
+  def 'Build fails when unsupported outputFormatter is provided'() {
+    given:
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'java'
+        apply plugin: 'com.github.ben-manes.versions'
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation 'com.google.inject:guice:2.0'
+        }
+
+        dependencyUpdates {
+          outputFormatter = 13
+          checkForGradleUpdate = false // future proof tests from breaking
+        }
+        """.stripIndent()
+
+    when:
+    def runner = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+
+    then:
+    runner.buildAndFail()
+  }
+
   def 'outputFormatter defaults to text output'() {
     given:
     def reportFile = new File(reportFolder, "report.txt")
