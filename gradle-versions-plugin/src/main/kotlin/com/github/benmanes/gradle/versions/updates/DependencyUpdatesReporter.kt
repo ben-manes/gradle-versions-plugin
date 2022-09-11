@@ -46,7 +46,7 @@ import java.util.TreeSet
  * @property gradleReleaseChannel The gradle release channel to use for reporting.
  *
  */
-internal class DependencyUpdatesReporter(
+class DependencyUpdatesReporter(
   val project: Project,
   val revision: String,
   private val outputFormatterArgument: OutputFormatterArgument,

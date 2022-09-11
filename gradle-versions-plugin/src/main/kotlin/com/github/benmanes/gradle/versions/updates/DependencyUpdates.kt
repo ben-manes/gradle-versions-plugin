@@ -17,7 +17,7 @@ import org.gradle.api.artifacts.UnresolvedDependency
  *   <li>integration: selects the latest revision of the dependency module (such as SNAPSHOT)
  * </ul>
  */
-internal class DependencyUpdates @JvmOverloads constructor(
+class DependencyUpdates @JvmOverloads constructor(
   val project: Project,
   val resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?,
   val revision: String,

@@ -7,7 +7,7 @@ import org.gradle.api.Action
 /**
  * Represents all the types of arguments for output formatting supported in [DependencyUpdatesTask].
  */
-internal sealed interface OutputFormatterArgument {
+sealed interface OutputFormatterArgument {
 
   /**
    * A string representing one of the built-in output formatters (i.e. "json", "text", "html" or
