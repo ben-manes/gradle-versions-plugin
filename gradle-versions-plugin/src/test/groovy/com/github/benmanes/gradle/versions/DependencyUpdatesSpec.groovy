@@ -638,7 +638,7 @@ final class DependencyUpdatesSpec extends Specification {
     } else if (outputFormatter instanceof Action<Result>) {
       return new OutputFormatterArgument.CustomAction(outputFormatter)
     } else {
-      return OutputFormatterArgument.DEFAULT
+      return new OutputFormatterArgument.BuiltIn("text")
     }
   }
 

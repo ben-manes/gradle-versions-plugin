@@ -27,7 +27,6 @@ sealed interface OutputFormatterArgument {
   class CustomAction(val action: Action<Result>) : OutputFormatterArgument
 
   companion object {
-    @JvmField
     val DEFAULT = BuiltIn(formatterNames = "text")
   }
 }
