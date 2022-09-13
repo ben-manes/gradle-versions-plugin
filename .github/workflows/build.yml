@@ -45,8 +45,8 @@ jobs:
           rm -rf ~/.m2/repository/com/github/ben-manes/gradle-versions-plugin/$VERSION_NAME
           ./gradlew publishToMavenLocal -x test -s
           cat ~/.m2/repository/com/github/ben-manes/gradle-versions-plugin/$VERSION_NAME/gradle-versions-plugin-$VERSION_NAME.pom
-          cd examples/groovy/ && ../../gradlew && cd -
-#          cd examples/kotlin/ && ../../gradlew && cd -
+          cd examples/groovy/ && ../../gradlew dU && cd -
+          cd examples/kotlin/ && ../../gradlew dU && cd -
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
