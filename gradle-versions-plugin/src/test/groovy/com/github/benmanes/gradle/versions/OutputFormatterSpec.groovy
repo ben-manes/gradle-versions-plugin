@@ -3,6 +3,7 @@ package com.github.benmanes.gradle.versions
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
 import groovy.json.JsonSlurper
+import groovy.xml.XmlParser
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
