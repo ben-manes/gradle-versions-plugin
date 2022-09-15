@@ -29,7 +29,7 @@ jobs:
         uses: gradle/wrapper-validation-action@v1.0.4
 
       - name: Configure JDK
-        uses: actions/setup-java@v3.3.0
+        uses: actions/setup-java@v3.5.0
         with:
           distribution: temurin
           java-version: ${{ matrix.java-version }}
@@ -45,8 +45,8 @@ jobs:
           rm -rf ~/.m2/repository/com/github/ben-manes/gradle-versions-plugin/$VERSION_NAME
           ./gradlew publishToMavenLocal -x test -s
           cat ~/.m2/repository/com/github/ben-manes/gradle-versions-plugin/$VERSION_NAME/gradle-versions-plugin-$VERSION_NAME.pom
-          cd examples/groovy/ && ../../gradlew && cd -
-#          cd examples/kotlin/ && ../../gradlew && cd -
+          cd examples/groovy/ && ../../gradlew dU && cd -
+          cd examples/kotlin/ && ../../gradlew dU && cd -
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3

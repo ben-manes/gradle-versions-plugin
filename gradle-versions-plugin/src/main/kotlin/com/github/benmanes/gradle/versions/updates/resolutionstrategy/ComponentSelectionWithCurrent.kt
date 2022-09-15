@@ -4,7 +4,7 @@ import org.gradle.api.artifacts.ComponentSelection
 
 class ComponentSelectionWithCurrent(
   private val delegate: ComponentSelection,
-  val currentVersion: String? = null,
+  val currentVersion: String,
 ) : ComponentSelection by delegate {
 
   override fun toString(): String {

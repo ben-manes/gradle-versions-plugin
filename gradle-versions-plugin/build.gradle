@@ -30,6 +30,7 @@ dependencies {
 
   implementation localGroovy()
   implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.6.21'
+  implementation 'org.jetbrains.kotlin:kotlin-reflect:1.6.21'
   implementation 'com.squareup.okhttp3:okhttp:4.9.3'
   implementation 'com.squareup.moshi:moshi-kotlin:1.12.0'
   implementation 'com.thoughtworks.xstream:xstream:1.4.19'
@@ -41,11 +42,11 @@ dependencies {
   testImplementation 'org.spockframework:spock-junit4:2.1-M2-groovy-3.0', { exclude module: 'groovy-all' } // Use localGroovy()
 }
 
-task docsJar(type: Jar, dependsOn: groovydoc) {
+task docsJar(type: Jar, dependsOn: dokkaHtml) {
   group = 'Publications'
   description = 'Create jar of documentation.'
   archiveClassifier = 'javadoc'
-  from groovydoc.destinationDir
+  from dokkaJavadoc.outputDirectory
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {
@@ -90,6 +91,11 @@ publishing {
           developer {
             id = 'jochenberger'
             name = 'Jochen Berger'
+          }
+          developer {
+            id = 'jaredsburrows'
+            name = 'Jared Burrows'
+            email = 'jaredsburrows@gmail.com'
           }
         }
 

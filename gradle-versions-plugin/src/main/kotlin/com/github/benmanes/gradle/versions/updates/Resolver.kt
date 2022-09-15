@@ -106,14 +106,7 @@ class Resolver(
     }
 
     val copy = configuration.copyRecursive().setTransitive(false)
-    // https://github.com/ben-manes/gradle-versions-plugin/issues/127
-    if (asBoolean(
-        getMetaClass(copy)
-          .respondsTo(copy, "setCanBeResolved", arrayOf<Any>(Boolean::class.java))
-      )
-    ) {
-      copy.isCanBeResolved = true
-    }
+    copy.isCanBeResolved = true
 
     // https://github.com/ben-manes/gradle-versions-plugin/issues/592
     // allow resolution of dynamic latest versions regardless of the original strategy
@@ -265,14 +258,7 @@ class Resolver(
 
     val coordinates = hashMapOf<Coordinate.Key, Coordinate>()
     val copy = configuration.copyRecursive().setTransitive(transitive)
-    // https://github.com/ben-manes/gradle-versions-plugin/issues/127
-    if (asBoolean(
-        getMetaClass(copy)
-          .respondsTo(copy, "setCanBeResolved", arrayOf<Any>(Boolean::class.java))
-      )
-    ) {
-      copy.isCanBeResolved = true
-    }
+    copy.isCanBeResolved = true
     val lenient = copy.resolvedConfiguration.lenientConfiguration
 
     val resolved = lenient.getFirstLevelModuleDependencies(SATISFIES_ALL)
@@ -411,8 +397,7 @@ class Resolver(
   }
 
   private fun supportsConstraints(configuration: Configuration): Boolean {
-    return checkConstraints && !getMetaClass(configuration)
-      .respondsTo(configuration, "getDependencyConstraints").isNullOrEmpty()
+    return checkConstraints && !configuration.dependencyConstraints.isNullOrEmpty()
   }
 
   private fun getResolvableDependencies(configuration: Configuration): List<Coordinate> {
