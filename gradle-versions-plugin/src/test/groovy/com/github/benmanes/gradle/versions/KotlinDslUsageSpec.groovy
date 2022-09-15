@@ -38,7 +38,7 @@ final class KotlinDslUsageSpec extends Specification {
   }
 
   @Unroll
-  def "user friendly kotlin-dsl with #gradleVersion"() {
+  def "user friendly kotlin-dsl with"() {
     given:
     buildFile << '''
       tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
@@ -60,7 +60,6 @@ final class KotlinDslUsageSpec extends Specification {
 
     when:
     def result = GradleRunner.create()
-      .withGradleVersion(gradleVersion)
       .withPluginClasspath()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
@@ -69,9 +68,6 @@ final class KotlinDslUsageSpec extends Specification {
     then:
     result.output.contains('''com.google.inject:guice [2.0 -> 3.0]''')
     result.task(':dependencyUpdates').outcome == SUCCESS
-
-    where:
-    gradleVersion << ['5.6']
   }
 
   @Unroll
@@ -97,7 +93,6 @@ final class KotlinDslUsageSpec extends Specification {
 
     when:
     def result = GradleRunner.create()
-      .withGradleVersion('5.6')
       .withPluginClasspath()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')

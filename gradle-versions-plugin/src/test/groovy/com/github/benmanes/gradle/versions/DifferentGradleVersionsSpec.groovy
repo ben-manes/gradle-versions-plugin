@@ -113,6 +113,13 @@ final class DifferentGradleVersionsSpec extends Specification {
       '6.6.1',
       '6.7.1',
       '6.8.3',
+      '6.9.2',
+      '7.0.2',
+      '7.1.1',
+      '7.2',
+      '7.3.3',
+      '7.4.2',
+      '7.5.1',
     ]
   }
 
@@ -147,7 +154,7 @@ final class DifferentGradleVersionsSpec extends Specification {
 
     when:
     def result = GradleRunner.create()
-      .withGradleVersion('5.0')
+      .withGradleVersion('7.4.2') // 7.5.1+ breaks, keep 1 version behind
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .build()
@@ -266,7 +273,7 @@ final class DifferentGradleVersionsSpec extends Specification {
 
     when:
     def result = GradleRunner.create()
-      .withGradleVersion('6.2')
+      .withGradleVersion('6.2') // for dependency verification
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .build()
@@ -277,7 +284,7 @@ final class DifferentGradleVersionsSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
-  def 'dependencyUpdates task completes without errors if configuration cache is enabled with Gradle 7.4'() {
+  def 'dependencyUpdates task completes without errors if configuration cache is enabled with Gradle 7.4+'() {
     given:
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
@@ -306,7 +313,6 @@ final class DifferentGradleVersionsSpec extends Specification {
 
     when:
     def result = GradleRunner.create()
-      .withGradleVersion('7.4-rc-2')
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates', '--configuration-cache')
       .build()
@@ -378,7 +384,7 @@ final class DifferentGradleVersionsSpec extends Specification {
       '7.0.2',
       '7.1.1',
       '7.2',
-      '7.3.3',
+      '7.3.3', // 7.4.2+ breaks
     ]
   }
 }

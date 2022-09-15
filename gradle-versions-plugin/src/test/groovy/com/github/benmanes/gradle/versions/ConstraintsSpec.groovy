@@ -168,6 +168,8 @@ final class ConstraintsSpec extends Specification {
       '7.1.1',
       '7.2',
       '7.3.3',
+      '7.4.2',
+      '7.5.1',
     ]
   }
 
@@ -201,7 +203,6 @@ final class ConstraintsSpec extends Specification {
 
     when:
     def result = GradleRunner.create()
-      .withGradleVersion('7.3.2')
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -235,14 +236,13 @@ final class ConstraintsSpec extends Specification {
 
     when:
     def result = GradleRunner.create()
-      .withGradleVersion('7.3.2')
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
       .build()
 
     then:
-    result.output.contains('org.apache.logging.log4j:log4j-core [2.16.0 -> ')
+    result.output.contains('org.apache.logging.log4j:log4j-core [2.17.1 -> ')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 }
