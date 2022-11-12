@@ -8,5 +8,5 @@ package com.github.benmanes.gradle.versions.reporter.result
  */
 data class DependenciesGroup<T : Dependency>(
   val count: Int,
-  val dependencies: Set<T> = sortedSetOf(),
+  val dependencies: MutableSet<T> = mutableSetOf(),
 )

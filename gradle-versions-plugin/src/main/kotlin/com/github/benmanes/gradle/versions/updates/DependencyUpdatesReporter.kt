@@ -176,38 +176,38 @@ class DependencyUpdatesReporter(
     )
   }
 
-  private fun buildCurrentGroup(): Set<Dependency> {
+  private fun buildCurrentGroup(): MutableSet<Dependency> {
     return sortByGroupAndName(upToDateVersions)
       .map { dep ->
         updateKey(dep.key as HashMap)
         buildDependency(dep.value, dep.key)
-      }.toSortedSet() as TreeSet<Dependency>
+      }.toSortedSet()
   }
 
-  private fun buildOutdatedGroup(): Set<DependencyOutdated> {
+  private fun buildOutdatedGroup(): MutableSet<DependencyOutdated> {
     return sortByGroupAndName(upgradeVersions)
       .map { dep ->
         updateKey(dep.key as HashMap)
         buildOutdatedDependency(dep.value, dep.key)
-      }.toSortedSet() as TreeSet<DependencyOutdated>
+      }.toSortedSet()
   }
 
-  private fun buildExceededGroup(): Set<DependencyLatest> {
+  private fun buildExceededGroup(): MutableSet<DependencyLatest> {
     return sortByGroupAndName(downgradeVersions)
       .map { dep ->
         updateKey(dep.key as HashMap)
         buildExceededDependency(dep.value, dep.key)
-      }.toSortedSet() as TreeSet<DependencyLatest>
+      }.toSortedSet()
   }
 
-  private fun buildUndeclaredGroup(): Set<Dependency> {
+  private fun buildUndeclaredGroup(): MutableSet<Dependency> {
     return undeclared
       .map { coordinate ->
         Dependency(coordinate.groupId, coordinate.artifactId)
-      }.toSortedSet() as TreeSet<Dependency>
+      }.toSortedSet()
   }
 
-  private fun buildUnresolvedGroup(): Set<DependencyUnresolved> {
+  private fun buildUnresolvedGroup(): MutableSet<DependencyUnresolved> {
     return unresolved
       .sortedWith { a, b ->
         compareKeys(keyOf(a.selector), keyOf(b.selector))
@@ -311,7 +311,7 @@ class DependencyUpdatesReporter(
       )
     }
 
-    private fun <T : Dependency> buildDependenciesGroup(dependencies: Set<T>): DependenciesGroup<T> {
+    private fun <T : Dependency> buildDependenciesGroup(dependencies: MutableSet<T>): DependenciesGroup<T> {
       return DependenciesGroup<T>(dependencies.size, dependencies)
     }
 
