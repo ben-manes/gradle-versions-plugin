@@ -109,7 +109,7 @@ class DependencyUpdatesReporter(
   }
 
   private fun getOutputReporter(formatterOriginal: String): Reporter {
-    return when (formatterOriginal.replace("\\s", "")) {
+    return when (formatterOriginal.trim()) {
       "json" -> JsonReporter(project, revision, gradleReleaseChannel)
       "xml" -> XmlReporter(project, revision, gradleReleaseChannel)
       "html" -> HtmlReporter(project, revision, gradleReleaseChannel)
