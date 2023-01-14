@@ -153,7 +153,7 @@ class Resolver(
     // If no version was specified then it may be intended to be resolved by another plugin
     // (e.g. the dependency-management-plugin for BOMs) or is an explicit file (e.g. libs/*.jar).
     // In the case of another plugin we use "+" in the hope that the plugin will not restrict the
-    // query (see issue #97). Otherwise if its a file then use "none" to pass it through.
+    // query (see issue #97). Otherwise, if it's a file then use "none" to pass it through.
     val version = if (dependency.version == null) {
       if (dependency.artifacts.isEmpty()) {
         "+"
