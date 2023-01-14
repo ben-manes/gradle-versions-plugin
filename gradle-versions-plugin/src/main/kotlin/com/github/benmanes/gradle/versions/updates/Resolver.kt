@@ -92,10 +92,10 @@ class Resolver(
     currentCoordinates: Map<Coordinate.Key, Coordinate>,
   ): Configuration {
     val latest = configuration.dependencies
-      .filter { dependency -> dependency is ExternalDependency }
-      .map { dependency ->
+      .filterIsInstance<ExternalDependency>()
+      .mapTo(mutableListOf()) { dependency ->
         createQueryDependency(dependency as ModuleDependency)
-      } as MutableList<Dependency>
+      }
 
     // Common use case for dependency constraints is a java-platform BOM project or to control
     // version of transitive dependency.
@@ -123,10 +123,9 @@ class Resolver(
     // inherited stdlib dependencies from the super configurations. This is required for variant
     // resolution, but the full set can break consumer capability matching.
     val inherited = configuration.allDependencies
-      .filter { dependency -> dependency is ExternalDependency }
-      .filter { dependency -> dependency.group == "org.jetbrains.kotlin" }
-      .filter { dependency -> dependency.version != null } -
-      configuration.dependencies
+      .filterIsInstance<ExternalDependency>()
+      .filter { dependency -> dependency.group == "org.jetbrains.kotlin" && dependency.version != null }
+      .minus(configuration.dependencies)
 
     // Adds the Kotlin 1.2.x legacy metadata to assist in variant selection
     val metadata = project.configurations.findByName("commonMainMetadataElements")
@@ -154,7 +153,7 @@ class Resolver(
     // If no version was specified then it may be intended to be resolved by another plugin
     // (e.g. the dependency-management-plugin for BOMs) or is an explicit file (e.g. libs/*.jar).
     // In the case of another plugin we use "+" in the hope that the plugin will not restrict the
-    // query (see issue #97). Otherwise if its a file then use "none" to pass it through.
+    // query (see issue #97). Otherwise, if it's a file then use "none" to pass it through.
     val version = if (dependency.version == null) {
       if (dependency.artifacts.isEmpty()) {
         "+"
@@ -401,11 +400,12 @@ class Resolver(
   }
 
   private fun getResolvableDependencies(configuration: Configuration): List<Coordinate> {
+    @Suppress("SimplifiableCall")
     val coordinates = configuration.dependencies
       .filter { dependency -> dependency is ExternalDependency }
-      .map { dependency ->
+      .mapTo(mutableListOf()) { dependency ->
         Coordinate.from(dependency)
-      } as MutableList<Coordinate>
+      }
 
     if (supportsConstraints(configuration)) {
       configuration.dependencyConstraints.forEach { dependencyConstraint ->

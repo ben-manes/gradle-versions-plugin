@@ -312,7 +312,7 @@ class DependencyUpdatesReporter(
     }
 
     private fun <T : Dependency> buildDependenciesGroup(dependencies: MutableSet<T>): DependenciesGroup<T> {
-      return DependenciesGroup<T>(dependencies.size, dependencies)
+      return DependenciesGroup(dependencies.size, dependencies)
     }
 
     private fun sortByGroupAndName(
