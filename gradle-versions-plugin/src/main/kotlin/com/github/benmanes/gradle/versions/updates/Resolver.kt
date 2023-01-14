@@ -124,9 +124,8 @@ class Resolver(
     // resolution, but the full set can break consumer capability matching.
     val inherited = configuration.allDependencies
       .filterIsInstance<ExternalDependency>()
-      .filter { dependency -> dependency.group == "org.jetbrains.kotlin" }
-      .filter { dependency -> dependency.version != null } -
-      configuration.dependencies
+      .filter { dependency -> dependency.group == "org.jetbrains.kotlin" && dependency.version != null }
+      .minus(configuration.dependencies)
 
     // Adds the Kotlin 1.2.x legacy metadata to assist in variant selection
     val metadata = project.configurations.findByName("commonMainMetadataElements")
