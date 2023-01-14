@@ -92,7 +92,7 @@ class Resolver(
     currentCoordinates: Map<Coordinate.Key, Coordinate>,
   ): Configuration {
     val latest = configuration.dependencies
-      .filter { dependency -> dependency is ExternalDependency }
+      .filterIsInstance<ExternalDependency>()
       .map { dependency ->
         createQueryDependency(dependency as ModuleDependency)
       } as MutableList<Dependency>
@@ -123,7 +123,7 @@ class Resolver(
     // inherited stdlib dependencies from the super configurations. This is required for variant
     // resolution, but the full set can break consumer capability matching.
     val inherited = configuration.allDependencies
-      .filter { dependency -> dependency is ExternalDependency }
+      .filterIsInstance<ExternalDependency>()
       .filter { dependency -> dependency.group == "org.jetbrains.kotlin" }
       .filter { dependency -> dependency.version != null } -
       configuration.dependencies
@@ -401,6 +401,7 @@ class Resolver(
   }
 
   private fun getResolvableDependencies(configuration: Configuration): List<Coordinate> {
+    @Suppress("SimplifiableCall")
     val coordinates = configuration.dependencies
       .filter { dependency -> dependency is ExternalDependency }
       .map { dependency ->
