@@ -93,9 +93,9 @@ class Resolver(
   ): Configuration {
     val latest = configuration.dependencies
       .filterIsInstance<ExternalDependency>()
-      .map { dependency ->
+      .mapTo(mutableListOf()) { dependency ->
         createQueryDependency(dependency as ModuleDependency)
-      } as MutableList<Dependency>
+      }
 
     // Common use case for dependency constraints is a java-platform BOM project or to control
     // version of transitive dependency.
@@ -404,9 +404,9 @@ class Resolver(
     @Suppress("SimplifiableCall")
     val coordinates = configuration.dependencies
       .filter { dependency -> dependency is ExternalDependency }
-      .map { dependency ->
+      .mapTo(mutableListOf()) { dependency ->
         Coordinate.from(dependency)
-      } as MutableList<Coordinate>
+      }
 
     if (supportsConstraints(configuration)) {
       configuration.dependencyConstraints.forEach { dependencyConstraint ->
