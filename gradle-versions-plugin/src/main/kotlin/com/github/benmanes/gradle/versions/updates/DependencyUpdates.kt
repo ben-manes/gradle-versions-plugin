@@ -165,5 +165,5 @@ class DependencyUpdates @JvmOverloads constructor(
 }
 
 private fun <T> Collection<T>.toLinkedHashSet(): LinkedHashSet<T> {
-  return toCollection(LinkedHashSet<T>(this.size))
+  return toCollection(LinkedHashSet(this.size))
 }
