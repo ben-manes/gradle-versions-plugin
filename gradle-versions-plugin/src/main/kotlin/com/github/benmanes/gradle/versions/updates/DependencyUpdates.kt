@@ -66,8 +66,10 @@ class DependencyUpdates @JvmOverloads constructor(
     projectConfigs.forEach { (currentProject, currentConfigurations) ->
       val resolver = Resolver(currentProject, resolutionStrategy, checkConstraints)
       for (currentConfiguration in currentConfigurations) {
-        for (newStatus in resolve(resolver, currentProject, currentConfiguration)) {
-          addValidatedDependencyStatus(resultStatus, newStatus)
+        if (currentConfiguration.isCanBeResolved) {
+          for (newStatus in resolve(resolver, currentProject, currentConfiguration)) {
+            addValidatedDependencyStatus(resultStatus, newStatus)
+          }
         }
       }
     }

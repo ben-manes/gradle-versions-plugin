@@ -91,7 +91,7 @@ class Resolver(
     revision: String,
     currentCoordinates: Map<Coordinate.Key, Coordinate>,
   ): Configuration {
-    val latest = configuration.dependencies
+    val latest = configuration.allDependencies
       .filterIsInstance<ExternalDependency>()
       .mapTo(mutableListOf()) { dependency ->
         createQueryDependency(dependency as ModuleDependency)
@@ -100,13 +100,12 @@ class Resolver(
     // Common use case for dependency constraints is a java-platform BOM project or to control
     // version of transitive dependency.
     if (supportsConstraints(configuration)) {
-      for (dependency in configuration.dependencyConstraints) {
+      for (dependency in configuration.allDependencyConstraints) {
         latest.add(createQueryDependency(dependency))
       }
     }
 
     val copy = configuration.copyRecursive().setTransitive(false)
-    copy.isCanBeResolved = true
 
     // https://github.com/ben-manes/gradle-versions-plugin/issues/592
     // allow resolution of dynamic latest versions regardless of the original strategy
@@ -125,7 +124,7 @@ class Resolver(
     val inherited = configuration.allDependencies
       .filterIsInstance<ExternalDependency>()
       .filter { dependency -> dependency.group == "org.jetbrains.kotlin" && dependency.version != null }
-      .minus(configuration.dependencies)
+      .minus(configuration.allDependencies)
 
     // Adds the Kotlin 1.2.x legacy metadata to assist in variant selection
     val metadata = project.configurations.findByName("commonMainMetadataElements")
@@ -257,7 +256,7 @@ class Resolver(
 
     val coordinates = hashMapOf<Coordinate.Key, Coordinate>()
     val copy = configuration.copyRecursive().setTransitive(transitive)
-    copy.isCanBeResolved = true
+
     val lenient = copy.resolvedConfiguration.lenientConfiguration
 
     val resolved = lenient.getFirstLevelModuleDependencies(SATISFIES_ALL)
@@ -273,7 +272,7 @@ class Resolver(
     }
 
     if (supportsConstraints(copy)) {
-      for (constraint in copy.dependencyConstraints) {
+      for (constraint in copy.allDependencyConstraints) {
         val coordinate = Coordinate.from(constraint)
         // Only add a constraint to the report if there is no dependency matching it, this means it
         // is targeting a transitive dependency or is part of a platform.
@@ -396,19 +395,19 @@ class Resolver(
   }
 
   private fun supportsConstraints(configuration: Configuration): Boolean {
-    return checkConstraints && !configuration.dependencyConstraints.isNullOrEmpty()
+    return checkConstraints && !configuration.allDependencyConstraints.isNullOrEmpty()
   }
 
   private fun getResolvableDependencies(configuration: Configuration): List<Coordinate> {
     @Suppress("SimplifiableCall")
-    val coordinates = configuration.dependencies
+    val coordinates = configuration.allDependencies
       .filter { dependency -> dependency is ExternalDependency }
       .mapTo(mutableListOf()) { dependency ->
         Coordinate.from(dependency)
       }
 
     if (supportsConstraints(configuration)) {
-      configuration.dependencyConstraints.forEach { dependencyConstraint ->
+      configuration.allDependencyConstraints.forEach { dependencyConstraint ->
         coordinates.add(Coordinate.from(dependencyConstraint))
       }
     }
