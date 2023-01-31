@@ -17,10 +17,21 @@ class HtmlReporter(
   override val gradleReleaseChannel: String,
 ) : AbstractReporter(project, revision, gradleReleaseChannel) {
   override fun write(printStream: OutputStream, result: Result) {
+    printStream.println("<!doctype html>")
+    printStream.println("<html lang=\"en\">")
     writeHeader(printStream)
+    writeBody(printStream, result)
+    printStream.println("</html>")
+  }
 
+  private fun writeHeader(printStream: OutputStream) {
+    printStream.println(header.trimMargin())
+  }
+
+  private fun writeBody(printStream: OutputStream, result: Result) {
+    printStream.println("<body>")
     if (result.count == 0) {
-      printStream.println("<P>No dependencies found.</P>")
+      printStream.println("<p>No dependencies found.</p>")
     } else {
       writeUpToDate(printStream, result)
       writeExceedLatestFound(printStream, result)
@@ -28,18 +39,14 @@ class HtmlReporter(
       writeUndeclared(printStream, result)
       writeUnresolved(printStream, result)
     }
-
     writeGradleUpdates(printStream, result)
-  }
-
-  private fun writeHeader(printStream: OutputStream) {
-    printStream.println(header.trimMargin())
+    printStream.println("</body>")
   }
 
   private fun writeUpToDate(printStream: OutputStream, result: Result) {
     val versions = result.current.dependencies
     if (versions.isNotEmpty()) {
-      printStream.println("<H2>Current dependencies</H2>")
+      printStream.println("<h2>Current dependencies</h2>")
       printStream
         .println("<p>The following dependencies are using the latest $revision version:<p>")
       printStream.println("<table class=\"currentInfo\">")
@@ -56,7 +63,7 @@ class HtmlReporter(
     if (versions.isNotEmpty()) {
       // The following dependencies exceed the version found at the "
       //        + revision + " revision level:
-      printStream.println("<H2>Exceeded dependencies</H2>")
+      printStream.println("<h2>Exceeded dependencies</h2>")
       printStream.println(
         "<p>The following dependencies exceed the version found at the $revision revision level:<p>"
       )
@@ -72,7 +79,7 @@ class HtmlReporter(
   private fun writeUpgrades(printStream: OutputStream, result: Result) {
     val versions = result.outdated.dependencies
     if (versions.isNotEmpty()) {
-      printStream.println("<H2>Later dependencies</H2>")
+      printStream.println("<h2>Later dependencies</h2>")
       printStream.println("<p>The following dependencies have later $revision versions:<p>")
       printStream.println("<table class=\"warningInfo\">")
       for (it in getUpgradesRows(result)) {
@@ -86,7 +93,7 @@ class HtmlReporter(
   private fun writeUndeclared(printStream: OutputStream, result: Result) {
     val versions = result.undeclared.dependencies
     if (versions.isNotEmpty()) {
-      printStream.println("<H2>Undeclared dependencies</H2>")
+      printStream.println("<h2>Undeclared dependencies</h2>")
       printStream.println(
         "<p>Failed to compare versions for the following dependencies because they were declared without version:<p>"
       )
@@ -102,7 +109,7 @@ class HtmlReporter(
   private fun writeUnresolved(printStream: OutputStream, result: Result) {
     val versions = result.unresolved.dependencies
     if (versions.isNotEmpty()) {
-      printStream.println("<H2>Unresolved dependencies</H2>")
+      printStream.println("<h2>Unresolved dependencies</h2>")
       printStream
         .println("<p>Failed to determine the latest version for the following dependencies:<p>")
       printStream.println("<table class=\"warningInfo\">")
@@ -118,32 +125,29 @@ class HtmlReporter(
     if (!result.gradle.enabled) {
       return
     }
-
-    printStream.println("<H2>Gradle $gradleReleaseChannel updates</H2>")
-
+    printStream.println("<h2>Gradle $gradleReleaseChannel updates</h2>")
     printStream.println("Gradle $gradleReleaseChannel updates:")
     // Log Gradle update checking failures.
     if (result.gradle.current.isFailure) {
       printStream.println(
-        "<P>[ERROR] [release channel: ${CURRENT.id}] " + result.gradle.current.reason + "</P>"
+        "<p>[ERROR] [release channel: ${CURRENT.id}] " + result.gradle.current.reason + "</p>"
       )
     }
     if ((gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id) &&
       result.gradle.releaseCandidate.isFailure
     ) {
       printStream.println(
-        "<P>[ERROR] [release channel: ${RELEASE_CANDIDATE.id}] " + result
-          .gradle.releaseCandidate.reason + "</P>"
+        "<p>[ERROR] [release channel: ${RELEASE_CANDIDATE.id}] " + result.gradle.releaseCandidate.reason + "</p>"
       )
     }
     if (gradleReleaseChannel == NIGHTLY.id && result.gradle.nightly.isFailure) {
       printStream.println(
-        "<P>[ERROR] [release channel: ${NIGHTLY.id}] " + result.gradle.nightly.reason + "</P>"
+        "<p>[ERROR] [release channel: ${NIGHTLY.id}] " + result.gradle.nightly.reason + "</p>"
       )
     }
 
     // print Gradle updates in breadcrumb format
-    printStream.print("<P>Gradle: [" + getGradleVersionUrl(result.gradle.running.version))
+    printStream.print("<p>Gradle: [" + getGradleVersionUrl(result.gradle.running.version))
     var updatePrinted = false
     if (result.gradle.current.isUpdateAvailable && result.gradle.current > result.gradle.running) {
       updatePrinted = true
@@ -168,7 +172,7 @@ class HtmlReporter(
     if (!updatePrinted) {
       printStream.print(": UP-TO-DATE")
     }
-    printStream.println("]<P>")
+    printStream.println("]</p>")
     printStream.println(getGradleUrl())
   }
 
@@ -216,13 +220,13 @@ class HtmlReporter(
 
   companion object {
     private const val header = """
-    <!DOCTYPE html>
-    <HEAD><TITLE>Project Dependency Updates Report</TITLE></HEAD>
-    <style type=\"text/css\">
+    <head>
+    <title>Project Dependency Updates Report</title>
+    <style>
        .body {
-        font:100% verdana, arial, sans-serif;
-        background-color:#fff
-        }
+           font:100% verdana, arial, sans-serif;
+           background-color:#fff
+       }
        .currentInfo {
            border-collapse: collapse;
        }
@@ -241,11 +245,10 @@ class HtmlReporter(
            border-collapse: collapse;
        }
        .currentInfo tr:nth-child(odd) {
-            background-color: #EFFFD2;
+           background-color: #EFFFD2;
            padding: 12px 15px;
            border-collapse: collapse;
        }
-
        .warningInfo {
            border-collapse: collapse;
        }
@@ -264,27 +267,25 @@ class HtmlReporter(
            border-collapse: collapse;
        }
        .warningInfo tr:nth-child(odd) {
-            background-color: #FFFFCC;
+           background-color: #FFFFCC;
            padding: 12px 15px;
            border-collapse: collapse;
        }
-
-
    </style>
-   <script src=\"https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js\"></script>
-
-   <script type="text/javascript">
-   \$(document).ready(function(){
+   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+   <script>
+   $(document).ready(function(){
     /* set current to collapsed initially */
-    \$('#currentId').nextUntil('tr.header').slideToggle(100, function(){});
+    $('#currentId').nextUntil('tr.header').slideToggle(100, function(){});
     /* click callback to toggle tables */
-    \$('tr.header').click(function(){
-        \$(this).find('span').text(function(_, value){return value=='(Click to collapse)'?'(Click to expand)':'(Click to collapse)'});
-        \$(this).nextUntil('tr.header').slideToggle(100, function(){
+    $('tr.header').click(function(){
+        $(this).find('span').text(function(_, value){return value=='(Click to collapse)'?'(Click to expand)':'(Click to collapse)'});
+        $(this).nextUntil('tr.header').slideToggle(100, function(){
         });
     });
-});
+   });
    </script>
+   </HEAD>
    """
 
     private fun getCurrentRows(result: Result): List<String> {
@@ -389,7 +390,7 @@ class HtmlReporter(
     }
 
     private fun getGradleUrl(): String {
-      return "<P>For information about Gradle releases click <a target=\"_blank\" href=\"https://gradle.org/releases/\">here</a>."
+      return "<p>For information about Gradle releases click <a target=\"_blank\" href=\"https://gradle.org/releases/\">here</a>.</p>"
     }
 
     private fun getGradleVersionUrl(version: String?): String {
