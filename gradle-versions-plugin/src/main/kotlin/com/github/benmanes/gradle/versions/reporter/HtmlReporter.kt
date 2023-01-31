@@ -285,7 +285,7 @@ class HtmlReporter(
     });
    });
    </script>
-   </HEAD>
+   </head>
    """
 
     private fun getCurrentRows(result: Result): List<String> {
