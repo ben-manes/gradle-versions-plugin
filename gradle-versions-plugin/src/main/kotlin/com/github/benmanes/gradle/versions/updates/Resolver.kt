@@ -26,6 +26,7 @@ import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.attributes.HasConfigurableAttributes
 import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
+import org.gradle.api.internal.artifacts.dependencies.DefaultProjectDependencyConstraint
 import org.gradle.api.specs.Specs.SATISFIES_ALL
 import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier
 import org.gradle.maven.MavenModule
@@ -101,7 +102,9 @@ class Resolver(
     // version of transitive dependency.
     if (supportsConstraints(configuration)) {
       for (dependency in configuration.allDependencyConstraints) {
-        latest.add(createQueryDependency(dependency))
+        if (dependency !is DefaultProjectDependencyConstraint) {
+          latest.add(createQueryDependency(dependency))
+        }
       }
     }
 
