@@ -69,12 +69,8 @@ class Resolver(
       val resolvedCoordinate = Coordinate.from(dependency.module.id)
       val originalCoordinate = coordinates[resolvedCoordinate.key]
       val coord = originalCoordinate ?: resolvedCoordinate
-      if (originalCoordinate == null && resolvedCoordinate.groupId != "null") {
-        project.logger.info("Skipping hidden dependency: $resolvedCoordinate")
-      } else {
-        val projectUrl = getProjectUrl(dependency.module.id)
-        result.add(DependencyStatus(coord, resolvedCoordinate.version, projectUrl))
-      }
+      val projectUrl = getProjectUrl(dependency.module.id)
+      result.add(DependencyStatus(coord, resolvedCoordinate.version, projectUrl))
     }
 
     for (dependency in unresolved) {
@@ -167,7 +163,7 @@ class Resolver(
     }
 
     // Format the query with an optional classifier and extension
-    var query = "${dependency.group}:${dependency.name}:$version"
+    var query = "${dependency.group.orEmpty()}:${dependency.name}:$version"
     if (dependency.artifacts.isNotEmpty()) {
       dependency.artifacts.firstOrNull()?.classifier?.let { classifier ->
         query += ":$classifier"
@@ -191,7 +187,7 @@ class Resolver(
     // If no version was specified then use "none" to pass it through.
     val version = if (dependency.version == null) "none" else "+"
     val nonTransitiveDependency =
-      project.dependencies.create("${dependency.group}:${dependency.name}:$version") as ModuleDependency
+      project.dependencies.create("${dependency.group.orEmpty()}:${dependency.name}:$version") as ModuleDependency
     nonTransitiveDependency.isTransitive = false
     return nonTransitiveDependency
   }
@@ -249,7 +245,7 @@ class Resolver(
   /** Returns the coordinates for the current (declared) dependency versions. */
   private fun getCurrentCoordinates(configuration: Configuration): Map<Coordinate.Key, Coordinate> {
     val declared = getResolvableDependencies(configuration)
-      .associateBy({ it.key }, { it })
+      .associateBy { it.key }
     if (declared.isEmpty()) {
       return emptyMap()
     }
@@ -378,7 +374,7 @@ class Resolver(
             } else {
               val parent = getParentFromPom(file)
               if (parent != null &&
-                "${parent.group}:${parent.name}" != "org.sonatype.oss:oss-parent"
+                "${parent.group.orEmpty()}:${parent.name}" != "org.sonatype.oss:oss-parent"
               ) {
                 url = getProjectUrl(parent)
                 if (!url.isNullOrEmpty()) {
