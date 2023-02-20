@@ -25,6 +25,7 @@ import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.attributes.HasConfigurableAttributes
+import org.gradle.api.attributes.java.TargetJvmVersion
 import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
 import org.gradle.api.internal.artifacts.dependencies.DefaultProjectDependencyConstraint
 import org.gradle.api.specs.Specs.SATISFIES_ALL
@@ -143,6 +144,8 @@ class Resolver(
     addRevisionFilter(copy, revision)
     addAttributes(copy, configuration)
     addCustomResolutionStrategy(copy, currentCoordinates)
+
+    disableAutoTargetJvm(copy)
     return copy
   }
 
@@ -190,6 +193,12 @@ class Resolver(
       project.dependencies.create("${dependency.group.orEmpty()}:${dependency.name}:$version") as ModuleDependency
     nonTransitiveDependency.isTransitive = false
     return nonTransitiveDependency
+  }
+
+  private fun disableAutoTargetJvm(configuration: Configuration) {
+    // Disable the auto target jvm for the configuration
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/727#issuecomment-1427132589
+    configuration.attributes.attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, Integer.MAX_VALUE)
   }
 
   /** Adds the attributes from the source to the target. */
@@ -256,6 +265,7 @@ class Resolver(
     val coordinates = hashMapOf<Coordinate.Key, Coordinate>()
     val copy = configuration.copyRecursive().setTransitive(transitive)
 
+    disableAutoTargetJvm(copy)
     val lenient = copy.resolvedConfiguration.lenientConfiguration
 
     val resolved = lenient.getFirstLevelModuleDependencies(SATISFIES_ALL)
