@@ -10,7 +10,7 @@ class ComponentSelectionWithCurrent(
   override fun toString(): String {
     return """\
 ComponentSelectionWithCurrent{
-    group="${candidate.group}",
+    group="${candidate.group.orEmpty()}",
     module="${candidate.module}",
     version="${candidate.version}",
     currentVersion="$currentVersion",
