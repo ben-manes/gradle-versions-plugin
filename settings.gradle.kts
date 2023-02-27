@@ -6,7 +6,16 @@ gradleEnterprise {
   buildScan {
     termsOfServiceUrl = "https://gradle.com/terms-of-service"
     termsOfServiceAgree = "yes"
-    publishAlways()
+
+    if (System.getenv("CI") == "true") {
+      isUploadInBackground = false
+      publishAlways()
+    } else {
+      obfuscation.ipAddresses { addresses -> emptyList() }
+    }
+    if (System.getenv("GITHUB_ACTIONS") == "true") {
+      obfuscation.username { name -> "github" }
+    }
   }
 }
 
