@@ -20,7 +20,7 @@ jobs:
         java-version:
           - 8
           - 11
-          - 18
+          - 19
 
     steps:
       - name: Checkout Project
