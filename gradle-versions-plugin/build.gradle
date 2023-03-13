@@ -39,7 +39,7 @@ dependencies {
 
   testImplementation localGroovy()
   testImplementation gradleTestKit()
-  testImplementation 'org.spockframework:spock-junit4:2.1-M2-groovy-3.0', { exclude module: 'groovy-all' } // Use localGroovy()
+  testImplementation 'org.spockframework:spock-junit4:2.4-M1-groovy-4.0', { exclude module: 'groovy-all' } // Use localGroovy()
 }
 
 task docsJar(type: Jar, dependsOn: dokkaHtml) {
