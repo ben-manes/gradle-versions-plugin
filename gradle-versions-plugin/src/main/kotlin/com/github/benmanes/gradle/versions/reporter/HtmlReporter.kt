@@ -417,12 +417,12 @@ class HtmlReporter(
     }
 
     private fun getMvnVersionString(group: String, name: String, version: String?): String {
-      // https://search.maven.org/artifact/com.azure/azure-core-http-netty/1.5.4
+      // https://central.sonatype.com/artifact/com.azure/azure-core-http-netty/1.5.4
       if (version == null) {
         return ""
       }
       val versionUrl = String
-        .format("https://search.maven.org/artifact/%s/%s/%s/bundle", group, name, version)
+        .format("https://central.sonatype.com/artifact/%s/%s/%s/bundle", group, name, version)
       return String.format("<a target=\"_blank\" href=\"%s\">%s</a>", versionUrl, "Sonatype")
     }
   }
