@@ -33,7 +33,7 @@ dependencies {
   implementation 'org.jetbrains.kotlin:kotlin-reflect:1.6.21'
   implementation 'com.squareup.okhttp3:okhttp:4.10.0'
   implementation 'com.squareup.moshi:moshi-kotlin:1.12.0'
-  implementation 'com.thoughtworks.xstream:xstream:1.4.19'
+  implementation 'com.thoughtworks.xstream:xstream:1.4.20'
 
   testRuntimeOnly files(createClasspathManifest)
 
