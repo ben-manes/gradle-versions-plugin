@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Checkout Project
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3.5.0
 
       - name: Validate Gradle Wrapper
         uses: gradle/wrapper-validation-action@v1.0.6
@@ -35,7 +35,7 @@ jobs:
           java-version: ${{ matrix.java-version }}
 
       - name: Run build with caching enabled
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v2.4.0
         with:
           arguments: clean build -s
 
@@ -50,7 +50,7 @@ jobs:
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
-        if: always()
+        if: github.repository == 'ben-manes/gradle-versions-plugin' && github.ref == 'refs/heads/master'
         with:
           name: gradle-versions-plugin-${{ github.workflow }}-${{ github.run_id }}
           path: |
@@ -60,4 +60,3 @@ jobs:
             build/distributions
             build/reports
             build/test-results
-          if-no-files-found: warn
