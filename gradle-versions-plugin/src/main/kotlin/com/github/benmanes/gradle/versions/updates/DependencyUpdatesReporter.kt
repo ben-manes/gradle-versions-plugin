@@ -70,7 +70,10 @@ class DependencyUpdatesReporter(
       val plainTextReporter = PlainTextReporter(
         project, revision, gradleReleaseChannel
       )
-      plainTextReporter.write(System.out, buildBaseObject())
+
+      if (!project.logger.isQuietEnabled) {
+        plainTextReporter.write(System.out, buildBaseObject())
+      }
     }
 
     if (outputFormatterArgument is OutputFormatterArgument.BuiltIn && outputFormatterArgument.formatterNames.isEmpty()) {
