@@ -534,4 +534,92 @@ Failed to determine the latest version for the following dependencies (use --inf
     expected == actual
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
+
+  def 'outputFormatter custom - modify unresolvable dependencies then outputs text output'() {
+    given:
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
+
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'java'
+        apply plugin: 'com.github.ben-manes.versions'
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation('backport-util-concurrent:backport-util-concurrent:3.1') { because 'I said so' }
+          implementation('backport-util-concurrent:backport-util-concurrent-java12:3.1')
+          implementation('com.google.guava:guava:99.0-SNAPSHOT') { because 'I know the future' }
+          implementation('com.google.guava:guava-tests:99.0-SNAPSHOT')
+          implementation('com.google.inject:guice:2.0') { because 'That\\'s just the way it is' }
+          implementation('com.google.inject.extensions:guice-multibindings:2.0')
+          implementation('com.github.ben-manes:unresolvable:1.0') { because 'Life is hard' }
+          implementation('com.github.ben-manes:unresolvable2:1.0')
+          implementation('com.github.ben-manes:unresolvable20:1.0')
+          implementation('com.github.ben-manes:unresolvable21:1.0')
+          implementation('com.github.ben-manes:unresolvable3:1.0')
+        }
+
+        dependencyUpdates {
+          outputFormatter = { result ->
+            result.unresolved.dependencies.removeIf {
+              it.name == 'unresolvable20' || it.name == 'unresolvable21'
+            }
+            def plainTextReporter = new PlainTextReporter(project, revision, gradleReleaseChannel)
+            plainTextReporter.write(System.out, result)
+          }
+          checkForGradleUpdate = false // future proof tests from breaking
+        }
+        """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+    def expected = """
+------------------------------------------------------------
+: Project Dependency Updates (report to plain text file)
+------------------------------------------------------------
+
+The following dependencies are using the latest milestone version:
+ - backport-util-concurrent:backport-util-concurrent:3.1
+     I said so
+ - backport-util-concurrent:backport-util-concurrent-java12:3.1
+
+The following dependencies exceed the version found at the milestone revision level:
+ - com.google.guava:guava [99.0-SNAPSHOT <- 16.0-rc1]
+     I know the future
+ - com.google.guava:guava-tests [99.0-SNAPSHOT <- 16.0-rc1]
+
+The following dependencies have later milestone versions:
+ - com.google.inject:guice [2.0 -> 3.1]
+     That's just the way it is
+     https://code.google.com/p/google-guice/
+ - com.google.inject.extensions:guice-multibindings [2.0 -> 3.0]
+     https://code.google.com/p/google-guice/
+
+Failed to determine the latest version for the following dependencies (use --info for details):
+ - com.github.ben-manes:unresolvable
+     Life is hard
+ - com.github.ben-manes:unresolvable2
+ - com.github.ben-manes:unresolvable3
+""".replace('\r', '').replace('\n', System.lineSeparator())
+
+    then:
+    assert result.output.toString().contains(expected)
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
 }

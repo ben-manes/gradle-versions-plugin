@@ -358,11 +358,11 @@ final class DependencyUpdatesSpec extends Specification {
     with(reporter) {
       unresolved.collect { it.selector }.collectEntries { dependency ->
         [['group': dependency.group, 'name': dependency.name]: dependency.version]
-      } == [['group': 'null', 'name': 'guava-18.0']: NONE_VERSION]
+      } == [['group': '', 'name': 'guava-18.0']: NONE_VERSION]
       upgradeVersions.isEmpty()
       upToDateVersions.isEmpty()
       downgradeVersions.isEmpty()
-      undeclared.contains(new Coordinate('null', 'guice-4.0', NONE_VERSION, null))
+      undeclared.contains(new Coordinate('', 'guice-4.0', NONE_VERSION, null))
     }
   }
 

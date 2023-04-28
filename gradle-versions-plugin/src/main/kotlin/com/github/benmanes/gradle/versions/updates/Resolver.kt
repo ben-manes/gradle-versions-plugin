@@ -25,7 +25,9 @@ import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.attributes.HasConfigurableAttributes
+import org.gradle.api.attributes.java.TargetJvmVersion
 import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
+import org.gradle.api.internal.artifacts.dependencies.DefaultProjectDependencyConstraint
 import org.gradle.api.specs.Specs.SATISFIES_ALL
 import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier
 import org.gradle.maven.MavenModule
@@ -68,12 +70,8 @@ class Resolver(
       val resolvedCoordinate = Coordinate.from(dependency.module.id)
       val originalCoordinate = coordinates[resolvedCoordinate.key]
       val coord = originalCoordinate ?: resolvedCoordinate
-      if (originalCoordinate == null && resolvedCoordinate.groupId != "null") {
-        project.logger.info("Skipping hidden dependency: $resolvedCoordinate")
-      } else {
-        val projectUrl = getProjectUrl(dependency.module.id)
-        result.add(DependencyStatus(coord, resolvedCoordinate.version, projectUrl))
-      }
+      val projectUrl = getProjectUrl(dependency.module.id)
+      result.add(DependencyStatus(coord, resolvedCoordinate.version, projectUrl))
     }
 
     for (dependency in unresolved) {
@@ -91,22 +89,26 @@ class Resolver(
     revision: String,
     currentCoordinates: Map<Coordinate.Key, Coordinate>,
   ): Configuration {
-    val latest = configuration.dependencies
-      .filter { dependency -> dependency is ExternalDependency }
-      .map { dependency ->
+    // Kotlin deps anywhere in the hierarchy are a special case we'll handle later
+    val kotlinDeps = { dependency: ExternalDependency -> dependency.group == "org.jetbrains.kotlin" && dependency.version != null }
+    val latest = configuration.allDependencies
+      .filterIsInstance<ExternalDependency>()
+      .filterNot(kotlinDeps)
+      .mapTo(mutableListOf()) { dependency ->
         createQueryDependency(dependency as ModuleDependency)
-      } as MutableList<Dependency>
+      }
 
     // Common use case for dependency constraints is a java-platform BOM project or to control
     // version of transitive dependency.
     if (supportsConstraints(configuration)) {
-      for (dependency in configuration.dependencyConstraints) {
-        latest.add(createQueryDependency(dependency))
+      for (dependency in configuration.allDependencyConstraints) {
+        if (dependency !is DefaultProjectDependencyConstraint) {
+          latest.add(createQueryDependency(dependency))
+        }
       }
     }
 
     val copy = configuration.copyRecursive().setTransitive(false)
-    copy.isCanBeResolved = true
 
     // https://github.com/ben-manes/gradle-versions-plugin/issues/592
     // allow resolution of dynamic latest versions regardless of the original strategy
@@ -122,11 +124,10 @@ class Resolver(
     // Resolve using the latest version of explicitly declared dependencies and retains Kotlin's
     // inherited stdlib dependencies from the super configurations. This is required for variant
     // resolution, but the full set can break consumer capability matching.
-    val inherited = configuration.allDependencies
-      .filter { dependency -> dependency is ExternalDependency }
-      .filter { dependency -> dependency.group == "org.jetbrains.kotlin" }
-      .filter { dependency -> dependency.version != null } -
-      configuration.dependencies
+    val inheritedKotlin = configuration.allDependencies
+      .filterIsInstance<ExternalDependency>()
+      .filter(kotlinDeps)
+      .minus(configuration.dependencies)
 
     // Adds the Kotlin 1.2.x legacy metadata to assist in variant selection
     val metadata = project.configurations.findByName("commonMainMetadataElements")
@@ -141,11 +142,13 @@ class Resolver(
 
     copy.dependencies.clear()
     copy.dependencies.addAll(latest)
-    copy.dependencies.addAll(inherited)
+    copy.dependencies.addAll(inheritedKotlin)
 
     addRevisionFilter(copy, revision)
     addAttributes(copy, configuration)
     addCustomResolutionStrategy(copy, currentCoordinates)
+
+    disableAutoTargetJvm(copy)
     return copy
   }
 
@@ -154,7 +157,7 @@ class Resolver(
     // If no version was specified then it may be intended to be resolved by another plugin
     // (e.g. the dependency-management-plugin for BOMs) or is an explicit file (e.g. libs/*.jar).
     // In the case of another plugin we use "+" in the hope that the plugin will not restrict the
-    // query (see issue #97). Otherwise if its a file then use "none" to pass it through.
+    // query (see issue #97). Otherwise, if it's a file then use "none" to pass it through.
     val version = if (dependency.version == null) {
       if (dependency.artifacts.isEmpty()) {
         "+"
@@ -166,7 +169,7 @@ class Resolver(
     }
 
     // Format the query with an optional classifier and extension
-    var query = "${dependency.group}:${dependency.name}:$version"
+    var query = "${dependency.group.orEmpty()}:${dependency.name}:$version"
     if (dependency.artifacts.isNotEmpty()) {
       dependency.artifacts.firstOrNull()?.classifier?.let { classifier ->
         query += ":$classifier"
@@ -190,9 +193,15 @@ class Resolver(
     // If no version was specified then use "none" to pass it through.
     val version = if (dependency.version == null) "none" else "+"
     val nonTransitiveDependency =
-      project.dependencies.create("${dependency.group}:${dependency.name}:$version") as ModuleDependency
+      project.dependencies.create("${dependency.group.orEmpty()}:${dependency.name}:$version") as ModuleDependency
     nonTransitiveDependency.isTransitive = false
     return nonTransitiveDependency
+  }
+
+  private fun disableAutoTargetJvm(configuration: Configuration) {
+    // Disable the auto target jvm for the configuration
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/727#issuecomment-1427132589
+    configuration.attributes.attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, Integer.MAX_VALUE)
   }
 
   /** Adds the attributes from the source to the target. */
@@ -248,7 +257,7 @@ class Resolver(
   /** Returns the coordinates for the current (declared) dependency versions. */
   private fun getCurrentCoordinates(configuration: Configuration): Map<Coordinate.Key, Coordinate> {
     val declared = getResolvableDependencies(configuration)
-      .associateBy({ it.key }, { it })
+      .associateBy { it.key }
     if (declared.isEmpty()) {
       return emptyMap()
     }
@@ -258,7 +267,8 @@ class Resolver(
 
     val coordinates = hashMapOf<Coordinate.Key, Coordinate>()
     val copy = configuration.copyRecursive().setTransitive(transitive)
-    copy.isCanBeResolved = true
+
+    disableAutoTargetJvm(copy)
     val lenient = copy.resolvedConfiguration.lenientConfiguration
 
     val resolved = lenient.getFirstLevelModuleDependencies(SATISFIES_ALL)
@@ -274,7 +284,7 @@ class Resolver(
     }
 
     if (supportsConstraints(copy)) {
-      for (constraint in copy.dependencyConstraints) {
+      for (constraint in copy.allDependencyConstraints) {
         val coordinate = Coordinate.from(constraint)
         // Only add a constraint to the report if there is no dependency matching it, this means it
         // is targeting a transitive dependency or is part of a platform.
@@ -377,7 +387,7 @@ class Resolver(
             } else {
               val parent = getParentFromPom(file)
               if (parent != null &&
-                "${parent.group}:${parent.name}" != "org.sonatype.oss:oss-parent"
+                "${parent.group.orEmpty()}:${parent.name}" != "org.sonatype.oss:oss-parent"
               ) {
                 url = getProjectUrl(parent)
                 if (!url.isNullOrEmpty()) {
@@ -397,18 +407,19 @@ class Resolver(
   }
 
   private fun supportsConstraints(configuration: Configuration): Boolean {
-    return checkConstraints && !configuration.dependencyConstraints.isNullOrEmpty()
+    return checkConstraints && !configuration.allDependencyConstraints.isNullOrEmpty()
   }
 
   private fun getResolvableDependencies(configuration: Configuration): List<Coordinate> {
-    val coordinates = configuration.dependencies
+    @Suppress("SimplifiableCall")
+    val coordinates = configuration.allDependencies
       .filter { dependency -> dependency is ExternalDependency }
-      .map { dependency ->
+      .mapTo(mutableListOf()) { dependency ->
         Coordinate.from(dependency)
-      } as MutableList<Coordinate>
+      }
 
     if (supportsConstraints(configuration)) {
-      configuration.dependencyConstraints.forEach { dependencyConstraint ->
+      configuration.allDependencyConstraints.forEach { dependencyConstraint ->
         coordinates.add(Coordinate.from(dependencyConstraint))
       }
     }

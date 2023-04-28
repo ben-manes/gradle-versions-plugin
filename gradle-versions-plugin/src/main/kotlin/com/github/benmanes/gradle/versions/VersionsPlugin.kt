@@ -17,7 +17,7 @@ class VersionsPlugin : Plugin<Project> {
     }
 
     val tasks = project.tasks
-    if (tasks.findByName("dependencyUpdates") == null) {
+    if (!tasks.getNames().contains("dependencyUpdates")) {
       tasks.register("dependencyUpdates", DependencyUpdatesTask::class.java)
     }
   }

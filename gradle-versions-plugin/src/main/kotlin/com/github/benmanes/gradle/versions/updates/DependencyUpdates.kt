@@ -47,10 +47,7 @@ class DependencyUpdates @JvmOverloads constructor(
 
     val statuses = status + buildscriptStatus
     val versions = VersionMapping(project, statuses)
-    val unresolved = statuses
-      .filter { it.unresolved != null }
-      .map { it.unresolved }
-      .toSet() as Set<UnresolvedDependency>
+    val unresolved = statuses.mapNotNullTo(mutableSetOf()) { it.unresolved }
     val projectUrls = statuses
       .filter { !it.projectUrl.isNullOrEmpty() }
       .associateBy(
@@ -69,8 +66,10 @@ class DependencyUpdates @JvmOverloads constructor(
     projectConfigs.forEach { (currentProject, currentConfigurations) ->
       val resolver = Resolver(currentProject, resolutionStrategy, checkConstraints)
       for (currentConfiguration in currentConfigurations) {
-        for (newStatus in resolve(resolver, currentProject, currentConfiguration)) {
-          addValidatedDependencyStatus(resultStatus, newStatus)
+        if (currentConfiguration.isCanBeResolved) {
+          for (newStatus in resolve(resolver, currentProject, currentConfiguration)) {
+            addValidatedDependencyStatus(resultStatus, newStatus)
+          }
         }
       }
     }
@@ -165,5 +164,5 @@ class DependencyUpdates @JvmOverloads constructor(
 }
 
 private fun <T> Collection<T>.toLinkedHashSet(): LinkedHashSet<T> {
-  return toCollection(LinkedHashSet<T>(this.size))
+  return toCollection(LinkedHashSet(this.size))
 }

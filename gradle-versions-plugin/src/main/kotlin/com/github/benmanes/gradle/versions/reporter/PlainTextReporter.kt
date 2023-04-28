@@ -191,7 +191,7 @@ class PlainTextReporter(
   companion object {
     /** Returns the dependency key as a stringified label. */
     private fun label(dependency: Dependency): String {
-      return "${dependency.group}:${dependency.name}"
+      return "${dependency.group.orEmpty()}:${dependency.name}"
     }
   }
 }
