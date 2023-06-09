@@ -611,6 +611,25 @@ final class DependencyUpdatesSpec extends Specification {
       undeclared.isEmpty()
     }
   }
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/782')
+    def "Allow filtering configurations"() {
+    given:
+    def project = singleProject()
+    addDependenciesTo(project)
+
+    when:
+    def reporter = evaluate(project, 'milestone', null, null, null,null, false, RELEASE_CANDIDATE.id, {config -> config.name.equals("upgradesFound")})
+    reporter.write()
+
+    then:
+    with(reporter) {
+      unresolved.isEmpty()
+      upgradeVersions.isEmpty()
+      upToDateVersions.isEmpty()
+      downgradeVersions.isEmpty()
+      undeclared.isEmpty()
+    }
+  }
 
   private static def singleProject() {
     return ProjectBuilder.builder().withName('single').build()
@@ -625,9 +644,10 @@ final class DependencyUpdatesSpec extends Specification {
 
   private static def evaluate(project, revision = 'milestone', outputFormatter = null,
     outputDir = 'build', resolutionStrategy = null, reportfileName = null,
-    checkForGradleUpdate = true, gradleReleaseChannel = RELEASE_CANDIDATE.id) {
+    checkForGradleUpdate = true, gradleReleaseChannel = RELEASE_CANDIDATE.id,
+    configurationFilter = {config -> true}) {
     new DependencyUpdates(project, resolutionStrategy, revision, buildOutputFormatter(outputFormatter), outputDir,
-      reportfileName, checkForGradleUpdate, gradleReleaseChannel).run()
+      reportfileName, checkForGradleUpdate, gradleReleaseChannel, configurationFilter).run()
   }
 
   private static OutputFormatterArgument buildOutputFormatter(outputFormatter) {

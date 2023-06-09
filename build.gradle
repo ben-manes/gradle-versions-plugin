@@ -8,9 +8,9 @@ plugins {
 }
 
 subprojects {
-  repositories {
-    mavenCentral()
-  }
+  // repositories {
+  //   mavenCentral()
+  // }
 
   tasks.withType(Jar).configureEach {
     manifest {

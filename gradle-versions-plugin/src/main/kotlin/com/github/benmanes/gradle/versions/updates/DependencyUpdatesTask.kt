@@ -9,10 +9,12 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.Resolution
 import groovy.lang.Closure
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
+import org.gradle.api.specs.Spec
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.artifacts.Configuration
 import org.gradle.util.ConfigureUtil
 import javax.annotation.Nullable
 
@@ -93,6 +95,9 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   @Input
   var checkConstraints: Boolean = false
 
+  @Internal
+  var filterConfigurations: Spec<Configuration> = Spec<Configuration> {true}
+
   @Input
   var checkBuildEnvironmentConstraints: Boolean = false
 
@@ -124,7 +129,8 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
     val evaluator = DependencyUpdates(
       project, resolutionStrategyAction, revision,
       outputFormatter(), outputDir, reportfileName, checkForGradleUpdate,
-      gradleReleaseChannel, checkConstraints, checkBuildEnvironmentConstraints
+      gradleReleaseChannel, checkConstraints, checkBuildEnvironmentConstraints,
+      filterConfigurations
     )
     val reporter = evaluator.run()
     reporter.write()
