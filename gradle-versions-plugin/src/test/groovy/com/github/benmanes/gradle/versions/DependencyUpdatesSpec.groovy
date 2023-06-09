@@ -616,15 +616,16 @@ final class DependencyUpdatesSpec extends Specification {
     given:
     def project = singleProject()
     addDependenciesTo(project)
+    addRepositoryTo(project)
 
     when:
-    def reporter = evaluate(project, 'milestone', null, null, null,null, false, RELEASE_CANDIDATE.id, {config -> config.name.equals("upgradesFound")})
+    def reporter = evaluate(project, 'milestone', null, 'build', null,null, false, RELEASE_CANDIDATE.id, {config -> config.name.equals("upgradesFound")})
     reporter.write()
 
     then:
     with(reporter) {
       unresolved.isEmpty()
-      upgradeVersions.isEmpty()
+      upgradeVersions.size() == 2
       upToDateVersions.isEmpty()
       downgradeVersions.isEmpty()
       undeclared.isEmpty()
@@ -645,9 +646,9 @@ final class DependencyUpdatesSpec extends Specification {
   private static def evaluate(project, revision = 'milestone', outputFormatter = null,
     outputDir = 'build', resolutionStrategy = null, reportfileName = null,
     checkForGradleUpdate = true, gradleReleaseChannel = RELEASE_CANDIDATE.id,
-    configurationFilter = {config -> true}) {
+    configurationFilter = { true }) {
     new DependencyUpdates(project, resolutionStrategy, revision, buildOutputFormatter(outputFormatter), outputDir,
-      reportfileName, checkForGradleUpdate, gradleReleaseChannel, configurationFilter).run()
+      reportfileName, checkForGradleUpdate, gradleReleaseChannel, false, false, configurationFilter).run()
   }
 
   private static OutputFormatterArgument buildOutputFormatter(outputFormatter) {
