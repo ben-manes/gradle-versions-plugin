@@ -307,6 +307,19 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
 
 Note: Do use the `plugins { .. }` syntax if you use the Kotlin DSL.
 
+#### Configuration filter
+You can change which dependency configurations the plugin checks for updates like this:
+
+```groovy
+// https://github.com/ben-manes/gradle-versions-plugin
+tasks.named("dependencyUpdates").configure {
+  filterConfigurations {
+    it.name.equals("runtimeClasspath") || it.name.equals("compileClasspath")
+  }
+}
+```
+
+
 #### Try out the samples
 
 Have a look at [`examples/groovy`](https://github.com/ben-manes/gradle-versions-plugin/tree/master/examples/groovy) and [`examples/kotlin`](https://github.com/ben-manes/gradle-versions-plugin/tree/master/examples/kotlin)

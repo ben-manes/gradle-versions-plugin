@@ -6,6 +6,7 @@ import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.UnresolvedDependency
+import org.gradle.api.specs.Spec
 
 /**
  * An evaluator for reporting of which dependencies have later versions.
@@ -28,6 +29,7 @@ class DependencyUpdates @JvmOverloads constructor(
   val gradleReleaseChannel: String,
   val checkConstraints: Boolean = false,
   val checkBuildEnvironmentConstraints: Boolean = false,
+  val filterConfigurations: Spec<Configuration> = Spec<Configuration> { true }
 ) {
 
   /**
@@ -36,7 +38,8 @@ class DependencyUpdates @JvmOverloads constructor(
    */
   fun run(): DependencyUpdatesReporter {
     val projectConfigs = project.allprojects
-      .associateBy({ it }, { it.configurations.toLinkedHashSet() })
+      .associateBy({ it }, { it.configurations.matching(filterConfigurations).toLinkedHashSet() })
+
     val status: Set<DependencyStatus> = resolveProjects(projectConfigs, checkConstraints)
 
     val buildscriptProjectConfigs = project.allprojects
