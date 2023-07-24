@@ -13,7 +13,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Validate Gradle Wrapper
-        uses: gradle/wrapper-validation-action@v1.0.6
+        uses: gradle/wrapper-validation-action@v1.1.0
 
       - name: Configure JDK
         uses: actions/setup-java@v3.11.0
