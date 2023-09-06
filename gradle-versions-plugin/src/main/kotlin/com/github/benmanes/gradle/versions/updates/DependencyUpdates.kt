@@ -26,6 +26,7 @@ class DependencyUpdates @JvmOverloads constructor(
   val outputDir: String,
   val reportfileName: String?,
   val checkForGradleUpdate: Boolean,
+  val gradleVersionsApiBaseUrl: String,
   val gradleReleaseChannel: String,
   val checkConstraints: Boolean = false,
   val checkBuildEnvironmentConstraints: Boolean = false,
@@ -107,7 +108,7 @@ class DependencyUpdates @JvmOverloads constructor(
     val upgradeVersions = toMap(versions.upgrade)
 
     // Check for Gradle updates.
-    val gradleUpdateChecker = GradleUpdateChecker(checkForGradleUpdate)
+    val gradleUpdateChecker = GradleUpdateChecker(checkForGradleUpdate, gradleVersionsApiBaseUrl)
 
     return DependencyUpdatesReporter(
       project, revision, outputFormatterArgument, outputDir,
