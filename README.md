@@ -272,6 +272,12 @@ The default is `release-candidate`. The value can be changed as shown below:
 dependencyUpdates.gradleReleaseChannel="current"
 ```
 
+#### Gradle Versions Api Base URL
+
+The `gradleVersionsApiBaseUrl` task property provides an option for customization of the Gradle versions service URL.
+If not specified, the default value https://services.gradle.org/versions/ is used.
+The customization can be useful in restricted environments without direct internet access and proxy availability.
+
 #### Constraints
 
 If you use constraints, for example to define a BOM using the [`java-platform`](https://docs.gradle.org/current/userguide/java_platform_plugin.html)

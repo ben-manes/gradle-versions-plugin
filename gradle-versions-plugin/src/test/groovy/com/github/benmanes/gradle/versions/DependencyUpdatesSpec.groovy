@@ -582,7 +582,7 @@ final class DependencyUpdatesSpec extends Specification {
     }
 
     when:
-    def reporter = evaluate(project, 'milestone', 'plain', 'build', null, null, true, CURRENT.id)
+    def reporter = evaluate(project, 'milestone', 'plain', 'build', null, null, true, "", CURRENT.id)
     reporter.write()
 
     then:
@@ -619,7 +619,7 @@ final class DependencyUpdatesSpec extends Specification {
     addRepositoryTo(project)
 
     when:
-    def reporter = evaluate(project, 'milestone', null, 'build', null,null, false, RELEASE_CANDIDATE.id, {config -> config.name.equals("upgradesFound")})
+    def reporter = evaluate(project, 'milestone', null, 'build', null,null, false, "", RELEASE_CANDIDATE.id, {config -> config.name.equals("upgradesFound")})
     reporter.write()
 
     then:
@@ -645,10 +645,10 @@ final class DependencyUpdatesSpec extends Specification {
 
   private static def evaluate(project, revision = 'milestone', outputFormatter = null,
     outputDir = 'build', resolutionStrategy = null, reportfileName = null,
-    checkForGradleUpdate = true, gradleReleaseChannel = RELEASE_CANDIDATE.id,
+    checkForGradleUpdate = true, gradleVersionsApiBaseUrl = "", gradleReleaseChannel = RELEASE_CANDIDATE.id,
     configurationFilter = { true }) {
     new DependencyUpdates(project, resolutionStrategy, revision, buildOutputFormatter(outputFormatter), outputDir,
-      reportfileName, checkForGradleUpdate, gradleReleaseChannel, false, false, configurationFilter).run()
+      reportfileName, checkForGradleUpdate, gradleVersionsApiBaseUrl, gradleReleaseChannel, false, false, configurationFilter).run()
   }
 
   private static OutputFormatterArgument buildOutputFormatter(outputFormatter) {

@@ -93,6 +93,9 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   var checkForGradleUpdate: Boolean = true
 
   @Input
+  var gradleVersionsApiBaseUrl: String = "https://services.gradle.org/versions/"
+
+  @Input
   var checkConstraints: Boolean = false
 
   @Internal
@@ -128,7 +131,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
     }
     val evaluator = DependencyUpdates(
       project, resolutionStrategyAction, revision,
-      outputFormatter(), outputDir, reportfileName, checkForGradleUpdate,
+      outputFormatter(), outputDir, reportfileName, checkForGradleUpdate, gradleVersionsApiBaseUrl,
       gradleReleaseChannel, checkConstraints, checkBuildEnvironmentConstraints,
       filterConfigurations
     )

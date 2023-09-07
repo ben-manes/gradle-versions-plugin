@@ -18,11 +18,12 @@ import java.util.concurrent.TimeUnit
  */
 class GradleUpdateChecker(
   val enabled: Boolean = true,
+  private val gradleVersionsApiBaseUrl: String,
 ) {
 
   init {
     if (enabled) {
-      fetch()
+      fetch(gradleVersionsApiBaseUrl)
     }
   }
 
@@ -84,7 +85,6 @@ class GradleUpdateChecker(
     private val cacheMap = EnumMap<GradleReleaseChannel, ReleaseStatus>(
       GradleReleaseChannel::class.java
     )
-    private const val API_BASE_URL = "https://services.gradle.org/versions/"
     private const val CLIENT_TIME_OUT = 15_000L
     private val client: OkHttpClient = OkHttpClient.Builder()
       .connectTimeout(CLIENT_TIME_OUT, TimeUnit.SECONDS)
@@ -95,17 +95,17 @@ class GradleUpdateChecker(
       .addLast(KotlinJsonAdapterFactory())
       .build()
 
-    /** Represents the XML from [API_BASE_URL] */
+    /** Represents the XML from [gradleVersionsApiBaseUrl] */
     private class VersionSite {
       var version: String? = null
     }
 
-    private fun fetch() {
+    private fun fetch(gradleVersionsApiBaseUrl: String) {
       for (it in GradleReleaseChannel.values()) {
         try {
           client.newCall(
             Request.Builder()
-              .url(API_BASE_URL + it.id)
+              .url(gradleVersionsApiBaseUrl + it.id)
               .build()
           ).execute().use { response ->
             response.body?.source()?.let { body ->
