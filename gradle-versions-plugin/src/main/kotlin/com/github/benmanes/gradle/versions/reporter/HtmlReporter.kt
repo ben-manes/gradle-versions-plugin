@@ -340,7 +340,7 @@ class HtmlReporter(
           getVersionString(
             dependency.group.orEmpty(),
             dependency.name.orEmpty(),
-            dependency.version
+            dependency.latest
           ),
           dependency.userReason.orEmpty()
         )
