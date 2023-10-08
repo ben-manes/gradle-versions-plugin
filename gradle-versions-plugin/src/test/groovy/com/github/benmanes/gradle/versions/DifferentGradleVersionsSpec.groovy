@@ -79,8 +79,10 @@ final class DifferentGradleVersionsSpec extends Specification {
 
     when:
     def arguments = ['dependencyUpdates']
-    // Warning mode reporting only supported on recent versions.
-    if (gradleVersion.substring(0, gradleVersion.indexOf('.')).toInteger() >= 6) {
+    // Warning mode reporting only supported on recent versions
+    // Gradle 8.x deprecated configurations for removal in 9.0; ignore as unrelated
+    def majorVersion = gradleVersion.substring(0, gradleVersion.indexOf('.')).toInteger()
+    if ((majorVersion >= 6) && (majorVersion != 8)) {
       arguments.add('--warning-mode=fail')
     }
     arguments.add('-S')
@@ -120,6 +122,11 @@ final class DifferentGradleVersionsSpec extends Specification {
       '7.3.3',
       '7.4.2',
       '7.5.1',
+      '8.0',
+      '8.1',
+      '8.2',
+      '8.3',
+      '8.4',
     ]
   }
 
