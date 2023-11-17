@@ -40,8 +40,6 @@ class XmlReporter(
     writeGradle(result, document, response)
 
     val transformerFactory = TransformerFactory.newInstance()
-    transformerFactory.setAttribute("indent-number", 2)
-
     val transformer = transformerFactory.newTransformer()
     transformer.setOutputProperty(OutputKeys.INDENT, "yes")
     transformer.setOutputProperty(OutputKeys.STANDALONE, "yes")
