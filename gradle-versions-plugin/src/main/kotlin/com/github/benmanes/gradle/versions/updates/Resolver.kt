@@ -89,11 +89,12 @@ class Resolver(
     revision: String,
     currentCoordinates: Map<Coordinate.Key, Coordinate>,
   ): Configuration {
-    // Kotlin deps anywhere in the hierarchy are a special case we'll handle later
-    val kotlinDeps = { dependency: ExternalDependency -> dependency.group == "org.jetbrains.kotlin" && dependency.version != null }
+    // Kotlin deps anywhere in the hierarchy are a special case we'll handle later separately, unless they are being
+    // forced, as is the case with plugins, in which case handle those deps here
+    val kotlinDeps = { dependency: ExternalDependency -> (dependency.group?.startsWith("org.jetbrains.kotlin") ?: false) && dependency.version != null }
     val latest = configuration.allDependencies
       .filterIsInstance<ExternalDependency>()
-      .filterNot(kotlinDeps)
+      .filterNot { kotlinDeps(it) && it.isForce }
       .mapTo(mutableListOf()) { dependency ->
         createQueryDependency(dependency as ModuleDependency)
       }
