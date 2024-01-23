@@ -89,12 +89,8 @@ class Resolver(
     revision: String,
     currentCoordinates: Map<Coordinate.Key, Coordinate>,
   ): Configuration {
-    // Kotlin deps anywhere in the hierarchy are a special case we'll handle later separately, unless they are being
-    // forced, as is the case with plugins, in which case handle those deps here
-    val kotlinDeps = { dependency: ExternalDependency -> (dependency.group?.startsWith("org.jetbrains.kotlin") ?: false) && dependency.version != null }
     val latest = configuration.allDependencies
       .filterIsInstance<ExternalDependency>()
-      .filterNot { kotlinDeps(it) && it.isForce }
       .mapTo(mutableListOf()) { dependency ->
         createQueryDependency(dependency as ModuleDependency)
       }
@@ -123,11 +119,12 @@ class Resolver(
     }
 
     // Resolve using the latest version of explicitly declared dependencies and retains Kotlin's
-    // inherited stdlib dependencies from the super configurations. This is required for variant
-    // resolution, but the full set can break consumer capability matching.
+    // inherited dependencies (importantly, including stdlib) from the super configurations. This
+    // is required for variant resolution, but the full set can break consumer capability matching.
+    val isKotlinDep = { dependency: ExternalDependency -> (dependency.group?.startsWith("org.jetbrains.kotlin") ?: false) }
     val inheritedKotlin = configuration.allDependencies
       .filterIsInstance<ExternalDependency>()
-      .filter(kotlinDeps)
+      .filter { d -> isKotlinDep(d) }
       .minus(configuration.dependencies)
 
     // Adds the Kotlin 1.2.x legacy metadata to assist in variant selection
