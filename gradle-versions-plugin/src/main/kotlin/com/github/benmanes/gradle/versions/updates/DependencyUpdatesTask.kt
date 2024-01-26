@@ -15,7 +15,6 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
-import org.gradle.util.ConfigureUtil
 import javax.annotation.Nullable
 
 /**
@@ -123,7 +122,8 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   fun dependencyUpdates() {
     project.evaluationDependsOnChildren()
     if (resolutionStrategy != null) {
-      resolutionStrategy(ConfigureUtil.configureUsing(resolutionStrategy))
+      val closure = resolutionStrategy!!
+      resolutionStrategy { current -> project.configure(current, closure) }
       logger.warn(
         "dependencyUpdates.resolutionStrategy: " +
           "Remove the assignment operator, \"=\", when setting this task property"
@@ -144,6 +144,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
       strategy.componentSelection { selection ->
         selection.all(
           Action<ComponentSelectionWithCurrent> { current ->
+            @Suppress("SENSELESS_COMPARISON")
             val isNotNull = current.currentVersion != null && current.candidate.version != null
             if (isNotNull && filter.reject(current)) {
               current.reject("Rejected by rejectVersionIf ")
