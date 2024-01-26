@@ -24,14 +24,13 @@ class VersionsPlugin : Plugin<Project> {
 
   private fun requireMinimumGradleVersion() {
     if (GradleVersion.current() < GradleVersion.version("5.0")) {
-      throw GradleException(
-        "Gradle 5.0 or greater is required to apply the com.github.ben-manes.versions plugin.")
+      throw GradleException("Gradle 5.0 or greater is required to apply the com.github.ben-manes.versions plugin.")
     }
   }
 
   private fun requireSupportedSaxParser() {
-    val isRestrictedInPatch = GradleVersion.current() >= GradleVersion.version("7.6.3")
-        && GradleVersion.current() <= GradleVersion.version("8.0")
+    val isRestrictedInPatch = GradleVersion.current() >= GradleVersion.version("7.6.3") &&
+      GradleVersion.current() <= GradleVersion.version("8.0")
     val isRestrictedInMajor = GradleVersion.current() >= GradleVersion.version("8.4")
 
     if (isRestrictedInPatch || isRestrictedInMajor) {
@@ -40,15 +39,16 @@ class VersionsPlugin : Plugin<Project> {
         factory.newSAXParser().setProperty("http://javax.xml.XMLConstants/property/accessExternalSchema", "")
       } catch (ex: SAXException) {
         throw GradleException(
-            """A plugin or custom build logic has included an insecure XML parser, which is not compatible for
-              |dependency resolution with this version of Gradle. You can work around this issue by specifying the
-              |SAXParserFactory to use or by updating any plugin that depends on an old XML parser version.
-              |
-              |Use ./gradlew buildEnvironment to check your build's plugin dependencies.
-              |
-              |For more details and a workaround see,
-              |https://docs.gradle.org/8.4/userguide/upgrading_version_8.html#changes_8.4
-              |""".trimMargin())
+          """A plugin or custom build logic has included an insecure XML parser, which is not compatible for
+            |dependency resolution with this version of Gradle. You can work around this issue by specifying
+            |the SAXParserFactory to use or by updating any plugin that depends on an old XML parser version.
+            |
+            |Use ./gradlew buildEnvironment to check your build's plugin dependencies.
+            |
+            |For more details and a workaround see,
+            |https://docs.gradle.org/8.4/userguide/upgrading_version_8.html#changes_8.4
+            |""".trimMargin()
+        )
       }
     }
   }

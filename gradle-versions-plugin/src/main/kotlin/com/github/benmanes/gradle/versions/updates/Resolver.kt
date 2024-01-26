@@ -206,12 +206,13 @@ class Resolver(
   private fun addAttributes(
     target: HasConfigurableAttributes<*>,
     source: HasConfigurableAttributes<*>,
-    filter: (String) -> Boolean = { key: String -> true },
+    filter: (String) -> Boolean = { _ -> true },
   ) {
     target.attributes { container ->
       for (key in source.attributes.keySet()) {
         if (filter.invoke(key.name)) {
-          val value = source.attributes.getAttribute(key as Attribute<Any>)
+          @Suppress("UNCHECKED_CAST")
+          val value = source.attributes.getAttribute(key as Attribute<Any>)!!
           container.attribute(key, value)
         }
       }
@@ -234,8 +235,6 @@ class Resolver(
         rules.all { selectionAction ->
           if (ComponentSelection::class.members.any { it.name == "getMetadata" }) {
             revisionFilter(selectionAction, selectionAction.metadata)
-          } else {
-            revisionFilter
           }
         }
       }
