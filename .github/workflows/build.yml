@@ -26,16 +26,16 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Validate Gradle Wrapper
-        uses: gradle/wrapper-validation-action@v1.0.6
+        uses: gradle/wrapper-validation-action@v2
 
       - name: Configure JDK
-        uses: actions/setup-java@v3.11.0
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: ${{ matrix.java-version }}
 
       - name: Run build with caching enabled
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
         with:
           arguments: clean build -s
 
@@ -49,7 +49,7 @@ jobs:
           cd examples/kotlin/ && ../../gradlew dU && cd -
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: gradle-versions-plugin-${{ github.workflow }}-${{ github.run_id }}
