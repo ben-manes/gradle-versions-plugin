@@ -34,10 +34,11 @@ jobs:
           distribution: temurin
           java-version: ${{ matrix.java-version }}
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
       - name: Run build with caching enabled
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: clean build -s
+        run: ./gradlew clean build -s
 
       - name: Run examples
         run: |
