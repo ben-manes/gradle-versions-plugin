@@ -18,154 +18,165 @@ import org.gradle.api.specs.Spec
  *   <li>integration: selects the latest revision of the dependency module (such as SNAPSHOT)
  * </ul>
  */
-class DependencyUpdates @JvmOverloads constructor(
-  val project: Project,
-  val resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?,
-  val revision: String,
-  private val outputFormatterArgument: OutputFormatterArgument,
-  val outputDir: String,
-  val reportfileName: String?,
-  val checkForGradleUpdate: Boolean,
-  val gradleVersionsApiBaseUrl: String,
-  val gradleReleaseChannel: String,
-  val checkConstraints: Boolean = false,
-  val checkBuildEnvironmentConstraints: Boolean = false,
-  val filterConfigurations: Spec<Configuration> = Spec<Configuration> { true }
-) {
-
-  /**
-   * Evaluates the project dependencies and then the buildScript dependencies to apply different
-   * task options and returns a reporter for the results.
-   */
-  fun run(): DependencyUpdatesReporter {
-    val projectConfigs = project.allprojects
-      .associateBy({ it }, { it.configurations.matching(filterConfigurations).toLinkedHashSet() })
-
-    val status: Set<DependencyStatus> = resolveProjects(projectConfigs, checkConstraints)
-
-    val buildscriptProjectConfigs = project.allprojects
-      .associateBy({ it }, { it.buildscript.configurations.toLinkedHashSet() })
-    val buildscriptStatus: Set<DependencyStatus> = resolveProjects(
-      buildscriptProjectConfigs, checkBuildEnvironmentConstraints
-    )
-
-    val statuses = status + buildscriptStatus
-    val versions = VersionMapping(project, statuses)
-    val unresolved = statuses.mapNotNullTo(mutableSetOf()) { it.unresolved }
-    val projectUrls = statuses
-      .filter { !it.projectUrl.isNullOrEmpty() }
-      .associateBy(
-        { mapOf("group" to it.coordinate.groupId, "name" to it.coordinate.artifactId) },
-        { it.projectUrl.toString() }
-      )
-
-    return createReporter(versions, unresolved, projectUrls)
-  }
-
-  private fun resolveProjects(
-    projectConfigs: Map<Project, Set<Configuration>>,
-    checkConstraints: Boolean,
-  ): Set<DependencyStatus> {
-    val resultStatus = hashSetOf<DependencyStatus>()
-    projectConfigs.forEach { (currentProject, currentConfigurations) ->
-      val resolver = Resolver(currentProject, resolutionStrategy, checkConstraints)
-      for (currentConfiguration in currentConfigurations) {
-        if (currentConfiguration.isCanBeResolved) {
-          for (newStatus in resolve(resolver, currentProject, currentConfiguration)) {
-            addValidatedDependencyStatus(resultStatus, newStatus)
-          }
-        }
-      }
-    }
-    return resultStatus
-  }
-
-  private fun resolve(
-    resolver: Resolver,
-    project: Project,
-    config: Configuration,
-  ): Set<DependencyStatus> {
-    return try {
-      resolver.resolve(config, revision)
-    } catch (e: Exception) {
-      project.logger.info("Skipping configuration ${project.path}:${config.name}", e)
-      emptySet()
-    }
-  }
-
-  private fun createReporter(
-    versions: VersionMapping,
-    unresolved: Set<UnresolvedDependency>,
-    projectUrls: Map<Map<String, String>, String>,
-  ): DependencyUpdatesReporter {
-    val currentVersions = versions.current
-      .associateBy({ mapOf("group" to it.groupId, "name" to it.artifactId) }, { it })
-    val latestVersions = versions.latest
-      .associateBy({ mapOf("group" to it.groupId, "name" to it.artifactId) }, { it })
-    val upToDateVersions = versions.upToDate
-      .associateBy({ mapOf("group" to it.groupId, "name" to it.artifactId) }, { it })
-    val downgradeVersions = toMap(versions.downgrade)
-    val upgradeVersions = toMap(versions.upgrade)
-
-    // Check for Gradle updates.
-    val gradleUpdateChecker = GradleUpdateChecker(checkForGradleUpdate, gradleVersionsApiBaseUrl)
-
-    return DependencyUpdatesReporter(
-      project, revision, outputFormatterArgument, outputDir,
-      reportfileName, currentVersions, latestVersions, upToDateVersions, downgradeVersions,
-      upgradeVersions, versions.undeclared, unresolved, projectUrls, gradleUpdateChecker,
-      gradleReleaseChannel
-    )
-  }
-
-  companion object {
+class DependencyUpdates
+  @JvmOverloads
+  constructor(
+    val project: Project,
+    val resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?,
+    val revision: String,
+    private val outputFormatterArgument: OutputFormatterArgument,
+    val outputDir: String,
+    val reportfileName: String?,
+    val checkForGradleUpdate: Boolean,
+    val gradleVersionsApiBaseUrl: String,
+    val gradleReleaseChannel: String,
+    val checkConstraints: Boolean = false,
+    val checkBuildEnvironmentConstraints: Boolean = false,
+    val filterConfigurations: Spec<Configuration> = Spec<Configuration> { true },
+  ) {
     /**
-     * A new status will be added if either,
-     * <ol>
-     *   <li>[Coordinate.Key] of new status is not yet present in status collection
-     *   <li>new status has concrete version (not `none`); the old status will then be removed
-     *       if its coordinate is `none` versioned</li>
-     * </ol>
+     * Evaluates the project dependencies and then the buildScript dependencies to apply different
+     * task options and returns a reporter for the results.
      */
-    private fun addValidatedDependencyStatus(
-      statusCollection: HashSet<DependencyStatus>,
-      status: DependencyStatus,
-    ) {
-      val statusWithSameCoordinateKey = statusCollection.find {
-        it.coordinate.key == status.coordinate.key
-      }
-      if (statusWithSameCoordinateKey == null) {
-        statusCollection.add(status)
-      } else if (status.coordinate.version != "none") {
-        statusCollection.add(status)
-        if (statusWithSameCoordinateKey.coordinate.version == "none") {
-          statusCollection.remove(statusWithSameCoordinateKey)
+    fun run(): DependencyUpdatesReporter {
+      val projectConfigs =
+        project.allprojects
+          .associateBy({ it }, { it.configurations.matching(filterConfigurations).toLinkedHashSet() })
+
+      val status: Set<DependencyStatus> = resolveProjects(projectConfigs, checkConstraints)
+
+      val buildscriptProjectConfigs =
+        project.allprojects
+          .associateBy({ it }, { it.buildscript.configurations.toLinkedHashSet() })
+      val buildscriptStatus: Set<DependencyStatus> =
+        resolveProjects(
+          buildscriptProjectConfigs,
+          checkBuildEnvironmentConstraints,
+        )
+
+      val statuses = status + buildscriptStatus
+      val versions = VersionMapping(project, statuses)
+      val unresolved = statuses.mapNotNullTo(mutableSetOf()) { it.unresolved }
+      val projectUrls =
+        statuses
+          .filter { !it.projectUrl.isNullOrEmpty() }
+          .associateBy(
+            { mapOf("group" to it.coordinate.groupId, "name" to it.coordinate.artifactId) },
+            { it.projectUrl.toString() },
+          )
+
+      return createReporter(versions, unresolved, projectUrls)
+    }
+
+    private fun resolveProjects(
+      projectConfigs: Map<Project, Set<Configuration>>,
+      checkConstraints: Boolean,
+    ): Set<DependencyStatus> {
+      val resultStatus = hashSetOf<DependencyStatus>()
+      projectConfigs.forEach { (currentProject, currentConfigurations) ->
+        val resolver = Resolver(currentProject, resolutionStrategy, checkConstraints)
+        for (currentConfiguration in currentConfigurations) {
+          if (currentConfiguration.isCanBeResolved) {
+            for (newStatus in resolve(resolver, currentProject, currentConfiguration)) {
+              addValidatedDependencyStatus(resultStatus, newStatus)
+            }
+          }
         }
+      }
+      return resultStatus
+    }
+
+    private fun resolve(
+      resolver: Resolver,
+      project: Project,
+      config: Configuration,
+    ): Set<DependencyStatus> {
+      return try {
+        resolver.resolve(config, revision)
+      } catch (e: Exception) {
+        project.logger.info("Skipping configuration ${project.path}:${config.name}", e)
+        emptySet()
       }
     }
 
-    private fun toMap(coordinates: Set<Coordinate>): Map<Map<String, String>, Coordinate> {
-      val map = HashMap<Map<String, String>, Coordinate>()
-      for (coordinate in coordinates) {
-        var i = 0
-        while (true) {
-          val artifactId = coordinate.artifactId + if (i == 0) "" else "[${i + 1}]"
-          val keyMap = linkedMapOf<String, String>().apply {
-            put("group", coordinate.groupId)
-            put("name", artifactId)
-          }
-          if (!map.containsKey(keyMap)) {
-            map[keyMap] = coordinate
-            break
-          }
+    private fun createReporter(
+      versions: VersionMapping,
+      unresolved: Set<UnresolvedDependency>,
+      projectUrls: Map<Map<String, String>, String>,
+    ): DependencyUpdatesReporter {
+      val currentVersions =
+        versions.current
+          .associateBy({ mapOf("group" to it.groupId, "name" to it.artifactId) }, { it })
+      val latestVersions =
+        versions.latest
+          .associateBy({ mapOf("group" to it.groupId, "name" to it.artifactId) }, { it })
+      val upToDateVersions =
+        versions.upToDate
+          .associateBy({ mapOf("group" to it.groupId, "name" to it.artifactId) }, { it })
+      val downgradeVersions = toMap(versions.downgrade)
+      val upgradeVersions = toMap(versions.upgrade)
 
-          ++i
+      // Check for Gradle updates.
+      val gradleUpdateChecker = GradleUpdateChecker(checkForGradleUpdate, gradleVersionsApiBaseUrl)
+
+      return DependencyUpdatesReporter(
+        project, revision, outputFormatterArgument, outputDir,
+        reportfileName, currentVersions, latestVersions, upToDateVersions, downgradeVersions,
+        upgradeVersions, versions.undeclared, unresolved, projectUrls, gradleUpdateChecker,
+        gradleReleaseChannel,
+      )
+    }
+
+    companion object {
+      /**
+       * A new status will be added if either,
+       * <ol>
+       *   <li>[Coordinate.Key] of new status is not yet present in status collection
+       *   <li>new status has concrete version (not `none`); the old status will then be removed
+       *       if its coordinate is `none` versioned</li>
+       * </ol>
+       */
+      private fun addValidatedDependencyStatus(
+        statusCollection: HashSet<DependencyStatus>,
+        status: DependencyStatus,
+      ) {
+        val statusWithSameCoordinateKey =
+          statusCollection.find {
+            it.coordinate.key == status.coordinate.key
+          }
+        if (statusWithSameCoordinateKey == null) {
+          statusCollection.add(status)
+        } else if (status.coordinate.version != "none") {
+          statusCollection.add(status)
+          if (statusWithSameCoordinateKey.coordinate.version == "none") {
+            statusCollection.remove(statusWithSameCoordinateKey)
+          }
         }
       }
-      return map
+
+      private fun toMap(coordinates: Set<Coordinate>): Map<Map<String, String>, Coordinate> {
+        val map = HashMap<Map<String, String>, Coordinate>()
+        for (coordinate in coordinates) {
+          var i = 0
+          while (true) {
+            val artifactId = coordinate.artifactId + if (i == 0) "" else "[${i + 1}]"
+            val keyMap =
+              linkedMapOf<String, String>().apply {
+                put("group", coordinate.groupId)
+                put("name", artifactId)
+              }
+            if (!map.containsKey(keyMap)) {
+              map[keyMap] = coordinate
+              break
+            }
+
+            ++i
+          }
+        }
+        return map
+      }
     }
   }
-}
 
 private fun <T> Collection<T>.toLinkedHashSet(): LinkedHashSet<T> {
   return toCollection(LinkedHashSet(this.size))

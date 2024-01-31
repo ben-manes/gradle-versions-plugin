@@ -16,7 +16,10 @@ class HtmlReporter(
   override val revision: String,
   override val gradleReleaseChannel: String,
 ) : AbstractReporter(project, revision, gradleReleaseChannel) {
-  override fun write(printStream: OutputStream, result: Result) {
+  override fun write(
+    printStream: OutputStream,
+    result: Result,
+  ) {
     printStream.println("<!doctype html>")
     printStream.println("<html lang=\"en\">")
     writeHeader(printStream)
@@ -25,10 +28,13 @@ class HtmlReporter(
   }
 
   private fun writeHeader(printStream: OutputStream) {
-    printStream.println(header.trimMargin())
+    printStream.println(HEADER.trimMargin())
   }
 
-  private fun writeBody(printStream: OutputStream, result: Result) {
+  private fun writeBody(
+    printStream: OutputStream,
+    result: Result,
+  ) {
     printStream.println("<body>")
     if (result.count == 0) {
       printStream.println("<p>No dependencies found.</p>")
@@ -43,7 +49,10 @@ class HtmlReporter(
     printStream.println("</body>")
   }
 
-  private fun writeUpToDate(printStream: OutputStream, result: Result) {
+  private fun writeUpToDate(
+    printStream: OutputStream,
+    result: Result,
+  ) {
     val versions = result.current.dependencies
     if (versions.isNotEmpty()) {
       printStream.println("<h2>Current dependencies</h2>")
@@ -58,14 +67,17 @@ class HtmlReporter(
     }
   }
 
-  private fun writeExceedLatestFound(printStream: OutputStream, result: Result) {
+  private fun writeExceedLatestFound(
+    printStream: OutputStream,
+    result: Result,
+  ) {
     val versions = result.exceeded.dependencies
     if (versions.isNotEmpty()) {
       // The following dependencies exceed the version found at the "
       //        + revision + " revision level:
       printStream.println("<h2>Exceeded dependencies</h2>")
       printStream.println(
-        "<p>The following dependencies exceed the version found at the $revision revision level:<p>"
+        "<p>The following dependencies exceed the version found at the $revision revision level:<p>",
       )
       printStream.println("<table class=\"warningInfo\">")
       for (it in getExceededRows(result)) {
@@ -76,7 +88,10 @@ class HtmlReporter(
     }
   }
 
-  private fun writeUpgrades(printStream: OutputStream, result: Result) {
+  private fun writeUpgrades(
+    printStream: OutputStream,
+    result: Result,
+  ) {
     val versions = result.outdated.dependencies
     if (versions.isNotEmpty()) {
       printStream.println("<h2>Later dependencies</h2>")
@@ -90,12 +105,15 @@ class HtmlReporter(
     }
   }
 
-  private fun writeUndeclared(printStream: OutputStream, result: Result) {
+  private fun writeUndeclared(
+    printStream: OutputStream,
+    result: Result,
+  ) {
     val versions = result.undeclared.dependencies
     if (versions.isNotEmpty()) {
       printStream.println("<h2>Undeclared dependencies</h2>")
       printStream.println(
-        "<p>Failed to compare versions for the following dependencies because they were declared without version:<p>"
+        "<p>Failed to compare versions for the following dependencies because they were declared without version:<p>",
       )
       printStream.println("<table class=\"warningInfo\">")
       for (row in getUndeclaredRows(result)) {
@@ -106,7 +124,10 @@ class HtmlReporter(
     }
   }
 
-  private fun writeUnresolved(printStream: OutputStream, result: Result) {
+  private fun writeUnresolved(
+    printStream: OutputStream,
+    result: Result,
+  ) {
     val versions = result.unresolved.dependencies
     if (versions.isNotEmpty()) {
       printStream.println("<h2>Unresolved dependencies</h2>")
@@ -121,7 +142,10 @@ class HtmlReporter(
     }
   }
 
-  private fun writeGradleUpdates(printStream: OutputStream, result: Result) {
+  private fun writeGradleUpdates(
+    printStream: OutputStream,
+    result: Result,
+  ) {
     if (!result.gradle.enabled) {
       return
     }
@@ -130,19 +154,19 @@ class HtmlReporter(
     // Log Gradle update checking failures.
     if (result.gradle.current.isFailure) {
       printStream.println(
-        "<p>[ERROR] [release channel: ${CURRENT.id}] " + result.gradle.current.reason + "</p>"
+        "<p>[ERROR] [release channel: ${CURRENT.id}] " + result.gradle.current.reason + "</p>",
       )
     }
     if ((gradleReleaseChannel == RELEASE_CANDIDATE.id || gradleReleaseChannel == NIGHTLY.id) &&
       result.gradle.releaseCandidate.isFailure
     ) {
       printStream.println(
-        "<p>[ERROR] [release channel: ${RELEASE_CANDIDATE.id}] " + result.gradle.releaseCandidate.reason + "</p>"
+        "<p>[ERROR] [release channel: ${RELEASE_CANDIDATE.id}] " + result.gradle.releaseCandidate.reason + "</p>",
       )
     }
     if (gradleReleaseChannel == NIGHTLY.id && result.gradle.nightly.isFailure) {
       printStream.println(
-        "<p>[ERROR] [release channel: ${NIGHTLY.id}] " + result.gradle.nightly.reason + "</p>"
+        "<p>[ERROR] [release channel: ${NIGHTLY.id}] " + result.gradle.nightly.reason + "</p>",
       )
     }
 
@@ -180,24 +204,30 @@ class HtmlReporter(
     val rows = mutableListOf<String>()
     val list = result.outdated
     rows.add(
-      "<tr class=\"header\"><th colspan=\"5\"><b>Later dependencies<span>(Click to collapse)</span></b></th></tr>"
+      "<tr class=\"header\"><th colspan=\"5\"><b>Later dependencies<span>(Click to collapse)</span></b></th></tr>",
     )
     rows.add(
-      "<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Latest Version</b></td><td><b>Reason</b></td></tr>"
+      """
+      <tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td>
+      <b>Current Version</b></td><td><b>Latest Version</b></td><td><b>Reason</b></td></tr>""".trim(),
     )
     for (dependency in list.dependencies) {
       val rowStringFmt =
         "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
-      val rowString = String.format(
-        rowStringFmt, dependency.name.orEmpty(), dependency.group.orEmpty(),
-        getUrlString(dependency.projectUrl),
-        getVersionString(dependency.group.orEmpty(), dependency.name.orEmpty(), dependency.version),
-        getVersionString(
-          dependency.group.orEmpty(), dependency.name.orEmpty(),
-          getDisplayableVersion(dependency.available)
-        ),
-        dependency.userReason.orEmpty()
-      )
+      val rowString =
+        String.format(
+          rowStringFmt,
+          dependency.name.orEmpty(),
+          dependency.group.orEmpty(),
+          getUrlString(dependency.projectUrl),
+          getVersionString(dependency.group.orEmpty(), dependency.name.orEmpty(), dependency.version),
+          getVersionString(
+            dependency.group.orEmpty(),
+            dependency.name.orEmpty(),
+            getDisplayableVersion(dependency.available),
+          ),
+          dependency.userReason.orEmpty(),
+        )
       rows.add(rowString)
     }
     return rows
@@ -219,7 +249,7 @@ class HtmlReporter(
   }
 
   companion object {
-    private const val header = """
+    private const val HEADER = """
     <head>
     <title>Project Dependency Updates Report</title>
     <style>
@@ -293,24 +323,29 @@ class HtmlReporter(
       // The following dependencies are using the latest milestone version:
       val list = result.current
       rows.add(
-        "<tr class=\"header\" id = \"currentId\" ><th colspan=\"4\"><b>Current dependencies<span>(Click to expand)</span></b></th></tr>"
+        """
+        <tr class=\"header\" id = \"currentId\" ><th colspan=\"4\">
+        <b>Current dependencies<span>(Click to expand)</span></b></th></tr>""".trim(),
       )
       rows.add(
-        "<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Reason</b></td></tr>"
+        "<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Reason</b></td></tr>",
       )
       for (dependency in list.dependencies) {
         val rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
-        val rowString = String.format(
-          rowStringFmt, dependency.name, dependency.group,
-          getUrlString(dependency.projectUrl),
-          // TODO nullness
-          getVersionString(
-            dependency.group.orEmpty(),
-            dependency.name.orEmpty(),
-            dependency.version
-          ),
-          dependency.userReason.orEmpty()
-        )
+        val rowString =
+          String.format(
+            rowStringFmt,
+            dependency.name,
+            dependency.group,
+            getUrlString(dependency.projectUrl),
+            // TODO nullness
+            getVersionString(
+              dependency.group.orEmpty(),
+              dependency.name.orEmpty(),
+              dependency.version,
+            ),
+            dependency.userReason.orEmpty(),
+          )
         rows.add(rowString)
       }
       return rows
@@ -321,29 +356,34 @@ class HtmlReporter(
       // The following dependencies are using the latest milestone version:
       val list = result.exceeded
       rows.add(
-        "<tr class=\"header\"><th colspan=\"5\"><b>Exceeded dependencies<span>(Click to collapse)</span></b></th></tr>"
+        "<tr class=\"header\"><th colspan=\"5\"><b>Exceeded dependencies<span>(Click to collapse)</span></b></th></tr>",
       )
       rows.add(
-        "<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td><b>Latest Version</b></td><td><b>Reason</b></td></tr>"
+        """
+        <tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td>
+        <td><b>Current Version</b></td><td><b>Latest Version</b></td><td><b>Reason</b></td></tr>""".trim(),
       )
       for (dependency in list.dependencies) {
         val rowStringFmt =
           "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
-        val rowString = String.format(
-          rowStringFmt, dependency.name, dependency.group,
-          getUrlString(dependency.projectUrl),
-          getVersionString(
-            dependency.group.orEmpty(),
-            dependency.name.orEmpty(),
-            dependency.version
-          ),
-          getVersionString(
-            dependency.group.orEmpty(),
-            dependency.name.orEmpty(),
-            dependency.latest
-          ),
-          dependency.userReason.orEmpty()
-        )
+        val rowString =
+          String.format(
+            rowStringFmt,
+            dependency.name,
+            dependency.group,
+            getUrlString(dependency.projectUrl),
+            getVersionString(
+              dependency.group.orEmpty(),
+              dependency.name.orEmpty(),
+              dependency.version,
+            ),
+            getVersionString(
+              dependency.group.orEmpty(),
+              dependency.name.orEmpty(),
+              dependency.latest,
+            ),
+            dependency.userReason.orEmpty(),
+          )
         rows.add(rowString)
       }
       return rows
@@ -352,7 +392,7 @@ class HtmlReporter(
     private fun getUndeclaredRows(result: Result): List<String> {
       val rows = mutableListOf<String>()
       rows.add(
-        "<tr class=\"header\"><th colspan=\"2\"><b>Undeclared dependencies<span>(Click to collapse)</span></b></th></tr>"
+        "<tr class=\"header\"><th colspan=\"2\"><b>Undeclared dependencies<span>(Click to collapse)</span></b></th></tr>",
       )
       rows.add("<tr><td><b>Name</b></td><td><b>Group</b></td></tr>")
       for (dependency in result.undeclared.dependencies) {
@@ -367,23 +407,26 @@ class HtmlReporter(
       val rows = mutableListOf<String>()
       val list = result.unresolved
       rows.add(
-        "<tr class=\"header\"><th colspan=\"4\"><b>Unresolved dependencies<span>(Click to collapse)</span></b></th></tr>"
+        "<tr class=\"header\"><th colspan=\"4\"><b>Unresolved dependencies<span>(Click to collapse)</span></b></th></tr>",
       )
       rows.add(
-        "<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td>Reason</td></tr>"
+        "<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td>Reason</td></tr>",
       )
       for (dependency in list.dependencies) {
         val rowStringFmt = "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
-        val rowString = String.format(
-          rowStringFmt, dependency.name, dependency.group,
-          getUrlString(dependency.projectUrl),
-          getVersionString(
-            dependency.group.orEmpty(),
-            dependency.name.orEmpty(),
-            dependency.version
-          ),
-          dependency.userReason.orEmpty()
-        )
+        val rowString =
+          String.format(
+            rowStringFmt,
+            dependency.name,
+            dependency.group,
+            getUrlString(dependency.projectUrl),
+            getVersionString(
+              dependency.group.orEmpty(),
+              dependency.name.orEmpty(),
+              dependency.version,
+            ),
+            dependency.userReason.orEmpty(),
+          )
         rows.add(rowString)
       }
       return rows
@@ -400,7 +443,8 @@ class HtmlReporter(
       return String
         .format(
           "<a target=\"_blank\" href=\"https://docs.gradle.org/%s/release-notes.html\">%s</a>",
-          version, version
+          version,
+          version,
         )
     }
 
@@ -411,18 +455,27 @@ class HtmlReporter(
       return String.format("<a target=\"_blank\" href=\"%s\">%s</a>", url, url)
     }
 
-    private fun getVersionString(group: String, name: String, version: String?): String {
+    private fun getVersionString(
+      group: String,
+      name: String,
+      version: String?,
+    ): String {
       val mvn = getMvnVersionString(group, name, version)
       return String.format("%s %s", version, mvn)
     }
 
-    private fun getMvnVersionString(group: String, name: String, version: String?): String {
+    private fun getMvnVersionString(
+      group: String,
+      name: String,
+      version: String?,
+    ): String {
       // https://central.sonatype.com/artifact/com.azure/azure-core-http-netty/1.5.4
       if (version == null) {
         return ""
       }
-      val versionUrl = String
-        .format("https://central.sonatype.com/artifact/%s/%s/%s/bundle", group, name, version)
+      val versionUrl =
+        String
+          .format("https://central.sonatype.com/artifact/%s/%s/%s/bundle", group, name, version)
       return String.format("<a target=\"_blank\" href=\"%s\">%s</a>", versionUrl, "Sonatype")
     }
   }

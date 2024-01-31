@@ -29,8 +29,9 @@ class VersionsPlugin : Plugin<Project> {
   }
 
   private fun requireSupportedSaxParser() {
-    val isRestrictedInPatch = GradleVersion.current() >= GradleVersion.version("7.6.3") &&
-      GradleVersion.current() <= GradleVersion.version("8.0")
+    val isRestrictedInPatch =
+      GradleVersion.current() >= GradleVersion.version("7.6.3") &&
+        GradleVersion.current() <= GradleVersion.version("8.0")
     val isRestrictedInMajor = GradleVersion.current() >= GradleVersion.version("8.4")
 
     if (isRestrictedInPatch || isRestrictedInMajor) {
@@ -47,7 +48,8 @@ class VersionsPlugin : Plugin<Project> {
             |
             |For more details and a workaround see,
             |https://docs.gradle.org/8.4/userguide/upgrading_version_8.html#changes_8.4
-            |""".trimMargin()
+            |
+          """.trimMargin(),
         )
       }
     }

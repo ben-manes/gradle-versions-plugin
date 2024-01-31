@@ -56,16 +56,17 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   var outputFormatter: Any?
     @Internal get() = null
     set(value) {
-      outputFormatterArgument = when (value) {
-        is String -> OutputFormatterArgument.BuiltIn(value)
-        is Reporter -> OutputFormatterArgument.CustomReporter(value)
-        // Kept for retro-compatibility with "outputFormatter = {}" usages.
-        is Closure<*> -> OutputFormatterArgument.CustomAction { value.call(it) }
-        else -> throw IllegalArgumentException(
-          "Unsupported output formatter provided $value. Please use a String, a Reporter/Closure, " +
-            "or alternatively provide a function using the `outputFormatter(Action<Result>)` API."
-        )
-      }
+      outputFormatterArgument =
+        when (value) {
+          is String -> OutputFormatterArgument.BuiltIn(value)
+          is Reporter -> OutputFormatterArgument.CustomReporter(value)
+          // Kept for retro-compatibility with "outputFormatter = {}" usages.
+          is Closure<*> -> OutputFormatterArgument.CustomAction { value.call(it) }
+          else -> throw IllegalArgumentException(
+            "Unsupported output formatter provided $value. Please use a String, a Reporter/Closure, " +
+              "or alternatively provide a function using the `outputFormatter(Action<Result>)` API.",
+          )
+        }
     }
 
   /**
@@ -126,15 +127,16 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
       resolutionStrategy { current -> project.configure(current, closure) }
       logger.warn(
         "dependencyUpdates.resolutionStrategy: " +
-          "Remove the assignment operator, \"=\", when setting this task property"
+          "Remove the assignment operator, \"=\", when setting this task property",
       )
     }
-    val evaluator = DependencyUpdates(
-      project, resolutionStrategyAction, revision,
-      outputFormatter(), outputDir, reportfileName, checkForGradleUpdate, gradleVersionsApiBaseUrl,
-      gradleReleaseChannel, checkConstraints, checkBuildEnvironmentConstraints,
-      filterConfigurations
-    )
+    val evaluator =
+      DependencyUpdates(
+        project, resolutionStrategyAction, revision,
+        outputFormatter(), outputDir, reportfileName, checkForGradleUpdate, gradleVersionsApiBaseUrl,
+        gradleReleaseChannel, checkConstraints, checkBuildEnvironmentConstraints,
+        filterConfigurations,
+      )
     val reporter = evaluator.run()
     reporter.write()
   }
@@ -149,7 +151,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
             if (isNotNull && filter.reject(current)) {
               current.reject("Rejected by rejectVersionIf ")
             }
-          }
+          },
         )
       }
     }

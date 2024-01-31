@@ -22,8 +22,10 @@ class XmlReporter(
   override val revision: String,
   override val gradleReleaseChannel: String,
 ) : AbstractReporter(project, revision, gradleReleaseChannel) {
-
-  override fun write(printStream: OutputStream, result: Result) {
+  override fun write(
+    printStream: OutputStream,
+    result: Result,
+  ) {
     val documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder()
     val document = documentBuilder.newDocument()
     document.setXmlStandalone(true)
@@ -49,7 +51,11 @@ class XmlReporter(
     transformer.transform(source, resultStream)
   }
 
-  private fun writeCurrentSection(result: Result, document: Document, response: Element) {
+  private fun writeCurrentSection(
+    result: Result,
+    document: Document,
+    response: Element,
+  ) {
     val current = document.createElement("current")
     response.appendChild(current)
     appendTextChild(document, current, "count", result.current.count)
@@ -61,7 +67,11 @@ class XmlReporter(
     }
   }
 
-  private fun writeOutdatedSection(result: Result, document: Document, response: Element) {
+  private fun writeOutdatedSection(
+    result: Result,
+    document: Document,
+    response: Element,
+  ) {
     val outdated = document.createElement("outdated")
     response.appendChild(outdated)
     appendTextChild(document, outdated, "count", result.outdated.count)
@@ -77,7 +87,7 @@ class XmlReporter(
   private fun writeVersionAvailable(
     document: Document,
     dependencyElement: Element,
-    version: VersionAvailable
+    version: VersionAvailable,
   ) {
     val available = document.createElement("available")
     dependencyElement.appendChild(available)
@@ -87,7 +97,11 @@ class XmlReporter(
     appendTextChild(document, available, "integration", version.integration)
   }
 
-  private fun writeExceededSection(result: Result, document: Document, response: Element) {
+  private fun writeExceededSection(
+    result: Result,
+    document: Document,
+    response: Element,
+  ) {
     val exceeded = document.createElement("exceeded")
     response.appendChild(exceeded)
     appendTextChild(document, exceeded, "count", result.exceeded.count)
@@ -100,7 +114,11 @@ class XmlReporter(
     }
   }
 
-  private fun writeUndeclaredSection(result: Result, document: Document, response: Element) {
+  private fun writeUndeclaredSection(
+    result: Result,
+    document: Document,
+    response: Element,
+  ) {
     val undeclared = document.createElement("undeclared")
     response.appendChild(undeclared)
     appendTextChild(document, undeclared, "count", result.undeclared.count)
@@ -112,7 +130,11 @@ class XmlReporter(
     }
   }
 
-  private fun writeUnresolvedSection(result: Result, document: Document, response: Element) {
+  private fun writeUnresolvedSection(
+    result: Result,
+    document: Document,
+    response: Element,
+  ) {
     val unresolved = document.createElement("unresolved")
     response.appendChild(unresolved)
     appendTextChild(document, unresolved, "count", result.unresolved.count)
@@ -125,7 +147,11 @@ class XmlReporter(
     }
   }
 
-  private fun writeGradle(result: Result, document: Document, response: Element) {
+  private fun writeGradle(
+    result: Result,
+    document: Document,
+    response: Element,
+  ) {
     val gradle = document.createElement("gradle")
     response.appendChild(gradle)
     appendTextChild(document, gradle, "enabled", result.gradle.enabled)
@@ -140,7 +166,7 @@ class XmlReporter(
     document: Document,
     element: Element,
     name: String,
-    update: GradleUpdateResult
+    update: GradleUpdateResult,
   ) {
     val channel = document.createElement(name)
     element.appendChild(channel)
@@ -155,7 +181,7 @@ class XmlReporter(
     document: Document,
     element: Element,
     name: String,
-    dependency: Dependency
+    dependency: Dependency,
   ): Element {
     val dependencyElement = document.createElement(name)
     element.appendChild(dependencyElement)
@@ -172,7 +198,7 @@ class XmlReporter(
     document: Document,
     parent: Element,
     name: String,
-    textContent: Any?
+    textContent: Any?,
   ) {
     if (textContent != null) {
       val element = document.createElement(name)
