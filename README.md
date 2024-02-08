@@ -135,6 +135,10 @@ no agreed standard on this, but this is a good starting point:
 
 ```groovy
 def isNonStable = { String version ->
+  def nonStableKeyword = ["BETA"].any { it -> version.toUpperCase().contains(it) }
+  if (nonStableKeyword) {
+    return true
+  }
   def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { it -> version.toUpperCase().contains(it) }
   def regex = /^[0-9,.v-]+(-r)?$/
   return !stableKeyword && !(version ==~ regex)
