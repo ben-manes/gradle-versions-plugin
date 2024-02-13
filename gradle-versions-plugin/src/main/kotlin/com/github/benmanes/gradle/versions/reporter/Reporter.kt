@@ -14,7 +14,10 @@ interface Reporter {
    * @param result the result of the dependency update analysis
    * @see Result
    */
-  fun write(printStream: OutputStream, result: Result)
+  fun write(
+    printStream: OutputStream,
+    result: Result,
+  )
 
   fun getFileExtension(): String
 }

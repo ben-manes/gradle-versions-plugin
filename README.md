@@ -148,7 +148,7 @@ def isNonStable = { String version ->
 
 ```kotlin
 fun isNonStable(version: String): Boolean {
-    val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.toUpperCase().contains(it) }
+    val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.uppercase().contains(it) }
     val regex = "^[0-9,.v-]+(-r)?$".toRegex()
     val isStable = stableKeyword || regex.matches(version)
     return isStable.not()
@@ -272,6 +272,12 @@ The default is `release-candidate`. The value can be changed as shown below:
 dependencyUpdates.gradleReleaseChannel="current"
 ```
 
+#### Gradle Versions Api Base URL
+
+The `gradleVersionsApiBaseUrl` task property provides an option for customization of the Gradle versions service URL.
+If not specified, the default value https://services.gradle.org/versions/ is used.
+The customization can be useful in restricted environments without direct internet access and proxy availability.
+
 #### Constraints
 
 If you use constraints, for example to define a BOM using the [`java-platform`](https://docs.gradle.org/current/userguide/java_platform_plugin.html)
@@ -306,6 +312,19 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
 ```
 
 Note: Do use the `plugins { .. }` syntax if you use the Kotlin DSL.
+
+#### Configuration filter
+You can change which dependency configurations the plugin checks for updates like this:
+
+```groovy
+// https://github.com/ben-manes/gradle-versions-plugin
+tasks.named("dependencyUpdates").configure {
+  filterConfigurations {
+    it.name.equals("runtimeClasspath") || it.name.equals("compileClasspath")
+  }
+}
+```
+
 
 #### Try out the samples
 

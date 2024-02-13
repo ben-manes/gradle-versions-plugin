@@ -12,10 +12,7 @@ class ComponentSelectionRulesWithCurrent(
   private val delegate: ComponentSelectionRules,
   private val currentCoordinates: Map<Coordinate.Key, Coordinate>,
 ) {
-
-  fun all(
-    selectionAction: Action<in ComponentSelectionWithCurrent>
-  ): ComponentSelectionRulesWithCurrent {
+  fun all(selectionAction: Action<in ComponentSelectionWithCurrent>): ComponentSelectionRulesWithCurrent {
     delegate.all {
       wrapComponentSelection(it)?.let { wrapped ->
         selectionAction.execute(wrapped)
@@ -35,8 +32,9 @@ class ComponentSelectionRulesWithCurrent(
   }
 
   fun all(ruleSource: Any): ComponentSelectionRulesWithCurrent {
-    val ruleAction = RuleSourceBackedRuleAction
-      .create(ModelType.of(ComponentSelectionWithCurrent::class.java), ruleSource)
+    val ruleAction =
+      RuleSourceBackedRuleAction
+        .create(ModelType.of(ComponentSelectionWithCurrent::class.java), ruleSource)
     delegate.all {
       wrapComponentSelection(it)?.let { wrapped ->
         ruleAction.execute(wrapped, mutableListOf<Any>())
@@ -47,7 +45,7 @@ class ComponentSelectionRulesWithCurrent(
 
   fun withModule(
     id: Any,
-    selectionAction: Action<in ComponentSelectionWithCurrent>
+    selectionAction: Action<in ComponentSelectionWithCurrent>,
   ): ComponentSelectionRulesWithCurrent {
     delegate.withModule(id) {
       wrapComponentSelection(it)?.let { wrapped ->
@@ -57,7 +55,10 @@ class ComponentSelectionRulesWithCurrent(
     return this
   }
 
-  fun withModule(id: Any, closure: Closure<*>): ComponentSelectionRulesWithCurrent {
+  fun withModule(
+    id: Any,
+    closure: Closure<*>,
+  ): ComponentSelectionRulesWithCurrent {
     delegate.withModule(id) {
       wrapComponentSelection(it)?.let { wrapped ->
         closure.delegate = wrapped
@@ -67,9 +68,13 @@ class ComponentSelectionRulesWithCurrent(
     return this
   }
 
-  fun withModule(id: Any, ruleSource: Any): ComponentSelectionRulesWithCurrent {
-    val ruleAction = RuleSourceBackedRuleAction
-      .create(ModelType.of(ComponentSelectionWithCurrent::class.java), ruleSource)
+  fun withModule(
+    id: Any,
+    ruleSource: Any,
+  ): ComponentSelectionRulesWithCurrent {
+    val ruleAction =
+      RuleSourceBackedRuleAction
+        .create(ModelType.of(ComponentSelectionWithCurrent::class.java), ruleSource)
     delegate.withModule(id) {
       wrapComponentSelection(it)?.let { wrapped ->
         ruleAction.execute(wrapped, mutableListOf<Any>())

@@ -582,7 +582,7 @@ final class DependencyUpdatesSpec extends Specification {
     }
 
     when:
-    def reporter = evaluate(project, 'milestone', 'plain', 'build', null, null, true, CURRENT.id)
+    def reporter = evaluate(project, 'milestone', 'plain', 'build', null, null, true, null, CURRENT.id)
     reporter.write()
 
     then:
@@ -611,6 +611,27 @@ final class DependencyUpdatesSpec extends Specification {
       undeclared.isEmpty()
     }
   }
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/782')
+    def "Allow filtering configurations"() {
+    given:
+    def project = singleProject()
+    addDependenciesTo(project)
+    addRepositoryTo(project)
+
+    when:
+    def reporter = evaluate(project, 'milestone', null, 'build', null, null, false,
+      "", RELEASE_CANDIDATE.id, {config -> config.name.equals("upgradesFound")})
+    reporter.write()
+
+    then:
+    with(reporter) {
+      unresolved.isEmpty()
+      upgradeVersions.size() == 2
+      upToDateVersions.isEmpty()
+      downgradeVersions.isEmpty()
+      undeclared.isEmpty()
+    }
+  }
 
   private static def singleProject() {
     return ProjectBuilder.builder().withName('single').build()
@@ -624,10 +645,17 @@ final class DependencyUpdatesSpec extends Specification {
   }
 
   private static def evaluate(project, revision = 'milestone', outputFormatter = null,
-    outputDir = 'build', resolutionStrategy = null, reportfileName = null,
-    checkForGradleUpdate = true, gradleReleaseChannel = RELEASE_CANDIDATE.id) {
+      outputDir = 'build', resolutionStrategy = null, reportfileName = null,
+      checkForGradleUpdate = true, gradleVersionsApiBaseUrl = null,
+      gradleReleaseChannel = RELEASE_CANDIDATE.id, configurationFilter = { true }) {
+    if (reportfileName == null) {
+      reportfileName = "report"
+    }
+    if (gradleVersionsApiBaseUrl == null) {
+      gradleVersionsApiBaseUrl = "https://services.gradle.org/versions/"
+    }
     new DependencyUpdates(project, resolutionStrategy, revision, buildOutputFormatter(outputFormatter), outputDir,
-      reportfileName, checkForGradleUpdate, gradleReleaseChannel).run()
+      reportfileName, checkForGradleUpdate, gradleVersionsApiBaseUrl, gradleReleaseChannel, false, false, configurationFilter).run()
   }
 
   private static OutputFormatterArgument buildOutputFormatter(outputFormatter) {

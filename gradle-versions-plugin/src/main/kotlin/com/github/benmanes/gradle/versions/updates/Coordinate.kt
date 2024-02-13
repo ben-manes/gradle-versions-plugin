@@ -35,7 +35,8 @@ class Coordinate(
 
   override fun compareTo(other: Coordinate): Int {
     return compareValuesBy(
-      this, other,
+      this,
+      other,
       { it.key },
       { it.version },
     )
@@ -65,7 +66,8 @@ class Coordinate(
 
     override fun compareTo(other: Key): Int {
       return compareValuesBy(
-        this, other,
+        this,
+        other,
         { it.groupId },
         { it.artifactId },
       )
@@ -93,10 +95,15 @@ class Coordinate(
       return Key(selector.group, selector.name)
     }
 
-    fun from(identifier: ModuleVersionIdentifier, declared: Map<Key, Coordinate?>): Coordinate {
+    fun from(
+      identifier: ModuleVersionIdentifier,
+      declared: Map<Key, Coordinate?>,
+    ): Coordinate {
       return Coordinate(
-        identifier.group, identifier.name, identifier.version,
-        declared.getOrDefault(Key(identifier.group, identifier.name), null)?.userReason
+        identifier.group,
+        identifier.name,
+        identifier.version,
+        declared.getOrDefault(Key(identifier.group, identifier.name), null)?.userReason,
       )
     }
 

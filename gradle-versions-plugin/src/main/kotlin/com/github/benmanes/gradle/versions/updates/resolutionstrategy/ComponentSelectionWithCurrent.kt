@@ -6,7 +6,6 @@ class ComponentSelectionWithCurrent(
   private val delegate: ComponentSelection,
   val currentVersion: String,
 ) : ComponentSelection by delegate {
-
   override fun toString(): String {
     return """\
 ComponentSelectionWithCurrent{

@@ -12,7 +12,6 @@ class GradleUpdateResult(
   running: ReleaseStatus.Available? = null,
   release: ReleaseStatus? = null,
 ) : Comparable<GradleUpdateResult> {
-
   /**
    * The version available on the release channel represented by this object.
    */
@@ -58,7 +57,7 @@ class GradleUpdateResult(
       reason = release.reason
     } else {
       throw IllegalStateException(
-        "ReleaseStatus subtype [" + release!!.javaClass + "] not yet implemented"
+        "ReleaseStatus subtype [" + release!!.javaClass + "] not yet implemented",
       )
     }
   }
@@ -80,8 +79,9 @@ class GradleUpdateResult(
      * Comparator that compares two instances of [GradleUpdateResult] by comparing the
      * [GradleVersion] they represent
      */
-    private val comparator = Comparator.comparing { gradleUpdateResult: GradleUpdateResult ->
-      GradleVersion.version(gradleUpdateResult.version)
-    }
+    private val comparator =
+      Comparator.comparing { gradleUpdateResult: GradleUpdateResult ->
+        GradleVersion.version(gradleUpdateResult.version)
+      }
   }
 }

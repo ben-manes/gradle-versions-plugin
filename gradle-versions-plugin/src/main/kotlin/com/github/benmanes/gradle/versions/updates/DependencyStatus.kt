@@ -33,7 +33,7 @@ class DependencyStatus {
       coordinate.groupId,
       coordinate.artifactId,
       latestVersion,
-      coordinate.userReason
+      coordinate.userReason,
     )
   }
 }
