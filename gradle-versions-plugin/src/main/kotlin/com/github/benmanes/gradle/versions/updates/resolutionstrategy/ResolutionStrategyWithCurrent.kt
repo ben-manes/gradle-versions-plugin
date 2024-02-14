@@ -11,7 +11,6 @@ class ResolutionStrategyWithCurrent(
   private val delegate: ResolutionStrategy,
   private val currentCoordinates: Map<Coordinate.Key, Coordinate>,
 ) {
-
   fun failOnVersionConflict(): ResolutionStrategyWithCurrent {
     delegate.failOnVersionConflict()
     return this
@@ -37,16 +36,12 @@ class ResolutionStrategyWithCurrent(
     return this
   }
 
-  fun dependencySubstitution(
-    action: Action<in DependencySubstitutions>
-  ): ResolutionStrategyWithCurrent {
+  fun dependencySubstitution(action: Action<in DependencySubstitutions>): ResolutionStrategyWithCurrent {
     delegate.dependencySubstitution(action)
     return this
   }
 
-  fun componentSelection(
-    action: Action<in ComponentSelectionRulesWithCurrent>
-  ): ResolutionStrategyWithCurrent {
+  fun componentSelection(action: Action<in ComponentSelectionRulesWithCurrent>): ResolutionStrategyWithCurrent {
     action.execute(getComponentSelectionNonDelegate())
     return this
   }
@@ -61,7 +56,7 @@ class ResolutionStrategyWithCurrent(
   private fun getComponentSelectionNonDelegate(): ComponentSelectionRulesWithCurrent {
     return ComponentSelectionRulesWithCurrent(
       delegate.componentSelection,
-      currentCoordinates
+      currentCoordinates,
     )
   }
 }

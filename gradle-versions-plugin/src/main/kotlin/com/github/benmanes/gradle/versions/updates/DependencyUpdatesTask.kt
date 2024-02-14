@@ -15,7 +15,6 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
-import org.gradle.util.ConfigureUtil
 import javax.annotation.Nullable
 
 /**
@@ -57,16 +56,17 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   var outputFormatter: Any?
     @Internal get() = null
     set(value) {
-      outputFormatterArgument = when (value) {
-        is String -> OutputFormatterArgument.BuiltIn(value)
-        is Reporter -> OutputFormatterArgument.CustomReporter(value)
-        // Kept for retro-compatibility with "outputFormatter = {}" usages.
-        is Closure<*> -> OutputFormatterArgument.CustomAction { value.call(it) }
-        else -> throw IllegalArgumentException(
-          "Unsupported output formatter provided $value. Please use a String, a Reporter/Closure, " +
-            "or alternatively provide a function using the `outputFormatter(Action<Result>)` API."
-        )
-      }
+      outputFormatterArgument =
+        when (value) {
+          is String -> OutputFormatterArgument.BuiltIn(value)
+          is Reporter -> OutputFormatterArgument.CustomReporter(value)
+          // Kept for retro-compatibility with "outputFormatter = {}" usages.
+          is Closure<*> -> OutputFormatterArgument.CustomAction { value.call(it) }
+          else -> throw IllegalArgumentException(
+            "Unsupported output formatter provided $value. Please use a String, a Reporter/Closure, " +
+              "or alternatively provide a function using the `outputFormatter(Action<Result>)` API.",
+          )
+        }
     }
 
   /**
@@ -91,6 +91,9 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   // Gradle will reject this behavior starting in 7.0 so we make sure to define accessors ourselves.
   @Input
   var checkForGradleUpdate: Boolean = true
+
+  @Input
+  var gradleVersionsApiBaseUrl: String = "https://services.gradle.org/versions/"
 
   @Input
   var checkConstraints: Boolean = false
@@ -120,18 +123,20 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   fun dependencyUpdates() {
     project.evaluationDependsOnChildren()
     if (resolutionStrategy != null) {
-      resolutionStrategy(ConfigureUtil.configureUsing(resolutionStrategy))
+      val closure = resolutionStrategy!!
+      resolutionStrategy { current -> project.configure(current, closure) }
       logger.warn(
         "dependencyUpdates.resolutionStrategy: " +
-          "Remove the assignment operator, \"=\", when setting this task property"
+          "Remove the assignment operator, \"=\", when setting this task property",
       )
     }
-    val evaluator = DependencyUpdates(
-      project, resolutionStrategyAction, revision,
-      outputFormatter(), outputDir, reportfileName, checkForGradleUpdate,
-      gradleReleaseChannel, checkConstraints, checkBuildEnvironmentConstraints,
-      filterConfigurations
-    )
+    val evaluator =
+      DependencyUpdates(
+        project, resolutionStrategyAction, revision,
+        outputFormatter(), outputDir, reportfileName, checkForGradleUpdate, gradleVersionsApiBaseUrl,
+        gradleReleaseChannel, checkConstraints, checkBuildEnvironmentConstraints,
+        filterConfigurations,
+      )
     val reporter = evaluator.run()
     reporter.write()
   }
@@ -141,11 +146,12 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
       strategy.componentSelection { selection ->
         selection.all(
           Action<ComponentSelectionWithCurrent> { current ->
+            @Suppress("SENSELESS_COMPARISON")
             val isNotNull = current.currentVersion != null && current.candidate.version != null
             if (isNotNull && filter.reject(current)) {
               current.reject("Rejected by rejectVersionIf ")
             }
-          }
+          },
         )
       }
     }

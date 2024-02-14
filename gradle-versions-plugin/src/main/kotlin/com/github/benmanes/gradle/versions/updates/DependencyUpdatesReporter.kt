@@ -63,13 +63,15 @@ class DependencyUpdatesReporter(
   val gradleUpdateChecker: GradleUpdateChecker,
   val gradleReleaseChannel: String,
 ) {
-
   @Synchronized
   fun write() {
     if (outputFormatterArgument !is OutputFormatterArgument.CustomAction) {
-      val plainTextReporter = PlainTextReporter(
-        project, revision, gradleReleaseChannel
-      )
+      val plainTextReporter =
+        PlainTextReporter(
+          project,
+          revision,
+          gradleReleaseChannel,
+        )
       plainTextReporter.write(System.out, buildBaseObject())
     }
 
@@ -124,11 +126,12 @@ class DependencyUpdatesReporter(
     val sortedUndeclared = buildUndeclaredGroup()
     val sortedUnresolved = buildUnresolvedGroup()
 
-    val count = sortedCurrent.size +
-      sortedOutdated.size +
-      sortedExceeded.size +
-      sortedUndeclared.size +
-      sortedUnresolved.size
+    val count =
+      sortedCurrent.size +
+        sortedOutdated.size +
+        sortedExceeded.size +
+        sortedUndeclared.size +
+        sortedUnresolved.size
 
     return buildObject(
       count = count,
@@ -149,30 +152,35 @@ class DependencyUpdatesReporter(
     val enabled = gradleUpdateChecker.enabled
     return GradleUpdateResults(
       enabled = enabled,
-      running = GradleUpdateResult(
-        enabled = enabled,
-        running = gradleUpdateChecker.getRunningGradleVersion(),
-        release = gradleUpdateChecker.getRunningGradleVersion(),
-      ),
-      current = GradleUpdateResult(
-        enabled = enabled,
-        running = gradleUpdateChecker.getRunningGradleVersion(),
-        release = gradleUpdateChecker.getCurrentGradleVersion(),
-      ),
-      releaseCandidate = GradleUpdateResult(
-        enabled = enabled &&
-          (
-            gradleReleaseChannel == GradleReleaseChannel.RELEASE_CANDIDATE.id ||
-              gradleReleaseChannel == GradleReleaseChannel.NIGHTLY.id
-            ),
-        running = gradleUpdateChecker.getRunningGradleVersion(),
-        release = gradleUpdateChecker.getReleaseCandidateGradleVersion(),
-      ),
-      nightly = GradleUpdateResult(
-        enabled = enabled && (gradleReleaseChannel == GradleReleaseChannel.NIGHTLY.id),
-        running = gradleUpdateChecker.getRunningGradleVersion(),
-        release = gradleUpdateChecker.getNightlyGradleVersion(),
-      ),
+      running =
+        GradleUpdateResult(
+          enabled = enabled,
+          running = gradleUpdateChecker.getRunningGradleVersion(),
+          release = gradleUpdateChecker.getRunningGradleVersion(),
+        ),
+      current =
+        GradleUpdateResult(
+          enabled = enabled,
+          running = gradleUpdateChecker.getRunningGradleVersion(),
+          release = gradleUpdateChecker.getCurrentGradleVersion(),
+        ),
+      releaseCandidate =
+        GradleUpdateResult(
+          enabled =
+            enabled &&
+              (
+                gradleReleaseChannel == GradleReleaseChannel.RELEASE_CANDIDATE.id ||
+                  gradleReleaseChannel == GradleReleaseChannel.NIGHTLY.id
+              ),
+          running = gradleUpdateChecker.getRunningGradleVersion(),
+          release = gradleUpdateChecker.getReleaseCandidateGradleVersion(),
+        ),
+      nightly =
+        GradleUpdateResult(
+          enabled = enabled && (gradleReleaseChannel == GradleReleaseChannel.NIGHTLY.id),
+          running = gradleUpdateChecker.getRunningGradleVersion(),
+          release = gradleUpdateChecker.getNightlyGradleVersion(),
+        ),
     )
   }
 
@@ -222,7 +230,7 @@ class DependencyUpdatesReporter(
 
   private fun buildDependency(
     coordinate: Coordinate,
-    key: Map<String, String>
+    key: Map<String, String>,
   ): Dependency {
     return Dependency(
       group = key["group"],
@@ -235,7 +243,7 @@ class DependencyUpdatesReporter(
 
   private fun buildExceededDependency(
     coordinate: Coordinate,
-    key: Map<String, String>
+    key: Map<String, String>,
   ): DependencyLatest {
     return DependencyLatest(
       group = key["group"],
@@ -249,13 +257,13 @@ class DependencyUpdatesReporter(
 
   private fun buildUnresolvedDependency(
     selector: ModuleVersionSelector,
-    message: String
+    message: String,
   ): DependencyUnresolved {
     return DependencyUnresolved(
       group = selector.group,
       name = selector.name,
       version = currentVersions[keyOf(selector)]?.version,
-      projectUrl = latestVersions[keyOf(selector)]?.version, // TODO not sure?
+      projectUrl = latestVersions[keyOf(selector)]?.version,
       userReason = currentVersions[keyOf(selector)]?.userReason,
       reason = message,
     )
@@ -263,14 +271,15 @@ class DependencyUpdatesReporter(
 
   private fun buildOutdatedDependency(
     coordinate: Coordinate,
-    key: Map<String, String>
+    key: Map<String, String>,
   ): DependencyOutdated {
     val laterVersion = latestVersions[key]?.version
-    val available = when (revision) {
-      "milestone" -> VersionAvailable(milestone = laterVersion)
-      "integration" -> VersionAvailable(integration = laterVersion)
-      else -> VersionAvailable(release = laterVersion)
-    }
+    val available =
+      when (revision) {
+        "milestone" -> VersionAvailable(milestone = laterVersion)
+        "integration" -> VersionAvailable(integration = laterVersion)
+        else -> VersionAvailable(release = laterVersion)
+      }
     return DependencyOutdated(
       group = key["group"],
       name = key["name"],
@@ -307,7 +316,7 @@ class DependencyUpdatesReporter(
         exceeded = exceededGroup,
         undeclared = undeclaredGroup,
         unresolved = unresolvedGroup,
-        gradle = gradleUpdateResults
+        gradle = gradleUpdateResults,
       )
     }
 
@@ -315,16 +324,17 @@ class DependencyUpdatesReporter(
       return DependenciesGroup(dependencies.size, dependencies)
     }
 
-    private fun sortByGroupAndName(
-      dependencies: Map<Map<String, String>, Coordinate>
-    ): Map<Map<String, String>, Coordinate> {
+    private fun sortByGroupAndName(dependencies: Map<Map<String, String>, Coordinate>): Map<Map<String, String>, Coordinate> {
       return dependencies.toSortedMap { a, b ->
         compareKeys(a, b)
       }
     }
 
     /** Compares the dependency keys. */
-    private fun compareKeys(a: Map<String, String>, b: Map<String, String>): Int {
+    private fun compareKeys(
+      a: Map<String, String>,
+      b: Map<String, String>,
+    ): Int {
       return if (a["group"] == b["group"]) {
         a["name"].orEmpty().compareTo(b["name"].orEmpty())
       } else {

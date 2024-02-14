@@ -50,7 +50,10 @@ class Resolver(
   }
 
   /** Returns the version status of the configuration's dependencies at the given revision. */
-  fun resolve(configuration: Configuration, revision: String): Set<DependencyStatus> {
+  fun resolve(
+    configuration: Configuration,
+    revision: String,
+  ): Set<DependencyStatus> {
     val coordinates = getCurrentCoordinates(configuration)
     val latestConfiguration = createLatestConfiguration(configuration, revision, coordinates)
     val lenient = latestConfiguration.resolvedConfiguration.lenientConfiguration
@@ -89,14 +92,12 @@ class Resolver(
     revision: String,
     currentCoordinates: Map<Coordinate.Key, Coordinate>,
   ): Configuration {
-    // Kotlin deps anywhere in the hierarchy are a special case we'll handle later
-    val kotlinDeps = { dependency: ExternalDependency -> dependency.group == "org.jetbrains.kotlin" && dependency.version != null }
-    val latest = configuration.allDependencies
-      .filterIsInstance<ExternalDependency>()
-      .filterNot(kotlinDeps)
-      .mapTo(mutableListOf()) { dependency ->
-        createQueryDependency(dependency as ModuleDependency)
-      }
+    val latest =
+      configuration.allDependencies
+        .filterIsInstance<ExternalDependency>()
+        .mapTo(mutableListOf()) { dependency ->
+          createQueryDependency(dependency as ModuleDependency)
+        }
 
     // Common use case for dependency constraints is a java-platform BOM project or to control
     // version of transitive dependency.
@@ -114,7 +115,7 @@ class Resolver(
     // allow resolution of dynamic latest versions regardless of the original strategy
     if (asBoolean(
         getMetaClass(copy.resolutionStrategy)
-          .hasProperty(copy.resolutionStrategy, "failOnDynamicVersions")
+          .hasProperty(copy.resolutionStrategy, "failOnDynamicVersions"),
       )
     ) {
       getMetaClass(copy.resolutionStrategy)
@@ -122,12 +123,14 @@ class Resolver(
     }
 
     // Resolve using the latest version of explicitly declared dependencies and retains Kotlin's
-    // inherited stdlib dependencies from the super configurations. This is required for variant
-    // resolution, but the full set can break consumer capability matching.
-    val inheritedKotlin = configuration.allDependencies
-      .filterIsInstance<ExternalDependency>()
-      .filter(kotlinDeps)
-      .minus(configuration.dependencies)
+    // inherited dependencies (importantly, including stdlib) from the super configurations. This
+    // is required for variant resolution, but the full set can break consumer capability matching.
+    val isKotlinDep = { dependency: ExternalDependency -> (dependency.group?.startsWith("org.jetbrains.kotlin") ?: false) }
+    val inheritedKotlin =
+      configuration.allDependencies
+        .filterIsInstance<ExternalDependency>()
+        .filter { d -> isKotlinDep(d) }
+        .minus(configuration.dependencies)
 
     // Adds the Kotlin 1.2.x legacy metadata to assist in variant selection
     val metadata = project.configurations.findByName("commonMainMetadataElements")
@@ -158,15 +161,16 @@ class Resolver(
     // (e.g. the dependency-management-plugin for BOMs) or is an explicit file (e.g. libs/*.jar).
     // In the case of another plugin we use "+" in the hope that the plugin will not restrict the
     // query (see issue #97). Otherwise, if it's a file then use "none" to pass it through.
-    val version = if (dependency.version == null) {
-      if (dependency.artifacts.isEmpty()) {
-        "+"
+    val version =
+      if (dependency.version == null) {
+        if (dependency.artifacts.isEmpty()) {
+          "+"
+        } else {
+          "none"
+        }
       } else {
-        "none"
+        "+"
       }
-    } else {
-      "+"
-    }
 
     // Format the query with an optional classifier and extension
     var query = "${dependency.group.orEmpty()}:${dependency.name}:$version"
@@ -208,12 +212,13 @@ class Resolver(
   private fun addAttributes(
     target: HasConfigurableAttributes<*>,
     source: HasConfigurableAttributes<*>,
-    filter: (String) -> Boolean = { key: String -> true },
+    filter: (String) -> Boolean = { _ -> true },
   ) {
     target.attributes { container ->
       for (key in source.attributes.keySet()) {
         if (filter.invoke(key.name)) {
-          val value = source.attributes.getAttribute(key as Attribute<Any>)
+          @Suppress("UNCHECKED_CAST")
+          val value = source.attributes.getAttribute(key as Attribute<Any>)!!
           container.attribute(key, value)
         }
       }
@@ -221,14 +226,18 @@ class Resolver(
   }
 
   /** Adds a revision filter by rejecting candidates using a component selection rule.  */
-  private fun addRevisionFilter(configuration: Configuration, revision: String) {
+  private fun addRevisionFilter(
+    configuration: Configuration,
+    revision: String,
+  ) {
     configuration.resolutionStrategy { componentSelection ->
       componentSelection.componentSelection { rules ->
         val revisionFilter = { selection: ComponentSelection, metadata: ComponentMetadata? ->
-          val accepted = (metadata == null) ||
-            ((revision == "release") && (metadata.status == "release")) ||
-            ((revision == "milestone") && (metadata.status != "integration")) ||
-            (revision == "integration") || (selection.candidate.version == "none")
+          val accepted =
+            (metadata == null) ||
+              ((revision == "release") && (metadata.status == "release")) ||
+              ((revision == "milestone") && (metadata.status != "integration")) ||
+              (revision == "integration") || (selection.candidate.version == "none")
           if (!accepted) {
             selection.reject("Component status ${metadata?.status} rejected by revision $revision")
           }
@@ -236,8 +245,6 @@ class Resolver(
         rules.all { selectionAction ->
           if (ComponentSelection::class.members.any { it.name == "getMetadata" }) {
             revisionFilter(selectionAction, selectionAction.metadata)
-          } else {
-            revisionFilter
           }
         }
       }
@@ -247,7 +254,7 @@ class Resolver(
   /** Adds a custom resolution strategy only applicable for the dependency updates task.  */
   private fun addCustomResolutionStrategy(
     configuration: Configuration,
-    currentCoordinates: Map<Coordinate.Key, Coordinate>
+    currentCoordinates: Map<Coordinate.Key, Coordinate>,
   ) {
     configuration.resolutionStrategy { inner ->
       resolutionStrategy?.execute(ResolutionStrategyWithCurrent(inner, currentCoordinates))
@@ -256,8 +263,9 @@ class Resolver(
 
   /** Returns the coordinates for the current (declared) dependency versions. */
   private fun getCurrentCoordinates(configuration: Configuration): Map<Coordinate.Key, Coordinate> {
-    val declared = getResolvableDependencies(configuration)
-      .associateBy { it.key }
+    val declared =
+      getResolvableDependencies(configuration)
+        .associateBy { it.key }
     if (declared.isEmpty()) {
       return emptyMap()
     }
@@ -303,21 +311,21 @@ class Resolver(
   private fun logRepositories() {
     val root = project.rootProject == project
     val label = "${
-    if (root) {
-      project.name
-    } else {
-      project.path
-    }
+      if (root) {
+        project.name
+      } else {
+        project.path
+      }
     } project ${
-    if (root) {
-      " (root)"
-    } else {
-      ""
-    }
+      if (root) {
+        " (root)"
+      } else {
+        ""
+      }
     }"
     if (!project.buildscript.configurations
-      .flatMap { config -> config.dependencies }
-      .any()
+        .flatMap { config -> config.dependencies }
+        .any()
     ) {
       project.logger.info("Resolving $label buildscript with repositories:")
       for (repository in project.buildscript.repositories) {
@@ -367,11 +375,12 @@ class Resolver(
 
   private fun resolveProjectUrl(id: ModuleVersionIdentifier): String? {
     return try {
-      val resolutionResult = project.dependencies
-        .createArtifactResolutionQuery()
-        .forComponents(DefaultModuleComponentIdentifier.newId(id))
-        .withArtifacts(MavenModule::class.java, MavenPomArtifact::class.java)
-        .execute()
+      val resolutionResult =
+        project.dependencies
+          .createArtifactResolutionQuery()
+          .forComponents(DefaultModuleComponentIdentifier.newId(id))
+          .withArtifacts(MavenModule::class.java, MavenPomArtifact::class.java)
+          .execute()
 
       // size is 0 for gradle plugins, 1 for normal dependencies
       for (result in resolutionResult.resolvedComponents) {
@@ -412,11 +421,12 @@ class Resolver(
 
   private fun getResolvableDependencies(configuration: Configuration): List<Coordinate> {
     @Suppress("SimplifiableCall")
-    val coordinates = configuration.allDependencies
-      .filter { dependency -> dependency is ExternalDependency }
-      .mapTo(mutableListOf()) { dependency ->
-        Coordinate.from(dependency)
-      }
+    val coordinates =
+      configuration.allDependencies
+        .filter { dependency -> dependency is ExternalDependency }
+        .mapTo(mutableListOf()) { dependency ->
+          Coordinate.from(dependency)
+        }
 
     if (supportsConstraints(configuration)) {
       configuration.allDependencyConstraints.forEach { dependencyConstraint ->

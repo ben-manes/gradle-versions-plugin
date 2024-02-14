@@ -14,11 +14,15 @@ class JsonReporter(
   override val revision: String,
   override val gradleReleaseChannel: String,
 ) : AbstractReporter(project, revision, gradleReleaseChannel) {
-  override fun write(printStream: OutputStream, result: Result) {
-    val jsonAdapter = moshi
-      .adapter(Result::class.java)
-      .serializeNulls()
-      .indent(" ")
+  override fun write(
+    printStream: OutputStream,
+    result: Result,
+  ) {
+    val jsonAdapter =
+      moshi
+        .adapter(Result::class.java)
+        .serializeNulls()
+        .indent(" ")
     val json = jsonAdapter.toJson(result).trimMargin()
     printStream.println(json)
   }
@@ -28,8 +32,9 @@ class JsonReporter(
   }
 
   companion object {
-    private val moshi = Moshi.Builder()
-      .addLast(KotlinJsonAdapterFactory())
-      .build()
+    private val moshi =
+      Moshi.Builder()
+        .addLast(KotlinJsonAdapterFactory())
+        .build()
   }
 }
