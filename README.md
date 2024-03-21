@@ -55,7 +55,12 @@ buildscript {
 ```
 
 ### Using a Gradle init script ###
-You can also transparently add the plugin to every Gradle project that you run via a Gradle init script, e.g. `$HOME/.gradle/init.d/add-versions-plugin.gradle`:
+You can also transparently add the plugin to every Gradle project that you run via a [Gradle init script](https://docs.gradle.org/current/userguide/init_scripts.html):
+
+<details open>
+<summary>Groovy</summary>
+
+`$HOME/.gradle/init.d/add-versions-plugin.gradle`
 ```groovy
 initscript {
   repositories {
@@ -75,6 +80,35 @@ allprojects {
   }
 }
 ```
+
+</details>
+
+<details open>
+<summary>Kotlin</summary>
+
+`$HOME/.gradle/init.d/add-versions-plugin.init.gradle.kts`
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+initscript {
+  repositories {
+    gradlePluginPortal()
+  }
+  dependencies {
+    classpath("com.github.ben-manes:gradle-versions-plugin:+")
+  }
+}
+
+allprojects {
+  apply<com.github.benmanes.gradle.versions.VersionsPlugin>()
+
+  tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
+    // configure the task, for example wrt. resolution strategies
+  }
+}
+```
+
+</details>
 
 ### Related Plugins ###
 You may also wish to explore additional functionality provided by,
