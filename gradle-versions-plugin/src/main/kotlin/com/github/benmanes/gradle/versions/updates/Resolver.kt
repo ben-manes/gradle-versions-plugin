@@ -28,7 +28,6 @@ import org.gradle.api.attributes.HasConfigurableAttributes
 import org.gradle.api.attributes.java.TargetJvmVersion
 import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
 import org.gradle.api.internal.artifacts.dependencies.DefaultProjectDependencyConstraint
-import org.gradle.api.specs.Specs.SATISFIES_ALL
 import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier
 import org.gradle.maven.MavenModule
 import org.gradle.maven.MavenPomArtifact
@@ -57,7 +56,7 @@ class Resolver(
     val coordinates = getCurrentCoordinates(configuration)
     val latestConfiguration = createLatestConfiguration(configuration, revision, coordinates)
     val lenient = latestConfiguration.resolvedConfiguration.lenientConfiguration
-    val resolved = lenient.getFirstLevelModuleDependencies(SATISFIES_ALL)
+    val resolved = lenient.firstLevelModuleDependencies
     val unresolved = lenient.unresolvedModuleDependencies
     return getStatus(coordinates, resolved, unresolved)
   }
@@ -279,7 +278,7 @@ class Resolver(
     disableAutoTargetJvm(copy)
     val lenient = copy.resolvedConfiguration.lenientConfiguration
 
-    val resolved = lenient.getFirstLevelModuleDependencies(SATISFIES_ALL)
+    val resolved = lenient.firstLevelModuleDependencies
     for (dependency in resolved) {
       val coordinate = Coordinate.from(dependency.module.id, declared)
       coordinates[coordinate.key] = coordinate
