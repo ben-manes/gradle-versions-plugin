@@ -1,10 +1,26 @@
 plugins {
-  id 'org.jetbrains.kotlin.jvm' version '1.8.20' apply false
+  id 'org.jetbrains.kotlin.jvm' version '2.0.0' apply false
   id 'org.jetbrains.dokka' version '1.8.10' apply false
   id 'org.jlleitschuh.gradle.ktlint' version '12.1.0' apply false
   id 'java-gradle-plugin'
   id 'java-library'
   id 'groovy'
+}
+
+allprojects {
+  configurations.configureEach {
+    resolutionStrategy {
+      preferProjectModules()
+
+      enableDependencyVerification()
+
+      eachDependency { details ->
+        if (details.requested.group == "org.jetbrains.kotlin") {
+          details.useVersion("2.0.0")
+        }
+      }
+    }
+  }
 }
 
 subprojects {

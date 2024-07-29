@@ -53,7 +53,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: gradle-versions-plugin-${{ github.workflow }}-${{ github.run_id }}
+          name: gradle-versions-plugin-${{ matrix.java-version }}-${{ github.workflow }}-${{ github.run_id }}
           path: |
             build/libs
             build/outputs

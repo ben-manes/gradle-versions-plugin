@@ -11,7 +11,6 @@ import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 final class KotlinDependencyUpdatesSpec extends Specification {
   private static final DECLARED_KOTLIN_VERSION = '1.7.0'
   private static final DECLARED_KOTLIN_STD_VERSION = '1.8.0'
-  private static final CURRENT_KOTLIN_VERSION = '2.0.0-Beta3'
 
   @Rule
   final TemporaryFolder testProjectDir = new TemporaryFolder()
@@ -33,7 +32,7 @@ final class KotlinDependencyUpdatesSpec extends Specification {
         }
 
         plugins {
-            id 'com.github.ben-manes.versions' version '0.50.0'
+            id 'com.github.ben-manes.versions' version '0.51.0'
             id 'java-gradle-plugin'
             ${applyJvmPlugin ? "id 'org.jetbrains.kotlin.jvm' version \"\$kotlin_version\"" : ''}
         }
@@ -57,8 +56,7 @@ final class KotlinDependencyUpdatesSpec extends Specification {
       .build()
 
     then:
-    result.output.contains """The following dependencies have later milestone versions:
- - org.jetbrains.kotlin:kotlin-gradle-plugin [$DECLARED_KOTLIN_VERSION -> $CURRENT_KOTLIN_VERSION]"""
+    result.output.find(/The following dependencies have later milestone versions:\n - org\.jetbrains\.kotlin:kotlin-gradle-plugin \[$DECLARED_KOTLIN_VERSION -> 2\..*\]/)
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
@@ -71,7 +69,7 @@ final class KotlinDependencyUpdatesSpec extends Specification {
     testProjectDir.newFile('build.gradle') <<
       """
         plugins {
-            id 'com.github.ben-manes.versions' version '0.46.0'
+            id 'com.github.ben-manes.versions' version '0.51.0'
             id 'java-gradle-plugin'
         }
 
@@ -95,8 +93,7 @@ final class KotlinDependencyUpdatesSpec extends Specification {
       .build()
 
     then:
-    result.output.contains """The following dependencies have later milestone versions:
- - org.jetbrains.kotlin:kotlin-gradle-plugin [$DECLARED_KOTLIN_VERSION -> $CURRENT_KOTLIN_VERSION]"""
+    result.output.find(/The following dependencies have later milestone versions:\n - org\.jetbrains\.kotlin:kotlin-gradle-plugin \[$DECLARED_KOTLIN_VERSION -> 2\..*\]/)
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
@@ -106,7 +103,7 @@ final class KotlinDependencyUpdatesSpec extends Specification {
     testProjectDir.newFile('build.gradle') <<
       """
         plugins {
-            id 'com.github.ben-manes.versions' version '0.46.0'
+            id 'com.github.ben-manes.versions' version '0.51.0'
             id 'org.jetbrains.kotlin.jvm' version '$DECLARED_KOTLIN_VERSION'
         }
 
@@ -127,13 +124,7 @@ final class KotlinDependencyUpdatesSpec extends Specification {
       .build()
 
     then:
-    result.output.contains """The following dependencies have later milestone versions:
- - org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable [$DECLARED_KOTLIN_VERSION -> $CURRENT_KOTLIN_VERSION]
-     https://kotlinlang.org/
- - org.jetbrains.kotlin:kotlin-stdlib [${explicitStdLibVersion ? DECLARED_KOTLIN_STD_VERSION : DECLARED_KOTLIN_VERSION} -> $CURRENT_KOTLIN_VERSION]
-     https://kotlinlang.org/
- - org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin [$DECLARED_KOTLIN_VERSION -> $CURRENT_KOTLIN_VERSION]
-     https://kotlinlang.org/"""
+    result.output.find(/The following dependencies have later milestone versions:\n - org\.jetbrains\.kotlin:kotlin-scripting-compiler-embeddable \[$DECLARED_KOTLIN_VERSION -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n - org\.jetbrains\.kotlin:kotlin-stdlib \[${explicitStdLibVersion ? DECLARED_KOTLIN_STD_VERSION : DECLARED_KOTLIN_VERSION} -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n - org\.jetbrains\.kotlin\.jvm:org\.jetbrains\.kotlin\.jvm\.gradle\.plugin \[$DECLARED_KOTLIN_VERSION -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n/)
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
