@@ -106,7 +106,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
   @Internal
   @Nullable
-  var resolutionStrategy: Closure<*>? = null
+  var resolutionStrategy: Closure<Any>? = null
 
   @Nullable
   private var resolutionStrategyAction: Action<in ResolutionStrategyWithCurrent>? = null

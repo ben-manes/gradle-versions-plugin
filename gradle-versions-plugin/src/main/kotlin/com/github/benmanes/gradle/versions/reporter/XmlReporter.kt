@@ -28,7 +28,7 @@ class XmlReporter(
   ) {
     val documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder()
     val document = documentBuilder.newDocument()
-    document.setXmlStandalone(true)
+    document.xmlStandalone = true
 
     val response = document.createElement("response")
     document.appendChild(response)
@@ -79,7 +79,7 @@ class XmlReporter(
     val dependencies = document.createElement("dependencies")
     outdated.appendChild(dependencies)
     for (dependency in result.outdated.dependencies) {
-      var element = writeDependency(document, dependencies, "outdatedDependency", dependency)
+      val element = writeDependency(document, dependencies, "outdatedDependency", dependency)
       writeVersionAvailable(document, element, dependency.available)
     }
   }
@@ -109,7 +109,7 @@ class XmlReporter(
     val dependencies = document.createElement("dependencies")
     exceeded.appendChild(dependencies)
     for (dependency in result.exceeded.dependencies) {
-      var element = writeDependency(document, dependencies, "exceededDependency", dependency)
+      val element = writeDependency(document, dependencies, "exceededDependency", dependency)
       appendTextChild(document, element, "latest", dependency.latest)
     }
   }

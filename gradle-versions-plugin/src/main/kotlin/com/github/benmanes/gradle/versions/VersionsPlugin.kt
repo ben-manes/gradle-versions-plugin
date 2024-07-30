@@ -17,7 +17,7 @@ class VersionsPlugin : Plugin<Project> {
     requireSupportedSaxParser()
 
     val tasks = project.tasks
-    if (!tasks.getNames().contains("dependencyUpdates")) {
+    if (!tasks.names.contains("dependencyUpdates")) {
       tasks.register("dependencyUpdates", DependencyUpdatesTask::class.java)
     }
   }
