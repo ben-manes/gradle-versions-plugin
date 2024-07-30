@@ -115,19 +115,16 @@ publishing {
   }
 }
 
-pluginBundle {
+gradlePlugin {
   website = POM_URL
   vcsUrl = POM_SCM_URL
-  tags = ['dependencies', 'versions', 'updates']
-}
-gradlePlugin {
   plugins {
     versionsPlugin {
       id = 'com.github.ben-manes.versions'
-      displayName = POM_NAME
       implementationClass = 'com.github.benmanes.gradle.versions.VersionsPlugin'
+      displayName = POM_NAME
       description = POM_DESCRIPTION
+      tags.set(['dependencies', 'versions', 'updates'])
     }
   }
 }
-
