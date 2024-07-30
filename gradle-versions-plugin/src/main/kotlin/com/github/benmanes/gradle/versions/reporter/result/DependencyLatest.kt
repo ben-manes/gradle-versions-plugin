@@ -1,5 +1,8 @@
 package com.github.benmanes.gradle.versions.reporter.result
 
+import com.squareup.moshi.JsonClass
+
+@JsonClass(generateAdapter = true)
 data class DependencyLatest(
   override val group: String? = null,
   override val name: String? = null,

@@ -1,6 +1,7 @@
 package com.github.benmanes.gradle.versions.reporter.result
 
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
+import com.squareup.moshi.JsonClass
 
 /**
  * The result of a dependency update analysis.
@@ -14,6 +15,7 @@ import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
  * @property unresolved The unresolvable dependencies.
  * @property gradle Gradle release channels and respective update availability.
  */
+@JsonClass(generateAdapter = true)
 class Result(
   val count: Int,
   val current: DependenciesGroup<Dependency>,

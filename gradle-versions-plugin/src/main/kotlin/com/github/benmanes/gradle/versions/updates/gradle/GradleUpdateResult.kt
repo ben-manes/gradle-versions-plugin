@@ -1,12 +1,14 @@
 package com.github.benmanes.gradle.versions.updates.gradle
 
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker.ReleaseStatus
+import com.squareup.moshi.JsonClass
 import org.gradle.util.GradleVersion
 
 /**
  * Holder class for gradle update results of a specific release channel (or the running version).
  * Used for reporting & serialization to JSON/XML.
  */
+@JsonClass(generateAdapter = true)
 class GradleUpdateResult(
   enabled: Boolean = false,
   running: ReleaseStatus.Available? = null,

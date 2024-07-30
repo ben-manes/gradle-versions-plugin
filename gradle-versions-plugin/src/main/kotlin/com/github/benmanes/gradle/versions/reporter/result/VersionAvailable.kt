@@ -1,5 +1,8 @@
 package com.github.benmanes.gradle.versions.reporter.result
 
+import com.squareup.moshi.JsonClass
+
+@JsonClass(generateAdapter = true)
 class VersionAvailable
   @JvmOverloads
   constructor(

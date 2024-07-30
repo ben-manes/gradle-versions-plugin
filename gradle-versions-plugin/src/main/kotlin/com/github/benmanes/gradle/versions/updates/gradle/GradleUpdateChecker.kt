@@ -1,7 +1,7 @@
 package com.github.benmanes.gradle.versions.updates.gradle
 
+import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.gradle.util.GradleVersion
@@ -66,18 +66,20 @@ class GradleUpdateChecker(
      * Class representing an available release. Holds the release version in the
      * form of a [GradleVersion].
      */
-    class Available(val gradleVersion: GradleVersion) : ReleaseStatus()
+    @JsonClass(generateAdapter = true)
+    data class Available(val gradleVersion: GradleVersion) : ReleaseStatus()
 
     /**
      * Class representing a release channel without any releases. This may be the case with
      * pre-release channels after an update has been released to general availability.
      */
-    object Unavailable : ReleaseStatus()
+    data object Unavailable : ReleaseStatus()
 
     /**
      * Class representing a failure during update checking.
      */
-    class Failure(val reason: String) : ReleaseStatus()
+    @JsonClass(generateAdapter = true)
+    data class Failure(val reason: String) : ReleaseStatus()
   }
 
   companion object {
@@ -94,12 +96,12 @@ class GradleUpdateChecker(
         .build()
     private val moshi =
       Moshi.Builder()
-        .addLast(KotlinJsonAdapterFactory())
         .build()
 
     /** Represents the XML from [gradleVersionsApiBaseUrl] */
-    private class VersionSite {
-      var version: String? = null
+    @JsonClass(generateAdapter = true)
+    internal class VersionSite {
+      val version: String? = null
     }
 
     private fun fetch(gradleVersionsApiBaseUrl: String) {
