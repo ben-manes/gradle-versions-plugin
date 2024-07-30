@@ -145,7 +145,7 @@ final class DependencyUpdatesSpec extends Specification {
     def project = singleProject()
     addRepositoryTo(project)
     addDependenciesTo(project)
-    project.configurations.all {
+    project.configurations.configureEach {
       resolutionStrategy {
         failOnDynamicVersions()
       }
@@ -189,6 +189,7 @@ final class DependencyUpdatesSpec extends Specification {
   @Unroll
   def 'Multi-project with dependencies on parent (#revision, #outputFormat)'() {
     given:
+    //noinspection GroovyUnusedAssignment
     def (rootProject, childProject) = multiProject()
     addRepositoryTo(rootProject)
     addDependenciesTo(rootProject)
@@ -620,7 +621,7 @@ final class DependencyUpdatesSpec extends Specification {
 
     when:
     def reporter = evaluate(project, 'milestone', null, 'build', null, null, false,
-      "", RELEASE_CANDIDATE.id, {config -> config.name.equals("upgradesFound")})
+      "", RELEASE_CANDIDATE.id, {config -> (config.name == "upgradesFound") })
     reporter.write()
 
     then:
