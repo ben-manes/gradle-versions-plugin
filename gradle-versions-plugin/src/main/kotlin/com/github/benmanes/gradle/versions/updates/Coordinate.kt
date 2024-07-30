@@ -13,21 +13,13 @@ class Coordinate(
   groupId: String?,
   artifactId: String?,
   version: String?,
-  userReason: String? = null,
+  val userReason: String? = null,
 ) : Comparable<Coordinate> {
-  val groupId: String
-  val artifactId: String
-  val version: String
-  val userReason: String?
+  val groupId: String = groupId ?: "none"
+  val artifactId: String = artifactId ?: "none"
+  val version: String = version ?: "none"
   val key: Key
     get() = Key(groupId, artifactId)
-
-  init {
-    this.groupId = groupId ?: "none"
-    this.artifactId = artifactId ?: "none"
-    this.version = version ?: "none"
-    this.userReason = userReason
-  }
 
   override fun toString(): String {
     return "$groupId:$artifactId:$version"
