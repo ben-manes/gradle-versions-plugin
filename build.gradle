@@ -23,10 +23,6 @@ allprojects {
 }
 
 subprojects {
-  repositories {
-    mavenCentral()
-  }
-
   tasks.withType(Jar).configureEach {
     manifest {
       attributes(
