@@ -1,8 +1,9 @@
 plugins {
-  id 'org.jetbrains.kotlin.jvm'
-  id 'org.jetbrains.dokka'
-  id 'org.jlleitschuh.gradle.ktlint'
-  id 'com.gradle.plugin-publish'
+  alias(libs.plugins.kotlin.jvm)
+  alias(libs.plugins.dokka)
+  alias(libs.plugins.ktlint)
+  alias(libs.plugins.plugin.publish)
+  alias(libs.plugins.versions)
   id 'maven-publish' // For publishing the plugin to mavenLocal()
   id 'java-gradle-plugin'
   id 'java-library'
@@ -29,16 +30,16 @@ dependencies {
   compileOnly gradleApi()
 
   implementation localGroovy()
-  implementation 'org.jetbrains.kotlin:kotlin-stdlib:2.0.0'
-  implementation 'org.jetbrains.kotlin:kotlin-reflect:2.0.0'
-  implementation 'com.squareup.okhttp3:okhttp:4.12.0'
-  implementation 'com.squareup.moshi:moshi-kotlin:1.12.0'
+  implementation platform(libs.kotlin.bom)
+  implementation libs.kotlin.stdlib
+  implementation libs.okhttp
+  implementation libs.moshi
 
   testRuntimeOnly files(createClasspathManifest)
 
   testImplementation localGroovy()
   testImplementation gradleTestKit()
-  testImplementation 'org.spockframework:spock-junit4:2.1-M2-groovy-3.0', { exclude module: 'groovy-all' } // Use localGroovy()
+  testImplementation libs.spock, { exclude module: 'groovy-all' } // Use localGroovy()
 }
 
 gradlePlugin {
