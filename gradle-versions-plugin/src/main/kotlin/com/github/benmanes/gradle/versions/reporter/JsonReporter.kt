@@ -2,7 +2,6 @@ package com.github.benmanes.gradle.versions.reporter
 
 import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import org.gradle.api.Project
 import java.io.OutputStream
 
@@ -34,7 +33,6 @@ class JsonReporter(
   companion object {
     private val moshi =
       Moshi.Builder()
-        .addLast(KotlinJsonAdapterFactory())
         .build()
   }
 }

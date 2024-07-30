@@ -1,8 +1,11 @@
 package com.github.benmanes.gradle.versions.reporter.result
 
+import com.squareup.moshi.JsonClass
+
 /**
  * A project's dependency.
  */
+@JsonClass(generateAdapter = true)
 open class Dependency
   @JvmOverloads
   constructor(

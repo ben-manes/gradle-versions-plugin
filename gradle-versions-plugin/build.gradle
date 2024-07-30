@@ -3,6 +3,7 @@ plugins {
   alias(libs.plugins.dokka)
   alias(libs.plugins.ktlint)
   alias(libs.plugins.plugin.publish)
+  alias(libs.plugins.ksp)
   alias(libs.plugins.versions)
   id 'maven-publish' // For publishing the plugin to mavenLocal()
   id 'java-gradle-plugin'
@@ -26,6 +27,13 @@ tasks.register('createClasspathManifest') {
   }
 }
 
+ktlint {
+  ignoreFailures = true
+  filter {
+    exclude("**/build/generated/**")
+  }
+}
+
 dependencies {
   compileOnly gradleApi()
 
@@ -34,6 +42,7 @@ dependencies {
   implementation libs.kotlin.stdlib
   implementation libs.okhttp
   implementation libs.moshi
+  ksp libs.moshi.codegen
 
   testRuntimeOnly files(createClasspathManifest)
 

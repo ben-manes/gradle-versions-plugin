@@ -6,6 +6,7 @@ plugins {
   alias(libs.plugins.dokka) apply false
   alias(libs.plugins.ktlint) apply false
   alias(libs.plugins.plugin.publish) apply false
+  alias(libs.plugins.ksp) apply false
   alias(libs.plugins.versions)
   id 'java-gradle-plugin'
   id 'java-library'
