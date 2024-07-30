@@ -2,10 +2,11 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
-  id 'org.jetbrains.kotlin.jvm' version '2.0.0' apply false
-  id 'org.jetbrains.dokka' version '1.8.10' apply false
-  id 'org.jlleitschuh.gradle.ktlint' version '12.1.1' apply false
-  id 'com.gradle.plugin-publish' version '0.21.0' apply false
+  alias(libs.plugins.kotlin.jvm)
+  alias(libs.plugins.dokka) apply false
+  alias(libs.plugins.ktlint) apply false
+  alias(libs.plugins.plugin.publish) apply false
+  alias(libs.plugins.versions)
   id 'java-gradle-plugin'
   id 'java-library'
   id 'groovy'
@@ -17,12 +18,6 @@ allprojects {
       preferProjectModules()
 
       enableDependencyVerification()
-
-      eachDependency { details ->
-        if (details.requested.group == "org.jetbrains.kotlin") {
-          details.useVersion("2.0.0")
-        }
-      }
     }
   }
 }
