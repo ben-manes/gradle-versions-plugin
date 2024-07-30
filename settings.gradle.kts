@@ -1,21 +1,43 @@
-plugins {
-  `gradle-enterprise`
+pluginManagement {
+  repositories {
+    mavenCentral()
+    google {
+      content {
+        includeGroupByRegex("com\\.android.*")
+        includeGroupByRegex("com\\.google.*")
+        includeGroupByRegex("androidx.*")
+      }
+    }
+    gradlePluginPortal()
+  }
 }
 
-gradleEnterprise {
-  buildScan {
-    termsOfServiceUrl = "https://gradle.com/terms-of-service"
-    termsOfServiceAgree = "yes"
+dependencyResolutionManagement {
+  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
 
-    if (System.getenv("CI") == "true") {
-      isUploadInBackground = false
-      publishAlways()
-    } else {
-      obfuscation.ipAddresses { addresses -> emptyList() }
+  repositories {
+    mavenCentral()
+    google {
+      content {
+        includeGroupByRegex("com\\.android.*")
+        includeGroupByRegex("com\\.google.*")
+        includeGroupByRegex("androidx.*")
+      }
     }
-    if (System.getenv("GITHUB_ACTIONS") == "true") {
-      obfuscation.username { name -> "github" }
-    }
+    gradlePluginPortal()
+  }
+}
+
+plugins {
+  id("com.gradle.develocity") version("3.17.6")
+}
+
+develocity {
+  buildScan {
+    termsOfUseUrl.set("https://gradle.com/terms-of-service")
+    termsOfUseAgree.set("yes")
+    val isCI = System.getenv("CI") != null
+    publishing.onlyIf { isCI }
   }
 }
 
