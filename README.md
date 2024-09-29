@@ -120,6 +120,7 @@ You may also wish to explore additional functionality provided by,
  - [gradle-libraries-plugin](https://github.com/fkorotkov/gradle-libraries-plugin)
  - [gradle-update-notifier](https://github.com/y-yagi/gradle-update-notifier)
  - [refreshVersions](https://github.com/jmfayard/refreshVersions)
+ - [update-versions-gradle-plugin](https://github.com/tomasbjerre/update-versions-gradle-plugin)
 
 ## Tasks
 
