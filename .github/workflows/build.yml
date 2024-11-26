@@ -21,6 +21,10 @@ jobs:
           - 8
           - 11
 
+    permissions:
+      checks: write
+      pull-requests: write
+
     steps:
       - name: Checkout Project
         uses: actions/checkout@v4
@@ -39,6 +43,14 @@ jobs:
 
       - name: Run build with caching enabled
         run: ./gradlew clean build -s
+
+      - name: Publish Test Report
+        uses: EnricoMi/publish-unit-test-result-action@v2.18.0
+        if: always()
+        with:
+          comment_mode: off
+          action_fail_on_inconclusive: true
+          files: '**/build/test-results/test/TEST-*.xml'
 
       - name: Run examples
         run: |
