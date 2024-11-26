@@ -1,5 +1,5 @@
 [versions]
-kotlin = "2.0.0"
+kotlin = "2.0.21"
 
 [plugins]
 dokka = { id = "org.jetbrains.dokka", version = "1.9.20" }
