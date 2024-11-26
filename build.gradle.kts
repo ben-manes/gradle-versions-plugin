@@ -77,6 +77,8 @@ subprojects {
   }
 
   tasks.withType<Test>().configureEach {
+    useJUnitPlatform() // Ensure JUnit Platform is used if you are using JUnit 5 or Spock 2.x
+
     testLogging {
       exceptionFormat = FULL
       showCauses = true
