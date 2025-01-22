@@ -41,13 +41,13 @@ class DependencyUpdates
     fun run(): DependencyUpdatesReporter {
       val projectConfigs =
         project.allprojects
-          .associateBy({ it }, { it.configurations.matching(filterConfigurations).toLinkedHashSet() })
+          .associateBy({ it }, { it.configurations.matching(filterConfigurations) })
 
       val status: Set<DependencyStatus> = resolveProjects(projectConfigs, checkConstraints)
 
       val buildscriptProjectConfigs =
         project.allprojects
-          .associateBy({ it }, { it.buildscript.configurations.toLinkedHashSet() })
+          .associateBy({ it }, { it.buildscript.configurations })
       val buildscriptStatus: Set<DependencyStatus> =
         resolveProjects(
           buildscriptProjectConfigs,
@@ -177,7 +177,3 @@ class DependencyUpdates
       }
     }
   }
-
-private fun <T> Collection<T>.toLinkedHashSet(): LinkedHashSet<T> {
-  return toCollection(LinkedHashSet(this.size))
-}
