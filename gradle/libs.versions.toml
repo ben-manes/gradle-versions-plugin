@@ -1,5 +1,5 @@
 [versions]
-kotlin = "2.1.0"
+kotlin = "2.0.21"
 
 [plugins]
 dokka = { id = "org.jetbrains.dokka", version = "2.0.0" }
@@ -11,6 +11,6 @@ versions = { id = "com.github.ben-manes.versions", version = "0.51.0" }
 [libraries]
 kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
-moshi = { module = "com.squareup.moshi:moshi-kotlin", version = "1.15.2" }
+moshi = { module = "com.squareup.moshi:moshi-kotlin", version = "1.12.0" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version = "4.12.0" }
 spock = { module = "org.spockframework:spock-junit4", version = "2.4-M4-groovy-3.0" }
