@@ -324,7 +324,7 @@ class HtmlReporter(
       val list = result.current
       rows.add(
         """
-        <tr class=\"header\" id = \"currentId\" ><th colspan=\"4\">
+        <tr class="header" id="currentId"><th colspan="4">
         <b>Current dependencies<span>(Click to expand)</span></b></th></tr>""".trim(),
       )
       rows.add(
