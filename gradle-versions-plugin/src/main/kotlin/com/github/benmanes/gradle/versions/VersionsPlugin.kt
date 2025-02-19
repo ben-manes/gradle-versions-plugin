@@ -1,5 +1,6 @@
 package com.github.benmanes.gradle.versions
 
+import com.github.benmanes.gradle.versions.updates.AutoUpdateDependenciesTask
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -19,6 +20,7 @@ class VersionsPlugin : Plugin<Project> {
     val tasks = project.tasks
     if (!tasks.names.contains("dependencyUpdates")) {
       tasks.register("dependencyUpdates", DependencyUpdatesTask::class.java)
+      tasks.register("autoUpdateDependencies", AutoUpdateDependenciesTask::class.java)
     }
   }
 

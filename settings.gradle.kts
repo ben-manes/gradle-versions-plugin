@@ -5,6 +5,9 @@ pluginManagement {
   }
 }
 
+// Define CI environment variable properly
+val isCI: Boolean = System.getenv("CI")?.toBoolean() ?: false
+
 dependencyResolutionManagement {
   repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
 
@@ -14,19 +17,22 @@ dependencyResolutionManagement {
   }
 }
 
+// Apply Gradle Plugin
 plugins {
-  id("com.gradle.develocity") version("3.18.2")
+  id("com.gradle.develocity") version "3.18.2"
 }
 
+// Configure Develocity Plugin Properly
 develocity {
   buildScan {
-    termsOfUseUrl = "https://gradle.com/terms-of-service"
-    termsOfUseAgree = "yes"
-    val isCI = System.getenv("CI") != null
-    publishing.onlyIf { isCI }
+    termsOfUseUrl.set("https://gradle.com/terms-of-service")
+    termsOfUseAgree.set("yes")
+    publishing.onlyIf { isCI } // Use defined `isCI`
   }
 }
 
+// Set project name
 rootProject.name = "gradle-versions-plugin"
 
+// Include subprojects
 include(":gradle-versions-plugin")

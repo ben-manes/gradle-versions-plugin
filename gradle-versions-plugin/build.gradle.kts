@@ -1,6 +1,7 @@
 plugins {
   alias(libs.plugins.kotlin.jvm)
-  alias(libs.plugins.dokka)
+  alias(libs.plugins.dokka) apply false // If using Version Catalogs
+  // id("org.jetbrains.dokka") version "1.9.20" apply false // Latest stable
   alias(libs.plugins.ktlint)
   alias(libs.plugins.plugin.publish)
   alias(libs.plugins.versions)
@@ -10,8 +11,8 @@ plugins {
   groovy
 }
 
-group = properties["GROUP"].toString()
-version = properties["VERSION_NAME"].toString()
+group = properties["GROUP"]?.toString() ?: "default.group"
+version = properties["VERSION_NAME"]?.toString() ?: "0.1.0"
 
 // Write the plugin's classpath to a file to share with the tests
 tasks.register("createClasspathManifest") {
@@ -28,6 +29,7 @@ tasks.register("createClasspathManifest") {
 
 dependencies {
   compileOnly(gradleApi())
+  implementation("com.google.code.gson:gson:2.10.1")
 
   implementation(localGroovy())
   implementation(platform(libs.kotlin.bom))
@@ -43,15 +45,19 @@ dependencies {
 }
 
 gradlePlugin {
-  website.set(properties["POM_URL"].toString())
-  vcsUrl.set(properties["POM_SCM_URL"].toString())
   plugins {
     create("versionsPlugin") {
-      id = properties["PLUGIN_NAME"].toString()
-      implementationClass = properties["PLUGIN_NAME_CLASS"].toString()
-      displayName = properties["POM_NAME"].toString()
-      description = properties["POM_DESCRIPTION"].toString()
-      tags.set(listOf("dependencies", "versions", "updates"))
+      id = properties["PLUGIN_NAME"]?.toString() ?: "com.example.plugin"
+      implementationClass = properties["PLUGIN_NAME_CLASS"]?.toString() ?: "com.example.Plugin"
+      displayName = properties["POM_NAME"]?.toString() ?: "Gradle Versions Plugin"
+      description = properties["POM_DESCRIPTION"]?.toString() ?: "Automatically updates dependencies"
     }
   }
+}
+
+// ✅ Move metadata to `pluginBundle {}` instead
+pluginBundle {
+  website = properties["POM_URL"]?.toString() ?: "https://default-url.com"
+  vcsUrl = properties["POM_SCM_URL"]?.toString() ?: "https://github.com/example/repo"
+  tags = listOf("dependencies", "versions", "updates")
 }
