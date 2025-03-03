@@ -4,7 +4,7 @@ kotlin = "2.0.21"
 [plugins]
 dokka = { id = "org.jetbrains.dokka", version = "2.0.0" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-ktlint = { id = "org.jlleitschuh.gradle.ktlint", version = "12.1.2" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version = "12.2.0" }
 plugin-publish = { id = "com.gradle.plugin-publish", version = "1.3.0" }
 versions = { id = "com.github.ben-manes.versions", version = "0.51.0" }
 
