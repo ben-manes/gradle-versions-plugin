@@ -367,7 +367,7 @@ Have a look at [`examples/groovy`](https://github.com/ben-manes/gradle-versions-
 
 ```bash
 # Publish the latest version of the plugin to mavenLocal()
-$ ./gradlew install
+$ ./gradlew publishToMavenLocal
 
 # Try out the samples
 $ ./gradlew -p examples/groovy dependencyUpdate
