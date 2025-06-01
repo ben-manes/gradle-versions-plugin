@@ -204,7 +204,7 @@ class HtmlReporter(
     val rows = mutableListOf<String>()
     val list = result.outdated
     rows.add(
-      "<tr class=\"header\"><th colspan=\"5\"><b>Later dependencies<span>(Click to collapse)</span></b></th></tr>",
+      "<tr class=\"header\"><th colspan=\"6\"><b>Later dependencies<span>(Click to collapse)</span></b></th></tr>",
     )
     rows.add(
       """
@@ -324,7 +324,7 @@ class HtmlReporter(
       val list = result.current
       rows.add(
         """
-        <tr class="header" id="currentId"><th colspan="4">
+        <tr class="header" id="currentId"><th colspan="5">
         <b>Current dependencies<span>(Click to expand)</span></b></th></tr>""".trim(),
       )
       rows.add(
@@ -356,7 +356,7 @@ class HtmlReporter(
       // The following dependencies are using the latest milestone version:
       val list = result.exceeded
       rows.add(
-        "<tr class=\"header\"><th colspan=\"5\"><b>Exceeded dependencies<span>(Click to collapse)</span></b></th></tr>",
+        "<tr class=\"header\"><th colspan=\"6\"><b>Exceeded dependencies<span>(Click to collapse)</span></b></th></tr>",
       )
       rows.add(
         """
@@ -407,7 +407,7 @@ class HtmlReporter(
       val rows = mutableListOf<String>()
       val list = result.unresolved
       rows.add(
-        "<tr class=\"header\"><th colspan=\"4\"><b>Unresolved dependencies<span>(Click to collapse)</span></b></th></tr>",
+        "<tr class=\"header\"><th colspan=\"5\"><b>Unresolved dependencies<span>(Click to collapse)</span></b></th></tr>",
       )
       rows.add(
         "<tr><td><b>Name</b></td><td><b>Group</b></td><td><b>URL</b></td><td><b>Current Version</b></td><td>Reason</td></tr>",
