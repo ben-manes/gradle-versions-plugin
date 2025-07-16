@@ -123,8 +123,8 @@ You may also wish to explore additional functionality provided by,
  - [refreshVersions](https://github.com/jmfayard/refreshVersions)
  - [update-versions-gradle-plugin](https://github.com/tomasbjerre/update-versions-gradle-plugin)
 
-### Known Issues ###
-[Gradle configuration cache](https://docs.gradle.org/current/userguide/configuration_cache.html) is not supported, and there appears to also be an upstream issue with Gradle's configuration cache opt-out mechanism.  To work around the issue, run with `--no-configuration-cache` if it is enabled in your Gradle configuration and you see error logs such as `problems were found storing the configuration cache`.
+### Workarounds for related Gradle Issues ###
+ - https://github.com/gradle/gradle/issues/24636: setting the flag `org.gradle.configuration-cache.problems=warn` in `gradle.properties` causes the dependency check to fail to find dependencies with message `No dependencies found`.  Comment out that line until the upstream issue with Gradle is fixed.
 
 ## Tasks
 
