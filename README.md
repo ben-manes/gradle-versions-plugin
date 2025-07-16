@@ -124,7 +124,7 @@ You may also wish to explore additional functionality provided by,
  - [update-versions-gradle-plugin](https://github.com/tomasbjerre/update-versions-gradle-plugin)
 
 ### Known Issues ###
-[Gradle configuration cache](https://docs.gradle.org/current/userguide/configuration_cache.html) is not supported.  To work around the issue, run with `--no-configuration-cache` if it is enabled in your Gradle configuration.
+[Gradle configuration cache](https://docs.gradle.org/current/userguide/configuration_cache.html) is not supported, and there appears to also be an upstream issue with Gradle's configuration cache opt-out mechanism.  To work around the issue, run with `--no-configuration-cache` if it is enabled in your Gradle configuration and you see error logs such as `problems were found storing the configuration cache`.
 
 ## Tasks
 
