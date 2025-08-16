@@ -14,7 +14,7 @@ checks for updates to Gradle itself.
   - [buildscript block](#buildscript-block)
   - [Using a Gradle init script](#using-a-gradle-init-script)
   - [Related plugins](#related-plugins)
-  - [Known issues](#known-issues)
+  - [Known issues](#workarounds-for-related-gradle-issues)
 - [dependencyUpdates](#dependencyupdates)
   - [Multi-project build](#multi-project-build)
   - [Revisions](#revisions)
@@ -125,6 +125,7 @@ You may also wish to explore additional functionality provided by,
 
 ### Workarounds for related Gradle Issues ###
  - https://github.com/gradle/gradle/issues/24636: setting the flag `org.gradle.configuration-cache.problems=warn` in `gradle.properties` causes the dependency check to fail to find dependencies with message `No dependencies found`.  Comment out that line until the upstream issue with Gradle is fixed.
+ - In Gradle 9+, parallel execution is incompatible with having one project's task resolving another project configuration's dependencies. This requires obtaining an internal lock not available to plugin developers, but is relied on by native plugins (e.g. for IDE support). This simply requires passing the `--no-parallel` flag when running the `dependencyUpdates` task, which allows you to continue to benefit from the speedup in other build scenarios.
 
 ## Tasks
 
@@ -161,7 +162,7 @@ The following strategies are natively supported by Gradle:
 The strategy can be specified either on the task or as a system property for ad hoc usage:
 
 ```groovy
-gradle dependencyUpdates -Drevision=release
+gradle dependencyUpdates -Drevision=release --no-parallel
 ```
 
 #### RejectVersionsIf and componentSelection
@@ -286,11 +287,11 @@ import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 tasks.withType<DependencyUpdatesTask> {
   resolutionStrategy {
     componentSelection {
-      all {
+      all(Action<ComponentSelectionWithCurrent> {
         if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
           reject("Release candidate")
         }
-      }
+      })
     }
   }
 }
@@ -391,21 +392,21 @@ The task property `outputFormatter` controls the report output format. The follo
 You can also set multiple output formats using comma as the separator:
 
 ```groovy
-gradle dependencyUpdates -Drevision=release -DoutputFormatter=json,xml,html
+gradle dependencyUpdates -Drevision=release -DoutputFormatter=json,xml,html --no-parallel
 ```
 
 The task property `outputDir` controls the output directory for the report  file(s). The directory will be created if it does not exist.
 The default value is set to `build/dependencyUpdates`
 
 ```groovy
-gradle dependencyUpdates -Drevision=release -DoutputFormatter=json -DoutputDir=/any/path/with/permission
+gradle dependencyUpdates -Drevision=release -DoutputFormatter=json -DoutputDir=/any/path/with/permission --no-parallel
 ```
 
 Last the property `reportfileName` sets the filename (without extension) of the generated report. It defaults to `report`.
 The extension will be set according to the used output format.
 
 ```groovy
-gradle dependencyUpdates -Drevision=release -DoutputFormatter=json -DreportfileName=myCustomReport
+gradle dependencyUpdates -Drevision=release -DoutputFormatter=json -DreportfileName=myCustomReport --no-parallel
 ```
 
 This displays a report to the console.
