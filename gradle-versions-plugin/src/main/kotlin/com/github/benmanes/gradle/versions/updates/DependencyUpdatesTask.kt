@@ -9,12 +9,14 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.Resolution
 import groovy.lang.Closure
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.specs.Spec
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
+import org.gradle.util.GradleVersion
 import javax.annotation.Nullable
 
 /**
@@ -121,6 +123,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
   @TaskAction
   fun dependencyUpdates() {
+    requireNoParallel()
     project.evaluationDependsOnChildren()
     if (resolutionStrategy != null) {
       val closure = resolutionStrategy!!
@@ -139,6 +142,14 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
       )
     val reporter = evaluator.run()
     reporter.write()
+  }
+
+  private fun requireNoParallel() {
+    if (GradleVersion.current() > GradleVersion.version("9.0") &&
+      project.gradle.startParameter.isParallelProjectExecutionEnabled
+    ) {
+      throw GradleException("Parallel project execution is not supported, run this task with --no-parallel")
+    }
   }
 
   fun rejectVersionIf(filter: ComponentFilter) {
