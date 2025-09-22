@@ -122,6 +122,7 @@ You may also wish to explore additional functionality provided by,
  - [gradle-update-notifier](https://github.com/y-yagi/gradle-update-notifier)
  - [refreshVersions](https://github.com/jmfayard/refreshVersions)
  - [update-versions-gradle-plugin](https://github.com/tomasbjerre/update-versions-gradle-plugin)
+ - [caupain](https://github.com/deezer/caupain/)
 
 ### Workarounds for related Gradle Issues ###
  - https://github.com/gradle/gradle/issues/24636: setting the flag `org.gradle.configuration-cache.problems=warn` in `gradle.properties` causes the dependency check to fail to find dependencies with message `No dependencies found`.  Comment out that line until the upstream issue with Gradle is fixed.
