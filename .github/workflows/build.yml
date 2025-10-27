@@ -62,7 +62,7 @@ jobs:
           cd examples/kotlin/ && ../../gradlew dU && cd -
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: gradle-versions-plugin-${{ matrix.java-version }}-${{ github.workflow }}-${{ github.run_id }}
