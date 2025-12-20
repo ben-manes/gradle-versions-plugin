@@ -39,15 +39,18 @@ class DependencyUpdates
      * task options and returns a reporter for the results.
      */
     fun run(): DependencyUpdatesReporter {
+      // Create a snapshot of configurations to avoid ConcurrentModificationException
+      // when configurations are lazily created during resolution (e.g., by AGP 9.x)
+      // See: https://github.com/ben-manes/gradle-versions-plugin/issues/966
       val projectConfigs =
         project.allprojects
-          .associateBy({ it }, { it.configurations.matching(filterConfigurations) })
+          .associateBy({ it }, { it.configurations.matching(filterConfigurations).toSet() })
 
       val status: Set<DependencyStatus> = resolveProjects(projectConfigs, checkConstraints)
 
       val buildscriptProjectConfigs =
         project.allprojects
-          .associateBy({ it }, { it.buildscript.configurations })
+          .associateBy({ it }, { it.buildscript.configurations.toSet() })
       val buildscriptStatus: Set<DependencyStatus> =
         resolveProjects(
           buildscriptProjectConfigs,
