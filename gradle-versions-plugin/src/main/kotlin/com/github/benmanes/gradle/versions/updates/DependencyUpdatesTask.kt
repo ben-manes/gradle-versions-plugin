@@ -10,6 +10,7 @@ import groovy.lang.Closure
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
+import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.specs.Spec
 import org.gradle.api.tasks.Input
@@ -17,6 +18,7 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.util.GradleVersion
+import java.io.File
 import javax.annotation.Nullable
 
 /**
@@ -109,9 +111,28 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   @Internal
   @Nullable
   var resolutionStrategy: Closure<Any>? = null
+    set(value) {
+      field = null
+      if (value != null) {
+        val closure = value
+        resolutionStrategyAction = Action { current -> taskProject.configure(current, closure) }
+        logger.warn(
+          "dependencyUpdates.resolutionStrategy: " +
+            "Remove the assignment operator, \"=\", when setting this task property",
+        )
+      }
+    }
 
   @Nullable
   private var resolutionStrategyAction: Action<in ResolutionStrategyWithCurrent>? = null
+
+  // Pre-computed at configuration time to avoid accessing Task.project at execution time.
+  private val taskProject: Project = project
+  private val taskProjectDir: File = project.projectDir
+  private val taskProjectPath: String = project.path
+  private var isParallelExecution: Boolean = project.gradle.startParameter.isParallelProjectExecutionEnabled
+  private var preCollectedProjectConfigs: Map<Project, Set<Configuration>>? = null
+  private var preCollectedBuildscriptConfigs: Map<Project, Set<Configuration>>? = null
 
   init {
     description = "Displays the dependency updates for the project."
@@ -119,35 +140,47 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
     outputs.upToDateWhen { false }
 
     callIncompatibleWithConfigurationCache()
+
+    project.gradle.taskGraph.whenReady { taskGraph ->
+      if (taskGraph.hasTask(this@DependencyUpdatesTask)) {
+        preCollectedProjectConfigs =
+          taskProject.allprojects
+            .associateBy({ it }, { it.configurations.matching(filterConfigurations).toSet() })
+        preCollectedBuildscriptConfigs =
+          taskProject.allprojects
+            .associateBy({ it }, { it.buildscript.configurations.toSet() })
+      }
+    }
   }
 
   @TaskAction
   fun dependencyUpdates() {
     requireNoParallel()
-    project.evaluationDependsOnChildren()
-    if (resolutionStrategy != null) {
-      val closure = resolutionStrategy!!
-      resolutionStrategy { current -> project.configure(current, closure) }
-      logger.warn(
-        "dependencyUpdates.resolutionStrategy: " +
-          "Remove the assignment operator, \"=\", when setting this task property",
-      )
-    }
     val evaluator =
       DependencyUpdates(
-        project, resolutionStrategyAction, revision,
-        outputFormatter(), outputDir, reportfileName, checkForGradleUpdate, gradleVersionsApiBaseUrl,
-        gradleReleaseChannel, checkConstraints, checkBuildEnvironmentConstraints,
-        filterConfigurations,
+        preCollectedProjectConfigs ?: taskProject.allprojects
+          .associateBy({ it }, { it.configurations.matching(filterConfigurations).toSet() }),
+        preCollectedBuildscriptConfigs ?: taskProject.allprojects
+          .associateBy({ it }, { it.buildscript.configurations.toSet() }),
+        taskProjectDir,
+        taskProjectPath,
+        resolutionStrategyAction,
+        revision,
+        outputFormatter(),
+        outputDir,
+        reportfileName,
+        checkForGradleUpdate,
+        gradleVersionsApiBaseUrl,
+        gradleReleaseChannel,
+        checkConstraints,
+        checkBuildEnvironmentConstraints,
       )
     val reporter = evaluator.run()
     reporter.write()
   }
 
   private fun requireNoParallel() {
-    if (GradleVersion.current() > GradleVersion.version("9.0") &&
-      project.gradle.startParameter.isParallelProjectExecutionEnabled
-    ) {
+    if (GradleVersion.current() > GradleVersion.version("9.0") && isParallelExecution) {
       throw GradleException("Parallel project execution is not supported, run this task with --no-parallel")
     }
   }

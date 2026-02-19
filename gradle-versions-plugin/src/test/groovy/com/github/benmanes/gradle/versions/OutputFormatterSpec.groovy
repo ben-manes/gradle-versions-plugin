@@ -576,7 +576,7 @@ Failed to determine the latest version for the following dependencies (use --inf
             result.unresolved.dependencies.removeIf {
               it.name == 'unresolvable20' || it.name == 'unresolvable21'
             }
-            def plainTextReporter = new PlainTextReporter(project, revision, gradleReleaseChannel)
+            def plainTextReporter = new PlainTextReporter(project.path, revision, gradleReleaseChannel)
             plainTextReporter.write(System.out, result)
           }
           checkForGradleUpdate = false // future proof tests from breaking

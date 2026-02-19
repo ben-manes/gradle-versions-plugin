@@ -655,8 +655,14 @@ final class DependencyUpdatesSpec extends Specification {
     if (gradleVersionsApiBaseUrl == null) {
       gradleVersionsApiBaseUrl = "https://services.gradle.org/versions/"
     }
-    new DependencyUpdates(project, resolutionStrategy, revision, buildOutputFormatter(outputFormatter), outputDir,
-      reportfileName, checkForGradleUpdate, gradleVersionsApiBaseUrl, gradleReleaseChannel, false, false, configurationFilter).run()
+    def projectConfigs = project.allprojects
+      .collectEntries { p -> [(p): p.configurations.matching(configurationFilter).toSet()] }
+    def buildscriptConfigs = project.allprojects
+      .collectEntries { p -> [(p): p.buildscript.configurations.toSet()] }
+    new DependencyUpdates(projectConfigs, buildscriptConfigs, project.projectDir, project.path,
+      resolutionStrategy, revision, buildOutputFormatter(outputFormatter), outputDir,
+      reportfileName, checkForGradleUpdate, gradleVersionsApiBaseUrl, gradleReleaseChannel,
+      false, false).run()
   }
 
   private static OutputFormatterArgument buildOutputFormatter(outputFormatter) {

@@ -1,13 +1,14 @@
 package com.github.benmanes.gradle.versions.updates
 
-import org.gradle.api.Project
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionComparator
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.logging.Logging
 
 /**
  * A mapping of which versions are out of date, up to date, undeclared, or exceed the latest found.
  */
-class VersionMapping(val project: Project, statuses: Set<DependencyStatus>) {
+class VersionMapping(statuses: Set<DependencyStatus>) {
+  private val logger = Logging.getLogger(VersionMapping::class.java)
   val downgrade = sortedSetOf<Coordinate>()
   val upToDate = sortedSetOf<Coordinate>()
   val upgrade = sortedSetOf<Coordinate>()
@@ -35,7 +36,7 @@ class VersionMapping(val project: Project, statuses: Set<DependencyStatus>) {
     for (coordinate in current) {
       val latestCoordinate = latestByKey[coordinate.key]
       val version = latestCoordinate?.version
-      project.logger
+      logger
         .info("Comparing dependency (current: {}, latest: {})", coordinate, version ?: "unresolved")
       if (unresolved.contains(coordinate)) {
         continue

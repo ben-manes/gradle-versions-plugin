@@ -16,6 +16,8 @@ class VersionsPlugin : Plugin<Project> {
     requireMinimumGradleVersion()
     requireSupportedSaxParser()
 
+    project.evaluationDependsOnChildren()
+
     val tasks = project.tasks
     if (!tasks.names.contains("dependencyUpdates")) {
       tasks.register("dependencyUpdates", DependencyUpdatesTask::class.java)

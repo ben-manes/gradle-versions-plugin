@@ -1,18 +1,17 @@
 package com.github.benmanes.gradle.versions.reporter
 
-import org.gradle.api.Project
 import java.io.OutputStream
 import java.io.PrintStream
 
 /**
  * A base result object reporter for the dependency updates results.
  *
- * @property project The project evaluated against.
+ * @property projectPath The project path for display purposes.
  * @property revision The revision strategy evaluated with.
  * @property gradleReleaseChannel The gradle release channel to use for reporting.
  */
 abstract class AbstractReporter(
-  open val project: Project,
+  open val projectPath: String,
   open val revision: String,
   open val gradleReleaseChannel: String,
 ) : Reporter
