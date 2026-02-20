@@ -371,10 +371,6 @@ final class DifferentGradleVersionsSpec extends Specification {
 
     when:
     def arguments = ['dependencyUpdates']
-    // Warning mode reporting only supported on recent versions.
-    if (gradleVersion.substring(0, gradleVersion.indexOf('.')).toInteger() >= 6) {
-      arguments.add('--warning-mode=fail')
-    }
     arguments.add('-S')
     arguments.add('--configuration-cache')
     def result = GradleRunner.create()

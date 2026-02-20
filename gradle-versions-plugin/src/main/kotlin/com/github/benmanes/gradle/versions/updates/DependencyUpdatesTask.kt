@@ -39,7 +39,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   /** Returns the outputDir destination. */
   @Input
   var outputDir: String =
-    "${project.buildDir.path.replace(project.projectDir.path + "/", "")}/dependencyUpdates"
+    "${project.layout.buildDirectory.get().asFile.path.replace(project.projectDir.path + "/", "")}/dependencyUpdates"
     get() = (System.getProperties()["outputDir"] ?: field) as String
 
   /** Returns the filename of the report. */
