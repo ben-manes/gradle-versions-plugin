@@ -3,8 +3,6 @@ package com.github.benmanes.gradle.versions.updates
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import org.gradle.api.Action
-import org.gradle.api.Project
-import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.UnresolvedDependency
 import org.gradle.api.logging.Logging
 import java.io.File
@@ -20,8 +18,8 @@ import java.io.File
  * </ul>
  */
 class DependencyUpdates(
-  val projectConfigs: Map<Project, Set<Configuration>>,
-  val buildscriptConfigs: Map<Project, Set<Configuration>>,
+  val projectConfigs: List<ProjectConfigurations>,
+  val buildscriptConfigs: List<ProjectConfigurations>,
   val projectDir: File,
   val projectPath: String,
   val resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?,
@@ -65,15 +63,15 @@ class DependencyUpdates(
   }
 
   private fun resolveProjects(
-    projectConfigs: Map<Project, Set<Configuration>>,
+    projectConfigs: List<ProjectConfigurations>,
     checkConstraints: Boolean,
   ): Set<DependencyStatus> {
     val resultStatus = hashSetOf<DependencyStatus>()
-    projectConfigs.forEach { (currentProject, currentConfigurations) ->
-      val resolver = Resolver(currentProject, resolutionStrategy, checkConstraints)
-      for (currentConfiguration in currentConfigurations) {
+    for (entry in projectConfigs) {
+      val resolver = Resolver(entry.context, resolutionStrategy, checkConstraints)
+      for (currentConfiguration in entry.configurations) {
         if (currentConfiguration.isCanBeResolved) {
-          for (newStatus in resolve(resolver, currentProject, currentConfiguration)) {
+          for (newStatus in resolve(resolver, entry.context, currentConfiguration)) {
             addValidatedDependencyStatus(resultStatus, newStatus)
           }
         }
@@ -84,13 +82,13 @@ class DependencyUpdates(
 
   private fun resolve(
     resolver: Resolver,
-    project: Project,
-    config: Configuration,
+    context: ProjectContext,
+    config: org.gradle.api.artifacts.Configuration,
   ): Set<DependencyStatus> {
     return try {
       resolver.resolve(config, revision)
     } catch (e: Exception) {
-      logger.info("Skipping configuration ${project.path}:${config.name}", e)
+      logger.info("Skipping configuration ${context.path}:${config.name}", e)
       emptySet()
     }
   }

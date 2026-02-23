@@ -7,7 +7,6 @@ import groovy.xml.slurpersupport.NodeChildren
 import org.codehaus.groovy.runtime.DefaultGroovyMethods.asBoolean
 import org.codehaus.groovy.runtime.DefaultGroovyMethods.getMetaClass
 import org.gradle.api.Action
-import org.gradle.api.Project
 import org.gradle.api.artifacts.ComponentMetadata
 import org.gradle.api.artifacts.ComponentSelection
 import org.gradle.api.artifacts.Configuration
@@ -28,6 +27,7 @@ import org.gradle.api.attributes.HasConfigurableAttributes
 import org.gradle.api.attributes.java.TargetJvmVersion
 import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
 import org.gradle.api.internal.artifacts.dependencies.DefaultProjectDependencyConstraint
+import org.gradle.api.logging.Logging
 import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier
 import org.gradle.maven.MavenModule
 import org.gradle.maven.MavenPomArtifact
@@ -38,10 +38,11 @@ import java.util.concurrent.ConcurrentHashMap
  * Resolves the configuration to determine the version status of its dependencies.
  */
 class Resolver(
-  private val project: Project,
+  private val projectContext: ProjectContext,
   private val resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?,
   private val checkConstraints: Boolean,
 ) {
+  private val logger = Logging.getLogger(Resolver::class.java)
   private var projectUrls = ConcurrentHashMap<ModuleVersionIdentifier, ProjectUrl>()
 
   init {
@@ -132,9 +133,9 @@ class Resolver(
         .minus(configuration.dependencies)
 
     // Adds the Kotlin 1.2.x legacy metadata to assist in variant selection
-    val metadata = project.configurations.findByName("commonMainMetadataElements")
+    val metadata = projectContext.configurationContainer.findByName("commonMainMetadataElements")
     if (metadata == null) {
-      val compile = project.configurations.findByName("compile")
+      val compile = projectContext.configurationContainer.findByName("compile")
       if (compile != null) {
         addAttributes(copy, compile) { key -> key.contains("kotlin") }
       }
@@ -181,7 +182,7 @@ class Resolver(
         query += "@$extension"
       }
     }
-    val latest = project.dependencies.create(query) as ModuleDependency
+    val latest = projectContext.dependencyHandler.create(query) as ModuleDependency
     latest.isTransitive = false
 
     // Copy selection qualifiers if the artifact was not explicitly set
@@ -196,7 +197,7 @@ class Resolver(
     // If no version was specified then use "none" to pass it through.
     val version = if (dependency.version == null) "none" else "+"
     val nonTransitiveDependency =
-      project.dependencies.create("${dependency.group.orEmpty()}:${dependency.name}:$version") as ModuleDependency
+      projectContext.dependencyHandler.create("${dependency.group.orEmpty()}:${dependency.name}:$version") as ModuleDependency
     nonTransitiveDependency.isTransitive = false
     return nonTransitiveDependency
   }
@@ -308,31 +309,15 @@ class Resolver(
   }
 
   private fun logRepositories() {
-    val root = project.rootProject == project
-    val label = "${
-      if (root) {
-        project.name
-      } else {
-        project.path
-      }
-    } project ${
-      if (root) {
-        " (root)"
-      } else {
-        ""
-      }
-    }"
-    if (!project.buildscript.configurations
-        .flatMap { config -> config.dependencies }
-        .any()
-    ) {
-      project.logger.info("Resolving $label buildscript with repositories:")
-      for (repository in project.buildscript.repositories) {
+    val label = projectContext.label
+    if (!projectContext.buildscriptHasDependencies) {
+      logger.info("Resolving $label buildscript with repositories:")
+      for (repository in projectContext.buildscriptRepositories.toList()) {
         logRepository(repository)
       }
     }
-    project.logger.info("Resolving $label configurations with repositories:")
-    for (repository in project.repositories) {
+    logger.info("Resolving $label configurations with repositories:")
+    for (repository in projectContext.repositories.toList()) {
       logRepository(repository)
     }
   }
@@ -340,22 +325,22 @@ class Resolver(
   private fun logRepository(repository: ArtifactRepository) {
     when (repository) {
       is FlatDirectoryArtifactRepository -> {
-        project.logger.info(" - ${repository.name}: ${repository.dirs}")
+        logger.info(" - ${repository.name}: ${repository.dirs}")
       }
       is IvyArtifactRepository -> {
-        project.logger.info(" - ${repository.name}: ${repository.url}")
+        logger.info(" - ${repository.name}: ${repository.url}")
       }
       is MavenArtifactRepository -> {
-        project.logger.info(" - ${repository.name}: ${repository.url}")
+        logger.info(" - ${repository.name}: ${repository.url}")
       }
       else -> {
-        project.logger.info(" - ${repository.name}: ${repository.javaClass.simpleName}")
+        logger.info(" - ${repository.name}: ${repository.javaClass.simpleName}")
       }
     }
   }
 
   private fun getProjectUrl(id: ModuleVersionIdentifier): String? {
-    if (project.gradle.startParameter.isOffline) {
+    if (projectContext.isOffline) {
       return null
     }
     var projectUrl = ProjectUrl()
@@ -375,7 +360,7 @@ class Resolver(
   private fun resolveProjectUrl(id: ModuleVersionIdentifier): String? {
     return try {
       val resolutionResult =
-        project.dependencies
+        projectContext.dependencyHandler
           .createArtifactResolutionQuery()
           .forComponents(DefaultModuleComponentIdentifier.newId(id))
           .withArtifacts(MavenModule::class.java, MavenPomArtifact::class.java)
@@ -387,10 +372,10 @@ class Resolver(
         for (artifact in result.getArtifacts(MavenPomArtifact::class.java)) {
           if (artifact is ResolvedArtifactResult) {
             val file = artifact.file
-            project.logger.info("Pom file for $id is $file")
+            logger.info("Pom file for $id is $file")
             var url = getUrlFromPom(file)
             if (!url.isNullOrEmpty()) {
-              project.logger.info("Found url for $id: $url")
+              logger.info("Found url for $id: $url")
               return url.trim()
             } else {
               val parent = getParentFromPom(file)
@@ -406,10 +391,10 @@ class Resolver(
           }
         }
       }
-      project.logger.info("Did not find url for $id")
+      logger.info("Did not find url for $id")
       null
     } catch (e: Exception) {
-      project.logger.info("Failed to resolve the project's url", e)
+      logger.info("Failed to resolve the project's url", e)
       null
     }
   }

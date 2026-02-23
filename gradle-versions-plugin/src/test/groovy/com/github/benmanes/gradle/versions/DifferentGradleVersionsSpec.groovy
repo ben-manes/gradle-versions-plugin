@@ -37,6 +37,14 @@ final class DifferentGradleVersionsSpec extends Specification {
   @Unroll
   def 'dependencyUpdates task completes without errors with Gradle #gradleVersion'() {
     given:
+    def specVersion = System.getProperty("java.specification.version")
+    def jdkMajor = specVersion.startsWith("1.") ? specVersion.split("\\.")[1].toInteger() : specVersion.toInteger()
+    def gradleMajor = gradleVersion.substring(0, gradleVersion.indexOf('.')).toInteger()
+    // Gradle < 7.2 is incompatible with JDK 17+ (old Groovy runtime fails to initialize)
+    if (gradleMajor < 7 || (gradleMajor == 7 && gradleVersion < '7.2')) {
+      Assume.assumeTrue("Gradle ${gradleVersion} requires JDK < 17", jdkMajor < 17)
+    }
+
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
       """
@@ -188,6 +196,11 @@ final class DifferentGradleVersionsSpec extends Specification {
 
   def 'dependencyUpdates task works with dependency verification enabled'() {
     given:
+    def specVersion = System.getProperty("java.specification.version")
+    def jdkMajor = specVersion.startsWith("1.") ? specVersion.split("\\.")[1].toInteger() : specVersion.toInteger()
+    // This test uses Gradle 6.2 which is incompatible with JDK 17+
+    Assume.assumeTrue("Gradle 6.2 requires JDK < 17", jdkMajor < 17)
+
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
       """
@@ -420,7 +433,8 @@ final class DifferentGradleVersionsSpec extends Specification {
 
     then:
     result.output.contains('BUILD SUCCESSFUL')
-    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.task(':sub1:dependencyUpdates').outcome == SUCCESS
+    result.task(':sub2:dependencyUpdates').outcome == SUCCESS
 
     where:
     gradleVersion << [
@@ -433,6 +447,14 @@ final class DifferentGradleVersionsSpec extends Specification {
   @Unroll
   def 'dependencyUpdates task completes with configuration cache enabled with Gradle #gradleVersion'() {
     given:
+    def specVersion = System.getProperty("java.specification.version")
+    def jdkMajor = specVersion.startsWith("1.") ? specVersion.split("\\.")[1].toInteger() : specVersion.toInteger()
+    def gradleMajor = gradleVersion.substring(0, gradleVersion.indexOf('.')).toInteger()
+    // Gradle < 7.2 is incompatible with JDK 17+ (old Groovy runtime fails to initialize)
+    if (gradleMajor < 7 || (gradleMajor == 7 && gradleVersion < '7.2')) {
+      Assume.assumeTrue("Gradle ${gradleVersion} requires JDK < 17", jdkMajor < 17)
+    }
+
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
       """

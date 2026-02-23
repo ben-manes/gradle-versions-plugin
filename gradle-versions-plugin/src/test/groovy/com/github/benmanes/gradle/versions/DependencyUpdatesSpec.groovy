@@ -25,6 +25,8 @@ import com.github.benmanes.gradle.versions.reporter.Reporter
 import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.updates.Coordinate
 import com.github.benmanes.gradle.versions.updates.DependencyUpdates
+import com.github.benmanes.gradle.versions.updates.ProjectConfigurations
+import com.github.benmanes.gradle.versions.updates.ProjectContext
 import org.gradle.api.artifacts.ComponentSelection
 import org.gradle.api.artifacts.ModuleVersionSelector
 import org.gradle.testfixtures.ProjectBuilder
@@ -656,9 +658,9 @@ final class DependencyUpdatesSpec extends Specification {
       gradleVersionsApiBaseUrl = "https://services.gradle.org/versions/"
     }
     def projectConfigs = project.allprojects
-      .collectEntries { p -> [(p): p.configurations.matching(configurationFilter).toSet()] }
+      .collect { p -> new ProjectConfigurations(ProjectContext.from(p), p.configurations.matching(configurationFilter).toSet()) }
     def buildscriptConfigs = project.allprojects
-      .collectEntries { p -> [(p): p.buildscript.configurations.toSet()] }
+      .collect { p -> new ProjectConfigurations(ProjectContext.from(p), p.buildscript.configurations.toSet()) }
     new DependencyUpdates(projectConfigs, buildscriptConfigs, project.projectDir, project.path,
       resolutionStrategy, revision, buildOutputFormatter(outputFormatter), outputDir,
       reportfileName, checkForGradleUpdate, gradleVersionsApiBaseUrl, gradleReleaseChannel,

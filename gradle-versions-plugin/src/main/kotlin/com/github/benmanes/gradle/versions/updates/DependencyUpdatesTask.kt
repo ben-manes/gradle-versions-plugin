@@ -10,7 +10,6 @@ import groovy.lang.Closure
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
-import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.specs.Spec
 import org.gradle.api.tasks.Input
@@ -116,15 +115,16 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
       field = null
       if (value != null) {
         val closure = value
-        resolutionStrategyAction = Action { current ->
-          closure.resolveStrategy = Closure.DELEGATE_FIRST
-          closure.delegate = current
-          if (closure.maximumNumberOfParameters == 0) {
-            closure.call()
-          } else {
-            closure.call(current)
+        resolutionStrategyAction =
+          Action { current ->
+            closure.resolveStrategy = Closure.DELEGATE_FIRST
+            closure.delegate = current
+            if (closure.maximumNumberOfParameters == 0) {
+              closure.call()
+            } else {
+              closure.call(current)
+            }
           }
-        }
         logger.warn(
           "dependencyUpdates.resolutionStrategy: " +
             "Remove the assignment operator, \"=\", when setting this task property",
@@ -152,16 +152,21 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
     thisProject.gradle.taskGraph.whenReady { taskGraph ->
       if (taskGraph.hasTask(this@DependencyUpdatesTask)) {
         val filter = filterConfigurations ?: Spec<Configuration> { true }
-        val projectConfigs = thisProject.allprojects
-          .associateBy({ it }, { it.configurations.matching(filter).toSet() })
-        val buildscriptConfigs = thisProject.allprojects
-          .associateBy({ it }, { it.buildscript.configurations.toSet() })
-        executionDataCache[storageKey] = ExecutionData(
-          projectConfigs = projectConfigs,
-          buildscriptConfigs = buildscriptConfigs,
-          outputFormatterArgument = outputFormatterArgument,
-          resolutionStrategyAction = resolutionStrategyAction,
-        )
+        val projectConfigs =
+          thisProject.allprojects.map { p ->
+            ProjectConfigurations(ProjectContext.from(p), p.configurations.matching(filter).toSet())
+          }
+        val buildscriptConfigs =
+          thisProject.allprojects.map { p ->
+            ProjectConfigurations(ProjectContext.from(p), p.buildscript.configurations.toSet())
+          }
+        executionDataCache[storageKey] =
+          ExecutionData(
+            projectConfigs = projectConfigs,
+            buildscriptConfigs = buildscriptConfigs,
+            outputFormatterArgument = outputFormatterArgument,
+            resolutionStrategyAction = resolutionStrategyAction,
+          )
         // Clear fields that may hold closures/objects referencing Project or Configuration
         // so CC serialization doesn't walk into them.
         filterConfigurations = null
@@ -175,14 +180,15 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   fun dependencyUpdates() {
     requireNoParallel()
     val execData = executionDataCache.remove(storageKey)
-    val outputFmt = System.getProperties()["outputFormatter"]
-      ?.let { OutputFormatterArgument.BuiltIn(it as String) }
-      ?: execData?.outputFormatterArgument
-      ?: outputFormatterArgument
+    val outputFmt =
+      System.getProperties()["outputFormatter"]
+        ?.let { OutputFormatterArgument.BuiltIn(it as String) }
+        ?: execData?.outputFormatterArgument
+        ?: outputFormatterArgument
     val evaluator =
       DependencyUpdates(
-        execData?.projectConfigs ?: emptyMap(),
-        execData?.buildscriptConfigs ?: emptyMap(),
+        execData?.projectConfigs ?: emptyList(),
+        execData?.buildscriptConfigs ?: emptyList(),
         taskProjectDir,
         taskProjectPath,
         execData?.resolutionStrategyAction,
@@ -249,8 +255,8 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   // Holds all execution-time data that may reference Project/Configuration objects
   // or user-provided closures that capture Project references.
   private class ExecutionData(
-    val projectConfigs: Map<Project, Set<Configuration>>,
-    val buildscriptConfigs: Map<Project, Set<Configuration>>,
+    val projectConfigs: List<ProjectConfigurations>,
+    val buildscriptConfigs: List<ProjectConfigurations>,
     val outputFormatterArgument: OutputFormatterArgument,
     val resolutionStrategyAction: Action<in ResolutionStrategyWithCurrent>?,
   )
