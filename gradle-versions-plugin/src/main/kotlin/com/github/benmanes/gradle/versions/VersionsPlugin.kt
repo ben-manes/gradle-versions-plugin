@@ -1,6 +1,7 @@
 package com.github.benmanes.gradle.versions
 
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+import com.github.benmanes.gradle.versions.updates.WhenReadyAction
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -20,7 +21,20 @@ class VersionsPlugin : Plugin<Project> {
 
     val tasks = project.tasks
     if (!tasks.names.contains("dependencyUpdates")) {
-      tasks.register("dependencyUpdates", DependencyUpdatesTask::class.java)
+      val buildDirRelative =
+        project.layout.buildDirectory.get().asFile.path
+          .replace(project.projectDir.path + "/", "")
+      val taskProvider =
+        tasks.register("dependencyUpdates", DependencyUpdatesTask::class.java) { task ->
+          task.outputDir = "$buildDirRelative/dependencyUpdates"
+          task.taskProjectDir = project.projectDir
+          task.taskProjectPath = project.path
+          task.isParallelExecution = project.gradle.startParameter.isParallelProjectExecutionEnabled
+        }
+      // Register the whenReady callback here (during project evaluation) rather than
+      // inside the task configuration action. This ensures the callback fires after ALL
+      // configuration actions (including configureEach from build scripts) have run.
+      WhenReadyAction.register(taskProvider, project)
     }
   }
 

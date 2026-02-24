@@ -5,6 +5,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.artifacts.dsl.RepositoryHandler
+import org.gradle.api.specs.Spec
 
 /**
  * Captures everything [Resolver] needs from a [Project] at configuration time, so that
@@ -52,3 +53,10 @@ class ProjectConfigurations(
   val context: ProjectContext,
   val configurations: Set<Configuration>,
 )
+
+/**
+ * A [Spec] that accepts all configurations. Defined here (outside [DependencyUpdatesTask])
+ * so that the lambda accepting [Configuration] is not compiled as a method on the task class,
+ * which would cause CC to flag it as a disallowed type.
+ */
+internal val ACCEPT_ALL_CONFIGURATIONS: Spec<Configuration> = Spec { true }

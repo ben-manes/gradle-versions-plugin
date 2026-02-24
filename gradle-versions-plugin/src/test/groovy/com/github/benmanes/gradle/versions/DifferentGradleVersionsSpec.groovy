@@ -435,6 +435,7 @@ final class DifferentGradleVersionsSpec extends Specification {
     result.output.contains('BUILD SUCCESSFUL')
     result.task(':sub1:dependencyUpdates').outcome == SUCCESS
     result.task(':sub2:dependencyUpdates').outcome == SUCCESS
+    !result.output.contains('problems were found storing the configuration cache')
 
     where:
     gradleVersion << [

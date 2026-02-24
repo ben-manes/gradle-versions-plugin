@@ -10,8 +10,6 @@ import groovy.lang.Closure
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
-import org.gradle.api.artifacts.Configuration
-import org.gradle.api.specs.Spec
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
@@ -38,8 +36,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
   /** Returns the outputDir destination. */
   @Input
-  var outputDir: String =
-    "${project.layout.buildDirectory.get().asFile.path.replace(project.projectDir.path + "/", "")}/dependencyUpdates"
+  var outputDir: String = "build/dependencyUpdates"
     get() = (System.getProperties()["outputDir"] ?: field) as String
 
   /** Returns the filename of the report. */
@@ -77,7 +74,8 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
    * Keeps a reference to the latest [OutputFormatterArgument] provided either via the [outputFormatter]
    * property or the [outputFormatter] function.
    */
-  private var outputFormatterArgument: OutputFormatterArgument = OutputFormatterArgument.DEFAULT
+  @get:Internal
+  internal var outputFormatterArgument: OutputFormatterArgument = OutputFormatterArgument.DEFAULT
 
   @Input
   @Optional
@@ -102,8 +100,11 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   @Input
   var checkConstraints: Boolean = false
 
-  @Internal
-  var filterConfigurations: Spec<Configuration>? = Spec<Configuration> { true }
+  // Typed as Any? so that CC serialization never sees Spec<Configuration> in the
+  // task class signature. Build scripts set this to a Spec<Configuration> and the
+  // cast happens in WhenReadyAction at configuration time.
+  @get:Internal
+  var filterConfigurations: Any? = null
 
   @Input
   var checkBuildEnvironmentConstraints: Boolean = false
@@ -132,48 +133,24 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
       }
     }
 
+  @get:Internal
   @Nullable
-  private var resolutionStrategyAction: Action<in ResolutionStrategyWithCurrent>? = null
+  internal var resolutionStrategyAction: Action<in ResolutionStrategyWithCurrent>? = null
 
-  // Pre-computed at configuration time to avoid accessing Task.project at execution time.
-  private val taskProjectDir: File = project.projectDir
-  private val taskProjectPath: String = project.path
+  // Set by the plugin at configuration time so that the task class never calls getProject().
+  // Gradle 9.x instruments task classes and flags any getProject() call, even in constructors.
+  @get:Internal
+  internal var taskProjectDir: File = File(".")
+  @get:Internal
+  internal var taskProjectPath: String = ""
   private val storageKey: String = path
-  private var isParallelExecution: Boolean = project.gradle.startParameter.isParallelProjectExecutionEnabled
+  @get:Internal
+  internal var isParallelExecution: Boolean = false
 
   init {
     description = "Displays the dependency updates for the project."
     group = "Help"
     outputs.upToDateWhen { false }
-
-    callIncompatibleWithConfigurationCache()
-
-    val thisProject = project
-    thisProject.gradle.taskGraph.whenReady { taskGraph ->
-      if (taskGraph.hasTask(this@DependencyUpdatesTask)) {
-        val filter = filterConfigurations ?: Spec<Configuration> { true }
-        val projectConfigs =
-          thisProject.allprojects.map { p ->
-            ProjectConfigurations(ProjectContext.from(p), p.configurations.matching(filter).toSet())
-          }
-        val buildscriptConfigs =
-          thisProject.allprojects.map { p ->
-            ProjectConfigurations(ProjectContext.from(p), p.buildscript.configurations.toSet())
-          }
-        executionDataCache[storageKey] =
-          ExecutionData(
-            projectConfigs = projectConfigs,
-            buildscriptConfigs = buildscriptConfigs,
-            outputFormatterArgument = outputFormatterArgument,
-            resolutionStrategyAction = resolutionStrategyAction,
-          )
-        // Clear fields that may hold closures/objects referencing Project or Configuration
-        // so CC serialization doesn't walk into them.
-        filterConfigurations = null
-        outputFormatterArgument = OutputFormatterArgument.DEFAULT
-        resolutionStrategyAction = null
-      }
-    }
   }
 
   @TaskAction
@@ -247,24 +224,26 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
     outputFormatterArgument = OutputFormatterArgument.CustomAction(action)
   }
 
-  private fun callIncompatibleWithConfigurationCache() {
-    this::class.members.find { it.name == "notCompatibleWithConfigurationCache" }
-      ?.call(this, "The gradle-versions-plugin isn't compatible with the configuration cache")
-  }
-
   // Holds all execution-time data that may reference Project/Configuration objects
   // or user-provided closures that capture Project references.
-  private class ExecutionData(
+  internal class ExecutionData(
     val projectConfigs: List<ProjectConfigurations>,
     val buildscriptConfigs: List<ProjectConfigurations>,
     val outputFormatterArgument: OutputFormatterArgument,
     val resolutionStrategyAction: Action<in ResolutionStrategyWithCurrent>?,
   )
 
+  /** Clears fields that may hold closures/objects referencing Project or Configuration. */
+  internal fun clearConfigurationTimeState() {
+    filterConfigurations = null
+    outputFormatterArgument = OutputFormatterArgument.DEFAULT
+    resolutionStrategyAction = null
+  }
+
   companion object {
     // Stored outside the task's field graph so CC serialization doesn't walk into
     // Project/Configuration references or user-provided closures that capture them.
     // Keyed by task path, cleaned up after use.
-    private val executionDataCache = ConcurrentHashMap<String, ExecutionData>()
+    internal val executionDataCache = ConcurrentHashMap<String, ExecutionData>()
   }
 }

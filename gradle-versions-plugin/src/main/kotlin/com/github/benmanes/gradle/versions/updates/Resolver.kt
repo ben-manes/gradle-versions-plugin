@@ -109,7 +109,13 @@ class Resolver(
       }
     }
 
-    val copy = configuration.copyRecursive().setTransitive(false)
+    // Use copy() instead of copyRecursive() to preserve the resolution strategy (including
+    // component selection rules) while avoiding the recursive parent copy that triggers
+    // internal Task.project access through Gradle's lazy task initialization.
+    val copy =
+      configuration.copy().apply {
+        isTransitive = false
+      }
 
     // https://github.com/ben-manes/gradle-versions-plugin/issues/592
     // allow resolution of dynamic latest versions regardless of the original strategy
@@ -274,8 +280,23 @@ class Resolver(
     val transitive = declared.values.any { it.version == "none" }
 
     val coordinates = hashMapOf<Coordinate.Key, Coordinate>()
-    val copy = configuration.copyRecursive().setTransitive(transitive)
+    // Use detachedConfiguration instead of copyRecursive to avoid triggering internal
+    // Task.project access through Gradle's lazy task initialization during copy.
+    val copy =
+      projectContext.configurationContainer.detachedConfiguration(
+        *configuration.allDependencies.toTypedArray(),
+      ).apply {
+        isTransitive = transitive
+      }
 
+    // Add constraints from the original configuration for proper resolution
+    if (checkConstraints) {
+      for (constraint in configuration.allDependencyConstraints) {
+        copy.dependencyConstraints.add(constraint)
+      }
+    }
+
+    addAttributes(copy, configuration)
     disableAutoTargetJvm(copy)
     val lenient = copy.resolvedConfiguration.lenientConfiguration
 
@@ -291,8 +312,8 @@ class Resolver(
       declared[key]?.let { coordinates.put(key, it) }
     }
 
-    if (supportsConstraints(copy)) {
-      for (constraint in copy.allDependencyConstraints) {
+    if (supportsConstraints(configuration)) {
+      for (constraint in configuration.allDependencyConstraints) {
         val coordinate = Coordinate.from(constraint)
         // Only add a constraint to the report if there is no dependency matching it, this means it
         // is targeting a transitive dependency or is part of a platform.
