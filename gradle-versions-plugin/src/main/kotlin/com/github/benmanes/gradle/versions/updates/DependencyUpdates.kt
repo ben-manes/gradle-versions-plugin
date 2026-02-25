@@ -103,7 +103,7 @@ class DependencyUpdates(
     return try {
       resolver.resolve(config, revision)
     } catch (e: Exception) {
-      logger.info("Skipping configuration ${context.path}:${config.name}: ${e.javaClass.simpleName}: ${e.message}")
+      logger.info("Skipping configuration ${context.path}:${config.name}: ${e.javaClass.simpleName}: ${e.message}", e)
       emptySet()
     }
   }

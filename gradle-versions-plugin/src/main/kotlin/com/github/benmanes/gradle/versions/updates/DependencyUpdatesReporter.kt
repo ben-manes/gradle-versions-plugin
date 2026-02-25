@@ -107,10 +107,10 @@ class DependencyUpdatesReporter(
     val outputDirFile = projectDir.resolve(outputDir)
     outputDirFile.mkdirs()
     val outputFile = projectDir.resolve(fileName.path)
-    val stream = PrintStream(outputFile)
     val result = buildBaseObject()
-    reporter.write(stream, result)
-    stream.close()
+    PrintStream(outputFile).use { stream ->
+      reporter.write(stream, result)
+    }
 
     logger.lifecycle("\nGenerated report file $fileName")
   }

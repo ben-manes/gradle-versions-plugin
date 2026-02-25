@@ -1,5 +1,6 @@
 package com.github.benmanes.gradle.versions.updates
 
+import groovy.lang.Closure
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.specs.Spec
@@ -52,7 +53,11 @@ internal object WhenReadyAction {
 
     val storageKey = task.path
     @Suppress("UNCHECKED_CAST")
-    val filter = (task.filterConfigurations as? Spec<Configuration>) ?: ACCEPT_ALL_CONFIGURATIONS
+    val filter = when (val raw = task.filterConfigurations) {
+      is Spec<*> -> raw as Spec<Configuration>
+      is Closure<*> -> Spec<Configuration> { config -> raw.call(config) as Boolean }
+      else -> ACCEPT_ALL_CONFIGURATIONS
+    }
     val projectConfigs =
       project.allprojects.map { p ->
         ProjectConfigurations(

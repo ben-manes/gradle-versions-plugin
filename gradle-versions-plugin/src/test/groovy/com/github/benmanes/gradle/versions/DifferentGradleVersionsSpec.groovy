@@ -46,6 +46,10 @@ final class DifferentGradleVersionsSpec extends Specification {
     if (gradleMajor < 7 || (gradleMajor == 7 && gradleMinor < 2)) {
       Assume.assumeTrue("Gradle ${gradleVersion} requires JDK < 17", jdkMajor < 17)
     }
+    // Gradle 9+ requires JDK 17+
+    if (gradleMajor >= 9) {
+      Assume.assumeTrue("Gradle ${gradleVersion} requires JDK 17+", jdkMajor >= 17)
+    }
 
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
@@ -682,6 +686,10 @@ final class DifferentGradleVersionsSpec extends Specification {
     // Gradle < 7.2 is incompatible with JDK 17+ (old Groovy runtime fails to initialize)
     if (gradleMajor < 7 || (gradleMajor == 7 && gradleMinor < 2)) {
       Assume.assumeTrue("Gradle ${gradleVersion} requires JDK < 17", jdkMajor < 17)
+    }
+    // Gradle 9+ requires JDK 17+
+    if (gradleMajor >= 9) {
+      Assume.assumeTrue("Gradle ${gradleVersion} requires JDK 17+", jdkMajor >= 17)
     }
 
     buildFile = testProjectDir.newFile('build.gradle')
