@@ -159,6 +159,12 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   fun dependencyUpdates() {
     requireNoParallel()
     val execData = executionDataCache.remove(storageKey)
+    if (execData == null) {
+      logger.warn(
+        "dependencyUpdates: No pre-resolved data found for task '$path'. " +
+          "The report will be empty. This can happen if the whenReady callback did not run.",
+      )
+    }
     val outputFmt =
       System.getProperties()["outputFormatter"]
         ?.let { OutputFormatterArgument.BuiltIn(it as String) }
@@ -193,7 +199,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   }
 
   private fun requireNoParallel() {
-    if (GradleVersion.current() > GradleVersion.version("9.0") && isParallelExecution) {
+    if (GradleVersion.current() >= GradleVersion.version("9.0") && isParallelExecution) {
       throw GradleException("Parallel project execution is not supported, run this task with --no-parallel")
     }
   }

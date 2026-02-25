@@ -131,7 +131,10 @@ class Resolver(
         dependencies.addAll(allDeps)
       }
     } catch (e: Exception) {
-      logger.info("Configuration copy failed, using detached configuration: ${e.message}")
+      logger.warn(
+        "Configuration copy failed for '${configuration.name}', using detached configuration " +
+          "(resolution strategy including component selection rules will not be inherited): ${e.message}",
+      )
       projectContext.configurationContainer.detachedConfiguration(
         *allDeps.toTypedArray(),
       ).apply {
