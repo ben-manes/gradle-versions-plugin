@@ -24,18 +24,22 @@ class VersionsPlugin : Plugin<Project> {
       val buildDirRelative =
         project.layout.buildDirectory.get().asFile.path
           .replace(project.projectDir.path + "/", "")
-      val taskProvider =
-        tasks.register("dependencyUpdates", DependencyUpdatesTask::class.java) { task ->
-          task.outputDir = "$buildDirRelative/dependencyUpdates"
-          task.taskProjectDir = project.projectDir
-          task.taskProjectPath = project.path
-          task.isParallelExecution = project.gradle.startParameter.isParallelProjectExecutionEnabled
-        }
-      // Register the whenReady callback here (during project evaluation) rather than
-      // inside the task configuration action. This ensures the callback fires after ALL
-      // configuration actions (including configureEach from build scripts) have run.
-      WhenReadyAction.register(taskProvider, project)
+      tasks.register("dependencyUpdates", DependencyUpdatesTask::class.java) { task ->
+        task.outputDir = "$buildDirRelative/dependencyUpdates"
+      }
     }
+
+    // Set common properties for ALL tasks of this type (including user-created ones)
+    tasks.withType(DependencyUpdatesTask::class.java).configureEach { task ->
+      task.taskProjectDir = project.projectDir
+      task.taskProjectPath = project.path
+      task.isParallelExecution = project.gradle.startParameter.isParallelProjectExecutionEnabled
+    }
+
+    // Register the whenReady callback here (during project evaluation) rather than
+    // inside the task configuration action. This ensures the callback fires after ALL
+    // configuration actions (including configureEach from build scripts) have run.
+    WhenReadyAction.register(project)
   }
 
   private fun requireMinimumGradleVersion() {

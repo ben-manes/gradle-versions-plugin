@@ -36,19 +36,26 @@ class DependencyUpdates(
   private val logger = Logging.getLogger(DependencyUpdates::class.java)
 
   /**
-   * Evaluates the project dependencies and then the buildScript dependencies to apply different
-   * task options and returns a reporter for the results.
+   * Resolves all project and buildscript dependencies and returns the status sets.
+   * This requires project services (ConfigurationContainer, DependencyHandler) and must
+   * be called during the configuration phase when those services are available.
    */
-  fun run(): DependencyUpdatesReporter {
-    val status: Set<DependencyStatus> = resolveProjects(projectConfigs, checkConstraints)
+  fun resolveStatuses(): Pair<Set<DependencyStatus>, Set<DependencyStatus>> {
+    val projectStatuses = resolveProjects(projectConfigs, checkConstraints)
+    val buildscriptStatuses = resolveProjects(buildscriptConfigs, checkBuildEnvironmentConstraints)
+    return Pair(projectStatuses, buildscriptStatuses)
+  }
 
-    val buildscriptStatus: Set<DependencyStatus> =
-      resolveProjects(
-        buildscriptConfigs,
-        checkBuildEnvironmentConstraints,
-      )
-
-    val statuses = status + buildscriptStatus
+  /**
+   * Builds a reporter from pre-resolved dependency statuses.
+   * This is a pure data transformation that does not require project services,
+   * so it can safely run at execution time.
+   */
+  fun createReporterFromStatuses(
+    projectStatuses: Set<DependencyStatus>,
+    buildscriptStatuses: Set<DependencyStatus>,
+  ): DependencyUpdatesReporter {
+    val statuses = projectStatuses + buildscriptStatuses
     val versions = VersionMapping(statuses)
     val unresolved = statuses.mapNotNullTo(mutableSetOf()) { it.unresolved }
     val projectUrls =
@@ -58,8 +65,16 @@ class DependencyUpdates(
           { mapOf("group" to it.coordinate.groupId, "name" to it.coordinate.artifactId) },
           { it.projectUrl.toString() },
         )
-
     return createReporter(versions, unresolved, projectUrls)
+  }
+
+  /**
+   * Evaluates the project dependencies and then the buildScript dependencies to apply different
+   * task options and returns a reporter for the results.
+   */
+  fun run(): DependencyUpdatesReporter {
+    val (projectStatuses, buildscriptStatuses) = resolveStatuses()
+    return createReporterFromStatuses(projectStatuses, buildscriptStatuses)
   }
 
   private fun resolveProjects(
@@ -88,7 +103,7 @@ class DependencyUpdates(
     return try {
       resolver.resolve(config, revision)
     } catch (e: Exception) {
-      logger.info("Skipping configuration ${context.path}:${config.name}", e)
+      logger.info("Skipping configuration ${context.path}:${config.name}: ${e.javaClass.simpleName}: ${e.message}")
       emptySet()
     }
   }

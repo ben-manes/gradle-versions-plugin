@@ -109,13 +109,35 @@ class Resolver(
       }
     }
 
-    // Use copy() instead of copyRecursive() to preserve the resolution strategy (including
-    // component selection rules) while avoiding the recursive parent copy that triggers
-    // internal Task.project access through Gradle's lazy task initialization.
-    val copy =
+    // Resolve using the latest version of explicitly declared dependencies and retains Kotlin's
+    // inherited dependencies (importantly, including stdlib) from the super configurations. This
+    // is required for variant resolution, but the full set can break consumer capability matching.
+    val isKotlinDep = { dependency: ExternalDependency -> (dependency.group?.startsWith("org.jetbrains.kotlin") ?: false) }
+    val inheritedKotlin =
+      configuration.allDependencies
+        .filterIsInstance<ExternalDependency>()
+        .filter { d -> isKotlinDep(d) }
+        .minus(configuration.dependencies)
+
+    val allDeps = latest + inheritedKotlin
+
+    // Prefer copy() to inherit the resolution strategy (including component selection rules),
+    // but fall back to detachedConfiguration() when copy() fails — e.g. under configuration
+    // cache where reading lazy attribute values triggers PropertyQueryException.
+    val copy = try {
       configuration.copy().apply {
         isTransitive = false
+        dependencies.clear()
+        dependencies.addAll(allDeps)
       }
+    } catch (e: Exception) {
+      logger.info("Configuration copy failed, using detached configuration: ${e.message}")
+      projectContext.configurationContainer.detachedConfiguration(
+        *allDeps.toTypedArray(),
+      ).apply {
+        isTransitive = false
+      }
+    }
 
     // https://github.com/ben-manes/gradle-versions-plugin/issues/592
     // allow resolution of dynamic latest versions regardless of the original strategy
@@ -128,16 +150,6 @@ class Resolver(
         .setProperty(copy.resolutionStrategy, "failOnDynamicVersions", false)
     }
 
-    // Resolve using the latest version of explicitly declared dependencies and retains Kotlin's
-    // inherited dependencies (importantly, including stdlib) from the super configurations. This
-    // is required for variant resolution, but the full set can break consumer capability matching.
-    val isKotlinDep = { dependency: ExternalDependency -> (dependency.group?.startsWith("org.jetbrains.kotlin") ?: false) }
-    val inheritedKotlin =
-      configuration.allDependencies
-        .filterIsInstance<ExternalDependency>()
-        .filter { d -> isKotlinDep(d) }
-        .minus(configuration.dependencies)
-
     // Adds the Kotlin 1.2.x legacy metadata to assist in variant selection
     val metadata = projectContext.configurationContainer.findByName("commonMainMetadataElements")
     if (metadata == null) {
@@ -148,10 +160,6 @@ class Resolver(
     } else {
       addAttributes(copy, metadata)
     }
-
-    copy.dependencies.clear()
-    copy.dependencies.addAll(latest)
-    copy.dependencies.addAll(inheritedKotlin)
 
     addRevisionFilter(copy, revision)
     addAttributes(copy, configuration)
@@ -223,9 +231,15 @@ class Resolver(
     target.attributes { container ->
       for (key in source.attributes.keySet()) {
         if (filter.invoke(key.name)) {
-          @Suppress("UNCHECKED_CAST")
-          val value = source.attributes.getAttribute(key as Attribute<Any>)!!
-          container.attribute(key, value)
+          try {
+            @Suppress("UNCHECKED_CAST")
+            val value = source.attributes.getAttribute(key as Attribute<Any>)
+            if (value != null) {
+              container.attribute(key, value)
+            }
+          } catch (e: Exception) {
+            logger.info("Skipping attribute ${key.name}: ${e.message}")
+          }
         }
       }
     }

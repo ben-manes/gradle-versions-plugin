@@ -3,7 +3,6 @@ package com.github.benmanes.gradle.versions.updates
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.specs.Spec
-import org.gradle.api.tasks.TaskProvider
 
 /**
  * Handles the [org.gradle.api.execution.TaskExecutionGraph.whenReady] callback for
@@ -17,43 +16,86 @@ import org.gradle.api.tasks.TaskProvider
  *
  * The callback is registered during project evaluation (from [com.github.benmanes.gradle.versions.VersionsPlugin.apply])
  * so that it fires after ALL task configuration actions (including `configureEach` from build scripts)
- * have completed. The [TaskProvider] is only resolved (`get()`) inside the callback, which runs
- * after the task graph is finalized and the task has been fully configured.
+ * have completed. Tasks are discovered via [org.gradle.api.execution.TaskExecutionGraph.allTasks],
+ * which includes every [DependencyUpdatesTask] in the graph regardless of its name.
+ *
+ * In a multi-project build the plugin is applied per-project, so multiple callbacks may be
+ * registered. Each task is only cached once (guarded by [DependencyUpdatesTask.executionDataCache])
+ * using [org.gradle.api.Task.getProject] to obtain the correct project scope. Accessing
+ * `task.project` here is safe because `whenReady` runs during the configuration phase, before
+ * configuration-cache serialization — CC restrictions only apply to task execution.
  */
 internal object WhenReadyAction {
-  fun register(
-    taskProvider: TaskProvider<DependencyUpdatesTask>,
-    project: Project,
-  ) {
+  fun register(project: Project) {
     project.gradle.taskGraph.whenReady { taskGraph ->
-      val task = taskProvider.get()
-      if (taskGraph.hasTask(task)) {
-        val storageKey = task.path
-        @Suppress("UNCHECKED_CAST")
-        val filter = (task.filterConfigurations as? Spec<Configuration>) ?: ACCEPT_ALL_CONFIGURATIONS
-        val projectConfigs =
-          project.allprojects.map { p ->
-            ProjectConfigurations(
-              ProjectContext.from(p),
-              p.configurations.matching(filter).toSet(),
-            )
-          }
-        val buildscriptConfigs =
-          project.allprojects.map { p ->
-            ProjectConfigurations(
-              ProjectContext.from(p),
-              p.buildscript.configurations.toSet(),
-            )
-          }
-        DependencyUpdatesTask.executionDataCache[storageKey] =
-          DependencyUpdatesTask.ExecutionData(
-            projectConfigs = projectConfigs,
-            buildscriptConfigs = buildscriptConfigs,
-            outputFormatterArgument = task.outputFormatterArgument,
-            resolutionStrategyAction = task.resolutionStrategyAction,
-          )
-        task.clearConfigurationTimeState()
+      for (task in taskGraph.allTasks) {
+        if (task is DependencyUpdatesTask && !DependencyUpdatesTask.executionDataCache.containsKey(task.path)) {
+          cacheExecutionData(task)
+        }
       }
     }
+  }
+
+  private fun cacheExecutionData(task: DependencyUpdatesTask) {
+    // task.project is safe here — we're in a whenReady callback (configuration phase),
+    // before CC serialization, not during task execution.
+    val project = task.project
+
+    // Ensure task properties are set even when the plugin wasn't applied to this project
+    // directly (e.g., a custom task registered at root while the plugin is applied to subprojects).
+    if (task.taskProjectPath.isEmpty()) {
+      task.taskProjectDir = project.projectDir
+      task.taskProjectPath = project.path
+      task.isParallelExecution = project.gradle.startParameter.isParallelProjectExecutionEnabled
+    }
+
+    val storageKey = task.path
+    @Suppress("UNCHECKED_CAST")
+    val filter = (task.filterConfigurations as? Spec<Configuration>) ?: ACCEPT_ALL_CONFIGURATIONS
+    val projectConfigs =
+      project.allprojects.map { p ->
+        ProjectConfigurations(
+          ProjectContext.from(p),
+          p.configurations.matching(filter).toSet(),
+        )
+      }
+    val buildscriptConfigs =
+      project.allprojects.map { p ->
+        ProjectConfigurations(
+          ProjectContext.from(p),
+          p.buildscript.configurations.toSet(),
+        )
+      }
+
+    // Resolve dependencies at configuration time. In Gradle 9.x with configuration cache,
+    // project services (ConfigurationContainer, DependencyHandler) are closed after the
+    // configuration phase, making it impossible to create detached configurations or resolve
+    // dependencies at execution time.
+    val evaluator =
+      DependencyUpdates(
+        projectConfigs,
+        buildscriptConfigs,
+        task.taskProjectDir,
+        task.taskProjectPath,
+        task.resolutionStrategyAction,
+        task.revision,
+        task.outputFormatterArgument,
+        task.outputDir,
+        task.reportfileName,
+        task.checkForGradleUpdate,
+        task.gradleVersionsApiBaseUrl,
+        task.gradleReleaseChannel,
+        task.checkConstraints,
+        task.checkBuildEnvironmentConstraints,
+      )
+    val (projectStatuses, buildscriptStatuses) = evaluator.resolveStatuses()
+
+    DependencyUpdatesTask.executionDataCache[storageKey] =
+      DependencyUpdatesTask.ExecutionData(
+        projectStatuses = projectStatuses,
+        buildscriptStatuses = buildscriptStatuses,
+        outputFormatterArgument = task.outputFormatterArgument,
+      )
+    task.clearConfigurationTimeState()
   }
 }

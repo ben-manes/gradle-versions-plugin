@@ -145,6 +145,227 @@ final class DifferentGradleVersionsSpec extends Specification {
     ]
   }
 
+  def 'custom-named DependencyUpdatesTask reports updates'() {
+    given:
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'java'
+        apply plugin: "com.github.ben-manes.versions"
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation 'com.google.inject:guice:2.0'
+        }
+
+        tasks.register('dependencyUpdatesSummary', DependencyUpdatesTask) {
+          outputDir = 'build/customReport'
+        }
+        """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdatesSummary')
+      .build()
+
+    then:
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.task(':dependencyUpdatesSummary').outcome == SUCCESS
+  }
+
+  def 'custom-named DependencyUpdatesTask at root reports subproject updates'() {
+    given:
+    def settingsFile = testProjectDir.newFile('settings.gradle')
+    settingsFile << """
+      rootProject.name = 'test-root'
+      include 'sub1'
+    """.stripIndent()
+
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        subprojects {
+          apply plugin: 'java'
+          apply plugin: "com.github.ben-manes.versions"
+
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+
+          dependencies {
+            implementation 'com.google.inject:guice:2.0'
+          }
+        }
+
+        tasks.register('dependencyUpdatesSummary', DependencyUpdatesTask) {
+          outputDir = 'build/customReport'
+        }
+        """.stripIndent()
+
+    testProjectDir.newFolder("sub1")
+    testProjectDir.newFile("sub1/build.gradle") << ""
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdatesSummary')
+      .build()
+
+    then:
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.task(':dependencyUpdatesSummary').outcome == SUCCESS
+  }
+
+  @Unroll
+  def 'subproject dependencyUpdates tasks find outdated deps when root delegates via plain lifecycle tasks with Gradle #gradleVersion'() {
+    given:
+    def specVersion = System.getProperty("java.specification.version")
+    def jdkMajor = specVersion.startsWith("1.") ? specVersion.split("\\.")[1].toInteger() : specVersion.toInteger()
+    def gradleMajor = gradleVersion.substring(0, gradleVersion.indexOf('.')).toInteger()
+    if (gradleMajor >= 9) {
+      Assume.assumeTrue("Gradle ${gradleVersion} requires JDK 17+", jdkMajor >= 17)
+    }
+
+    def settingsFile = testProjectDir.newFile('settings.gradle')
+    settingsFile << """
+      rootProject.name = 'test-root'
+      include 'sub1', 'sub2'
+    """.stripIndent()
+
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        // Mirror real-world setup: plugin applied to subprojects only, not root
+        subprojects {
+          apply plugin: 'java'
+          apply plugin: "com.github.ben-manes.versions"
+
+          repositories {
+            maven { url '${mavenRepoUrl}' }
+          }
+
+          dependencies {
+            implementation 'com.google.inject:guice:2.0'
+          }
+        }
+
+        def isNonStable = { String v ->
+          def stableKeyword = ['RELEASE','FINAL','GA'].any { v?.toUpperCase()?.contains(it) }
+          def regex = /^[0-9,.v-]+(-r)?\$/
+          !stableKeyword && !(v ==~ regex)
+        }
+
+        // Second subprojects block: custom formatter + resolution strategy
+        subprojects {
+          tasks.matching { it.name == "dependencyUpdates" }.configureEach {
+            checkForGradleUpdate = false
+            def projectName = project.name
+            def markerFile = rootProject.layout.buildDirectory
+                .file("dependencyUpdates/.hasOutdated").get().asFile
+
+            outputFormatter = { result ->
+              def outdated = result.outdated.dependencies
+              if (outdated) {
+                markerFile.parentFile.mkdirs()
+                markerFile.text = 'true'
+                println "\${projectName}:"
+                outdated.each { dep ->
+                  def latest = dep.available.release ?: dep.available.milestone ?: dep.available.integration
+                  println "  \${dep.group}:\${dep.name} \${dep.version} -> \${latest}"
+                }
+              }
+            }
+
+            resolutionStrategy {
+              componentSelection {
+                all { s ->
+                  if (isNonStable(s.candidate.version) && !isNonStable(s.currentVersion)) {
+                    s.reject('Release candidate')
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // Summary task that checks the marker file
+        tasks.register('dependencyUpdatesSummary') {
+          description = 'Prints a summary after all dependency update checks'
+          def markerFile = rootProject.layout.buildDirectory
+              .file("dependencyUpdates/.hasOutdated").get().asFile
+          dependsOn allprojects.collect { p ->
+            p.tasks.matching { it.name == 'dependencyUpdates' }
+          }
+          doLast {
+            if (!markerFile.exists()) {
+              println 'All dependencies are up-to-date.'
+            }
+            markerFile.delete()
+          }
+        }
+
+        // Root lifecycle task delegates to subprojects
+        tasks.register('dependencyUpdates') {
+          description = 'Runs dependency update checks for all subprojects'
+          group = 'Help'
+          dependsOn subprojects.collect { p ->
+            p.tasks.matching { it.name == 'dependencyUpdates' }
+          }
+          finalizedBy tasks.named('dependencyUpdatesSummary')
+        }
+        """.stripIndent()
+
+    testProjectDir.newFolder("sub1")
+    testProjectDir.newFile("sub1/build.gradle") << ""
+    testProjectDir.newFolder("sub2")
+    testProjectDir.newFile("sub2/build.gradle") << ""
+
+    when:
+    def result = GradleRunner.create()
+      .withGradleVersion(gradleVersion)
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates', '-Drevision=release', '--configuration-cache')
+      .build()
+
+    then:
+    result.output.contains('com.google.inject:guice 2.0 ->')
+    !result.output.contains('All dependencies are up-to-date')
+    result.task(':dependencyUpdatesSummary').outcome == SUCCESS
+
+    where:
+    gradleVersion << ['8.9', '9.1.0']
+  }
+
   @Unroll
   def 'dependencyUpdates task uses specified release channel with Gradle #gradleReleaseChannel'() {
     given:

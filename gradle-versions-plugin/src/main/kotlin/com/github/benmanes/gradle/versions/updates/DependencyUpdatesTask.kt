@@ -162,13 +162,17 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
         ?.let { OutputFormatterArgument.BuiltIn(it as String) }
         ?: execData?.outputFormatterArgument
         ?: outputFormatterArgument
+
+    // Build the reporter from pre-resolved statuses. Resolution happened at configuration
+    // time (in WhenReadyAction) because project services are not available at execution time
+    // under Gradle 9.x with configuration cache.
     val evaluator =
       DependencyUpdates(
-        execData?.projectConfigs ?: emptyList(),
-        execData?.buildscriptConfigs ?: emptyList(),
+        emptyList(),
+        emptyList(),
         taskProjectDir,
         taskProjectPath,
-        execData?.resolutionStrategyAction,
+        null,
         revision,
         outputFmt,
         outputDir,
@@ -179,7 +183,10 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
         checkConstraints,
         checkBuildEnvironmentConstraints,
       )
-    val reporter = evaluator.run()
+    val reporter = evaluator.createReporterFromStatuses(
+      execData?.projectStatuses ?: emptySet(),
+      execData?.buildscriptStatuses ?: emptySet(),
+    )
     reporter.write()
   }
 
@@ -224,13 +231,14 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
     outputFormatterArgument = OutputFormatterArgument.CustomAction(action)
   }
 
-  // Holds all execution-time data that may reference Project/Configuration objects
-  // or user-provided closures that capture Project references.
+  // Holds pre-resolved dependency statuses and the output formatter.
+  // Resolution happens at configuration time (in WhenReadyAction) because Gradle 9.x
+  // with configuration cache closes project services after the configuration phase,
+  // making it impossible to create detached configurations at execution time.
   internal class ExecutionData(
-    val projectConfigs: List<ProjectConfigurations>,
-    val buildscriptConfigs: List<ProjectConfigurations>,
+    val projectStatuses: Set<DependencyStatus>,
+    val buildscriptStatuses: Set<DependencyStatus>,
     val outputFormatterArgument: OutputFormatterArgument,
-    val resolutionStrategyAction: Action<in ResolutionStrategyWithCurrent>?,
   )
 
   /** Clears fields that may hold closures/objects referencing Project or Configuration. */
