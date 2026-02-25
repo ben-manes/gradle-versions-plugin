@@ -24,8 +24,7 @@ class VersionsPlugin : Plugin<Project> {
 
     // Set common properties for ALL tasks of this type (including user-created ones)
     val buildDirRelative =
-      project.layout.buildDirectory.get().asFile.path
-        .replace(project.projectDir.path + "/", "")
+      project.layout.buildDirectory.get().asFile.relativeTo(project.projectDir).path
     tasks.withType(DependencyUpdatesTask::class.java).configureEach { task ->
       task.outputDir = "$buildDirRelative/dependencyUpdates"
       task.taskProjectDir = project.projectDir

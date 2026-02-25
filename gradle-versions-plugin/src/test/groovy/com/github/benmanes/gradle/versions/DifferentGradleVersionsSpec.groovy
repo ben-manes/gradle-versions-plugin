@@ -39,9 +39,11 @@ final class DifferentGradleVersionsSpec extends Specification {
     given:
     def specVersion = System.getProperty("java.specification.version")
     def jdkMajor = specVersion.startsWith("1.") ? specVersion.split("\\.")[1].toInteger() : specVersion.toInteger()
-    def gradleMajor = gradleVersion.substring(0, gradleVersion.indexOf('.')).toInteger()
+    def gradleVersionParts = gradleVersion.tokenize('.').collect { it.toInteger() }
+    def gradleMajor = gradleVersionParts[0]
+    def gradleMinor = gradleVersionParts.size() > 1 ? gradleVersionParts[1] : 0
     // Gradle < 7.2 is incompatible with JDK 17+ (old Groovy runtime fails to initialize)
-    if (gradleMajor < 7 || (gradleMajor == 7 && gradleVersion < '7.2')) {
+    if (gradleMajor < 7 || (gradleMajor == 7 && gradleMinor < 2)) {
       Assume.assumeTrue("Gradle ${gradleVersion} requires JDK < 17", jdkMajor < 17)
     }
 
@@ -89,8 +91,8 @@ final class DifferentGradleVersionsSpec extends Specification {
     when:
     def arguments = ['dependencyUpdates']
     // Warning mode reporting only supported on recent versions
-    // Gradle 8.x deprecated configurations for removal in 9.0; ignore as unrelated
-    def majorVersion = gradleVersion.substring(0, gradleVersion.indexOf('.')).toInteger()
+    // Gradle 8.x and 9.x deprecated configurations; ignore as unrelated
+    def majorVersion = gradleMajor
     if ((majorVersion >= 6) && (majorVersion != 8) && (majorVersion < 9)) {
       arguments.add('--warning-mode=fail')
     }
@@ -674,9 +676,11 @@ final class DifferentGradleVersionsSpec extends Specification {
     given:
     def specVersion = System.getProperty("java.specification.version")
     def jdkMajor = specVersion.startsWith("1.") ? specVersion.split("\\.")[1].toInteger() : specVersion.toInteger()
-    def gradleMajor = gradleVersion.substring(0, gradleVersion.indexOf('.')).toInteger()
+    def gradleVersionParts = gradleVersion.tokenize('.').collect { it.toInteger() }
+    def gradleMajor = gradleVersionParts[0]
+    def gradleMinor = gradleVersionParts.size() > 1 ? gradleVersionParts[1] : 0
     // Gradle < 7.2 is incompatible with JDK 17+ (old Groovy runtime fails to initialize)
-    if (gradleMajor < 7 || (gradleMajor == 7 && gradleVersion < '7.2')) {
+    if (gradleMajor < 7 || (gradleMajor == 7 && gradleMinor < 2)) {
       Assume.assumeTrue("Gradle ${gradleVersion} requires JDK < 17", jdkMajor < 17)
     }
 

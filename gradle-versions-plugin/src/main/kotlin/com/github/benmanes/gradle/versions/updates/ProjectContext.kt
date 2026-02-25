@@ -40,7 +40,7 @@ class ProjectContext(
           project.buildscript.configurations
             .flatMap { config -> config.dependencies }
             .any(),
-        label = if (isRoot) "${project.name} project  (root)" else "${project.path} project ",
+        label = if (isRoot) "${project.name} project (root)" else "${project.path} project",
       )
     }
   }
