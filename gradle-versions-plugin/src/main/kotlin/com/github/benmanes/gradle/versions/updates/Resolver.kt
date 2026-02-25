@@ -124,24 +124,25 @@ class Resolver(
     // Prefer copy() to inherit the resolution strategy (including component selection rules),
     // but fall back to detachedConfiguration() when copy() fails — e.g. under configuration
     // cache where reading lazy attribute values triggers PropertyQueryException.
-    val copy = try {
-      configuration.copy().apply {
-        isTransitive = false
-        dependencies.clear()
-        dependencies.addAll(allDeps)
+    val copy =
+      try {
+        configuration.copy().apply {
+          isTransitive = false
+          dependencies.clear()
+          dependencies.addAll(allDeps)
+        }
+      } catch (e: Exception) {
+        logger.warn(
+          "Configuration copy failed for '${configuration.name}', using detached configuration " +
+            "(resolution strategy including component selection rules will not be inherited): ${e.message}",
+          e,
+        )
+        projectContext.configurationContainer.detachedConfiguration(
+          *allDeps.toTypedArray(),
+        ).apply {
+          isTransitive = false
+        }
       }
-    } catch (e: Exception) {
-      logger.warn(
-        "Configuration copy failed for '${configuration.name}', using detached configuration " +
-          "(resolution strategy including component selection rules will not be inherited): ${e.message}",
-        e,
-      )
-      projectContext.configurationContainer.detachedConfiguration(
-        *allDeps.toTypedArray(),
-      ).apply {
-        isTransitive = false
-      }
-    }
 
     // https://github.com/ben-manes/gradle-versions-plugin/issues/592
     // allow resolution of dynamic latest versions regardless of the original strategy

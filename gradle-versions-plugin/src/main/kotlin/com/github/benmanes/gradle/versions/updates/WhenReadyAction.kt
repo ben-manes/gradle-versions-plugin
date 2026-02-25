@@ -35,7 +35,6 @@ internal object WhenReadyAction {
         }
       }
     }
-
   }
 
   private fun cacheExecutionData(task: DependencyUpdatesTask) {
@@ -52,12 +51,14 @@ internal object WhenReadyAction {
     }
 
     val storageKey = task.path
+
     @Suppress("UNCHECKED_CAST")
-    val filter = when (val raw = task.filterConfigurations) {
-      is Spec<*> -> raw as Spec<Configuration>
-      is Closure<*> -> Spec<Configuration> { config -> raw.call(config) as Boolean }
-      else -> ACCEPT_ALL_CONFIGURATIONS
-    }
+    val filter =
+      when (val raw = task.filterConfigurations) {
+        is Spec<*> -> raw as Spec<Configuration>
+        is Closure<*> -> Spec<Configuration> { config -> raw.call(config) as Boolean }
+        else -> ACCEPT_ALL_CONFIGURATIONS
+      }
     val projectConfigs =
       project.allprojects.map { p ->
         ProjectConfigurations(

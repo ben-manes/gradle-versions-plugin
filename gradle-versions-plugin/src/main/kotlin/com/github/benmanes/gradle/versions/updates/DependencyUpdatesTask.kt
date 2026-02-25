@@ -143,9 +143,12 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   // Gradle 9.x instruments task classes and flags any getProject() call, even in constructors.
   @get:Internal
   internal var taskProjectDir: File = File(".")
+
   @get:Internal
   internal var taskProjectPath: String = ""
+
   private val storageKey: String = path
+
   @get:Internal
   internal var isParallelExecution: Boolean = false
 
@@ -191,10 +194,11 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
         checkConstraints,
         checkBuildEnvironmentConstraints,
       )
-    val reporter = evaluator.createReporterFromStatuses(
-      execData?.projectStatuses ?: emptySet(),
-      execData?.buildscriptStatuses ?: emptySet(),
-    )
+    val reporter =
+      evaluator.createReporterFromStatuses(
+        execData?.projectStatuses ?: emptySet(),
+        execData?.buildscriptStatuses ?: emptySet(),
+      )
     reporter.write()
   }
 
