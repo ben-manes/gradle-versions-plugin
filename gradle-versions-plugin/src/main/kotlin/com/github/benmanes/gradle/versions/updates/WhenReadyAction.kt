@@ -34,6 +34,7 @@ internal object WhenReadyAction {
         }
       }
     }
+
   }
 
   private fun cacheExecutionData(task: DependencyUpdatesTask) {

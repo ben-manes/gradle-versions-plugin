@@ -130,6 +130,8 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
           "dependencyUpdates.resolutionStrategy: " +
             "Remove the assignment operator, \"=\", when setting this task property",
         )
+      } else {
+        resolutionStrategyAction = null
       }
     }
 
@@ -218,8 +220,8 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
    * @param resolutionStrategy the resolution strategy
    */
   fun resolutionStrategy(resolutionStrategy: Action<in ResolutionStrategyWithCurrent>? = null) {
+    this.resolutionStrategy = null // Clear Closure field first (setter may clear resolutionStrategyAction)
     this.resolutionStrategyAction = resolutionStrategy
-    this.resolutionStrategy = null
   }
 
   /**

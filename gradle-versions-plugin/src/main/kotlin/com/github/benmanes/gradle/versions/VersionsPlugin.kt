@@ -17,20 +17,17 @@ class VersionsPlugin : Plugin<Project> {
     requireMinimumGradleVersion()
     requireSupportedSaxParser()
 
-    project.evaluationDependsOnChildren()
-
     val tasks = project.tasks
     if (!tasks.names.contains("dependencyUpdates")) {
-      val buildDirRelative =
-        project.layout.buildDirectory.get().asFile.path
-          .replace(project.projectDir.path + "/", "")
-      tasks.register("dependencyUpdates", DependencyUpdatesTask::class.java) { task ->
-        task.outputDir = "$buildDirRelative/dependencyUpdates"
-      }
+      tasks.register("dependencyUpdates", DependencyUpdatesTask::class.java)
     }
 
     // Set common properties for ALL tasks of this type (including user-created ones)
+    val buildDirRelative =
+      project.layout.buildDirectory.get().asFile.path
+        .replace(project.projectDir.path + "/", "")
     tasks.withType(DependencyUpdatesTask::class.java).configureEach { task ->
+      task.outputDir = "$buildDirRelative/dependencyUpdates"
       task.taskProjectDir = project.projectDir
       task.taskProjectPath = project.path
       task.isParallelExecution = project.gradle.startParameter.isParallelProjectExecutionEnabled
