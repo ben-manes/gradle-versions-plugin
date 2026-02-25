@@ -91,7 +91,7 @@ final class DifferentGradleVersionsSpec extends Specification {
     // Warning mode reporting only supported on recent versions
     // Gradle 8.x deprecated configurations for removal in 9.0; ignore as unrelated
     def majorVersion = gradleVersion.substring(0, gradleVersion.indexOf('.')).toInteger()
-    if ((majorVersion >= 6) && (majorVersion != 8)) {
+    if ((majorVersion >= 6) && (majorVersion != 8) && (majorVersion < 9)) {
       arguments.add('--warning-mode=fail')
     }
     arguments.add('-S')
@@ -142,6 +142,9 @@ final class DifferentGradleVersionsSpec extends Specification {
       '8.7',
       '8.8',
       '8.9',
+      '9.1.0',
+      '9.2.1',
+      '9.3.1',
     ]
   }
 
@@ -363,7 +366,7 @@ final class DifferentGradleVersionsSpec extends Specification {
     result.task(':dependencyUpdatesSummary').outcome == SUCCESS
 
     where:
-    gradleVersion << ['8.9', '9.1.0']
+    gradleVersion << ['8.9', '9.1.0', '9.2.1', '9.3.1']
   }
 
   @Unroll
@@ -732,6 +735,9 @@ final class DifferentGradleVersionsSpec extends Specification {
       '7.1.1',
       '7.2',
       '7.3.3',
+      '9.1.0',
+      '9.2.1',
+      '9.3.1',
     ]
   }
 }
