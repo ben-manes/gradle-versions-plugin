@@ -9,12 +9,10 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.Resolution
 import groovy.lang.Closure
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
-import org.gradle.api.GradleException
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
-import org.gradle.util.GradleVersion
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.Nullable
@@ -147,9 +145,6 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   @get:Internal
   internal var taskProjectPath: String = ""
 
-  @get:Internal
-  internal var isParallelExecution: Boolean = false
-
   init {
     description = "Displays the dependency updates for the project."
     group = "Help"
@@ -158,7 +153,6 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
   @TaskAction
   fun dependencyUpdates() {
-    requireNoParallel()
     val execData = executionDataCache.remove(path)
     if (execData == null) {
       logger.warn(
@@ -198,12 +192,6 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
         execData?.buildscriptStatuses ?: emptySet(),
       )
     reporter.write()
-  }
-
-  private fun requireNoParallel() {
-    if (GradleVersion.current() >= GradleVersion.version("9.0") && isParallelExecution) {
-      throw GradleException("Parallel project execution is not supported, run this task with --no-parallel")
-    }
   }
 
   fun rejectVersionIf(filter: ComponentFilter) {

@@ -60,7 +60,6 @@ internal object WhenReadyAction {
     if (task.taskProjectPath.isEmpty()) {
       task.taskProjectDir = project.projectDir
       task.taskProjectPath = project.path
-      task.isParallelExecution = project.gradle.startParameter.isParallelProjectExecutionEnabled
     }
 
     val storageKey = task.path

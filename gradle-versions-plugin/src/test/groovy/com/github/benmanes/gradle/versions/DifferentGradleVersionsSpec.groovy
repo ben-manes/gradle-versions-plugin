@@ -541,7 +541,7 @@ final class DifferentGradleVersionsSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
-  def 'dependencyUpdates task fails with parallel execution on Gradle 9.x'() {
+  def 'dependencyUpdates task succeeds with parallel execution on Gradle 9.x'() {
     given:
     def specVersion = System.getProperty("java.specification.version")
     def isJdk17Plus = !specVersion.startsWith("1.") && Integer.parseInt(specVersion) >= 17
@@ -586,10 +586,11 @@ final class DifferentGradleVersionsSpec extends Specification {
       .withGradleVersion('9.1.0')
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates', '--parallel')
-      .buildAndFail()
+      .build()
 
     then:
-    result.output.contains('Parallel project execution is not supported')
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.task(':sub1:dependencyUpdates').outcome == SUCCESS
   }
 
   def 'dependencyUpdates task completes without errors if configuration cache is enabled with Gradle 7.4+'() {

@@ -29,7 +29,6 @@ class VersionsPlugin : Plugin<Project> {
       task.outputDir = project.layout.buildDirectory.dir("dependencyUpdates").get().asFile.path
       task.taskProjectDir = project.projectDir
       task.taskProjectPath = project.path
-      task.isParallelExecution = project.gradle.startParameter.isParallelProjectExecutionEnabled
     }
 
     // Register the whenReady callback here (during project evaluation) rather than
