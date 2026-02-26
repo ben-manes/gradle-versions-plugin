@@ -20,17 +20,30 @@ import org.gradle.api.specs.Spec
  * have completed. Tasks are discovered via [org.gradle.api.execution.TaskExecutionGraph.allTasks],
  * which includes every [DependencyUpdatesTask] in the graph regardless of its name.
  *
- * In a multi-project build the plugin is applied per-project, so multiple callbacks may be
- * registered. Each task is only cached once (guarded by [DependencyUpdatesTask.executionDataCache])
+ * In a multi-project build the plugin is applied per-project, but only a single callback
+ * is registered per Gradle instance (guarded by an extra property on the root project). The callback iterates all tasks in the graph and caches each one
  * using [org.gradle.api.Task.getProject] to obtain the correct project scope. Accessing
  * `task.project` here is safe because `whenReady` runs during the configuration phase, before
  * configuration-cache serialization — CC restrictions only apply to task execution.
  */
 internal object WhenReadyAction {
+  private const val REGISTERED_PROPERTY = "com.github.benmanes.gradle.versions.whenReadyRegistered"
+
   fun register(project: Project) {
+    // Guard against registering multiple whenReady callbacks in multi-project builds.
+    // The plugin is applied per-project, but the callback iterates ALL tasks in the
+    // graph, so a single registration per Gradle instance is sufficient.
+    // Uses rootProject extra properties because Gradle.getExtensions() is unavailable
+    // in Gradle versions prior to 8.x.
+    val rootProject = project.rootProject
+    if (rootProject.extensions.extraProperties.has(REGISTERED_PROPERTY)) {
+      return
+    }
+    rootProject.extensions.extraProperties.set(REGISTERED_PROPERTY, true)
+
     project.gradle.taskGraph.whenReady { taskGraph ->
       for (task in taskGraph.allTasks) {
-        if (task is DependencyUpdatesTask && !DependencyUpdatesTask.executionDataCache.containsKey(task.path)) {
+        if (task is DependencyUpdatesTask) {
           cacheExecutionData(task)
         }
       }

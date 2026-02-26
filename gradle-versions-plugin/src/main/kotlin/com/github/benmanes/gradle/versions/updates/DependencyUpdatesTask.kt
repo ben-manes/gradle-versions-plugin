@@ -147,8 +147,6 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   @get:Internal
   internal var taskProjectPath: String = ""
 
-  private val storageKey: String = path
-
   @get:Internal
   internal var isParallelExecution: Boolean = false
 
@@ -161,7 +159,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   @TaskAction
   fun dependencyUpdates() {
     requireNoParallel()
-    val execData = executionDataCache.remove(storageKey)
+    val execData = executionDataCache.remove(path)
     if (execData == null) {
       logger.warn(
         "dependencyUpdates: No pre-resolved data found for task '$path'. " +
@@ -253,10 +251,14 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
     val outputFormatterArgument: OutputFormatterArgument,
   )
 
-  /** Clears fields that may hold closures/objects referencing Project or Configuration. */
+  /**
+   * Clears fields that may hold closures/objects referencing Project or Configuration.
+   * Note: [outputFormatterArgument] is intentionally NOT cleared here — it is already
+   * captured in [ExecutionData] before this method is called, and its types (String,
+   * Reporter, Action<Result>) do not reference Project/Configuration.
+   */
   internal fun clearConfigurationTimeState() {
     filterConfigurations = null
-    outputFormatterArgument = OutputFormatterArgument.DEFAULT
     resolutionStrategyAction = null
   }
 
