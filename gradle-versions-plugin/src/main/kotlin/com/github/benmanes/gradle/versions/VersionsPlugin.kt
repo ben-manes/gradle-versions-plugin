@@ -23,12 +23,10 @@ class VersionsPlugin : Plugin<Project> {
     }
 
     // Set common properties for ALL tasks of this type (including user-created ones).
-    // buildDirRelative is computed inside configureEach so it respects any later changes
-    // to project.layout.buildDirectory made by the build script.
+    // The output directory is derived from the (possibly customized) buildDirectory so it
+    // works even when the build directory is located outside the project directory.
     tasks.withType(DependencyUpdatesTask::class.java).configureEach { task ->
-      val buildDirRelative =
-        project.layout.buildDirectory.get().asFile.relativeTo(project.projectDir).path
-      task.outputDir = "$buildDirRelative/dependencyUpdates"
+      task.outputDir = project.layout.buildDirectory.dir("dependencyUpdates").get().asFile.path
       task.taskProjectDir = project.projectDir
       task.taskProjectPath = project.path
       task.isParallelExecution = project.gradle.startParameter.isParallelProjectExecutionEnabled
