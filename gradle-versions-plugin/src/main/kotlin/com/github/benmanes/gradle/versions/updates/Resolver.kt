@@ -299,8 +299,13 @@ class Resolver(
     val transitive = declared.values.any { it.version == "none" }
 
     val coordinates = hashMapOf<Coordinate.Key, Coordinate>()
-    // Use detachedConfiguration instead of copyRecursive to avoid triggering internal
-    // Task.project access through Gradle's lazy task initialization during copy.
+    // Use detachedConfiguration to avoid inheriting the extendsFrom hierarchy, which would
+    // pull in dependencies from parent configurations and change resolution results.
+    // This means user-defined resolution strategies (forces, substitutions) won't apply here,
+    // but that's acceptable: this method determines what the user *declared*, and forces /
+    // substitutions primarily affect transitive resolution rather than first-level declarations.
+    // Using copy() was also avoided because Gradle's lazy task initialization can trigger
+    // internal Task.project access during the copy.
     val copy =
       projectContext.configurationContainer.detachedConfiguration(
         *configuration.allDependencies.toTypedArray(),
