@@ -94,10 +94,10 @@ final class DifferentGradleVersionsSpec extends Specification {
 
     when:
     def arguments = ['dependencyUpdates']
-    // Warning mode reporting only supported on recent versions
-    // Gradle 8.x and 9.x deprecated configurations; ignore as unrelated
+    // Only enable --warning-mode=fail for Gradle 6.x and 7.x.
+    // Gradle 8+ deprecated configurations that produce unrelated warnings.
     def majorVersion = gradleMajor
-    if ((majorVersion >= 6) && (majorVersion != 8) && (majorVersion < 9)) {
+    if (majorVersion >= 6 && majorVersion < 8) {
       arguments.add('--warning-mode=fail')
     }
     arguments.add('-S')
@@ -539,6 +539,57 @@ final class DifferentGradleVersionsSpec extends Specification {
     result.output.contains('Dependency verification is an incubating feature.')
     result.output.contains('com.google.inject:guice [3.0 -> 3.1]')
     result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  def 'dependencyUpdates task fails with parallel execution on Gradle 9.x'() {
+    given:
+    def specVersion = System.getProperty("java.specification.version")
+    def isJdk17Plus = !specVersion.startsWith("1.") && Integer.parseInt(specVersion) >= 17
+    Assume.assumeTrue("Gradle 9.x requires JDK 17+", isJdk17Plus)
+
+    def settingsFile = testProjectDir.newFile('settings.gradle')
+    settingsFile << """
+      rootProject.name = 'test-root'
+      include 'sub1'
+    """.stripIndent()
+
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        subprojects {
+          apply plugin: 'java'
+          apply plugin: "com.github.ben-manes.versions"
+
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+
+          dependencies {
+            implementation 'com.google.inject:guice:2.0'
+          }
+        }
+        """.stripIndent()
+
+    testProjectDir.newFolder("sub1")
+    testProjectDir.newFile("sub1/build.gradle") << ""
+
+    when:
+    def result = GradleRunner.create()
+      .withGradleVersion('9.1.0')
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates', '--parallel')
+      .buildAndFail()
+
+    then:
+    result.output.contains('Parallel project execution is not supported')
   }
 
   def 'dependencyUpdates task completes without errors if configuration cache is enabled with Gradle 7.4+'() {
