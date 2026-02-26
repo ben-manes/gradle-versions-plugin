@@ -243,7 +243,7 @@ class Resolver(
               container.attribute(key, value)
             }
           } catch (e: Exception) {
-            logger.info("Skipping attribute ${key.name}: ${e.message}")
+            logger.info("Skipping attribute ${key.name}", e)
           }
         }
       }
