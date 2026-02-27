@@ -261,6 +261,10 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   /**
    * Retrieves and removes execution data for the given task path. Tries the build service
    * first (Gradle 6.1+), then falls back to the static companion-object map (Gradle 5.x).
+   *
+   * The static-map fallback is necessary even when a service provider is present because
+   * on Gradle 9.x the service instance visible at task execution time may differ from the
+   * one populated during the whenReady callback (WhenReadyAction dual-writes to both).
    */
   @Suppress("UNCHECKED_CAST")
   private fun removeExecutionData(taskPath: String): ExecutionData? {
@@ -275,7 +279,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
           return data
         }
       } catch (_: Exception) {
-        // Fall through to static map
+        // Service unavailable, fall through to static map
       }
     }
     return executionDataCache.remove(taskPath)
