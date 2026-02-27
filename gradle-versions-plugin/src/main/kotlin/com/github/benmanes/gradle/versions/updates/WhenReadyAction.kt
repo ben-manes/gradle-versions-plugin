@@ -110,11 +110,12 @@ internal object WhenReadyAction {
       )
     val (projectStatuses, buildscriptStatuses) = evaluator.resolveStatuses()
 
-    val executionData = DependencyUpdatesTask.ExecutionData(
-      projectStatuses = projectStatuses,
-      buildscriptStatuses = buildscriptStatuses,
-      outputFormatterArgument = task.outputFormatterArgument,
-    )
+    val executionData =
+      DependencyUpdatesTask.ExecutionData(
+        projectStatuses = projectStatuses,
+        buildscriptStatuses = buildscriptStatuses,
+        outputFormatterArgument = task.outputFormatterArgument,
+      )
 
     // Write to the build service if available (Gradle 6.1+). Always write to the static
     // map as well so that the task can find data regardless of which path it reads from.

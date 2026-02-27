@@ -9,11 +9,11 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.Resolution
 import groovy.lang.Closure
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
-import org.gradle.api.provider.Provider
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.Nullable

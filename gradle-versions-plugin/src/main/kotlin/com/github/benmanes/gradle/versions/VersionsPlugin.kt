@@ -37,10 +37,11 @@ class VersionsPlugin : Plugin<Project> {
     // avoids leaking state across builds within the same daemon.
     // BuildService was introduced in Gradle 6.1.
     if (GradleVersion.current() >= GradleVersion.version("6.1")) {
-      val serviceProvider = project.gradle.sharedServices.registerIfAbsent(
-        DependencyUpdatesDataService.SERVICE_NAME,
-        DependencyUpdatesDataService::class.java,
-      ) {}
+      val serviceProvider =
+        project.gradle.sharedServices.registerIfAbsent(
+          DependencyUpdatesDataService.SERVICE_NAME,
+          DependencyUpdatesDataService::class.java,
+        ) {}
       tasks.withType(DependencyUpdatesTask::class.java).configureEach { task ->
         task.dataServiceProvider = serviceProvider
         task.usesService(serviceProvider)
