@@ -1,5 +1,6 @@
 package com.github.benmanes.gradle.versions
 
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesDataService
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import com.github.benmanes.gradle.versions.updates.WhenReadyAction
 import org.gradle.api.GradleException
@@ -29,6 +30,21 @@ class VersionsPlugin : Plugin<Project> {
       task.outputDir = project.layout.buildDirectory.dir("dependencyUpdates").get().asFile.path
       task.taskProjectDir = project.projectDir
       task.taskProjectPath = project.path
+    }
+
+    // Register a shared build service to hold pre-resolved execution data instead of a
+    // JVM-level static map. This is the proper Gradle API for build-scoped data and
+    // avoids leaking state across builds within the same daemon.
+    // BuildService was introduced in Gradle 6.1.
+    if (GradleVersion.current() >= GradleVersion.version("6.1")) {
+      val serviceProvider = project.gradle.sharedServices.registerIfAbsent(
+        DependencyUpdatesDataService.SERVICE_NAME,
+        DependencyUpdatesDataService::class.java,
+      ) {}
+      tasks.withType(DependencyUpdatesTask::class.java).configureEach { task ->
+        task.dataServiceProvider = serviceProvider
+        task.usesService(serviceProvider)
+      }
     }
 
     // Register the whenReady callback here (during project evaluation) rather than

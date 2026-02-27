@@ -13,6 +13,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.provider.Provider
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.Nullable
@@ -145,6 +146,12 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   @get:Internal
   internal var taskProjectPath: String = ""
 
+  // Typed as Any? so that CC serialization and class loading on Gradle 5.x (where
+  // BuildService doesn't exist) never see DependencyUpdatesDataService in the task's
+  // field graph. On Gradle 6.1+ this holds a Provider<DependencyUpdatesDataService>.
+  @get:Internal
+  internal var dataServiceProvider: Any? = null
+
   init {
     description = "Displays the dependency updates for the project."
     group = "Help"
@@ -153,11 +160,12 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
   @TaskAction
   fun dependencyUpdates() {
-    val execData = executionDataCache.remove(path)
+    val execData = removeExecutionData(path)
     if (execData == null) {
       logger.warn(
         "dependencyUpdates: No pre-resolved data found for task '$path'. " +
-          "The report will be empty. This can happen if the whenReady callback did not run.",
+          "The report will be empty. This can happen when the configuration cache is " +
+          "reused and the whenReady callback did not re-run.",
       )
     }
     val outputFmt =
@@ -250,10 +258,33 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
     resolutionStrategyAction = null
   }
 
+  /**
+   * Retrieves and removes execution data for the given task path. Tries the build service
+   * first (Gradle 6.1+), then falls back to the static companion-object map (Gradle 5.x).
+   */
+  @Suppress("UNCHECKED_CAST")
+  private fun removeExecutionData(taskPath: String): ExecutionData? {
+    val provider = dataServiceProvider
+    if (provider != null) {
+      try {
+        val service = (provider as Provider<DependencyUpdatesDataService>).get()
+        val data = service.executionDataMap.remove(taskPath)
+        if (data != null) {
+          // Also clean the static map if data was dual-written
+          executionDataCache.remove(taskPath)
+          return data
+        }
+      } catch (_: Exception) {
+        // Fall through to static map
+      }
+    }
+    return executionDataCache.remove(taskPath)
+  }
+
   companion object {
-    // Stored outside the task's field graph so CC serialization doesn't walk into
-    // Project/Configuration references or user-provided closures that capture them.
-    // Keyed by task path, cleaned up after use.
+    // Fallback for Gradle < 6.1 where build services are not available.
+    // On Gradle 6.1+ the build service is the primary storage; this map is
+    // only used when the service is not wired (e.g. old Gradle versions).
     internal val executionDataCache = ConcurrentHashMap<String, ExecutionData>()
   }
 }

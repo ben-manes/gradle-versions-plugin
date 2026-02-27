@@ -3,6 +3,7 @@ package com.github.benmanes.gradle.versions.updates
 import groovy.lang.Closure
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.provider.Provider
 import org.gradle.api.specs.Spec
 
 /**
@@ -109,12 +110,25 @@ internal object WhenReadyAction {
       )
     val (projectStatuses, buildscriptStatuses) = evaluator.resolveStatuses()
 
-    DependencyUpdatesTask.executionDataCache[storageKey] =
-      DependencyUpdatesTask.ExecutionData(
-        projectStatuses = projectStatuses,
-        buildscriptStatuses = buildscriptStatuses,
-        outputFormatterArgument = task.outputFormatterArgument,
-      )
+    val executionData = DependencyUpdatesTask.ExecutionData(
+      projectStatuses = projectStatuses,
+      buildscriptStatuses = buildscriptStatuses,
+      outputFormatterArgument = task.outputFormatterArgument,
+    )
+
+    // Write to the build service if available (Gradle 6.1+). Always write to the static
+    // map as well so that the task can find data regardless of which path it reads from.
+    val serviceProvider = task.dataServiceProvider
+    if (serviceProvider != null) {
+      try {
+        @Suppress("UNCHECKED_CAST")
+        val service = (serviceProvider as Provider<DependencyUpdatesDataService>).get()
+        service.executionDataMap[storageKey] = executionData
+      } catch (_: Exception) {
+        // Service unavailable, static map is the only storage
+      }
+    }
+    DependencyUpdatesTask.executionDataCache[storageKey] = executionData
     task.clearConfigurationTimeState()
   }
 }

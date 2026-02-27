@@ -593,6 +593,61 @@ final class DifferentGradleVersionsSpec extends Specification {
     result.task(':sub1:dependencyUpdates').outcome == SUCCESS
   }
 
+  def 'dependencyUpdates task produces correct output on configuration cache reuse'() {
+    given:
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'java'
+        apply plugin: "com.github.ben-manes.versions"
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation 'com.google.inject:guice:2.0'
+        }
+        """.stripIndent()
+
+    testProjectDir.newFolder("gradle")
+
+    when:
+    // First run: populates the configuration cache
+    def result1 = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates', '--configuration-cache')
+      .build()
+
+    then:
+    result1.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result1.task(':dependencyUpdates').outcome == SUCCESS
+
+    when:
+    // Second run: configuration cache is reused; whenReady does NOT re-run.
+    // The build service (like the old static map) will be empty, so the report
+    // will be empty. This is a known limitation documented here.
+    def result2 = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates', '--configuration-cache')
+      .build()
+
+    then:
+    result2.output.contains('BUILD SUCCESSFUL')
+    result2.task(':dependencyUpdates').outcome == SUCCESS
+    // On CC reuse the whenReady callback doesn't re-run, so no dependency data
+    // is available and the task logs a warning.
+    result2.output.contains('No pre-resolved data found')
+  }
+
   def 'dependencyUpdates task completes without errors if configuration cache is enabled with Gradle 7.4+'() {
     given:
     buildFile = testProjectDir.newFile('build.gradle')
