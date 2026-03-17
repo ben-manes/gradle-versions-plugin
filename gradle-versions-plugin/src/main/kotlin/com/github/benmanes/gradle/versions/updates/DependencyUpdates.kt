@@ -75,7 +75,7 @@ class DependencyUpdates
       val resultStatus = hashSetOf<DependencyStatus>()
       projectConfigs.forEach { (currentProject, currentConfigurations) ->
         val resolver = Resolver(currentProject, resolutionStrategy, checkConstraints)
-        for (currentConfiguration in currentConfigurations) {
+        for (currentConfiguration in currentConfigurations.toList()) {
           if (currentConfiguration.isCanBeResolved) {
             for (newStatus in resolve(resolver, currentProject, currentConfiguration)) {
               addValidatedDependencyStatus(resultStatus, newStatus)
