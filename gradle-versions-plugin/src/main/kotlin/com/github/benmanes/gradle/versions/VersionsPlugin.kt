@@ -1,9 +1,11 @@
 package com.github.benmanes.gradle.versions
 
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.util.GradleVersion
 import org.xml.sax.SAXException
 import javax.xml.parsers.SAXParserFactory
@@ -14,11 +16,18 @@ import javax.xml.parsers.SAXParserFactory
 class VersionsPlugin : Plugin<Project> {
   override fun apply(project: Project) {
     requireMinimumGradleVersion()
-    requireSupportedSaxParser()
 
     val tasks = project.tasks
     if (!tasks.names.contains("dependencyUpdates")) {
-      tasks.register("dependencyUpdates", DependencyUpdatesTask::class.java)
+      tasks.register("dependencyUpdates", DependencyUpdatesTask::class.java) { task ->
+        task.doFirst(
+          object : Action<Task> {
+            override fun execute(t: Task) {
+              requireSupportedSaxParser()
+            }
+          },
+        )
+      }
     }
   }
 
@@ -32,7 +41,9 @@ class VersionsPlugin : Plugin<Project> {
     val isRestrictedInPatch =
       GradleVersion.current() >= GradleVersion.version("7.6.3") &&
         GradleVersion.current() <= GradleVersion.version("8.0")
-    val isRestrictedInMajor = GradleVersion.current() >= GradleVersion.version("8.4")
+    val isRestrictedInMajor =
+      GradleVersion.current() >= GradleVersion.version("8.4") &&
+        GradleVersion.current() <= GradleVersion.version("8.10.2")
 
     if (isRestrictedInPatch || isRestrictedInMajor) {
       try {
