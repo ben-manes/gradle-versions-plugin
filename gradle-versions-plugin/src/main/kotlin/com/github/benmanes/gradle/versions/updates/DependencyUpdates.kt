@@ -41,13 +41,13 @@ class DependencyUpdates
     fun run(): DependencyUpdatesReporter {
       val projectConfigs =
         project.allprojects
-          .associateBy({ it }, { it.configurations.matching(filterConfigurations) })
+          .associateBy({ it }, { it.configurations.matching(filterConfigurations).toCollection(LinkedHashSet()) })
 
       val status: Set<DependencyStatus> = resolveProjects(projectConfigs, checkConstraints)
 
       val buildscriptProjectConfigs =
         project.allprojects
-          .associateBy({ it }, { it.buildscript.configurations })
+          .associateBy({ it }, { it.buildscript.configurations.toCollection(LinkedHashSet()) })
       val buildscriptStatus: Set<DependencyStatus> =
         resolveProjects(
           buildscriptProjectConfigs,
