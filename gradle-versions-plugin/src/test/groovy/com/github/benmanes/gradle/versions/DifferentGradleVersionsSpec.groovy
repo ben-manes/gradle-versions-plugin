@@ -6,6 +6,7 @@ import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseCh
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
 import org.gradle.testkit.runner.GradleRunner
+import org.junit.Assume
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import spock.lang.Specification
@@ -36,6 +37,20 @@ final class DifferentGradleVersionsSpec extends Specification {
   @Unroll
   def 'dependencyUpdates task completes without errors with Gradle #gradleVersion'() {
     given:
+    def specVersion = System.getProperty("java.specification.version")
+    def jdkMajor = specVersion.startsWith("1.") ? specVersion.split("\\.")[1].toInteger() : specVersion.toInteger()
+    def gradleVersionParts = gradleVersion.tokenize('.').collect { it.toInteger() }
+    def gradleMajor = gradleVersionParts[0]
+    def gradleMinor = gradleVersionParts.size() > 1 ? gradleVersionParts[1] : 0
+    // Gradle < 7.2 is incompatible with JDK 17+ (old Groovy runtime fails to initialize)
+    if (gradleMajor < 7 || (gradleMajor == 7 && gradleMinor < 2)) {
+      Assume.assumeTrue("Gradle ${gradleVersion} requires JDK < 17", jdkMajor < 17)
+    }
+    // Gradle 9+ requires JDK 17+
+    if (gradleMajor >= 9) {
+      Assume.assumeTrue("Gradle ${gradleVersion} requires JDK 17+", jdkMajor >= 17)
+    }
+
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
       """
@@ -79,10 +94,10 @@ final class DifferentGradleVersionsSpec extends Specification {
 
     when:
     def arguments = ['dependencyUpdates']
-    // Warning mode reporting only supported on recent versions
-    // Gradle 8.x deprecated configurations for removal in 9.0; ignore as unrelated
-    def majorVersion = gradleVersion.substring(0, gradleVersion.indexOf('.')).toInteger()
-    if ((majorVersion >= 6) && (majorVersion != 8)) {
+    // Only enable --warning-mode=fail for Gradle 6.x and 7.x.
+    // Gradle 8+ deprecated configurations that produce unrelated warnings.
+    def majorVersion = gradleMajor
+    if (majorVersion >= 6 && majorVersion < 8) {
       arguments.add('--warning-mode=fail')
     }
     arguments.add('-S')
@@ -133,7 +148,231 @@ final class DifferentGradleVersionsSpec extends Specification {
       '8.7',
       '8.8',
       '8.9',
+      '9.1.0',
+      '9.2.1',
+      '9.3.1',
     ]
+  }
+
+  def 'custom-named DependencyUpdatesTask reports updates'() {
+    given:
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'java'
+        apply plugin: "com.github.ben-manes.versions"
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation 'com.google.inject:guice:2.0'
+        }
+
+        tasks.register('dependencyUpdatesSummary', DependencyUpdatesTask) {
+          outputDir = 'build/customReport'
+        }
+        """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdatesSummary')
+      .build()
+
+    then:
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.task(':dependencyUpdatesSummary').outcome == SUCCESS
+  }
+
+  def 'custom-named DependencyUpdatesTask at root reports subproject updates'() {
+    given:
+    def settingsFile = testProjectDir.newFile('settings.gradle')
+    settingsFile << """
+      rootProject.name = 'test-root'
+      include 'sub1'
+    """.stripIndent()
+
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        subprojects {
+          apply plugin: 'java'
+          apply plugin: "com.github.ben-manes.versions"
+
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+
+          dependencies {
+            implementation 'com.google.inject:guice:2.0'
+          }
+        }
+
+        tasks.register('dependencyUpdatesSummary', DependencyUpdatesTask) {
+          outputDir = 'build/customReport'
+        }
+        """.stripIndent()
+
+    testProjectDir.newFolder("sub1")
+    testProjectDir.newFile("sub1/build.gradle") << ""
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdatesSummary')
+      .build()
+
+    then:
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.task(':dependencyUpdatesSummary').outcome == SUCCESS
+  }
+
+  @Unroll
+  def 'subproject dependencyUpdates tasks find outdated deps when root delegates via plain lifecycle tasks with Gradle #gradleVersion'() {
+    given:
+    def specVersion = System.getProperty("java.specification.version")
+    def jdkMajor = specVersion.startsWith("1.") ? specVersion.split("\\.")[1].toInteger() : specVersion.toInteger()
+    def gradleMajor = gradleVersion.substring(0, gradleVersion.indexOf('.')).toInteger()
+    if (gradleMajor >= 9) {
+      Assume.assumeTrue("Gradle ${gradleVersion} requires JDK 17+", jdkMajor >= 17)
+    }
+
+    def settingsFile = testProjectDir.newFile('settings.gradle')
+    settingsFile << """
+      rootProject.name = 'test-root'
+      include 'sub1', 'sub2'
+    """.stripIndent()
+
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        // Mirror real-world setup: plugin applied to subprojects only, not root
+        subprojects {
+          apply plugin: 'java'
+          apply plugin: "com.github.ben-manes.versions"
+
+          repositories {
+            maven { url '${mavenRepoUrl}' }
+          }
+
+          dependencies {
+            implementation 'com.google.inject:guice:2.0'
+          }
+        }
+
+        def isNonStable = { String v ->
+          def stableKeyword = ['RELEASE','FINAL','GA'].any { v?.toUpperCase()?.contains(it) }
+          def regex = /^[0-9,.v-]+(-r)?\$/
+          !stableKeyword && !(v ==~ regex)
+        }
+
+        // Second subprojects block: custom formatter + resolution strategy
+        subprojects {
+          tasks.matching { it.name == "dependencyUpdates" }.configureEach {
+            checkForGradleUpdate = false
+            def projectName = project.name
+            def markerFile = rootProject.layout.buildDirectory
+                .file("dependencyUpdates/.hasOutdated").get().asFile
+
+            outputFormatter = { result ->
+              def outdated = result.outdated.dependencies
+              if (outdated) {
+                markerFile.parentFile.mkdirs()
+                markerFile.text = 'true'
+                println "\${projectName}:"
+                outdated.each { dep ->
+                  def latest = dep.available.release ?: dep.available.milestone ?: dep.available.integration
+                  println "  \${dep.group}:\${dep.name} \${dep.version} -> \${latest}"
+                }
+              }
+            }
+
+            resolutionStrategy {
+              componentSelection {
+                all { s ->
+                  if (isNonStable(s.candidate.version) && !isNonStable(s.currentVersion)) {
+                    s.reject('Release candidate')
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // Summary task that checks the marker file
+        tasks.register('dependencyUpdatesSummary') {
+          description = 'Prints a summary after all dependency update checks'
+          def markerFile = rootProject.layout.buildDirectory
+              .file("dependencyUpdates/.hasOutdated").get().asFile
+          dependsOn allprojects.collect { p ->
+            p.tasks.matching { it.name == 'dependencyUpdates' }
+          }
+          doLast {
+            if (!markerFile.exists()) {
+              println 'All dependencies are up-to-date.'
+            }
+            markerFile.delete()
+          }
+        }
+
+        // Root lifecycle task delegates to subprojects
+        tasks.register('dependencyUpdates') {
+          description = 'Runs dependency update checks for all subprojects'
+          group = 'Help'
+          dependsOn subprojects.collect { p ->
+            p.tasks.matching { it.name == 'dependencyUpdates' }
+          }
+          finalizedBy tasks.named('dependencyUpdatesSummary')
+        }
+        """.stripIndent()
+
+    testProjectDir.newFolder("sub1")
+    testProjectDir.newFile("sub1/build.gradle") << ""
+    testProjectDir.newFolder("sub2")
+    testProjectDir.newFile("sub2/build.gradle") << ""
+
+    when:
+    def result = GradleRunner.create()
+      .withGradleVersion(gradleVersion)
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates', '-Drevision=release', '--configuration-cache')
+      .build()
+
+    then:
+    result.output.contains('com.google.inject:guice 2.0 ->')
+    !result.output.contains('All dependencies are up-to-date')
+    result.task(':dependencyUpdatesSummary').outcome == SUCCESS
+
+    where:
+    gradleVersion << ['8.9', '9.1.0', '9.2.1', '9.3.1']
   }
 
   @Unroll
@@ -187,6 +426,11 @@ final class DifferentGradleVersionsSpec extends Specification {
 
   def 'dependencyUpdates task works with dependency verification enabled'() {
     given:
+    def specVersion = System.getProperty("java.specification.version")
+    def jdkMajor = specVersion.startsWith("1.") ? specVersion.split("\\.")[1].toInteger() : specVersion.toInteger()
+    // This test uses Gradle 6.2 which is incompatible with JDK 17+
+    Assume.assumeTrue("Gradle 6.2 requires JDK < 17", jdkMajor < 17)
+
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
       """
@@ -297,6 +541,113 @@ final class DifferentGradleVersionsSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
+  def 'dependencyUpdates task succeeds with parallel execution on Gradle 9.x'() {
+    given:
+    def specVersion = System.getProperty("java.specification.version")
+    def isJdk17Plus = !specVersion.startsWith("1.") && Integer.parseInt(specVersion) >= 17
+    Assume.assumeTrue("Gradle 9.x requires JDK 17+", isJdk17Plus)
+
+    def settingsFile = testProjectDir.newFile('settings.gradle')
+    settingsFile << """
+      rootProject.name = 'test-root'
+      include 'sub1'
+    """.stripIndent()
+
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        subprojects {
+          apply plugin: 'java'
+          apply plugin: "com.github.ben-manes.versions"
+
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+
+          dependencies {
+            implementation 'com.google.inject:guice:2.0'
+          }
+        }
+        """.stripIndent()
+
+    testProjectDir.newFolder("sub1")
+    testProjectDir.newFile("sub1/build.gradle") << ""
+
+    when:
+    def result = GradleRunner.create()
+      .withGradleVersion('9.1.0')
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates', '--parallel')
+      .build()
+
+    then:
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.task(':sub1:dependencyUpdates').outcome == SUCCESS
+  }
+
+  def 'dependencyUpdates task produces correct output on configuration cache reuse'() {
+    given:
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'java'
+        apply plugin: "com.github.ben-manes.versions"
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation 'com.google.inject:guice:2.0'
+        }
+        """.stripIndent()
+
+    testProjectDir.newFolder("gradle")
+
+    when:
+    // First run: populates the configuration cache
+    def result1 = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates', '--configuration-cache')
+      .build()
+
+    then:
+    result1.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result1.task(':dependencyUpdates').outcome == SUCCESS
+
+    when:
+    // Second run: configuration cache is reused; whenReady does NOT re-run.
+    // The build service (like the old static map) will be empty, so the report
+    // will be empty. This is a known limitation documented here.
+    def result2 = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates', '--configuration-cache')
+      .build()
+
+    then:
+    result2.output.contains('BUILD SUCCESSFUL')
+    result2.task(':dependencyUpdates').outcome == SUCCESS
+    // On CC reuse the whenReady callback doesn't re-run, so no dependency data
+    // is available and the task logs a warning.
+    result2.output.contains('No pre-resolved data found')
+  }
+
   def 'dependencyUpdates task completes without errors if configuration cache is enabled with Gradle 7.4+'() {
     given:
     buildFile = testProjectDir.newFile('build.gradle')
@@ -336,8 +687,118 @@ final class DifferentGradleVersionsSpec extends Specification {
   }
 
   @Unroll
-  def 'dependencyUpdates task fails if configuration cache is enabled with Gradle #gradleVersion'() {
+  def 'dependencyUpdates task completes with configuration cache enabled in multi-project build with Gradle #gradleVersion'() {
     given:
+    def specVersion = System.getProperty("java.specification.version")
+    def isJdk17Plus = !specVersion.startsWith("1.") && Integer.parseInt(specVersion) >= 17
+    Assume.assumeTrue("Gradle 9.x requires JDK 17+", isJdk17Plus)
+
+    def settingsFile = testProjectDir.newFile('settings.gradle')
+    settingsFile << """
+      rootProject.name = 'test-root'
+      include 'sub1', 'sub2'
+    """.stripIndent()
+
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        subprojects {
+          apply plugin: 'java'
+          apply plugin: "com.github.ben-manes.versions"
+
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+
+          dependencies {
+            implementation 'com.google.inject:guice:3.0'
+          }
+        }
+
+        allprojects {
+          tasks.matching { it.name == "dependencyUpdates" }.configureEach {
+            // Pre-resolve project.name at configuration time to avoid Task.project at execution time
+            def projName = project.name
+            outputFormatter = { result ->
+              def outdated = result.outdated.dependencies
+              if (outdated) {
+                println "\${projName}:"
+                outdated.each { dep ->
+                  def latest = dep.available.release ?: dep.available.milestone ?: dep.available.integration
+                  println "  \${dep.group}:\${dep.name} \${dep.version} -> \${latest}"
+                }
+              }
+            }
+
+            resolutionStrategy {
+              componentSelection {
+                all { s ->
+                  def v = s.candidate.version
+                  def stableKeyword = ['RELEASE','FINAL','GA'].any { v?.toUpperCase()?.contains(it) }
+                  def regex = /^[0-9,.v-]+(-r)?\$/
+                  def isNonStable = !stableKeyword && !(v ==~ regex)
+                  if (isNonStable && !(['RELEASE','FINAL','GA'].any { s.currentVersion?.toUpperCase()?.contains(it) }) && (s.currentVersion ==~ regex)) {
+                    s.reject('Release candidate')
+                  }
+                }
+              }
+            }
+          }
+        }
+        """.stripIndent()
+
+    testProjectDir.newFolder("gradle")
+    testProjectDir.newFolder("sub1")
+    testProjectDir.newFile("sub1/build.gradle") << ""
+    testProjectDir.newFolder("sub2")
+    testProjectDir.newFile("sub2/build.gradle") << ""
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withGradleVersion(gradleVersion)
+      .withArguments('dependencyUpdates', '--configuration-cache')
+      .build()
+
+    then:
+    result.output.contains('BUILD SUCCESSFUL')
+    result.task(':sub1:dependencyUpdates').outcome == SUCCESS
+    result.task(':sub2:dependencyUpdates').outcome == SUCCESS
+    !result.output.contains('problems were found storing the configuration cache')
+
+    where:
+    gradleVersion << [
+      '9.1.0',
+      '9.2.1',
+      '9.3.1',
+    ]
+  }
+
+  @Unroll
+  def 'dependencyUpdates task completes with configuration cache enabled with Gradle #gradleVersion'() {
+    given:
+    def specVersion = System.getProperty("java.specification.version")
+    def jdkMajor = specVersion.startsWith("1.") ? specVersion.split("\\.")[1].toInteger() : specVersion.toInteger()
+    def gradleVersionParts = gradleVersion.tokenize('.').collect { it.toInteger() }
+    def gradleMajor = gradleVersionParts[0]
+    def gradleMinor = gradleVersionParts.size() > 1 ? gradleVersionParts[1] : 0
+    // Gradle < 7.2 is incompatible with JDK 17+ (old Groovy runtime fails to initialize)
+    if (gradleMajor < 7 || (gradleMajor == 7 && gradleMinor < 2)) {
+      Assume.assumeTrue("Gradle ${gradleVersion} requires JDK < 17", jdkMajor < 17)
+    }
+    // Gradle 9+ requires JDK 17+
+    if (gradleMajor >= 9) {
+      Assume.assumeTrue("Gradle ${gradleVersion} requires JDK 17+", jdkMajor >= 17)
+    }
+
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
       """
@@ -371,21 +832,16 @@ final class DifferentGradleVersionsSpec extends Specification {
 
     when:
     def arguments = ['dependencyUpdates']
-    // Warning mode reporting only supported on recent versions.
-    if (gradleVersion.substring(0, gradleVersion.indexOf('.')).toInteger() >= 6) {
-      arguments.add('--warning-mode=fail')
-    }
     arguments.add('-S')
     arguments.add('--configuration-cache')
     def result = GradleRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
       .withArguments(arguments)
-      .buildAndFail()
+      .build()
 
     then:
-    result.output.contains('FAILURE: Build failed with an exception.')
-    result.output.contains('Configuration cache problems found in this build.')
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
@@ -397,7 +853,10 @@ final class DifferentGradleVersionsSpec extends Specification {
       '7.0.2',
       '7.1.1',
       '7.2',
-      '7.3.3', // 7.4.2+ breaks
+      '7.3.3',
+      '9.1.0',
+      '9.2.1',
+      '9.3.1',
     ]
   }
 }

@@ -9,6 +9,7 @@ import spock.lang.Specification
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
 final class KotlinDependencyUpdatesSpec extends Specification {
+  private static final DECLARED_KOTLIN_PLUGIN_VERSION = '2.0.21'
   private static final DECLARED_KOTLIN_VERSION = '1.7.0'
   private static final DECLARED_KOTLIN_STD_VERSION = '1.8.0'
 
@@ -46,7 +47,7 @@ final class KotlinDependencyUpdatesSpec extends Specification {
         }
       """.stripIndent()
 
-    testProjectDir.newFile('gradle.properties') << "kotlin_version = $DECLARED_KOTLIN_VERSION"
+    testProjectDir.newFile('gradle.properties') << "kotlin_version = $DECLARED_KOTLIN_PLUGIN_VERSION"
 
     when:
     def result = GradleRunner.create()
@@ -56,7 +57,7 @@ final class KotlinDependencyUpdatesSpec extends Specification {
       .build()
 
     then:
-    result.output.find(/The following dependencies have later milestone versions:\n - org\.jetbrains\.kotlin:kotlin-gradle-plugin \[$DECLARED_KOTLIN_VERSION -> 2\..*\]/)
+    result.output.find(/The following dependencies have later milestone versions:\n - org\.jetbrains\.kotlin:kotlin-gradle-plugin \[$DECLARED_KOTLIN_PLUGIN_VERSION -> 2\..*\]/)
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
@@ -83,7 +84,7 @@ final class KotlinDependencyUpdatesSpec extends Specification {
         }
       """.stripIndent()
 
-    testProjectDir.newFile('gradle.properties') << "kotlin_version = $DECLARED_KOTLIN_VERSION"
+    testProjectDir.newFile('gradle.properties') << "kotlin_version = $DECLARED_KOTLIN_PLUGIN_VERSION"
 
     when:
     def result = GradleRunner.create()
@@ -93,7 +94,7 @@ final class KotlinDependencyUpdatesSpec extends Specification {
       .build()
 
     then:
-    result.output.find(/The following dependencies have later milestone versions:\n - org\.jetbrains\.kotlin:kotlin-gradle-plugin \[$DECLARED_KOTLIN_VERSION -> 2\..*\]/)
+    result.output.find(/The following dependencies have later milestone versions:\n - org\.jetbrains\.kotlin:kotlin-gradle-plugin \[$DECLARED_KOTLIN_PLUGIN_VERSION -> 2\..*\]/)
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 

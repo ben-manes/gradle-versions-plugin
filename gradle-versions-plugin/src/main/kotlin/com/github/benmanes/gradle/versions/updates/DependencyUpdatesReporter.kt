@@ -16,9 +16,9 @@ import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResult
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
-import org.gradle.api.Project
 import org.gradle.api.artifacts.ModuleVersionSelector
 import org.gradle.api.artifacts.UnresolvedDependency
+import org.gradle.api.logging.Logging
 import java.io.File
 import java.io.PrintStream
 import java.io.PrintWriter
@@ -28,7 +28,8 @@ import java.util.TreeSet
 /**
  * Sorts and writes the resolved dependency reports.
  *
- * @property project The project evaluated against.
+ * @property projectDir The project directory for resolving output paths.
+ * @property projectPath The project path for display purposes.
  * @property revision The revision strategy evaluated with.
  * @property outputFormatterArgument The output formatter strategy evaluated with.
  * @property outputDir The outputDir for report.
@@ -47,7 +48,8 @@ import java.util.TreeSet
  *
  */
 class DependencyUpdatesReporter(
-  val project: Project,
+  val projectDir: File,
+  val projectPath: String,
   val revision: String,
   private val outputFormatterArgument: OutputFormatterArgument,
   val outputDir: String,
@@ -63,12 +65,14 @@ class DependencyUpdatesReporter(
   val gradleUpdateChecker: GradleUpdateChecker,
   val gradleReleaseChannel: String,
 ) {
+  private val logger = Logging.getLogger(DependencyUpdatesReporter::class.java)
+
   @Synchronized
   fun write() {
     if (outputFormatterArgument !is OutputFormatterArgument.CustomAction) {
       val plainTextReporter =
         PlainTextReporter(
-          project,
+          projectPath,
           revision,
           gradleReleaseChannel,
         )
@@ -76,7 +80,7 @@ class DependencyUpdatesReporter(
     }
 
     if (outputFormatterArgument is OutputFormatterArgument.BuiltIn && outputFormatterArgument.formatterNames.isEmpty()) {
-      project.logger.lifecycle("Skip generating report to file (outputFormatter is empty)")
+      logger.lifecycle("Skip generating report to file (outputFormatter is empty)")
       return
     }
 
@@ -100,22 +104,23 @@ class DependencyUpdatesReporter(
 
   private fun generateFileReport(reporter: Reporter) {
     val fileName = File(outputDir, reportfileName + "." + reporter.getFileExtension())
-    project.file(outputDir).mkdirs()
-    val outputFile = project.file(fileName)
-    val stream = PrintStream(outputFile)
+    val outputDirFile = projectDir.resolve(outputDir)
+    outputDirFile.mkdirs()
+    val outputFile = projectDir.resolve(fileName.path)
     val result = buildBaseObject()
-    reporter.write(stream, result)
-    stream.close()
+    PrintStream(outputFile).use { stream ->
+      reporter.write(stream, result)
+    }
 
-    project.logger.lifecycle("\nGenerated report file $fileName")
+    logger.lifecycle("\nGenerated report file $fileName")
   }
 
   private fun getOutputReporter(formatterOriginal: String): Reporter {
     return when (formatterOriginal.trim()) {
-      "json" -> JsonReporter(project, revision, gradleReleaseChannel)
-      "xml" -> XmlReporter(project, revision, gradleReleaseChannel)
-      "html" -> HtmlReporter(project, revision, gradleReleaseChannel)
-      else -> PlainTextReporter(project, revision, gradleReleaseChannel)
+      "json" -> JsonReporter(projectPath, revision, gradleReleaseChannel)
+      "xml" -> XmlReporter(projectPath, revision, gradleReleaseChannel)
+      "html" -> HtmlReporter(projectPath, revision, gradleReleaseChannel)
+      else -> PlainTextReporter(projectPath, revision, gradleReleaseChannel)
     }
   }
 

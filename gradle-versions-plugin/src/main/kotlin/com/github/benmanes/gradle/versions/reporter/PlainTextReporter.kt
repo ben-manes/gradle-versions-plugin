@@ -5,17 +5,19 @@ import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.CURRENT
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.NIGHTLY
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
-import org.gradle.api.Project
+import org.gradle.api.logging.Logging
 import java.io.OutputStream
 
 /**
  * A plain text reporter for the dependency updates results.
  */
 class PlainTextReporter(
-  override val project: Project,
+  override val projectPath: String,
   override val revision: String,
   override val gradleReleaseChannel: String,
-) : AbstractReporter(project, revision, gradleReleaseChannel) {
+) : AbstractReporter(projectPath, revision, gradleReleaseChannel) {
+  private val logger = Logging.getLogger(PlainTextReporter::class.java)
+
   /** Writes the report to the print stream. The stream is not automatically closed. */
   override fun write(
     printStream: OutputStream,
@@ -44,7 +46,7 @@ class PlainTextReporter(
   private fun writeHeader(printStream: OutputStream) {
     printStream.println()
     printStream.println("------------------------------------------------------------")
-    printStream.println("${project.path} Project Dependency Updates (report to plain text file)")
+    printStream.println("$projectPath Project Dependency Updates (report to plain text file)")
     printStream.println("------------------------------------------------------------")
   }
 
@@ -143,7 +145,7 @@ class PlainTextReporter(
         dependency.projectUrl?.let {
           printStream.println("     $it")
         }
-        project.logger.info(
+        logger.info(
           "The exception that is the cause of unresolved state: {}",
           dependency.reason,
         )

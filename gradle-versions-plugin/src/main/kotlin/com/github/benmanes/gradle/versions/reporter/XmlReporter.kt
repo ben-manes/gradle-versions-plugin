@@ -4,7 +4,6 @@ import com.github.benmanes.gradle.versions.reporter.result.Dependency
 import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.reporter.result.VersionAvailable
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResult
-import org.gradle.api.Project
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import java.io.OutputStream
@@ -18,10 +17,10 @@ import javax.xml.transform.stream.StreamResult
  * A XML reporter for the dependency updates results.
  */
 class XmlReporter(
-  override val project: Project,
+  override val projectPath: String,
   override val revision: String,
   override val gradleReleaseChannel: String,
-) : AbstractReporter(project, revision, gradleReleaseChannel) {
+) : AbstractReporter(projectPath, revision, gradleReleaseChannel) {
   override fun write(
     printStream: OutputStream,
     result: Result,

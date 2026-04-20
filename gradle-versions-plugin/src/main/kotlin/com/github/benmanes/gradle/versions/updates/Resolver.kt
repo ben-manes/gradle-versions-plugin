@@ -7,7 +7,6 @@ import groovy.xml.slurpersupport.NodeChildren
 import org.codehaus.groovy.runtime.DefaultGroovyMethods.asBoolean
 import org.codehaus.groovy.runtime.DefaultGroovyMethods.getMetaClass
 import org.gradle.api.Action
-import org.gradle.api.Project
 import org.gradle.api.artifacts.ComponentMetadata
 import org.gradle.api.artifacts.ComponentSelection
 import org.gradle.api.artifacts.Configuration
@@ -28,6 +27,7 @@ import org.gradle.api.attributes.HasConfigurableAttributes
 import org.gradle.api.attributes.java.TargetJvmVersion
 import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
 import org.gradle.api.internal.artifacts.dependencies.DefaultProjectDependencyConstraint
+import org.gradle.api.logging.Logging
 import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier
 import org.gradle.maven.MavenModule
 import org.gradle.maven.MavenPomArtifact
@@ -38,10 +38,11 @@ import java.util.concurrent.ConcurrentHashMap
  * Resolves the configuration to determine the version status of its dependencies.
  */
 class Resolver(
-  private val project: Project,
+  private val projectContext: ProjectContext,
   private val resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?,
   private val checkConstraints: Boolean,
 ) {
+  private val logger = Logging.getLogger(Resolver::class.java)
   private var projectUrls = ConcurrentHashMap<ModuleVersionIdentifier, ProjectUrl>()
 
   init {
@@ -108,7 +109,40 @@ class Resolver(
       }
     }
 
-    val copy = configuration.copyRecursive().setTransitive(false)
+    // Resolve using the latest version of explicitly declared dependencies and retains Kotlin's
+    // inherited dependencies (importantly, including stdlib) from the super configurations. This
+    // is required for variant resolution, but the full set can break consumer capability matching.
+    val isKotlinDep = { dependency: ExternalDependency -> (dependency.group?.startsWith("org.jetbrains.kotlin") ?: false) }
+    val inheritedKotlin =
+      configuration.allDependencies
+        .filterIsInstance<ExternalDependency>()
+        .filter { d -> isKotlinDep(d) }
+        .minus(configuration.dependencies)
+
+    val allDeps = latest + inheritedKotlin
+
+    // Prefer copy() to inherit the resolution strategy (including component selection rules),
+    // but fall back to detachedConfiguration() when copy() fails — e.g. under configuration
+    // cache where reading lazy attribute values triggers PropertyQueryException.
+    val copy =
+      try {
+        configuration.copy().apply {
+          isTransitive = false
+          dependencies.clear()
+          dependencies.addAll(allDeps)
+        }
+      } catch (e: Exception) {
+        logger.warn(
+          "Configuration copy failed for '${configuration.name}', using detached configuration " +
+            "(resolution strategy including component selection rules will not be inherited): ${e.message}",
+          e,
+        )
+        projectContext.configurationContainer.detachedConfiguration(
+          *allDeps.toTypedArray(),
+        ).apply {
+          isTransitive = false
+        }
+      }
 
     // https://github.com/ben-manes/gradle-versions-plugin/issues/592
     // allow resolution of dynamic latest versions regardless of the original strategy
@@ -121,30 +155,16 @@ class Resolver(
         .setProperty(copy.resolutionStrategy, "failOnDynamicVersions", false)
     }
 
-    // Resolve using the latest version of explicitly declared dependencies and retains Kotlin's
-    // inherited dependencies (importantly, including stdlib) from the super configurations. This
-    // is required for variant resolution, but the full set can break consumer capability matching.
-    val isKotlinDep = { dependency: ExternalDependency -> (dependency.group?.startsWith("org.jetbrains.kotlin") ?: false) }
-    val inheritedKotlin =
-      configuration.allDependencies
-        .filterIsInstance<ExternalDependency>()
-        .filter { d -> isKotlinDep(d) }
-        .minus(configuration.dependencies)
-
     // Adds the Kotlin 1.2.x legacy metadata to assist in variant selection
-    val metadata = project.configurations.findByName("commonMainMetadataElements")
+    val metadata = projectContext.configurationContainer.findByName("commonMainMetadataElements")
     if (metadata == null) {
-      val compile = project.configurations.findByName("compile")
+      val compile = projectContext.configurationContainer.findByName("compile")
       if (compile != null) {
         addAttributes(copy, compile) { key -> key.contains("kotlin") }
       }
     } else {
       addAttributes(copy, metadata)
     }
-
-    copy.dependencies.clear()
-    copy.dependencies.addAll(latest)
-    copy.dependencies.addAll(inheritedKotlin)
 
     addRevisionFilter(copy, revision)
     addAttributes(copy, configuration)
@@ -181,7 +201,7 @@ class Resolver(
         query += "@$extension"
       }
     }
-    val latest = project.dependencies.create(query) as ModuleDependency
+    val latest = projectContext.dependencyHandler.create(query) as ModuleDependency
     latest.isTransitive = false
 
     // Copy selection qualifiers if the artifact was not explicitly set
@@ -196,7 +216,7 @@ class Resolver(
     // If no version was specified then use "none" to pass it through.
     val version = if (dependency.version == null) "none" else "+"
     val nonTransitiveDependency =
-      project.dependencies.create("${dependency.group.orEmpty()}:${dependency.name}:$version") as ModuleDependency
+      projectContext.dependencyHandler.create("${dependency.group.orEmpty()}:${dependency.name}:$version") as ModuleDependency
     nonTransitiveDependency.isTransitive = false
     return nonTransitiveDependency
   }
@@ -216,9 +236,15 @@ class Resolver(
     target.attributes { container ->
       for (key in source.attributes.keySet()) {
         if (filter.invoke(key.name)) {
-          @Suppress("UNCHECKED_CAST")
-          val value = source.attributes.getAttribute(key as Attribute<Any>)!!
-          container.attribute(key, value)
+          try {
+            @Suppress("UNCHECKED_CAST")
+            val value = source.attributes.getAttribute(key as Attribute<Any>)
+            if (value != null) {
+              container.attribute(key, value)
+            }
+          } catch (e: Exception) {
+            logger.info("Skipping attribute ${key.name}", e)
+          }
         }
       }
     }
@@ -273,8 +299,28 @@ class Resolver(
     val transitive = declared.values.any { it.version == "none" }
 
     val coordinates = hashMapOf<Coordinate.Key, Coordinate>()
-    val copy = configuration.copyRecursive().setTransitive(transitive)
+    // Use detachedConfiguration to avoid inheriting the extendsFrom hierarchy, which would
+    // pull in dependencies from parent configurations and change resolution results.
+    // This means user-defined resolution strategies (forces, substitutions) won't apply here,
+    // but that's acceptable: this method determines what the user *declared*, and forces /
+    // substitutions primarily affect transitive resolution rather than first-level declarations.
+    // Using copy() was also avoided because Gradle's lazy task initialization can trigger
+    // internal Task.project access during the copy.
+    val copy =
+      projectContext.configurationContainer.detachedConfiguration(
+        *configuration.allDependencies.toTypedArray(),
+      ).apply {
+        isTransitive = transitive
+      }
 
+    // Add constraints from the original configuration for proper resolution
+    if (checkConstraints) {
+      for (constraint in configuration.allDependencyConstraints) {
+        copy.dependencyConstraints.add(constraint)
+      }
+    }
+
+    addAttributes(copy, configuration)
     disableAutoTargetJvm(copy)
     val lenient = copy.resolvedConfiguration.lenientConfiguration
 
@@ -290,8 +336,8 @@ class Resolver(
       declared[key]?.let { coordinates.put(key, it) }
     }
 
-    if (supportsConstraints(copy)) {
-      for (constraint in copy.allDependencyConstraints) {
+    if (supportsConstraints(configuration)) {
+      for (constraint in configuration.allDependencyConstraints) {
         val coordinate = Coordinate.from(constraint)
         // Only add a constraint to the report if there is no dependency matching it, this means it
         // is targeting a transitive dependency or is part of a platform.
@@ -308,31 +354,15 @@ class Resolver(
   }
 
   private fun logRepositories() {
-    val root = project.rootProject == project
-    val label = "${
-      if (root) {
-        project.name
-      } else {
-        project.path
-      }
-    } project ${
-      if (root) {
-        " (root)"
-      } else {
-        ""
-      }
-    }"
-    if (!project.buildscript.configurations
-        .flatMap { config -> config.dependencies }
-        .any()
-    ) {
-      project.logger.info("Resolving $label buildscript with repositories:")
-      for (repository in project.buildscript.repositories) {
+    val label = projectContext.label
+    if (!projectContext.buildscriptHasDependencies) {
+      logger.info("Resolving $label buildscript with repositories:")
+      for (repository in projectContext.buildscriptRepositories.toList()) {
         logRepository(repository)
       }
     }
-    project.logger.info("Resolving $label configurations with repositories:")
-    for (repository in project.repositories) {
+    logger.info("Resolving $label configurations with repositories:")
+    for (repository in projectContext.repositories.toList()) {
       logRepository(repository)
     }
   }
@@ -340,22 +370,22 @@ class Resolver(
   private fun logRepository(repository: ArtifactRepository) {
     when (repository) {
       is FlatDirectoryArtifactRepository -> {
-        project.logger.info(" - ${repository.name}: ${repository.dirs}")
+        logger.info(" - ${repository.name}: ${repository.dirs}")
       }
       is IvyArtifactRepository -> {
-        project.logger.info(" - ${repository.name}: ${repository.url}")
+        logger.info(" - ${repository.name}: ${repository.url}")
       }
       is MavenArtifactRepository -> {
-        project.logger.info(" - ${repository.name}: ${repository.url}")
+        logger.info(" - ${repository.name}: ${repository.url}")
       }
       else -> {
-        project.logger.info(" - ${repository.name}: ${repository.javaClass.simpleName}")
+        logger.info(" - ${repository.name}: ${repository.javaClass.simpleName}")
       }
     }
   }
 
   private fun getProjectUrl(id: ModuleVersionIdentifier): String? {
-    if (project.gradle.startParameter.isOffline) {
+    if (projectContext.isOffline) {
       return null
     }
     var projectUrl = ProjectUrl()
@@ -375,7 +405,7 @@ class Resolver(
   private fun resolveProjectUrl(id: ModuleVersionIdentifier): String? {
     return try {
       val resolutionResult =
-        project.dependencies
+        projectContext.dependencyHandler
           .createArtifactResolutionQuery()
           .forComponents(DefaultModuleComponentIdentifier.newId(id))
           .withArtifacts(MavenModule::class.java, MavenPomArtifact::class.java)
@@ -387,10 +417,10 @@ class Resolver(
         for (artifact in result.getArtifacts(MavenPomArtifact::class.java)) {
           if (artifact is ResolvedArtifactResult) {
             val file = artifact.file
-            project.logger.info("Pom file for $id is $file")
+            logger.info("Pom file for $id is $file")
             var url = getUrlFromPom(file)
             if (!url.isNullOrEmpty()) {
-              project.logger.info("Found url for $id: $url")
+              logger.info("Found url for $id: $url")
               return url.trim()
             } else {
               val parent = getParentFromPom(file)
@@ -406,10 +436,10 @@ class Resolver(
           }
         }
       }
-      project.logger.info("Did not find url for $id")
+      logger.info("Did not find url for $id")
       null
     } catch (e: Exception) {
-      project.logger.info("Failed to resolve the project's url", e)
+      logger.info("Failed to resolve the project's url", e)
       null
     }
   }

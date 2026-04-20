@@ -9,14 +9,13 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.Resolution
 import groovy.lang.Closure
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
-import org.gradle.api.GradleException
-import org.gradle.api.artifacts.Configuration
-import org.gradle.api.specs.Spec
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
-import org.gradle.util.GradleVersion
+import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.Nullable
 
 /**
@@ -36,8 +35,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
   /** Returns the outputDir destination. */
   @Input
-  var outputDir: String =
-    "${project.buildDir.path.replace(project.projectDir.path + "/", "")}/dependencyUpdates"
+  var outputDir: String = "build/dependencyUpdates"
     get() = (System.getProperties()["outputDir"] ?: field) as String
 
   /** Returns the filename of the report. */
@@ -75,7 +73,8 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
    * Keeps a reference to the latest [OutputFormatterArgument] provided either via the [outputFormatter]
    * property or the [outputFormatter] function.
    */
-  private var outputFormatterArgument: OutputFormatterArgument = OutputFormatterArgument.DEFAULT
+  @get:Internal
+  internal var outputFormatterArgument: OutputFormatterArgument = OutputFormatterArgument.DEFAULT
 
   @Input
   @Optional
@@ -100,8 +99,11 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   @Input
   var checkConstraints: Boolean = false
 
-  @Internal
-  var filterConfigurations: Spec<Configuration> = Spec<Configuration> { true }
+  // Typed as Any? so that CC serialization never sees Spec<Configuration> in the
+  // task class signature. Build scripts set this to a Spec<Configuration> and the
+  // cast happens in WhenReadyAction at configuration time.
+  @get:Internal
+  var filterConfigurations: Any? = null
 
   @Input
   var checkBuildEnvironmentConstraints: Boolean = false
@@ -109,47 +111,95 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   @Internal
   @Nullable
   var resolutionStrategy: Closure<Any>? = null
+    set(value) {
+      field = null
+      if (value != null) {
+        val closure = value
+        resolutionStrategyAction =
+          Action { current ->
+            closure.resolveStrategy = Closure.DELEGATE_FIRST
+            closure.delegate = current
+            if (closure.maximumNumberOfParameters == 0) {
+              closure.call()
+            } else {
+              closure.call(current)
+            }
+          }
+        logger.warn(
+          "dependencyUpdates.resolutionStrategy: " +
+            "Remove the assignment operator, \"=\", when setting this task property",
+        )
+      } else {
+        resolutionStrategyAction = null
+      }
+    }
 
+  @get:Internal
   @Nullable
-  private var resolutionStrategyAction: Action<in ResolutionStrategyWithCurrent>? = null
+  internal var resolutionStrategyAction: Action<in ResolutionStrategyWithCurrent>? = null
+
+  // Set by the plugin at configuration time so that the task class never calls getProject().
+  // Gradle 9.x instruments task classes and flags any getProject() call, even in constructors.
+  @get:Internal
+  internal var taskProjectDir: File = File(".")
+
+  @get:Internal
+  internal var taskProjectPath: String = ""
+
+  // Typed as Any? so that CC serialization and class loading on Gradle 5.x (where
+  // BuildService doesn't exist) never see DependencyUpdatesDataService in the task's
+  // field graph. On Gradle 6.1+ this holds a Provider<DependencyUpdatesDataService>.
+  @get:Internal
+  internal var dataServiceProvider: Any? = null
 
   init {
     description = "Displays the dependency updates for the project."
     group = "Help"
     outputs.upToDateWhen { false }
-
-    callIncompatibleWithConfigurationCache()
   }
 
   @TaskAction
   fun dependencyUpdates() {
-    requireNoParallel()
-    project.evaluationDependsOnChildren()
-    if (resolutionStrategy != null) {
-      val closure = resolutionStrategy!!
-      resolutionStrategy { current -> project.configure(current, closure) }
+    val execData = removeExecutionData(path)
+    if (execData == null) {
       logger.warn(
-        "dependencyUpdates.resolutionStrategy: " +
-          "Remove the assignment operator, \"=\", when setting this task property",
+        "dependencyUpdates: No pre-resolved data found for task '$path'. " +
+          "The report will be empty. This can happen when the configuration cache is " +
+          "reused and the whenReady callback did not re-run.",
       )
     }
+    val outputFmt =
+      System.getProperties()["outputFormatter"]
+        ?.let { OutputFormatterArgument.BuiltIn(it as String) }
+        ?: execData?.outputFormatterArgument
+        ?: outputFormatterArgument
+
+    // Build the reporter from pre-resolved statuses. Resolution happened at configuration
+    // time (in WhenReadyAction) because project services are not available at execution time
+    // under Gradle 9.x with configuration cache.
     val evaluator =
       DependencyUpdates(
-        project, resolutionStrategyAction, revision,
-        outputFormatter(), outputDir, reportfileName, checkForGradleUpdate, gradleVersionsApiBaseUrl,
-        gradleReleaseChannel, checkConstraints, checkBuildEnvironmentConstraints,
-        filterConfigurations,
+        emptyList(),
+        emptyList(),
+        taskProjectDir,
+        taskProjectPath,
+        null,
+        revision,
+        outputFmt,
+        outputDir,
+        reportfileName,
+        checkForGradleUpdate,
+        gradleVersionsApiBaseUrl,
+        gradleReleaseChannel,
+        checkConstraints,
+        checkBuildEnvironmentConstraints,
       )
-    val reporter = evaluator.run()
+    val reporter =
+      evaluator.createReporterFromStatuses(
+        execData?.projectStatuses ?: emptySet(),
+        execData?.buildscriptStatuses ?: emptySet(),
+      )
     reporter.write()
-  }
-
-  private fun requireNoParallel() {
-    if (GradleVersion.current() > GradleVersion.version("9.0") &&
-      project.gradle.startParameter.isParallelProjectExecutionEnabled
-    ) {
-      throw GradleException("Parallel project execution is not supported, run this task with --no-parallel")
-    }
   }
 
   fun rejectVersionIf(filter: ComponentFilter) {
@@ -174,16 +224,8 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
    * @param resolutionStrategy the resolution strategy
    */
   fun resolutionStrategy(resolutionStrategy: Action<in ResolutionStrategyWithCurrent>? = null) {
+    this.resolutionStrategy = null // Clear Closure field first (setter may clear resolutionStrategyAction)
     this.resolutionStrategyAction = resolutionStrategy
-    this.resolutionStrategy = null
-  }
-
-  /** Returns the outputDir format. */
-  private fun outputFormatter(): OutputFormatterArgument {
-    val outputFormatterProperty = System.getProperties()["outputFormatter"] as? String
-
-    return outputFormatterProperty?.let { OutputFormatterArgument.BuiltIn(it) }
-      ?: outputFormatterArgument
   }
 
   /**
@@ -195,8 +237,58 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
     outputFormatterArgument = OutputFormatterArgument.CustomAction(action)
   }
 
-  private fun callIncompatibleWithConfigurationCache() {
-    this::class.members.find { it.name == "notCompatibleWithConfigurationCache" }
-      ?.call(this, "The gradle-versions-plugin isn't compatible with the configuration cache")
+  // Holds pre-resolved dependency statuses and the output formatter.
+  // Resolution happens at configuration time (in WhenReadyAction) because Gradle 9.x
+  // with configuration cache closes project services after the configuration phase,
+  // making it impossible to create detached configurations at execution time.
+  internal class ExecutionData(
+    val projectStatuses: Set<DependencyStatus>,
+    val buildscriptStatuses: Set<DependencyStatus>,
+    val outputFormatterArgument: OutputFormatterArgument,
+  )
+
+  /**
+   * Clears fields that may hold closures/objects referencing Project or Configuration.
+   * Note: [outputFormatterArgument] is intentionally NOT cleared here — it is already
+   * captured in [ExecutionData] before this method is called, and its types (String,
+   * Reporter, Action<Result>) do not reference Project/Configuration.
+   */
+  internal fun clearConfigurationTimeState() {
+    filterConfigurations = null
+    resolutionStrategyAction = null
+  }
+
+  /**
+   * Retrieves and removes execution data for the given task path. Tries the build service
+   * first (Gradle 6.1+), then falls back to the static companion-object map (Gradle 5.x).
+   *
+   * The static-map fallback is necessary even when a service provider is present because
+   * on Gradle 9.x the service instance visible at task execution time may differ from the
+   * one populated during the whenReady callback (WhenReadyAction dual-writes to both).
+   */
+  @Suppress("UNCHECKED_CAST")
+  private fun removeExecutionData(taskPath: String): ExecutionData? {
+    val provider = dataServiceProvider
+    if (provider != null) {
+      try {
+        val service = (provider as Provider<DependencyUpdatesDataService>).get()
+        val data = service.executionDataMap.remove(taskPath)
+        if (data != null) {
+          // Also clean the static map if data was dual-written
+          executionDataCache.remove(taskPath)
+          return data
+        }
+      } catch (_: Exception) {
+        // Service unavailable, fall through to static map
+      }
+    }
+    return executionDataCache.remove(taskPath)
+  }
+
+  companion object {
+    // Fallback for Gradle < 6.1 where build services are not available.
+    // On Gradle 6.1+ the build service is the primary storage; this map is
+    // only used when the service is not wired (e.g. old Gradle versions).
+    internal val executionDataCache = ConcurrentHashMap<String, ExecutionData>()
   }
 }

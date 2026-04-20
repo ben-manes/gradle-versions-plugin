@@ -1,6 +1,8 @@
 package com.github.benmanes.gradle.versions
 
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesDataService
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+import com.github.benmanes.gradle.versions.updates.WhenReadyAction
 import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -29,6 +31,36 @@ class VersionsPlugin : Plugin<Project> {
         )
       }
     }
+
+    // Set common properties for ALL tasks of this type (including user-created ones).
+    // The output directory is derived from the (possibly customized) buildDirectory so it
+    // works even when the build directory is located outside the project directory.
+    tasks.withType(DependencyUpdatesTask::class.java).configureEach { task ->
+      task.outputDir = project.layout.buildDirectory.dir("dependencyUpdates").get().asFile.path
+      task.taskProjectDir = project.projectDir
+      task.taskProjectPath = project.path
+    }
+
+    // Register a shared build service to hold pre-resolved execution data instead of a
+    // JVM-level static map. This is the proper Gradle API for build-scoped data and
+    // avoids leaking state across builds within the same daemon.
+    // BuildService was introduced in Gradle 6.1.
+    if (GradleVersion.current() >= GradleVersion.version("6.1")) {
+      val serviceProvider =
+        project.gradle.sharedServices.registerIfAbsent(
+          DependencyUpdatesDataService.SERVICE_NAME,
+          DependencyUpdatesDataService::class.java,
+        ) {}
+      tasks.withType(DependencyUpdatesTask::class.java).configureEach { task ->
+        task.dataServiceProvider = serviceProvider
+        task.usesService(serviceProvider)
+      }
+    }
+
+    // Register the whenReady callback here (during project evaluation) rather than
+    // inside the task configuration action. This ensures the callback fires after ALL
+    // configuration actions (including configureEach from build scripts) have run.
+    WhenReadyAction.register(project)
   }
 
   private fun requireMinimumGradleVersion() {
