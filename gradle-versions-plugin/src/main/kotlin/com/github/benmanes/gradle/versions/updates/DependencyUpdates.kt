@@ -55,7 +55,7 @@ class DependencyUpdates
         )
 
       val statuses = status + buildscriptStatus
-      val versions = VersionMapping(project, statuses)
+      val versions = VersionMapping(project.logger, statuses)
       val unresolved = statuses.mapNotNullTo(mutableSetOf()) { it.unresolved }
       val projectUrls =
         statuses
