@@ -4,9 +4,11 @@ import com.github.benmanes.gradle.versions.updates.PartialResult
 import com.github.benmanes.gradle.versions.updates.PartialResultKt
 import com.github.benmanes.gradle.versions.updates.PartialStatus
 import com.github.benmanes.gradle.versions.updates.UnresolvedInfo
+import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Unroll
 
+@Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/948')
 final class PartialResultSpec extends Specification {
   private static PartialStatus status(String name, String declaredVersion,
       UnresolvedInfo unresolved = null) {

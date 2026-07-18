@@ -78,6 +78,7 @@ final class AggregationSpec extends Specification {
     then:
     first.task(':dependencyUpdates').outcome == SUCCESS
     second.task(':dependencyUpdates').outcome == SUCCESS
+    second.output.contains('Reusing configuration cache')
     second.output.contains('com.google.inject:guice [2.0 -> 3.1]')
     second.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
   }
@@ -109,12 +110,14 @@ final class AggregationSpec extends Specification {
     def arguments = ['dependencyUpdates', '-DoutputFormatter=json', '--no-parallel']
 
     when:
-    run(arguments)
+    def legacyRun = run(arguments)
     def legacy = new File(testProjectDir.root, 'build/dependencyUpdates/report.json').text
-    run(arguments + ['-Dcom.github.benmanes.versions.aggregate=true'])
+    def aggregateRun = run(arguments + ['-Dcom.github.benmanes.versions.aggregate=true'])
     def aggregated = new File(testProjectDir.root, 'build/dependencyUpdates/report.json').text
 
     then:
+    legacyRun.task(':app:dependencyUpdatesPartial') == null
+    aggregateRun.task(':app:dependencyUpdatesPartial').outcome == SUCCESS
     aggregated == legacy
   }
 }
