@@ -68,6 +68,32 @@ final class AggregationSpec extends Specification {
     result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
   }
 
+  def 'Reports a project declared explicitly only once'() {
+    given:
+    new File(testProjectDir.root, 'app/build.gradle') <<
+      """
+        dependencies {
+          implementation project(':lib')
+        }
+      """.stripIndent()
+    new File(testProjectDir.root, 'build.gradle') <<
+      """
+        dependencies {
+          dependencyUpdatesAggregation project(':app')
+        }
+      """.stripIndent()
+
+    when:
+    def result = run(['dependencyUpdates', '-Dcom.github.benmanes.versions.aggregate=true'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    // Every project is aggregated automatically, so declaring one is redundant rather than
+    // narrowing, and the redundant declaration must not report it twice.
+    result.output.count('com.google.guava:guava [15.0 -> 16.0-rc1]') == 1
+  }
+
   def 'Aggregates in parallel with the configuration cache'() {
     when:
     def first = run(['dependencyUpdates', '-Dcom.github.benmanes.versions.aggregate=true',
@@ -119,5 +145,152 @@ final class AggregationSpec extends Specification {
     legacyRun.task(':app:dependencyUpdatesPartial') == null
     aggregateRun.task(':app:dependencyUpdatesPartial').outcome == SUCCESS
     aggregated == legacy
+  }
+
+  def 'Aggregates sibling projects that share a group and name'() {
+    given:
+    new File(testProjectDir.root, 'settings.gradle').text =
+      "include 'app', 'app:core', 'lib', 'lib:core'"
+    new File(testProjectDir.root, 'build.gradle').text =
+      """
+        plugins {
+          id 'com.github.ben-manes.versions'
+        }
+
+        allprojects {
+          apply plugin: 'java'
+          group = 'com.example'
+          version = '1.0'
+
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+        }
+      """.stripIndent()
+    new File(testProjectDir.root, 'app/build.gradle').text = ''
+    new File(testProjectDir.root, 'lib/build.gradle').text = ''
+    new File(testProjectDir.root, 'app/core').mkdirs()
+    new File(testProjectDir.root, 'app/core/build.gradle').text =
+      """
+        dependencies {
+          implementation 'com.google.inject:guice:2.0'
+        }
+      """.stripIndent()
+    new File(testProjectDir.root, 'lib/core').mkdirs()
+    new File(testProjectDir.root, 'lib/core/build.gradle').text =
+      """
+        dependencies {
+          implementation 'com.google.guava:guava:15.0'
+        }
+      """.stripIndent()
+
+    when:
+    def result = run(['dependencyUpdates', '-Dcom.github.benmanes.versions.aggregate=true',
+                      '--no-parallel'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+  }
+
+  def 'Aggregates a configuration created after the project is evaluated'() {
+    given:
+    new File(testProjectDir.root, 'lib/build.gradle') <<
+      """
+        afterEvaluate {
+          configurations {
+            lateConfig {
+              canBeResolved = true
+              canBeConsumed = false
+            }
+          }
+          dependencies {
+            lateConfig 'com.google.inject:guice:2.2'
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = run(['dependencyUpdates', '-Dcom.github.benmanes.versions.aggregate=true',
+                      '--no-parallel'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains('com.google.inject:guice [2.2 -> 3.1]')
+  }
+
+  def 'Honors a subproject task setting when it also applies the plugin'() {
+    given:
+    new File(testProjectDir.root, 'build.gradle') <<
+      """
+        subprojects {
+          apply plugin: 'com.github.ben-manes.versions'
+        }
+      """.stripIndent()
+    new File(testProjectDir.root, 'app/build.gradle') <<
+      """
+        dependencyUpdates {
+          rejectVersionIf {
+            it.candidate.version == '3.1'
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = run([':app:dependencyUpdates', '--no-parallel',
+                      '-Dcom.github.benmanes.versions.aggregate=true'])
+
+    then:
+    result.task(':app:dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
+  }
+
+  def 'Honors the configuration filter when the children evaluate first'() {
+    given:
+    new File(testProjectDir.root, 'build.gradle') <<
+      """
+        tasks.named('dependencyUpdates').configure {
+          filterConfigurations { false }
+        }
+
+        evaluationDependsOnChildren()
+      """.stripIndent()
+
+    when:
+    def result = run(['dependencyUpdates', '-Dcom.github.benmanes.versions.aggregate=true',
+                      '--no-parallel'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    !result.output.contains('com.google.inject:guice')
+    !result.output.contains('com.google.guava:guava')
+  }
+
+  def 'Resolves the aggregation results without traversing the projects dependencies'() {
+    given:
+    new File(testProjectDir.root, 'build.gradle') <<
+      """
+        tasks.register('dumpAggregationGraph') {
+          def resolutionResult =
+            configurations.aggregateDependencyUpdatesResults.incoming.resolutionResult
+          doLast {
+            resolutionResult.allDependencies.each {
+              println "GRAPHEDGE \${it.class.simpleName} \${it.requested}"
+            }
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = run(['dumpAggregationGraph', '-Dcom.github.benmanes.versions.aggregate=true',
+                      '--no-parallel'])
+
+    then:
+    result.task(':dumpAggregationGraph').outcome == SUCCESS
+    !result.output.contains('UnresolvedDependencyResult')
   }
 }

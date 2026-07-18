@@ -116,7 +116,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   // Consumed at configuration time only, so it is kept out of the serialized task state.
   @Internal
   @Transient
-  var filterConfigurations: Spec<Configuration> = Spec<Configuration> { true }
+  var filterConfigurations: Spec<Configuration> = ALL_CONFIGURATIONS
 
   @Input
   var checkBuildEnvironmentConstraints: Boolean = false
