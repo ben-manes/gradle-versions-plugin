@@ -16,14 +16,13 @@ import org.gradle.api.artifacts.DependencyConstraint
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
-import org.gradle.api.artifacts.ResolvedDependency
-import org.gradle.api.artifacts.UnresolvedDependency
 import org.gradle.api.artifacts.component.ModuleComponentSelector
 import org.gradle.api.artifacts.repositories.ArtifactRepository
 import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
 import org.gradle.api.artifacts.repositories.IvyArtifactRepository
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
+import org.gradle.api.artifacts.result.ResolvedComponentResult
 import org.gradle.api.artifacts.result.ResolvedDependencyResult
 import org.gradle.api.artifacts.result.UnresolvedDependencyResult
 import org.gradle.api.attributes.Attribute
@@ -64,32 +63,38 @@ class Resolver(
 
     val current = getCurrentCoordinates(configuration)
     val latestConfiguration = createLatestConfiguration(configuration, revision, current)
-    val lenient = latestConfiguration.resolvedConfiguration.lenientConfiguration
-    val resolved = lenient.firstLevelModuleDependencies
-    val unresolved = lenient.unresolvedModuleDependencies
-    return getStatus(current.coordinates, resolved, unresolved)
+    val root = latestConfiguration.incoming.resolutionResult.root
+    return getStatus(current.coordinates, root)
   }
 
   /** Returns the version status of the configuration's dependencies. */
   private fun getStatus(
     coordinates: Map<Coordinate.Key, Coordinate>,
-    resolved: Set<ResolvedDependency>,
-    unresolved: Set<UnresolvedDependency>,
+    root: ResolvedComponentResult,
   ): Set<DependencyStatus> {
     val result = hashSetOf<DependencyStatus>()
-    for (dependency in resolved) {
-      val resolvedCoordinate = Coordinate.from(dependency.module.id)
-      val originalCoordinate = coordinates[resolvedCoordinate.key]
-      val coord = originalCoordinate ?: resolvedCoordinate
-      val projectUrl = getProjectUrl(dependency.module.id)
-      result.add(DependencyStatus(coord, resolvedCoordinate.version, projectUrl))
-    }
-
-    for (dependency in unresolved) {
-      val resolvedCoordinate = Coordinate.from(dependency.selector)
-      val originalCoordinate = coordinates[resolvedCoordinate.key]
-      val coord = originalCoordinate ?: resolvedCoordinate
-      result.add(DependencyStatus(coord, dependency))
+    for (dependency in root.dependencies) {
+      // Constraints do not carry a resolved version to report against.
+      if (dependency.isConstraint) {
+        continue
+      }
+      when (dependency) {
+        is ResolvedDependencyResult -> {
+          val moduleVersion = dependency.selected.moduleVersion ?: continue
+          val resolvedCoordinate = Coordinate.from(moduleVersion)
+          val originalCoordinate = coordinates[resolvedCoordinate.key]
+          val coord = originalCoordinate ?: resolvedCoordinate
+          val projectUrl = getProjectUrl(moduleVersion)
+          result.add(DependencyStatus(coord, resolvedCoordinate.version, projectUrl))
+        }
+        is UnresolvedDependencyResult -> {
+          val selector = dependency.attempted as? ModuleComponentSelector ?: continue
+          val resolvedCoordinate = Coordinate.from(selector)
+          val originalCoordinate = coordinates[resolvedCoordinate.key]
+          val coord = originalCoordinate ?: resolvedCoordinate
+          result.add(DependencyStatus(coord, dependency))
+        }
+      }
     }
     return result
   }

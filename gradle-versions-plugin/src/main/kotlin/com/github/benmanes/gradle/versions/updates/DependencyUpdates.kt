@@ -5,7 +5,7 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.Resolution
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.UnresolvedDependency
+import org.gradle.api.artifacts.result.UnresolvedDependencyResult
 import org.gradle.api.specs.Spec
 
 /**
@@ -101,7 +101,7 @@ class DependencyUpdates
 
     private fun createReporter(
       versions: VersionMapping,
-      unresolved: Set<UnresolvedDependency>,
+      unresolved: Set<UnresolvedDependencyResult>,
       projectUrls: Map<Map<String, String>, String>,
     ): DependencyUpdatesReporter {
       val currentVersions = toMap(versions.current)

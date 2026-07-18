@@ -16,8 +16,8 @@ import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResult
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
-import org.gradle.api.artifacts.ModuleVersionSelector
-import org.gradle.api.artifacts.UnresolvedDependency
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.artifacts.result.UnresolvedDependencyResult
 import org.gradle.api.logging.Logger
 import java.io.File
 import java.io.PrintStream
@@ -61,7 +61,7 @@ class DependencyUpdatesReporter(
   val downgradeVersions: Map<Map<String, String>, Coordinate>,
   val upgradeVersions: Map<Map<String, String>, Coordinate>,
   val undeclared: Set<Coordinate>,
-  val unresolved: Set<UnresolvedDependency>,
+  val unresolved: Set<UnresolvedDependencyResult>,
   val projectUrls: Map<Map<String, String>, String>,
   val gradleUpdateChecker: GradleUpdateChecker,
   val gradleReleaseChannel: String,
@@ -215,13 +215,13 @@ class DependencyUpdatesReporter(
   private fun buildUnresolvedGroup(): MutableSet<DependencyUnresolved> {
     return unresolved
       .sortedWith { a, b ->
-        compareKeys(keyOf(a.selector), keyOf(b.selector))
+        compareKeys(keyOf(a.attempted as ModuleComponentSelector), keyOf(b.attempted as ModuleComponentSelector))
       }.map { dep ->
         val stringWriter = StringWriter()
-        dep.problem.printStackTrace(PrintWriter(stringWriter))
+        dep.failure.printStackTrace(PrintWriter(stringWriter))
         val message = stringWriter.toString()
 
-        buildUnresolvedDependency(dep.selector, message)
+        buildUnresolvedDependency(dep.attempted as ModuleComponentSelector, message)
       }.toSortedSet() as TreeSet<DependencyUnresolved>
   }
 
@@ -261,12 +261,12 @@ class DependencyUpdatesReporter(
   }
 
   private fun buildUnresolvedDependency(
-    selector: ModuleVersionSelector,
+    selector: ModuleComponentSelector,
     message: String,
   ): DependencyUnresolved {
     return DependencyUnresolved(
       group = selector.group,
-      name = selector.name,
+      name = selector.module,
       version = currentVersions[keyOf(selector)]?.version,
       projectUrl = latestVersions[keyOf(selector)]?.version,
       userReason = currentVersions[keyOf(selector)]?.userReason,
@@ -345,8 +345,8 @@ class DependencyUpdatesReporter(
       }
     }
 
-    private fun keyOf(dependency: ModuleVersionSelector): Map<String, String> {
-      return mapOf("group" to dependency.group, "name" to dependency.name)
+    private fun keyOf(dependency: ModuleComponentSelector): Map<String, String> {
+      return mapOf("group" to dependency.group, "name" to dependency.module)
     }
   }
 }

@@ -26,7 +26,7 @@ import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.updates.Coordinate
 import com.github.benmanes.gradle.versions.updates.DependencyUpdates
 import org.gradle.api.artifacts.ComponentSelection
-import org.gradle.api.artifacts.ModuleVersionSelector
+import org.gradle.api.artifacts.component.ModuleComponentSelector
 import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Issue
 import spock.lang.Specification
@@ -357,8 +357,8 @@ final class DependencyUpdatesSpec extends Specification {
 
     then:
     with(reporter) {
-      unresolved.collect { it.selector }.collectEntries { dependency ->
-        [['group': dependency.group, 'name': dependency.name]: dependency.version]
+      unresolved.collect { it.attempted }.collectEntries { dependency ->
+        [['group': dependency.group, 'name': dependency.module]: dependency.version]
       } == [['group': '', 'name': 'guava-18.0']: NONE_VERSION]
       upgradeVersions.isEmpty()
       upToDateVersions.isEmpty()
@@ -709,9 +709,9 @@ final class DependencyUpdatesSpec extends Specification {
   }
 
   private static void checkUnresolvedVersions(def reporter) {
-    Map<Map<String, String>, ModuleVersionSelector> unresolvedMap = reporter.unresolved
-      .collect { it.selector }.collectEntries { dependency ->
-      [['group': dependency.group, 'name': dependency.name]: dependency]
+    Map<Map<String, String>, ModuleComponentSelector> unresolvedMap = reporter.unresolved
+      .collect { it.attempted }.collectEntries { dependency ->
+      [['group': dependency.group, 'name': dependency.module]: dependency]
     }
     assert reporter.unresolved.size() == 2
     assert unresolvedMap

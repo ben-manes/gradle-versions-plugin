@@ -1,6 +1,6 @@
 package com.github.benmanes.gradle.versions.updates
 
-import org.gradle.api.artifacts.UnresolvedDependency
+import org.gradle.api.artifacts.result.UnresolvedDependencyResult
 
 /**
  * The version status of a dependency.
@@ -11,7 +11,7 @@ import org.gradle.api.artifacts.UnresolvedDependency
 class DependencyStatus {
   val coordinate: Coordinate
   val latestVersion: String
-  val unresolved: UnresolvedDependency?
+  val unresolved: UnresolvedDependencyResult?
   val projectUrl: String?
 
   constructor(coordinate: Coordinate, latestVersion: String, projectUrl: String?) {
@@ -21,7 +21,7 @@ class DependencyStatus {
     this.unresolved = null
   }
 
-  constructor(coordinate: Coordinate, unresolved: UnresolvedDependency?) {
+  constructor(coordinate: Coordinate, unresolved: UnresolvedDependencyResult?) {
     this.coordinate = coordinate
     this.unresolved = unresolved
     latestVersion = "none"
