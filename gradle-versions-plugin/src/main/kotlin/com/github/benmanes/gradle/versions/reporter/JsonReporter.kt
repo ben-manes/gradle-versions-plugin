@@ -3,17 +3,16 @@ package com.github.benmanes.gradle.versions.reporter
 import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import org.gradle.api.Project
 import java.io.OutputStream
 
 /**
  * A JSON reporter for the dependency updates results.
  */
 class JsonReporter(
-  override val project: Project,
+  override val projectPath: String,
   override val revision: String,
   override val gradleReleaseChannel: String,
-) : AbstractReporter(project, revision, gradleReleaseChannel) {
+) : AbstractReporter(projectPath, revision, gradleReleaseChannel) {
   override fun write(
     printStream: OutputStream,
     result: Result,

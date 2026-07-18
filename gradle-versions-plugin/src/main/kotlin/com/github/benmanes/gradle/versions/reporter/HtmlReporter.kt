@@ -5,17 +5,16 @@ import com.github.benmanes.gradle.versions.reporter.result.VersionAvailable
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.CURRENT
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.NIGHTLY
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
-import org.gradle.api.Project
 import java.io.OutputStream
 
 /**
  * A HTML reporter for the dependency updates results.
  */
 class HtmlReporter(
-  override val project: Project,
+  override val projectPath: String,
   override val revision: String,
   override val gradleReleaseChannel: String,
-) : AbstractReporter(project, revision, gradleReleaseChannel) {
+) : AbstractReporter(projectPath, revision, gradleReleaseChannel) {
   override fun write(
     printStream: OutputStream,
     result: Result,

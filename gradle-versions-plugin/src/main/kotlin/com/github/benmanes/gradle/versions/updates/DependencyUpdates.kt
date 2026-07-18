@@ -116,7 +116,7 @@ class DependencyUpdates
       val gradleUpdateChecker = GradleUpdateChecker(checkForGradleUpdate, gradleVersionsApiBaseUrl)
 
       return DependencyUpdatesReporter(
-        project, revision, outputFormatterArgument, outputDir,
+        project.path, project.logger, revision, outputFormatterArgument, project.file(outputDir),
         reportfileName, currentVersions, latestVersions, upToDateVersions, downgradeVersions,
         upgradeVersions, versions.undeclared, unresolved, projectUrls, gradleUpdateChecker,
         gradleReleaseChannel, versions.latestByCurrent,
