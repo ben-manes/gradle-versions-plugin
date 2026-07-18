@@ -33,6 +33,7 @@ data class PartialResult(
   val formatVersion: Int,
   val projectPath: String,
   val statuses: List<PartialStatus>,
+  val buildscriptStatuses: List<PartialStatus>,
 ) {
   fun toJson(): String = adapter.toJson(this)
 

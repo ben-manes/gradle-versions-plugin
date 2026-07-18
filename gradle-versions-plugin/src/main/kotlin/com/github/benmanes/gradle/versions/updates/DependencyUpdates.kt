@@ -5,7 +5,9 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.Resolution
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.logging.Logger
 import org.gradle.api.specs.Spec
+import java.io.File
 
 /**
  * An evaluator for reporting of which dependencies have later versions.
@@ -53,18 +55,11 @@ class DependencyUpdates
           checkBuildEnvironmentConstraints,
         )
 
-      val statuses = status + buildscriptStatus
-      val versions = VersionMapping(project.logger, statuses)
-      val unresolved = statuses.mapNotNullTo(mutableSetOf()) { it.unresolved }
-      val projectUrls =
-        statuses
-          .filter { !it.projectUrl.isNullOrEmpty() }
-          .associateBy(
-            { mapOf("group" to it.group, "name" to it.name) },
-            { it.projectUrl.toString() },
-          )
-
-      return createReporter(versions, unresolved, projectUrls)
+      return reporterFor(
+        status + buildscriptStatus, project.path, project.logger, revision,
+        outputFormatterArgument, project.file(outputDir), reportfileName, checkForGradleUpdate,
+        gradleVersionsApiBaseUrl, gradleReleaseChannel,
+      )
     }
 
     private fun resolveProjects(
@@ -98,31 +93,51 @@ class DependencyUpdates
       }
     }
 
-    private fun createReporter(
-      versions: VersionMapping,
-      unresolved: Set<UnresolvedInfo>,
-      projectUrls: Map<Map<String, String>, String>,
-    ): DependencyUpdatesReporter {
-      val currentVersions = toMap(versions.current)
-      val latestVersions =
-        versions.latest
-          .associateBy({ mapOf("group" to it.groupId, "name" to it.artifactId) }, { it })
-      val upToDateVersions = toMap(versions.upToDate)
-      val downgradeVersions = toMap(versions.downgrade)
-      val upgradeVersions = toMap(versions.upgrade)
-
-      // Check for Gradle updates.
-      val gradleUpdateChecker = GradleUpdateChecker(checkForGradleUpdate, gradleVersionsApiBaseUrl)
-
-      return DependencyUpdatesReporter(
-        project.path, project.logger, revision, outputFormatterArgument, project.file(outputDir),
-        reportfileName, currentVersions, latestVersions, upToDateVersions, downgradeVersions,
-        upgradeVersions, versions.undeclared, unresolved, projectUrls, gradleUpdateChecker,
-        gradleReleaseChannel, versions.latestByCurrent,
-      )
-    }
-
     companion object {
+      /** Returns a reporter for the merged statuses of one or more projects. */
+      @JvmStatic
+      @Suppress("LongParameterList")
+      fun reporterFor(
+        statuses: List<PartialStatus>,
+        projectPath: String,
+        logger: Logger,
+        revision: String,
+        outputFormatterArgument: OutputFormatterArgument,
+        outputDir: File,
+        reportfileName: String?,
+        checkForGradleUpdate: Boolean,
+        gradleVersionsApiBaseUrl: String,
+        gradleReleaseChannel: String,
+      ): DependencyUpdatesReporter {
+        val versions = VersionMapping(logger, statuses)
+        val unresolved = statuses.mapNotNullTo(mutableSetOf()) { it.unresolved }
+        val projectUrls =
+          statuses
+            .filter { !it.projectUrl.isNullOrEmpty() }
+            .associateBy(
+              { mapOf("group" to it.group, "name" to it.name) },
+              { it.projectUrl.toString() },
+            )
+
+        val currentVersions = toMap(versions.current)
+        val latestVersions =
+          versions.latest
+            .associateBy({ mapOf("group" to it.groupId, "name" to it.artifactId) }, { it })
+        val upToDateVersions = toMap(versions.upToDate)
+        val downgradeVersions = toMap(versions.downgrade)
+        val upgradeVersions = toMap(versions.upgrade)
+
+        // Check for Gradle updates.
+        val gradleUpdateChecker = GradleUpdateChecker(checkForGradleUpdate, gradleVersionsApiBaseUrl)
+
+        return DependencyUpdatesReporter(
+          projectPath, logger, revision, outputFormatterArgument, outputDir,
+          reportfileName, currentVersions, latestVersions, upToDateVersions, downgradeVersions,
+          upgradeVersions, versions.undeclared, unresolved, projectUrls, gradleUpdateChecker,
+          gradleReleaseChannel, versions.latestByCurrent,
+        )
+      }
+
       private fun toMap(coordinates: Set<Coordinate>): Map<Map<String, String>, Coordinate> {
         val map = HashMap<Map<String, String>, Coordinate>()
         for (coordinate in coordinates) {

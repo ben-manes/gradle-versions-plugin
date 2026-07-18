@@ -18,7 +18,7 @@ final class PartialResultSpec extends Specification {
     given:
     def unresolved = new UnresolvedInfo('com.google.guava', 'guava', '+', 'boom\n\tat here')
     def result = new PartialResult(PartialResult.FORMAT_VERSION, ':sub',
-      [status('guava', '1.0'), status('gson', 'none', unresolved)])
+      [status('guava', '1.0'), status('gson', 'none', unresolved)], [status('okio', '2.0')])
 
     when:
     def decoded = PartialResult.fromJson(result.toJson())
@@ -29,7 +29,7 @@ final class PartialResultSpec extends Specification {
 
   def 'Rejects an unknown format version'() {
     given:
-    def json = new PartialResult(99, ':', []).toJson()
+    def json = new PartialResult(99, ':', [], []).toJson()
 
     when:
     PartialResult.fromJson(json)

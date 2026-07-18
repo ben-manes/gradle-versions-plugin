@@ -1,6 +1,8 @@
 package com.github.benmanes.gradle.versions
 
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+import com.github.benmanes.gradle.versions.updates.isAggregationEnabled
+import com.github.benmanes.gradle.versions.updates.registerAggregation
 import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -19,14 +21,18 @@ class VersionsPlugin : Plugin<Project> {
 
     val tasks = project.tasks
     if (!tasks.names.contains("dependencyUpdates")) {
-      tasks.register("dependencyUpdates", DependencyUpdatesTask::class.java) { task ->
-        task.doFirst(
-          object : Action<Task> {
-            override fun execute(t: Task) {
-              requireSupportedSaxParser()
-            }
-          },
-        )
+      val task =
+        tasks.register("dependencyUpdates", DependencyUpdatesTask::class.java) { task ->
+          task.doFirst(
+            object : Action<Task> {
+              override fun execute(t: Task) {
+                requireSupportedSaxParser()
+              }
+            },
+          )
+        }
+      if (isAggregationEnabled()) {
+        registerAggregation(project, task)
       }
     }
   }

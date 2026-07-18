@@ -10,13 +10,20 @@ import groovy.lang.Closure
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
+import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.specs.Spec
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.util.GradleVersion
+import java.io.File
 import javax.annotation.Nullable
 
 /**
@@ -106,7 +113,9 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   @Input
   var checkConstraints: Boolean = false
 
+  // Consumed at configuration time only, so it is kept out of the serialized task state.
   @Internal
+  @Transient
   var filterConfigurations: Spec<Configuration> = Spec<Configuration> { true }
 
   @Input
@@ -114,21 +123,43 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
   @Internal
   @Nullable
+  @Transient
   var resolutionStrategy: Closure<Any>? = null
 
   @Nullable
+  @Transient
   private var resolutionStrategyAction: Action<in ResolutionStrategyWithCurrent>? = null
+
+  /** The partial results of each project, wired by the plugin from the aggregation variants. */
+  @get:InputFiles
+  @get:PathSensitive(PathSensitivity.NONE)
+  val partialResults: ConfigurableFileCollection = project.files()
+
+  /** Captured at configuration time; replaces `project.path` at execution. */
+  @Internal
+  var projectPath: String = project.path
+
+  /** Captured at configuration time; replaces `project.file()` at execution. */
+  @get:Internal
+  val projectDirectory: DirectoryProperty =
+    project.objects.directoryProperty().convention(project.layout.projectDirectory)
 
   init {
     description = "Displays the dependency updates for the project."
     group = "Help"
     outputs.upToDateWhen { false }
 
-    callIncompatibleWithConfigurationCache()
+    if (!isAggregationEnabled()) {
+      callIncompatibleWithConfigurationCache()
+    }
   }
 
   @TaskAction
   fun dependencyUpdates() {
+    if (isAggregationEnabled()) {
+      aggregateUpdates()
+      return
+    }
     requireNoParallel()
     project.evaluationDependsOnChildren()
     if (resolutionStrategy != null) {
@@ -148,6 +179,52 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
       )
     val reporter = evaluator.run()
     reporter.write()
+  }
+
+  /** Merges the partial results of every project and writes the report. */
+  private fun aggregateUpdates() {
+    val partials =
+      partialResults.files
+        .map { PartialResult.fromJson(it.readText()) }
+        .sortedBy { it.projectPath }
+    val statuses =
+      mergeStatuses(partials.flatMap { it.statuses }) +
+        mergeStatuses(partials.flatMap { it.buildscriptStatuses })
+
+    DependencyUpdates.reporterFor(
+      statuses, projectPath, logger, revision, outputFormatter(), outputDirectory(), reportfileName,
+      checkForGradleUpdate, gradleVersionsApiBaseUrl, gradleReleaseChannel,
+    ).write()
+  }
+
+  /** Returns the report destination, resolved against the project directory as `project.file`. */
+  private fun outputDirectory(): File {
+    val destination = File(outputDir)
+    return if (destination.isAbsolute) {
+      destination
+    } else {
+      File(projectDirectory.get().asFile, outputDir)
+    }
+  }
+
+  /** Freezes the values the per-project producers need before any subproject is evaluated. */
+  internal fun freezeInto(
+    parameters: DependencyUpdatesParameters,
+    project: Project,
+  ) {
+    if (resolutionStrategy != null) {
+      val closure = resolutionStrategy!!
+      resolutionStrategy { current -> project.configure(current, closure) }
+      logger.warn(
+        "dependencyUpdates.resolutionStrategy: " +
+          "Remove the assignment operator, \"=\", when setting this task property",
+      )
+    }
+    parameters.revision = revision
+    parameters.filterConfigurations = filterConfigurations
+    parameters.resolutionStrategy = resolutionStrategyAction
+    parameters.checkConstraints = checkConstraints
+    parameters.checkBuildEnvironmentConstraints = checkBuildEnvironmentConstraints
   }
 
   private fun requireNoParallel() {
