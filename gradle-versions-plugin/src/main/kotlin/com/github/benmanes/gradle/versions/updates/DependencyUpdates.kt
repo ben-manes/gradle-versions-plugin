@@ -5,7 +5,6 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.Resolution
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.result.UnresolvedDependencyResult
 import org.gradle.api.specs.Spec
 
 /**
@@ -43,12 +42,12 @@ class DependencyUpdates
         project.allprojects
           .associateBy({ it }, { it.configurations.matching(filterConfigurations).toCollection(LinkedHashSet()) })
 
-      val status: Set<DependencyStatus> = resolveProjects(projectConfigs, checkConstraints)
+      val status: List<PartialStatus> = resolveProjects(projectConfigs, checkConstraints)
 
       val buildscriptProjectConfigs =
         project.allprojects
           .associateBy({ it }, { it.buildscript.configurations.toCollection(LinkedHashSet()) })
-      val buildscriptStatus: Set<DependencyStatus> =
+      val buildscriptStatus: List<PartialStatus> =
         resolveProjects(
           buildscriptProjectConfigs,
           checkBuildEnvironmentConstraints,
@@ -61,7 +60,7 @@ class DependencyUpdates
         statuses
           .filter { !it.projectUrl.isNullOrEmpty() }
           .associateBy(
-            { mapOf("group" to it.coordinate.groupId, "name" to it.coordinate.artifactId) },
+            { mapOf("group" to it.group, "name" to it.name) },
             { it.projectUrl.toString() },
           )
 
@@ -71,19 +70,19 @@ class DependencyUpdates
     private fun resolveProjects(
       projectConfigs: Map<Project, Set<Configuration>>,
       checkConstraints: Boolean,
-    ): Set<DependencyStatus> {
-      val resultStatus = hashSetOf<DependencyStatus>()
+    ): List<PartialStatus> {
+      val observed = mutableListOf<PartialStatus>()
       projectConfigs.forEach { (currentProject, currentConfigurations) ->
         val resolver = Resolver(currentProject, resolutionStrategy, checkConstraints)
         for (currentConfiguration in currentConfigurations) {
           if (currentConfiguration.isCanBeResolved) {
             for (newStatus in resolve(resolver, currentProject, currentConfiguration)) {
-              addValidatedDependencyStatus(resultStatus, newStatus)
+              observed.add(newStatus.toPartialStatus())
             }
           }
         }
       }
-      return resultStatus
+      return mergeStatuses(observed)
     }
 
     private fun resolve(
@@ -101,7 +100,7 @@ class DependencyUpdates
 
     private fun createReporter(
       versions: VersionMapping,
-      unresolved: Set<UnresolvedDependencyResult>,
+      unresolved: Set<UnresolvedInfo>,
       projectUrls: Map<Map<String, String>, String>,
     ): DependencyUpdatesReporter {
       val currentVersions = toMap(versions.current)
@@ -124,32 +123,6 @@ class DependencyUpdates
     }
 
     companion object {
-      /**
-       * A new status will be added if either,
-       * <ol>
-       *   <li>[Coordinate.Key] of new status is not yet present in status collection
-       *   <li>new status has concrete version (not `none`); the old status will then be removed
-       *       if its coordinate is `none` versioned</li>
-       * </ol>
-       */
-      private fun addValidatedDependencyStatus(
-        statusCollection: HashSet<DependencyStatus>,
-        status: DependencyStatus,
-      ) {
-        val statusWithSameCoordinateKey =
-          statusCollection.find {
-            it.coordinate.key == status.coordinate.key
-          }
-        if (statusWithSameCoordinateKey == null) {
-          statusCollection.add(status)
-        } else if (status.coordinate.version != "none") {
-          statusCollection.add(status)
-          if (statusWithSameCoordinateKey.coordinate.version == "none") {
-            statusCollection.remove(statusWithSameCoordinateKey)
-          }
-        }
-      }
-
       private fun toMap(coordinates: Set<Coordinate>): Map<Map<String, String>, Coordinate> {
         val map = HashMap<Map<String, String>, Coordinate>()
         for (coordinate in coordinates) {

@@ -1,6 +1,9 @@
 package com.github.benmanes.gradle.versions.updates
 
+import org.gradle.api.artifacts.component.ModuleComponentSelector
 import org.gradle.api.artifacts.result.UnresolvedDependencyResult
+import java.io.PrintWriter
+import java.io.StringWriter
 
 /**
  * The version status of a dependency.
@@ -34,6 +37,31 @@ class DependencyStatus {
       coordinate.artifactId,
       latestVersion,
       coordinate.userReason,
+    )
+  }
+
+  /** Returns the serializable projection of this status. */
+  fun toPartialStatus(): PartialStatus {
+    val info =
+      unresolved?.let { dependency ->
+        val selector = dependency.attempted as ModuleComponentSelector
+        val stringWriter = StringWriter()
+        dependency.failure.printStackTrace(PrintWriter(stringWriter))
+        UnresolvedInfo(
+          selector.group,
+          selector.module,
+          selector.version,
+          stringWriter.toString(),
+        )
+      }
+    return PartialStatus(
+      coordinate.groupId,
+      coordinate.artifactId,
+      coordinate.version,
+      coordinate.userReason,
+      latestVersion,
+      projectUrl,
+      info,
     )
   }
 }

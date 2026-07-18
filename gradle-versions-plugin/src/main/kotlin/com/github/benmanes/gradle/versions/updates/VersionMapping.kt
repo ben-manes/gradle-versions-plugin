@@ -7,7 +7,7 @@ import org.gradle.api.logging.Logger
 /**
  * A mapping of which versions are out of date, up to date, undeclared, or exceed the latest found.
  */
-class VersionMapping(private val logger: Logger, statuses: Set<DependencyStatus>) {
+class VersionMapping(private val logger: Logger, statuses: List<PartialStatus>) {
   val downgrade = sortedSetOf<Coordinate>()
   val upToDate = sortedSetOf<Coordinate>()
   val upgrade = sortedSetOf<Coordinate>()
@@ -22,7 +22,7 @@ class VersionMapping(private val logger: Logger, statuses: Set<DependencyStatus>
     for (status in statuses) {
       current.add(status.coordinate)
       if (status.unresolved == null) {
-        val latestCoordinate = status.getLatestCoordinate()
+        val latestCoordinate = status.latestCoordinate
         latest.add(latestCoordinate)
         val previous = latestByCurrent[status.coordinate]
         if (previous == null || comparator.compare(previous.version, latestCoordinate.version) < 0) {
