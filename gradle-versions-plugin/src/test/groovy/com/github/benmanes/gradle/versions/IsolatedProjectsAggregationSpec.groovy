@@ -81,6 +81,7 @@ final class IsolatedProjectsAggregationSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
     result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    !result.output.contains('The dependency updates report is missing')
   }
 
   def 'Honors the root task settings in every projects producer'() {
@@ -106,7 +107,7 @@ final class IsolatedProjectsAggregationSpec extends Specification {
     result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
   }
 
-  def 'Omits a project that does not apply the plugin itself'() {
+  def 'Omits and warns about a project that does not apply the plugin itself'() {
     given:
     new File(testProjectDir.root, 'lib/build.gradle').text =
       """
@@ -132,8 +133,10 @@ final class IsolatedProjectsAggregationSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
     // Isolated projects lets the root discover the project paths but not register a task in them,
-    // so a project without the plugin publishes nothing to aggregate. Registering the producers
-    // from a settings plugin is the only fix, which is a change to how the plugin is applied.
+    // so a project without the plugin publishes nothing to aggregate and is called out instead.
+    // Registering the producers from a settings plugin is the only fix, which is a change to how
+    // the plugin is applied.
     !result.output.contains('com.google.guava:guava')
+    result.output.contains('The dependency updates report is missing :lib')
   }
 }

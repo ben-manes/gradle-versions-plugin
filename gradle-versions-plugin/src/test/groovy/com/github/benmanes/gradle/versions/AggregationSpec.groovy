@@ -66,6 +66,7 @@ final class AggregationSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
     result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    !result.output.contains('The dependency updates report is missing')
   }
 
   def 'Reports a project declared explicitly only once'() {
@@ -107,6 +108,8 @@ final class AggregationSpec extends Specification {
     second.output.contains('Reusing configuration cache')
     second.output.contains('com.google.inject:guice [2.0 -> 3.1]')
     second.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    // The expected paths are task state, so a cache hit must not degrade to a false warning.
+    !second.output.contains('The dependency updates report is missing')
   }
 
   // Gradle 9 requires JVM 17.
@@ -194,6 +197,8 @@ final class AggregationSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
     result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    // Task-output wiring bypasses module conflict resolution, so no partial is evicted.
+    !result.output.contains('The dependency updates report is missing')
   }
 
   def 'Aggregates a configuration created after the project is evaluated'() {

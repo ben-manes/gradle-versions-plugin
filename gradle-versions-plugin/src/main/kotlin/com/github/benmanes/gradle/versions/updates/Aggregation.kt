@@ -112,8 +112,11 @@ internal fun registerAggregation(
       }
     }
 
+  // Reading the paths across projects is permitted under isolated projects, unlike configuring.
+  val aggregatedPaths = project.allprojects.map { it.path }.toSet()
   accumulator.configure { task ->
     task.projectPath = project.path
+    task.aggregatedProjectPaths = aggregatedPaths
     task.projectDirectory.set(project.layout.projectDirectory)
     task.partialResults.from(
       results.map { configuration ->

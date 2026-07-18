@@ -139,6 +139,10 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   @Internal
   var projectPath: String = project.path
 
+  /** The project paths expected to contribute partial results, wired by the plugin. */
+  @Internal
+  var aggregatedProjectPaths: Set<String> = emptySet()
+
   /** Captured at configuration time; replaces `project.file()` at execution. */
   @get:Internal
   val projectDirectory: DirectoryProperty =
@@ -187,6 +191,14 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
       partialResults.files
         .map { PartialResult.fromJson(it.readText()) }
         .sortedBy { it.projectPath }
+    val missing = aggregatedProjectPaths - partials.map { it.projectPath }.toSet()
+    if (missing.isNotEmpty()) {
+      logger.warn(
+        "The dependency updates report is missing ${missing.sorted().joinToString(", ")}. A project " +
+          "must apply the com.github.ben-manes.versions plugin to be aggregated when isolated " +
+          "projects is enabled, and projects that share a group and name are aggregated as one.",
+      )
+    }
     val statuses =
       mergeStatuses(partials.flatMap { it.statuses }) +
         mergeStatuses(partials.flatMap { it.buildscriptStatuses })
