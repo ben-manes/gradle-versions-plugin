@@ -25,6 +25,7 @@ import org.gradle.api.artifacts.repositories.IvyArtifactRepository
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.artifacts.result.ResolvedDependencyResult
+import org.gradle.api.artifacts.result.UnresolvedDependencyResult
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.attributes.HasConfigurableAttributes
 import org.gradle.api.attributes.java.TargetJvmVersion
@@ -296,18 +297,26 @@ class Resolver(
     val copy = configuration.copyRecursive().setTransitive(transitive)
 
     disableAutoTargetJvm(copy)
-    val lenient = copy.resolvedConfiguration.lenientConfiguration
+    val root = copy.incoming.resolutionResult.root
 
-    val resolved = lenient.firstLevelModuleDependencies
-    for (dependency in resolved) {
-      val coordinate = Coordinate.from(dependency.module.id, declared)
-      coordinates[coordinate.key] = coordinate
-    }
-
-    val unresolved = lenient.unresolvedModuleDependencies
-    for (dependency in unresolved) {
-      val key = Coordinate.keyFrom(dependency.selector)
-      declared[key]?.let { coordinates.put(key, it) }
+    for (dependency in root.dependencies) {
+      // Constraints are accumulated separately below via allDependencyConstraints.
+      if (dependency.isConstraint) {
+        continue
+      }
+      when (dependency) {
+        is ResolvedDependencyResult -> {
+          val moduleVersion = dependency.selected.moduleVersion ?: continue
+          val coordinate = Coordinate.from(moduleVersion, declared)
+          coordinates[coordinate.key] = coordinate
+        }
+        is UnresolvedDependencyResult -> {
+          (dependency.attempted as? ModuleComponentSelector)?.let { selector ->
+            val key = Coordinate.Key(selector.group, selector.module)
+            declared[key]?.let { coordinates.put(key, it) }
+          }
+        }
+      }
     }
 
     if (supportsConstraints(copy)) {
