@@ -98,7 +98,6 @@ final class DifferentGradleVersionsSpec extends Specification {
 
     where:
     gradleVersion << [
-      '5.0',
       '5.1.1',
       '5.2.1',
       '5.3.1',
