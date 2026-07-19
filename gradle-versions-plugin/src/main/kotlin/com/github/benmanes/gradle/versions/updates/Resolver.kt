@@ -53,6 +53,12 @@ class Resolver(
     configuration: Configuration,
     revision: String,
   ): Set<DependencyStatus> {
+    // Runs the actions that contribute dependencies lazily, so that the declared set below is read
+    // after them rather than before. A contribution missing from that set is discarded as an
+    // undeclared dependency, or reported with the resolved version as its declared one.
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/987
+    configuration.incoming.dependencies
+
     val coordinates = getCurrentCoordinates(configuration)
     val latestConfiguration = createLatestConfiguration(configuration, revision, coordinates)
     val lenient = latestConfiguration.resolvedConfiguration.lenientConfiguration

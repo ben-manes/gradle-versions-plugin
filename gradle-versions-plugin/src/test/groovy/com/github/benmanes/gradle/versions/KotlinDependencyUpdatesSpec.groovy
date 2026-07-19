@@ -56,7 +56,14 @@ final class KotlinDependencyUpdatesSpec extends Specification {
       .build()
 
     then:
-    result.output.find(/The following dependencies have later milestone versions:\n - org\.jetbrains\.kotlin:kotlin-gradle-plugin \[$DECLARED_KOTLIN_VERSION -> 2\..*\]/)
+    def inheritedByJvmPlugin =
+      / - org\.jetbrains\.kotlin:kotlin-compiler-embeddable \[$DECLARED_KOTLIN_VERSION -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n/
+    result.output.find(/The following dependencies have later milestone versions:\n/ +
+      (applyJvmPlugin ? inheritedByJvmPlugin : '') +
+      / - org\.jetbrains\.kotlin:kotlin-gradle-plugin \[$DECLARED_KOTLIN_VERSION -> 2\..*\]/)
+    // Sorts after kotlin-gradle-plugin, so it falls past the tail of the match above.
+    !applyJvmPlugin ||
+      result.output.contains("org.jetbrains.kotlin:kotlin-stdlib-jdk8 [$DECLARED_KOTLIN_VERSION -> 2.")
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
@@ -124,7 +131,7 @@ final class KotlinDependencyUpdatesSpec extends Specification {
       .build()
 
     then:
-    result.output.find(/The following dependencies have later milestone versions:\n - org\.jetbrains\.kotlin:kotlin-scripting-compiler-embeddable \[$DECLARED_KOTLIN_VERSION -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n - org\.jetbrains\.kotlin:kotlin-stdlib \[${explicitStdLibVersion ? DECLARED_KOTLIN_STD_VERSION : DECLARED_KOTLIN_VERSION} -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n - org\.jetbrains\.kotlin\.jvm:org\.jetbrains\.kotlin\.jvm\.gradle\.plugin \[$DECLARED_KOTLIN_VERSION -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n/)
+    result.output.find(/The following dependencies have later milestone versions:\n - org\.jetbrains\.kotlin:kotlin-compiler-embeddable \[$DECLARED_KOTLIN_VERSION -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n - org\.jetbrains\.kotlin:kotlin-klib-commonizer-embeddable \[$DECLARED_KOTLIN_VERSION -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n - org\.jetbrains\.kotlin:kotlin-scripting-compiler-embeddable \[$DECLARED_KOTLIN_VERSION -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n - org\.jetbrains\.kotlin:kotlin-stdlib \[${explicitStdLibVersion ? DECLARED_KOTLIN_STD_VERSION : DECLARED_KOTLIN_VERSION} -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n - org\.jetbrains\.kotlin\.jvm:org\.jetbrains\.kotlin\.jvm\.gradle\.plugin \[$DECLARED_KOTLIN_VERSION -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n/)
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
