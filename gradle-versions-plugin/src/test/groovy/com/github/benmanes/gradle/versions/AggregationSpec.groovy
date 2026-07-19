@@ -150,6 +150,40 @@ final class AggregationSpec extends Specification {
     aggregated == legacy
   }
 
+  def 'Reports the same results as the legacy topology at the revision given by a system property'() {
+    given:
+    new File(testProjectDir.root, 'build.gradle') <<
+      """
+        allprojects {
+          dependencies {
+            components {
+              all { details ->
+                if (details.id.version.contains('-rc')) {
+                  details.status = 'milestone'
+                }
+              }
+            }
+          }
+        }
+      """.stripIndent()
+    def arguments = ['dependencyUpdates', '-DoutputFormatter=json', '-Drevision=release',
+                     '--no-parallel']
+
+    when:
+    def legacyRun = run(arguments)
+    def legacy = new File(testProjectDir.root, 'build/dependencyUpdates/report.json').text
+    def aggregateRun = run(arguments + ['-Dcom.github.benmanes.versions.aggregate=true'])
+    def aggregated = new File(testProjectDir.root, 'build/dependencyUpdates/report.json').text
+
+    then:
+    legacyRun.task(':dependencyUpdates').outcome == SUCCESS
+    aggregateRun.task(':dependencyUpdates').outcome == SUCCESS
+    // The release candidate is a milestone, so the release revision holds guava at 15.0. A producer
+    // that resolved at the default revision instead would offer 16.0-rc1 as the later version.
+    !legacy.contains('16.0-rc1')
+    aggregated == legacy
+  }
+
   def 'Aggregates sibling projects that share a group and name'() {
     given:
     new File(testProjectDir.root, 'settings.gradle').text =

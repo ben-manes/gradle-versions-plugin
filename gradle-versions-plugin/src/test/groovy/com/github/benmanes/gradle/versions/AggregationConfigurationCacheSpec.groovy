@@ -124,7 +124,8 @@ final class AggregationConfigurationCacheSpec extends Specification {
     absent.every { !hit.output.contains(it) }
 
     where:
-    hook << ['rejectVersionIf', 'resolutionStrategy', 'filterConfigurations', 'checkConstraints']
+    hook << ['rejectVersionIf', 'resolutionStrategy', 'filterConfigurations', 'checkConstraints',
+             'revision']
     settings << [
       '''
         rejectVersionIf {
@@ -148,18 +149,24 @@ final class AggregationConfigurationCacheSpec extends Specification {
         }
       ''',
       'checkConstraints = true',
+      "revision = 'release'",
     ]
     present << [
       ['com.google.inject:guice [2.0 -> 3.0]'],
       ['com.google.inject:guice [2.0 -> 3.0]'],
       ['com.google.inject:guice [2.0 -> 3.1]'],
       ['com.google.inject.extensions:guice-multibindings [2.0 -> 3.0]'],
+      // The report names the revision and files the later version under it, so a hit that lost the
+      // task's own settings would announce the default level and offer no version at all.
+      ['The following dependencies have later release versions:',
+       'com.google.inject:guice [2.0 -> 3.1]'],
     ]
     absent << [
       ['com.google.inject:guice [2.0 -> 3.1]'],
       ['com.google.inject:guice [2.0 -> 3.1]'],
       ['com.google.guava:guava'],
       [],
+      ['The following dependencies have later milestone versions:'],
     ]
   }
 

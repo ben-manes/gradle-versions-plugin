@@ -23,7 +23,7 @@ private const val PARAMETERS_SERVICE = "dependencyUpdatesParameters"
 private const val VERIFICATION_TYPE = "dependency-updates"
 private const val AGGREGATE_PROPERTY = "com.github.benmanes.versions.aggregate"
 
-/** Shared so that an unconfigured task's filter is recognizable by identity. */
+/** The filter applied when a task leaves the configurations unrestricted. */
 internal val ALL_CONFIGURATIONS = Spec<Configuration> { true }
 
 /** Returns whether the per-project producer and root accumulator topology is opted into. */
@@ -35,51 +35,70 @@ internal fun isIsolatedProjectsEnabled(project: Project): Boolean =
     (project.gradle.startParameter as StartParameterInternal).isolatedProjects.get()
   }.getOrDefault(false)
 
-/** The task settings that the per-project producers need, frozen once the owning project evaluates. */
+/** The task settings that a project's producer reads while its input is realized; null is unset. */
 internal class DependencyUpdatesParameters {
-  var revision: String = "milestone"
-  var filterConfigurations: Spec<Configuration> = ALL_CONFIGURATIONS
-  var resolutionStrategy: Action<in ResolutionStrategyWithCurrent>? = null
-  var checkConstraints: Boolean = false
-  var checkBuildEnvironmentConstraints: Boolean = false
+  var revision: String? = null
 
-  /** Returns whether the owning task was left untouched, so that an ancestor's settings apply. */
-  internal val isDefault: Boolean
-    get() =
-      revision == "milestone" &&
-        filterConfigurations === ALL_CONFIGURATIONS &&
-        resolutionStrategy == null &&
-        !checkConstraints &&
-        !checkBuildEnvironmentConstraints
+  @Transient
+  var filterConfigurations: Spec<Configuration>? = null
+
+  @Transient
+  var resolutionStrategy: Action<in ResolutionStrategyWithCurrent>? = null
+
+  /** Distinguishes a strategy that was explicitly cleared from one that was never set. */
+  var resolutionStrategySet: Boolean = false
+  var checkConstraints: Boolean? = null
+  var checkBuildEnvironmentConstraints: Boolean? = null
 }
 
 /**
- * Holds the settings frozen by each project that applies the plugin.
+ * Holds the settings of the task of each project that applies the plugin.
  *
  * A producer reads its settings from here while its input is realized, which is the only channel
  * that isolated projects permits between the project that owns the task settings and the projects
- * that resolve with them.
+ * that resolve with them. The realization is ordered after every project is configured, so the
+ * settings are read live rather than copied at any earlier moment.
  */
 internal abstract class DependencyUpdatesParametersService :
   BuildService<BuildServiceParameters.None> {
   private val byPath = ConcurrentHashMap<String, DependencyUpdatesParameters>()
 
-  /** Returns the settings that the given project publishes, creating them on first application. */
-  fun of(path: String): DependencyUpdatesParameters = byPath.computeIfAbsent(path) { DependencyUpdatesParameters() }
+  /** Publishes the settings of the given project's task to the projects that resolve with them. */
+  fun register(
+    path: String,
+    parameters: DependencyUpdatesParameters,
+  ) {
+    byPath[path] = parameters
+  }
 
-  /** Returns the settings of the nearest ancestor that configured its task, else the defaults. */
-  fun resolve(path: String): DependencyUpdatesParameters {
-    var ancestor: String? = path
-    while (ancestor != null) {
-      val parameters = byPath[ancestor]
-      if (parameters != null && !parameters.isDefault) {
-        return parameters
-      }
-      ancestor = if (ancestor == ":") null else ancestor.substringBeforeLast(':').ifEmpty { ":" }
-    }
-    return of(path)
+  /** Returns the effective settings, taking each property from the nearest ancestor that set it. */
+  fun resolve(path: String): ResolvedParameters {
+    val chain =
+      generateSequence(path) { if (it == ":") null else it.substringBeforeLast(':').ifEmpty { ":" } }
+        .mapNotNull { byPath[it] }
+        .toList()
+    return ResolvedParameters(
+      revision =
+        (System.getProperties()["revision"] as String?)
+          ?: chain.firstNotNullOfOrNull { it.revision } ?: "milestone",
+      filterConfigurations =
+        chain.firstNotNullOfOrNull { it.filterConfigurations } ?: ALL_CONFIGURATIONS,
+      resolutionStrategy = chain.firstOrNull { it.resolutionStrategySet }?.resolutionStrategy,
+      checkConstraints = chain.firstNotNullOfOrNull { it.checkConstraints } ?: false,
+      checkBuildEnvironmentConstraints =
+        chain.firstNotNullOfOrNull { it.checkBuildEnvironmentConstraints } ?: false,
+    )
   }
 }
+
+/** The settings that apply to a single project's producer. */
+internal class ResolvedParameters(
+  val revision: String,
+  val filterConfigurations: Spec<Configuration>,
+  val resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?,
+  val checkConstraints: Boolean,
+  val checkBuildEnvironmentConstraints: Boolean,
+)
 
 /** Registers the per-project producers and wires their results into the accumulator task. */
 internal fun registerAggregation(
@@ -89,8 +108,10 @@ internal fun registerAggregation(
   val service =
     project.gradle.sharedServices
       .registerIfAbsent(PARAMETERS_SERVICE, DependencyUpdatesParametersService::class.java) { }
-  val parameters = service.get().of(project.path)
-  project.afterEvaluate { accumulator.get().freezeInto(parameters, project) }
+  accumulator.configure { task -> service.get().register(project.path, task.parameters) }
+  // Realizes the task, so that a configuration block on a task that nothing else realizes is still
+  // applied before the producers read the settings.
+  project.afterEvaluate { accumulator.get() }
 
   val aggregation =
     project.configurations.dependencyScope(AGGREGATION_CONFIGURATION) { configuration ->
@@ -167,8 +188,8 @@ private fun registerProducer(
         project.layout.buildDirectory.file("dependencyUpdates/partial.json"),
       )
       task.partialJson.set(
-        // Realized after every project has been evaluated, so that the settings are frozen and the
-        // container holds the configurations that late plugins and afterEvaluate blocks added.
+        // Realized after every project has been evaluated, so that the settings are read as last
+        // configured and the container holds the configurations that late plugins added.
         project.provider {
           val parameters = service.get().resolve(project.path)
           val configurations =
@@ -217,7 +238,7 @@ private fun registerProducer(
 private fun statusesOf(
   project: Project,
   configurations: List<Configuration>,
-  parameters: DependencyUpdatesParameters,
+  parameters: ResolvedParameters,
   checkConstraints: Boolean,
 ): List<PartialStatus> {
   if (configurations.isEmpty()) {

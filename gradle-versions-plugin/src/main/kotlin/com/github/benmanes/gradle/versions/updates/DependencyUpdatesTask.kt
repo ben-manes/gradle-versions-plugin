@@ -10,7 +10,6 @@ import groovy.lang.Closure
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
-import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
@@ -31,10 +30,17 @@ import javax.annotation.Nullable
  */
 open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
+  /** The settings the per-project producers read, held here so that they are configured as one. */
+  @get:Internal
+  internal val parameters = DependencyUpdatesParameters()
+
   /** Returns the resolution revision level. */
-  @Input
-  var revision: String = "milestone"
-    get() = (System.getProperties()["revision"] ?: field) as String
+  @get:Input
+  var revision: String
+    get() = (System.getProperties()["revision"] ?: parameters.revision ?: "milestone") as String
+    set(value) {
+      parameters.revision = value
+    }
 
   /** Returns the resolution revision level. */
   @Input
@@ -110,25 +116,47 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   @Input
   var gradleVersionsApiBaseUrl: String = "https://services.gradle.org/versions/"
 
-  @Input
-  var checkConstraints: Boolean = false
+  @get:Input
+  var checkConstraints: Boolean
+    get() = parameters.checkConstraints ?: false
+    set(value) {
+      parameters.checkConstraints = value
+    }
 
-  // Consumed at configuration time only, so it is kept out of the serialized task state.
-  @Internal
-  @Transient
-  var filterConfigurations: Spec<Configuration> = ALL_CONFIGURATIONS
+  @get:Internal
+  var filterConfigurations: Spec<Configuration>
+    get() = parameters.filterConfigurations ?: ALL_CONFIGURATIONS
+    set(value) {
+      parameters.filterConfigurations = value
+    }
 
-  @Input
-  var checkBuildEnvironmentConstraints: Boolean = false
+  @get:Input
+  var checkBuildEnvironmentConstraints: Boolean
+    get() = parameters.checkBuildEnvironmentConstraints ?: false
+    set(value) {
+      parameters.checkBuildEnvironmentConstraints = value
+    }
 
   @Internal
   @Nullable
   @Transient
   var resolutionStrategy: Closure<Any>? = null
-
-  @Nullable
-  @Transient
-  private var resolutionStrategyAction: Action<in ResolutionStrategyWithCurrent>? = null
+    set(value) {
+      field = value
+      // The aggregation topology reads the strategy while configuring, unlike the block below that
+      // adapts it when the task executes, so an assignment must be adapted as it is made.
+      if (value != null && isAggregationEnabled()) {
+        // Written directly rather than through resolutionStrategy(Action), which clears this
+        // property and would leave it reading back as unset.
+        parameters.resolutionStrategy =
+          Action<ResolutionStrategyWithCurrent> { current -> project.configure(current, value) }
+        parameters.resolutionStrategySet = true
+        logger.warn(
+          "dependencyUpdates.resolutionStrategy: " +
+            "Remove the assignment operator, \"=\", when setting this task property",
+        )
+      }
+    }
 
   /** The partial results of each project, wired by the plugin from the aggregation variants. */
   @get:InputFiles
@@ -176,7 +204,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
     }
     val evaluator =
       DependencyUpdates(
-        project, resolutionStrategyAction, revision,
+        project, parameters.resolutionStrategy, revision,
         outputFormatter(), outputDir, reportfileName, checkForGradleUpdate, gradleVersionsApiBaseUrl,
         gradleReleaseChannel, checkConstraints, checkBuildEnvironmentConstraints,
         filterConfigurations,
@@ -219,26 +247,6 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
     }
   }
 
-  /** Freezes the values the per-project producers need before any subproject is evaluated. */
-  internal fun freezeInto(
-    parameters: DependencyUpdatesParameters,
-    project: Project,
-  ) {
-    if (resolutionStrategy != null) {
-      val closure = resolutionStrategy!!
-      resolutionStrategy { current -> project.configure(current, closure) }
-      logger.warn(
-        "dependencyUpdates.resolutionStrategy: " +
-          "Remove the assignment operator, \"=\", when setting this task property",
-      )
-    }
-    parameters.revision = revision
-    parameters.filterConfigurations = filterConfigurations
-    parameters.resolutionStrategy = resolutionStrategyAction
-    parameters.checkConstraints = checkConstraints
-    parameters.checkBuildEnvironmentConstraints = checkBuildEnvironmentConstraints
-  }
-
   private fun requireNoParallel() {
     if (GradleVersion.current() > GradleVersion.version("9.0") &&
       project.gradle.startParameter.isParallelProjectExecutionEnabled
@@ -269,7 +277,8 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
    * @param resolutionStrategy the resolution strategy
    */
   fun resolutionStrategy(resolutionStrategy: Action<in ResolutionStrategyWithCurrent>? = null) {
-    this.resolutionStrategyAction = resolutionStrategy
+    parameters.resolutionStrategy = resolutionStrategy
+    parameters.resolutionStrategySet = true
     this.resolutionStrategy = null
   }
 

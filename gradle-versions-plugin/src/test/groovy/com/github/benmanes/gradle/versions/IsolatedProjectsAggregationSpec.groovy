@@ -107,6 +107,29 @@ final class IsolatedProjectsAggregationSpec extends Specification {
     result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
   }
 
+  def 'Honors the root task settings applied from its own afterEvaluate'() {
+    given:
+    new File(testProjectDir.root, 'build.gradle') <<
+      """
+        afterEvaluate {
+          tasks.named('dependencyUpdates').configure {
+            rejectVersionIf {
+              it.candidate.version == '3.1'
+            }
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = run()
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    // Isolated projects configures the projects in parallel, but a producer's input is realized
+    // once the work graph is assembled, so a setting made this late still reaches the resolution.
+    result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
+  }
+
   def 'Omits and warns about a project that does not apply the plugin itself'() {
     given:
     new File(testProjectDir.root, 'lib/build.gradle').text =
