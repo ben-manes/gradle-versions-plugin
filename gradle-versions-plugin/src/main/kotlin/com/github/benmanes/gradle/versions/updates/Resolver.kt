@@ -18,11 +18,13 @@ import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.artifacts.UnresolvedDependency
+import org.gradle.api.artifacts.component.ModuleComponentSelector
 import org.gradle.api.artifacts.repositories.ArtifactRepository
 import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
 import org.gradle.api.artifacts.repositories.IvyArtifactRepository
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
+import org.gradle.api.artifacts.result.ResolvedDependencyResult
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.attributes.HasConfigurableAttributes
 import org.gradle.api.attributes.java.TargetJvmVersion
@@ -59,12 +61,12 @@ class Resolver(
     // https://github.com/ben-manes/gradle-versions-plugin/issues/987
     configuration.incoming.dependencies
 
-    val coordinates = getCurrentCoordinates(configuration)
-    val latestConfiguration = createLatestConfiguration(configuration, revision, coordinates)
+    val current = getCurrentCoordinates(configuration)
+    val latestConfiguration = createLatestConfiguration(configuration, revision, current)
     val lenient = latestConfiguration.resolvedConfiguration.lenientConfiguration
     val resolved = lenient.firstLevelModuleDependencies
     val unresolved = lenient.unresolvedModuleDependencies
-    return getStatus(coordinates, resolved, unresolved)
+    return getStatus(current.coordinates, resolved, unresolved)
   }
 
   /** Returns the version status of the configuration's dependencies. */
@@ -95,13 +97,13 @@ class Resolver(
   private fun createLatestConfiguration(
     configuration: Configuration,
     revision: String,
-    currentCoordinates: Map<Coordinate.Key, Coordinate>,
+    current: CurrentCoordinates,
   ): Configuration {
     val latest =
       configuration.allDependencies
         .filterIsInstance<ExternalDependency>()
         .mapTo(mutableListOf()) { dependency ->
-          createQueryDependency(dependency as ModuleDependency)
+          createQueryDependency(dependency as ModuleDependency, current.substitutions)
         }
 
     // Common use case for dependency constraints is a java-platform BOM project or to control
@@ -154,14 +156,17 @@ class Resolver(
 
     addRevisionFilter(copy, revision)
     addAttributes(copy, configuration)
-    addCustomResolutionStrategy(copy, currentCoordinates)
+    addCustomResolutionStrategy(copy, current.coordinates)
 
     disableAutoTargetJvm(copy)
     return copy
   }
 
   /** Returns a variant of the provided dependency used for querying the latest version.  */
-  private fun createQueryDependency(dependency: ModuleDependency): Dependency {
+  private fun createQueryDependency(
+    dependency: ModuleDependency,
+    substitutions: Map<Coordinate.Key, Coordinate.Key>,
+  ): Dependency {
     // If no version was specified then it may be intended to be resolved by another plugin
     // (e.g. the dependency-management-plugin for BOMs) or is an explicit file (e.g. libs/*.jar).
     // In the case of another plugin we use "+" in the hope that the plugin will not restrict the
@@ -177,8 +182,14 @@ class Resolver(
         "+"
       }
 
+    // A rule that substitutes another module for this one applies to the query as well, which would
+    // pin the latest version to the one the rule names. Ask for the substituted module instead, so
+    // that the rule does not match and the query is answered for what the build actually resolves.
+    val substitute = substitutions[Coordinate.from(dependency as Dependency).key]
+
     // Format the query with an optional classifier and extension
-    var query = "${dependency.group.orEmpty()}:${dependency.name}:$version"
+    var query =
+      "${substitute?.groupId ?: dependency.group.orEmpty()}:${substitute?.artifactId ?: dependency.name}:$version"
     if (dependency.artifacts.isNotEmpty()) {
       dependency.artifacts.firstOrNull()?.classifier?.let { classifier ->
         query += ":$classifier"
@@ -267,12 +278,12 @@ class Resolver(
   }
 
   /** Returns the coordinates for the current (declared) dependency versions. */
-  private fun getCurrentCoordinates(configuration: Configuration): Map<Coordinate.Key, Coordinate> {
+  private fun getCurrentCoordinates(configuration: Configuration): CurrentCoordinates {
     val declared =
       getResolvableDependencies(configuration)
         .associateBy { it.key }
     if (declared.isEmpty()) {
-      return emptyMap()
+      return CurrentCoordinates(emptyMap(), emptyMap())
     }
 
     // https://github.com/ben-manes/gradle-versions-plugin/issues/231
@@ -307,10 +318,36 @@ class Resolver(
       }
     }
 
-    // Ignore undeclared (hidden) dependencies that appear when resolving a configuration
-    coordinates.keys.retainAll(declared.keys)
+    // A substitution rule can replace a declared module with one of a different group or name, so
+    // the resolved coordinates are in a different keyspace than the declared ones.
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/990
+    val substitutions = getSubstitutions(copy, declared)
 
-    return coordinates
+    // Ignore undeclared (hidden) dependencies that appear when resolving a configuration
+    coordinates.keys.retainAll(declared.keys + substitutions.values)
+
+    return CurrentCoordinates(coordinates, substitutions)
+  }
+
+  /** Returns the modules that a resolution rule substituted for a declared one, by declared key. */
+  private fun getSubstitutions(
+    resolved: Configuration,
+    declared: Map<Coordinate.Key, Coordinate>,
+  ): Map<Coordinate.Key, Coordinate.Key> {
+    val substitutions = hashMapOf<Coordinate.Key, Coordinate.Key>()
+    for (dependency in resolved.incoming.resolutionResult.root.dependencies) {
+      if (dependency !is ResolvedDependencyResult) {
+        continue
+      }
+      val requested = dependency.requested as? ModuleComponentSelector ?: continue
+      val selected = dependency.selected.moduleVersion ?: continue
+      val requestedKey = Coordinate.Key(requested.group, requested.module)
+      val selectedKey = Coordinate.Key(selected.group, selected.name)
+      if (requestedKey != selectedKey && declared.containsKey(requestedKey)) {
+        substitutions[requestedKey] = selectedKey
+      }
+    }
+    return substitutions
   }
 
   private fun logRepositories() {
@@ -440,6 +477,12 @@ class Resolver(
     }
     return coordinates
   }
+
+  /** The declared dependencies as resolved, and the modules substituted for any of them. */
+  private class CurrentCoordinates(
+    val coordinates: Map<Coordinate.Key, Coordinate>,
+    val substitutions: Map<Coordinate.Key, Coordinate.Key>,
+  )
 
   companion object {
     private fun getUrlFromPom(file: File): String? {
