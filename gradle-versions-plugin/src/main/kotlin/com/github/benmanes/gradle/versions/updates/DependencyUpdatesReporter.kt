@@ -188,26 +188,20 @@ class DependencyUpdatesReporter(
 
   private fun buildCurrentGroup(): MutableSet<Dependency> {
     return sortByGroupAndName(upToDateVersions)
-      .map { dep ->
-        updateKey(dep.key as HashMap)
-        buildDependency(dep.value, dep.key)
-      }.toSortedSet()
+      .map { dep -> buildDependency(dep.value, strippedKey(dep.key)) }
+      .toSortedSet()
   }
 
   private fun buildOutdatedGroup(): MutableSet<DependencyOutdated> {
     return sortByGroupAndName(upgradeVersions)
-      .map { dep ->
-        updateKey(dep.key as HashMap)
-        buildOutdatedDependency(dep.value, dep.key)
-      }.toSortedSet()
+      .map { dep -> buildOutdatedDependency(dep.value, strippedKey(dep.key)) }
+      .toSortedSet()
   }
 
   private fun buildExceededGroup(): MutableSet<DependencyLatest> {
     return sortByGroupAndName(downgradeVersions)
-      .map { dep ->
-        updateKey(dep.key as HashMap)
-        buildExceededDependency(dep.value, dep.key)
-      }.toSortedSet()
+      .map { dep -> buildExceededDependency(dep.value, strippedKey(dep.key)) }
+      .toSortedSet()
   }
 
   private fun buildUndeclaredGroup(): MutableSet<Dependency> {
@@ -301,13 +295,11 @@ class DependencyUpdatesReporter(
   }
 
   companion object {
-    private fun updateKey(existingKey: HashMap<String, String>) {
-      val index = existingKey["name"]?.lastIndexOf("[") ?: -1
-      if (index == -1) {
-        existingKey["name"] = existingKey["name"].orEmpty()
-      } else {
-        existingKey["name"] = existingKey["name"].orEmpty().substring(0, index)
-      }
+    /** Returns the key with the disambiguating suffix that [toMap] appended removed. */
+    private fun strippedKey(existingKey: Map<String, String>): Map<String, String> {
+      val name = existingKey["name"].orEmpty()
+      val index = name.lastIndexOf("[")
+      return if (index == -1) existingKey else existingKey + ("name" to name.substring(0, index))
     }
 
     private fun buildObject(

@@ -5,6 +5,7 @@ import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseCh
 import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.updates.DependencyUpdates
 import com.github.benmanes.gradle.versions.updates.OutputFormatterArgument
+import groovy.json.JsonSlurper
 import org.gradle.api.Action
 import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Issue
@@ -53,6 +54,23 @@ final class ReportJoinSpec extends Specification {
     result.outdated.dependencies.isEmpty()
   }
 
+  @Issue([
+    'https://github.com/ben-manes/gradle-versions-plugin/issues/348',
+    'https://github.com/ben-manes/gradle-versions-plugin/issues/906',
+  ])
+  def 'Multiple up to date versions of a module all survive into the report file'() {
+    given:
+    def root = twoProjects('org.apache.logging.log4j', 'log4j-core', '2\\.17\\.0', '2.16.0', '2.17.0')
+
+    when:
+    writeReport(root, 'json')
+
+    then:
+    def report = new JsonSlurper().parse(new File(root.projectDir, 'build/report.json'))
+    report.current.dependencies*.version == ['2.16.0', '2.17.0']
+    report.count == 2
+  }
+
   /**
    * A root project whose two children declare the same module, where the first child's repository
    * hides the versions matching {@code hiddenVersionRegex}. The latest version found therefore
@@ -93,10 +111,17 @@ final class ReportJoinSpec extends Specification {
 
   private static Result evaluate(project) {
     Result captured = null
-    def formatter =
-      new OutputFormatterArgument.CustomAction({ result -> captured = result } as Action<Result>)
+    reportWith(project,
+      new OutputFormatterArgument.CustomAction({ result -> captured = result } as Action<Result>))
+    return captured
+  }
+
+  private static void writeReport(project, String outputFormat) {
+    reportWith(project, new OutputFormatterArgument.BuiltIn(outputFormat))
+  }
+
+  private static void reportWith(project, OutputFormatterArgument formatter) {
     new DependencyUpdates(project, null, 'milestone', formatter, 'build', 'report', false,
       'https://services.gradle.org/versions/', RELEASE_CANDIDATE.id).run().write()
-    return captured
   }
 }
