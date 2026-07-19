@@ -240,6 +240,31 @@ final class AggregationConfigurationCacheSpec extends Specification {
     hit.output.contains('Cannot reference a Gradle script object from a Groovy closure')
   }
 
+  def 'Formats with a custom outputFormatter closure that captured a local'() {
+    given:
+    new File(testProjectDir.root, 'build.gradle') <<
+      """
+        def projectPath = project.path
+
+        dependencyUpdates {
+          outputFormatter = { result ->
+            println 'captured path=' + projectPath + ' outdated=' + result.outdated.dependencies.size()
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def store = run(ARGUMENTS)
+    def hit = run(ARGUMENTS)
+
+    then:
+    // A local is serialized with the closure, unlike the script object it was read from, so this is
+    // the supported way to get a build script value into a custom formatter.
+    store.output.contains('captured path=: outdated=2')
+    hit.output.contains('Reusing configuration cache')
+    hit.output.contains('captured path=: outdated=2')
+  }
+
   def 'Resolves the project url while storing the cache'() {
     when:
     def store = run(ARGUMENTS)
