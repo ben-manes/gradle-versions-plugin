@@ -44,6 +44,7 @@ import java.util.TreeSet
  * @property gradleUpdateChecker Facade object to access information about running gradle versions
  * and gradle updates.
  * @property gradleReleaseChannel The gradle release channel to use for reporting.
+ * @property latestByCurrent The latest version found for each declared version.
  *
  */
 class DependencyUpdatesReporter(
@@ -62,6 +63,7 @@ class DependencyUpdatesReporter(
   val projectUrls: Map<Map<String, String>, String>,
   val gradleUpdateChecker: GradleUpdateChecker,
   val gradleReleaseChannel: String,
+  val latestByCurrent: Map<Coordinate, Coordinate> = emptyMap(),
 ) {
   @Synchronized
   fun write() {
@@ -251,8 +253,16 @@ class DependencyUpdatesReporter(
       version = coordinate.version,
       projectUrl = projectUrls[key],
       userReason = coordinate.userReason,
-      latest = latestVersions[key]?.version.orEmpty(),
+      latest = latestFor(coordinate, key).orEmpty(),
     )
+  }
+
+  /** Returns the latest version found for the declared version, if it was paired with one. */
+  private fun latestFor(
+    coordinate: Coordinate,
+    key: Map<String, String>,
+  ): String? {
+    return (latestByCurrent[coordinate] ?: latestVersions[key])?.version
   }
 
   private fun buildUnresolvedDependency(
@@ -273,7 +283,7 @@ class DependencyUpdatesReporter(
     coordinate: Coordinate,
     key: Map<String, String>,
   ): DependencyOutdated {
-    val laterVersion = latestVersions[key]?.version
+    val laterVersion = latestFor(coordinate, key)
     val available =
       when (revision) {
         "milestone" -> VersionAvailable(milestone = laterVersion)
