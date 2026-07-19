@@ -240,6 +240,20 @@ final class AggregationConfigurationCacheSpec extends Specification {
     hit.output.contains('Cannot reference a Gradle script object from a Groovy closure')
   }
 
+  def 'Resolves the project url while storing the cache'() {
+    when:
+    def store = run(ARGUMENTS)
+    def hit = run(ARGUMENTS)
+
+    then:
+    // The pom is read by an artifact query as the producer resolves, which happens while the cache
+    // entry is stored rather than while the task runs, so a url in the report proves the query is
+    // usable there and that its answer is carried into a hit.
+    store.output.contains('https://code.google.com/p/google-guice/')
+    hit.output.contains('Reusing configuration cache')
+    hit.output.contains('https://code.google.com/p/google-guice/')
+  }
+
   def 'Invalidates the cache when a dependency publishes a new version'() {
     when:
     def store = run(ARGUMENTS)
