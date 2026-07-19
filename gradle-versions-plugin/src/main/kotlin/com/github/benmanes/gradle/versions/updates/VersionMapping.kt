@@ -15,13 +15,19 @@ class VersionMapping(val project: Project, statuses: Set<DependencyStatus>) {
   val unresolved = sortedSetOf<Coordinate>()
   val current = sortedSetOf<Coordinate>()
   val latest = sortedSetOf<Coordinate>()
+  val latestByCurrent = hashMapOf<Coordinate, Coordinate>()
   private var comparator = makeVersionComparator()
 
   init {
     for (status in statuses) {
       current.add(status.coordinate)
       if (status.unresolved == null) {
-        latest.add(status.getLatestCoordinate())
+        val latestCoordinate = status.getLatestCoordinate()
+        latest.add(latestCoordinate)
+        val previous = latestByCurrent[status.coordinate]
+        if (previous == null || comparator.compare(previous.version, latestCoordinate.version) < 0) {
+          latestByCurrent[status.coordinate] = latestCoordinate
+        }
       } else {
         unresolved.add(status.coordinate)
       }
@@ -33,7 +39,7 @@ class VersionMapping(val project: Project, statuses: Set<DependencyStatus>) {
   private fun organize() {
     val latestByKey = latest.associateBy({ it.key }, { it })
     for (coordinate in current) {
-      val latestCoordinate = latestByKey[coordinate.key]
+      val latestCoordinate = latestByCurrent[coordinate] ?: latestByKey[coordinate.key]
       val version = latestCoordinate?.version
       project.logger
         .info("Comparing dependency (current: {}, latest: {})", coordinate, version ?: "unresolved")

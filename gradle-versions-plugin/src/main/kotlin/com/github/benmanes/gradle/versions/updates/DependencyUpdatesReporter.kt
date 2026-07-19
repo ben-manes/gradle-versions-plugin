@@ -44,6 +44,7 @@ import java.util.TreeSet
  * @property gradleUpdateChecker Facade object to access information about running gradle versions
  * and gradle updates.
  * @property gradleReleaseChannel The gradle release channel to use for reporting.
+ * @property latestByCurrent The latest version found for each declared version.
  *
  */
 class DependencyUpdatesReporter(
@@ -62,6 +63,7 @@ class DependencyUpdatesReporter(
   val projectUrls: Map<Map<String, String>, String>,
   val gradleUpdateChecker: GradleUpdateChecker,
   val gradleReleaseChannel: String,
+  val latestByCurrent: Map<Coordinate, Coordinate> = emptyMap(),
 ) {
   @Synchronized
   fun write() {
@@ -186,26 +188,20 @@ class DependencyUpdatesReporter(
 
   private fun buildCurrentGroup(): MutableSet<Dependency> {
     return sortByGroupAndName(upToDateVersions)
-      .map { dep ->
-        updateKey(dep.key as HashMap)
-        buildDependency(dep.value, dep.key)
-      }.toSortedSet()
+      .map { dep -> buildDependency(dep.value, strippedKey(dep.key)) }
+      .toSortedSet()
   }
 
   private fun buildOutdatedGroup(): MutableSet<DependencyOutdated> {
     return sortByGroupAndName(upgradeVersions)
-      .map { dep ->
-        updateKey(dep.key as HashMap)
-        buildOutdatedDependency(dep.value, dep.key)
-      }.toSortedSet()
+      .map { dep -> buildOutdatedDependency(dep.value, strippedKey(dep.key)) }
+      .toSortedSet()
   }
 
   private fun buildExceededGroup(): MutableSet<DependencyLatest> {
     return sortByGroupAndName(downgradeVersions)
-      .map { dep ->
-        updateKey(dep.key as HashMap)
-        buildExceededDependency(dep.value, dep.key)
-      }.toSortedSet()
+      .map { dep -> buildExceededDependency(dep.value, strippedKey(dep.key)) }
+      .toSortedSet()
   }
 
   private fun buildUndeclaredGroup(): MutableSet<Dependency> {
@@ -251,8 +247,16 @@ class DependencyUpdatesReporter(
       version = coordinate.version,
       projectUrl = projectUrls[key],
       userReason = coordinate.userReason,
-      latest = latestVersions[key]?.version.orEmpty(),
+      latest = latestFor(coordinate, key).orEmpty(),
     )
+  }
+
+  /** Returns the latest version found for the declared version, if it was paired with one. */
+  private fun latestFor(
+    coordinate: Coordinate,
+    key: Map<String, String>,
+  ): String? {
+    return (latestByCurrent[coordinate] ?: latestVersions[key])?.version
   }
 
   private fun buildUnresolvedDependency(
@@ -273,7 +277,7 @@ class DependencyUpdatesReporter(
     coordinate: Coordinate,
     key: Map<String, String>,
   ): DependencyOutdated {
-    val laterVersion = latestVersions[key]?.version
+    val laterVersion = latestFor(coordinate, key)
     val available =
       when (revision) {
         "milestone" -> VersionAvailable(milestone = laterVersion)
@@ -291,13 +295,11 @@ class DependencyUpdatesReporter(
   }
 
   companion object {
-    private fun updateKey(existingKey: HashMap<String, String>) {
-      val index = existingKey["name"]?.lastIndexOf("[") ?: -1
-      if (index == -1) {
-        existingKey["name"] = existingKey["name"].orEmpty()
-      } else {
-        existingKey["name"] = existingKey["name"].orEmpty().substring(0, index)
-      }
+    /** Returns the key with the disambiguating suffix that [toMap] appended removed. */
+    private fun strippedKey(existingKey: Map<String, String>): Map<String, String> {
+      val name = existingKey["name"].orEmpty()
+      val index = name.lastIndexOf("[")
+      return if (index == -1) existingKey else existingKey + ("name" to name.substring(0, index))
     }
 
     private fun buildObject(

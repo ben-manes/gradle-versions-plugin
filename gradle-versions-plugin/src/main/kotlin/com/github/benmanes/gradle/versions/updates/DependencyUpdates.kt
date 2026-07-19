@@ -104,15 +104,11 @@ class DependencyUpdates
       unresolved: Set<UnresolvedDependency>,
       projectUrls: Map<Map<String, String>, String>,
     ): DependencyUpdatesReporter {
-      val currentVersions =
-        versions.current
-          .associateBy({ mapOf("group" to it.groupId, "name" to it.artifactId) }, { it })
+      val currentVersions = toMap(versions.current)
       val latestVersions =
         versions.latest
           .associateBy({ mapOf("group" to it.groupId, "name" to it.artifactId) }, { it })
-      val upToDateVersions =
-        versions.upToDate
-          .associateBy({ mapOf("group" to it.groupId, "name" to it.artifactId) }, { it })
+      val upToDateVersions = toMap(versions.upToDate)
       val downgradeVersions = toMap(versions.downgrade)
       val upgradeVersions = toMap(versions.upgrade)
 
@@ -123,7 +119,7 @@ class DependencyUpdates
         project, revision, outputFormatterArgument, outputDir,
         reportfileName, currentVersions, latestVersions, upToDateVersions, downgradeVersions,
         upgradeVersions, versions.undeclared, unresolved, projectUrls, gradleUpdateChecker,
-        gradleReleaseChannel,
+        gradleReleaseChannel, versions.latestByCurrent,
       )
     }
 
