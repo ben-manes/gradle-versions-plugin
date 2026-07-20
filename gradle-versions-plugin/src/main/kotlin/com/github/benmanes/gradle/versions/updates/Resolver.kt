@@ -282,7 +282,10 @@ class Resolver(
     val declared =
       getResolvableDependencies(configuration)
         .associateBy { it.key }
-    if (declared.isEmpty()) {
+    // An empty configuration is still resolved below, so that a listener contributing to it has
+    // run by the time the declared set is read again. That resolution costs nothing. One holding
+    // only project or file dependencies is skipped, as resolving it would not.
+    if (declared.isEmpty() && configuration.allDependencies.isNotEmpty()) {
       return CurrentCoordinates(emptyMap(), emptyMap())
     }
 

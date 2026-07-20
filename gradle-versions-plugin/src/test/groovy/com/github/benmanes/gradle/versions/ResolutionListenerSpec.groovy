@@ -52,12 +52,27 @@ final class ResolutionListenerSpec extends Specification {
     seen.contains('guava:15.0 -> 16.0-rc1')
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/992')
+  def 'A dependency contributed to a configuration that declares nothing else is reported'() {
+    given:
+    def project = contributing('com.google.guava:guava:15.0', 'aaa')
+
+    when:
+    def result = evaluate(project, null)
+
+    then:
+    with(result.outdated.dependencies.toList().find { it.name == 'guava' }) {
+      it.version == '15.0'
+      it.available.milestone == '16.0-rc1'
+    }
+  }
+
   /**
    * A project whose declared set gains {@code contribution} only once a resolution has begun, which
-   * is how a build-scoped listener adds one. The anchor dependency keeps the declared set non-empty
-   * so that the resolver does not short-circuit before the listener has fired.
+   * is how a build-scoped listener adds one. The contribution goes to {@code target}, which is
+   * resolved before the anchor when it sorts first, so that the empty case is covered too.
    */
-  private static def contributing(String contribution) {
+  private static def contributing(String contribution, String target = 'app') {
     def project = ProjectBuilder.builder().withName('root').build()
     project.repositories {
       maven {
@@ -65,6 +80,7 @@ final class ResolutionListenerSpec extends Specification {
       }
     }
     project.configurations {
+      aaa
       app
     }
     project.dependencies {
@@ -76,7 +92,7 @@ final class ResolutionListenerSpec extends Specification {
       void beforeResolve(ResolvableDependencies incoming) {
         if (!contributed) {
           contributed = true
-          project.dependencies.add('app', contribution)
+          project.dependencies.add(target, contribution)
         }
       }
 
