@@ -282,7 +282,10 @@ class Resolver(
     val declared =
       getResolvableDependencies(configuration)
         .associateBy { it.key }
-    if (declared.isEmpty()) {
+    // An empty configuration is still resolved below, so that a listener contributing to it has
+    // run by the time the declared set is read again. That resolution costs nothing. One holding
+    // only project or file dependencies is skipped, as resolving it would not.
+    if (declared.isEmpty() && configuration.allDependencies.isNotEmpty()) {
       return CurrentCoordinates(emptyMap(), emptyMap())
     }
 
@@ -318,13 +321,25 @@ class Resolver(
       }
     }
 
+    // A resolution listener contributes dependencies when a configuration is first resolved, which
+    // is the resolution above, so they are missing from the declared set read before it. Read it
+    // again to pick up their declared version; otherwise only the query below sees them and their
+    // latest version is reported as the declared one, hiding the update.
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/992
+    val contributed =
+      getResolvableDependencies(configuration)
+        .filterNot { declared.containsKey(it.key) }
+    for (coordinate in contributed) {
+      coordinates.putIfAbsent(coordinate.key, coordinate)
+    }
+
     // A substitution rule can replace a declared module with one of a different group or name, so
     // the resolved coordinates are in a different keyspace than the declared ones.
     // https://github.com/ben-manes/gradle-versions-plugin/issues/990
     val substitutions = getSubstitutions(copy, declared)
 
     // Ignore undeclared (hidden) dependencies that appear when resolving a configuration
-    coordinates.keys.retainAll(declared.keys + substitutions.values)
+    coordinates.keys.retainAll(declared.keys + contributed.map { it.key } + substitutions.values)
 
     return CurrentCoordinates(coordinates, substitutions)
   }
