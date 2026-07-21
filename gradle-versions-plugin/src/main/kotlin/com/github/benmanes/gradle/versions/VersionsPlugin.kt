@@ -1,6 +1,7 @@
 package com.github.benmanes.gradle.versions
 
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+import com.github.benmanes.gradle.versions.updates.registerAggregation
 import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -19,33 +20,28 @@ class VersionsPlugin : Plugin<Project> {
 
     val tasks = project.tasks
     if (!tasks.names.contains("dependencyUpdates")) {
-      tasks.register("dependencyUpdates", DependencyUpdatesTask::class.java) { task ->
-        task.doFirst(
-          object : Action<Task> {
-            override fun execute(t: Task) {
-              requireSupportedSaxParser()
-            }
-          },
-        )
-      }
+      val task =
+        tasks.register("dependencyUpdates", DependencyUpdatesTask::class.java) { task ->
+          task.doFirst(
+            object : Action<Task> {
+              override fun execute(t: Task) {
+                requireSupportedSaxParser()
+              }
+            },
+          )
+        }
+      registerAggregation(project, task)
     }
   }
 
   private fun requireMinimumGradleVersion() {
-    if (GradleVersion.current() < GradleVersion.version("5.0")) {
-      throw GradleException("Gradle 5.0 or greater is required to apply the com.github.ben-manes.versions plugin.")
+    if (GradleVersion.current() < GradleVersion.version("8.4")) {
+      throw GradleException("Gradle 8.4 or greater is required to apply the com.github.ben-manes.versions plugin.")
     }
   }
 
   private fun requireSupportedSaxParser() {
-    val isRestrictedInPatch =
-      GradleVersion.current() >= GradleVersion.version("7.6.3") &&
-        GradleVersion.current() <= GradleVersion.version("8.0")
-    val isRestrictedInMajor =
-      GradleVersion.current() >= GradleVersion.version("8.4") &&
-        GradleVersion.current() <= GradleVersion.version("8.10.2")
-
-    if (isRestrictedInPatch || isRestrictedInMajor) {
+    if (GradleVersion.current() <= GradleVersion.version("8.10.2")) {
       try {
         val factory = SAXParserFactory.newInstance()
         factory.newSAXParser().setProperty("http://javax.xml.XMLConstants/property/accessExternalSchema", "")

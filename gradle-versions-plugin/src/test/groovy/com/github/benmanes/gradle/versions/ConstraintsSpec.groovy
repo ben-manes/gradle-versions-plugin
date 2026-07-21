@@ -6,7 +6,6 @@ import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import spock.lang.Specification
-import spock.lang.Unroll
 
 final class ConstraintsSpec extends Specification {
   @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
@@ -132,8 +131,7 @@ final class ConstraintsSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
-  @Unroll
-  def 'Do not show updates for an gradle constraint (added in 7.3.2/6.9.2) with Gradle #gradleVersion'() {
+  def 'Do not show updates for a constraint that gradle added itself'() {
     given:
     ExpandoMetaClass.disableGlobally()
     buildFile = testProjectDir.newFile('build.gradle.kts')
@@ -151,26 +149,16 @@ final class ConstraintsSpec extends Specification {
 
     when:
     def result = GradleRunner.create()
-      .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
       .build()
 
     then:
-    !result.output.contains('org.apache.logging.log4j:log4j-core [2.16.0 -> ')
+    // Gradle constrains its own buildscript classpath, and which version it pins moves with the
+    // gradle version, so no version may be reported rather than no particular one.
+    !result.output.contains('org.apache.logging.log4j:log4j-core [')
     result.task(':dependencyUpdates').outcome == SUCCESS
-
-    where:
-    gradleVersion << [
-      '6.9.2',
-      '7.0.2',
-      '7.1.1',
-      '7.2',
-      '7.3.3',
-      '7.4.2',
-      '7.5.1',
-    ]
   }
 
   def "Show updates for log4j-core even if the constraint added by gradle is ignored"() {

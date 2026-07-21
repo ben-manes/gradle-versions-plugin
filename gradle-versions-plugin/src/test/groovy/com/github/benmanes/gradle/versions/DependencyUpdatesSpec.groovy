@@ -24,9 +24,8 @@ import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseCh
 import com.github.benmanes.gradle.versions.reporter.Reporter
 import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.updates.Coordinate
-import com.github.benmanes.gradle.versions.updates.DependencyUpdates
 import org.gradle.api.artifacts.ComponentSelection
-import org.gradle.api.artifacts.ModuleVersionSelector
+import com.github.benmanes.gradle.versions.updates.UnresolvedInfo
 import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Issue
 import spock.lang.Specification
@@ -38,6 +37,19 @@ import spock.lang.Unroll
 final class DependencyUpdatesSpec extends Specification {
 
   private static final String NONE_VERSION = 'none'
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/pull/994')
+  def 'Default outputDir stays absolute when the build directory is the project directory'() {
+    given:
+    def project = singleProject()
+    project.layout.buildDirectory.set(project.layout.projectDirectory)
+    project.pluginManager.apply('com.github.ben-manes.versions')
+
+    expect:
+    // An empty relative path would default the report to the filesystem root.
+    def outputDir = new File(project.tasks.getByName('dependencyUpdates').outputDir)
+    outputDir.canonicalPath.startsWith(project.projectDir.canonicalPath)
+  }
 
   def 'Single project with no dependencies for many formats'() {
     given:
@@ -357,8 +369,8 @@ final class DependencyUpdatesSpec extends Specification {
 
     then:
     with(reporter) {
-      unresolved.collect { it.selector }.collectEntries { dependency ->
-        [['group': dependency.group, 'name': dependency.name]: dependency.version]
+      unresolved.collectEntries { info ->
+        [['group': info.selectorGroup, 'name': info.selectorName]: info.selectorVersion]
       } == [['group': '', 'name': 'guava-18.0']: NONE_VERSION]
       upgradeVersions.isEmpty()
       upToDateVersions.isEmpty()
@@ -655,8 +667,9 @@ final class DependencyUpdatesSpec extends Specification {
     if (gradleVersionsApiBaseUrl == null) {
       gradleVersionsApiBaseUrl = "https://services.gradle.org/versions/"
     }
-    new DependencyUpdates(project, resolutionStrategy, revision, buildOutputFormatter(outputFormatter), outputDir,
-      reportfileName, checkForGradleUpdate, gradleVersionsApiBaseUrl, gradleReleaseChannel, false, false, configurationFilter).run()
+    ProjectEvaluator.evaluate(project, resolutionStrategy, revision,
+      buildOutputFormatter(outputFormatter), outputDir, reportfileName, checkForGradleUpdate,
+      gradleVersionsApiBaseUrl, gradleReleaseChannel, false, false, configurationFilter)
   }
 
   private static OutputFormatterArgument buildOutputFormatter(outputFormatter) {
@@ -709,20 +722,20 @@ final class DependencyUpdatesSpec extends Specification {
   }
 
   private static void checkUnresolvedVersions(def reporter) {
-    Map<Map<String, String>, ModuleVersionSelector> unresolvedMap = reporter.unresolved
-      .collect { it.selector }.collectEntries { dependency ->
-      [['group': dependency.group, 'name': dependency.name]: dependency]
+    Map<Map<String, String>, UnresolvedInfo> unresolvedMap = reporter.unresolved
+      .collectEntries { info ->
+      [['group': info.selectorGroup, 'name': info.selectorName]: info]
     }
     assert reporter.unresolved.size() == 2
     assert unresolvedMap
       .get(['group': 'com.github.ben-manes', 'name': 'unresolvable'])
-      .getVersion() == '+'
+      .getSelectorVersion() == '+'
     assert reporter.currentVersions
       .get(['group': 'com.github.ben-manes', 'name': 'unresolvable'])
       .getUserReason() == 'Life is hard'
     assert unresolvedMap
       .get(['group': 'com.github.ben-manes', 'name': 'unresolvable2'])
-      .getVersion() == '+'
+      .getSelectorVersion() == '+'
   }
 
   private static void checkUpgradeVersions(def reporter) {

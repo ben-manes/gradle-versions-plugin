@@ -12,10 +12,20 @@ import java.io.OutputStream
  * A plain text reporter for the dependency updates results.
  */
 class PlainTextReporter(
-  override val project: Project,
+  override val projectPath: String,
   override val revision: String,
   override val gradleReleaseChannel: String,
-) : AbstractReporter(project, revision, gradleReleaseChannel) {
+) : AbstractReporter(projectPath, revision, gradleReleaseChannel) {
+  @Deprecated(
+    "Use the constructor that takes the project's path.",
+    ReplaceWith("PlainTextReporter(project.path, revision, gradleReleaseChannel)"),
+  )
+  constructor(
+    project: Project,
+    revision: String,
+    gradleReleaseChannel: String,
+  ) : this(project.path, revision, gradleReleaseChannel)
+
   /** Writes the report to the print stream. The stream is not automatically closed. */
   override fun write(
     printStream: OutputStream,
@@ -44,7 +54,7 @@ class PlainTextReporter(
   private fun writeHeader(printStream: OutputStream) {
     printStream.println()
     printStream.println("------------------------------------------------------------")
-    printStream.println("${project.path} Project Dependency Updates (report to plain text file)")
+    printStream.println("$projectPath Project Dependency Updates (report to plain text file)")
     printStream.println("------------------------------------------------------------")
   }
 
@@ -143,10 +153,6 @@ class PlainTextReporter(
         dependency.projectUrl?.let {
           printStream.println("     $it")
         }
-        project.logger.info(
-          "The exception that is the cause of unresolved state: {}",
-          dependency.reason,
-        )
       }
     }
   }

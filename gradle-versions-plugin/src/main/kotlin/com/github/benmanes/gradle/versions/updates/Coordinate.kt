@@ -5,6 +5,7 @@ import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ModuleVersionSelector
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentSelector
 
 /**
  * The dependency's coordinate.
@@ -101,6 +102,10 @@ class Coordinate(
 
     fun from(identifier: ModuleComponentIdentifier): Coordinate {
       return Coordinate(identifier.group, identifier.module, identifier.version)
+    }
+
+    fun from(selector: ModuleComponentSelector): Coordinate {
+      return Coordinate(selector.group, selector.module, selector.version)
     }
   }
 }

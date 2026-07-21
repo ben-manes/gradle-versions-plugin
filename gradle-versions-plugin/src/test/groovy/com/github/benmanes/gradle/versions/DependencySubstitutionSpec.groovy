@@ -3,7 +3,6 @@ package com.github.benmanes.gradle.versions
 import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 
 import com.github.benmanes.gradle.versions.reporter.result.Result
-import com.github.benmanes.gradle.versions.updates.DependencyUpdates
 import com.github.benmanes.gradle.versions.updates.OutputFormatterArgument
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import org.gradle.api.Action
@@ -74,10 +73,10 @@ final class DependencySubstitutionSpec extends Specification {
     def strategy = selectionRule == null ? null : { ResolutionStrategyWithCurrent it ->
       it.componentSelection { rules -> rules.all(selectionRule) }
     } as Action<ResolutionStrategyWithCurrent>
-    new DependencyUpdates(project, strategy, 'milestone',
+    ProjectEvaluator.evaluate(project, strategy, 'milestone',
       new OutputFormatterArgument.CustomAction({ result -> captured = result } as Action<Result>),
       'build', 'report', false, 'https://services.gradle.org/versions/', RELEASE_CANDIDATE.id)
-      .run().write()
+      .write()
     return captured
   }
 }

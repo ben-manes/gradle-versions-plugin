@@ -16,22 +16,19 @@ import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResult
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
-import org.gradle.api.Project
-import org.gradle.api.artifacts.ModuleVersionSelector
-import org.gradle.api.artifacts.UnresolvedDependency
+import org.gradle.api.logging.Logger
 import java.io.File
 import java.io.PrintStream
-import java.io.PrintWriter
-import java.io.StringWriter
 import java.util.TreeSet
 
 /**
  * Sorts and writes the resolved dependency reports.
  *
- * @property project The project evaluated against.
+ * @property projectPath The path of the project evaluated against.
+ * @property logger The logger to report generated report files with.
  * @property revision The revision strategy evaluated with.
  * @property outputFormatterArgument The output formatter strategy evaluated with.
- * @property outputDir The outputDir for report.
+ * @property outputDirectory The directory the report is written to.
  * @property reportfileName The filename of the report file.
  * @property currentVersions The current versions of each dependency declared in the project(s).
  * @property latestVersions The latest versions of each dependency (as scoped by the revision level).
@@ -48,10 +45,11 @@ import java.util.TreeSet
  *
  */
 class DependencyUpdatesReporter(
-  val project: Project,
+  val projectPath: String,
+  val logger: Logger,
   val revision: String,
   private val outputFormatterArgument: OutputFormatterArgument,
-  val outputDir: String,
+  val outputDirectory: File,
   val reportfileName: String?,
   val currentVersions: Map<Map<String, String>, Coordinate>,
   val latestVersions: Map<Map<String, String>, Coordinate>,
@@ -59,7 +57,7 @@ class DependencyUpdatesReporter(
   val downgradeVersions: Map<Map<String, String>, Coordinate>,
   val upgradeVersions: Map<Map<String, String>, Coordinate>,
   val undeclared: Set<Coordinate>,
-  val unresolved: Set<UnresolvedDependency>,
+  val unresolved: Set<UnresolvedInfo>,
   val projectUrls: Map<Map<String, String>, String>,
   val gradleUpdateChecker: GradleUpdateChecker,
   val gradleReleaseChannel: String,
@@ -70,7 +68,7 @@ class DependencyUpdatesReporter(
     if (outputFormatterArgument !is OutputFormatterArgument.CustomAction) {
       val plainTextReporter =
         PlainTextReporter(
-          project,
+          projectPath,
           revision,
           gradleReleaseChannel,
         )
@@ -78,7 +76,7 @@ class DependencyUpdatesReporter(
     }
 
     if (outputFormatterArgument is OutputFormatterArgument.BuiltIn && outputFormatterArgument.formatterNames.isEmpty()) {
-      project.logger.lifecycle("Skip generating report to file (outputFormatter is empty)")
+      logger.lifecycle("Skip generating report to file (outputFormatter is empty)")
       return
     }
 
@@ -101,23 +99,22 @@ class DependencyUpdatesReporter(
   }
 
   private fun generateFileReport(reporter: Reporter) {
-    val fileName = File(outputDir, reportfileName + "." + reporter.getFileExtension())
-    project.file(outputDir).mkdirs()
-    val outputFile = project.file(fileName)
+    outputDirectory.mkdirs()
+    val outputFile = File(outputDirectory, reportfileName + "." + reporter.getFileExtension())
     val stream = PrintStream(outputFile)
     val result = buildBaseObject()
     reporter.write(stream, result)
     stream.close()
 
-    project.logger.lifecycle("\nGenerated report file $fileName")
+    logger.lifecycle("\nGenerated report file $outputFile")
   }
 
   private fun getOutputReporter(formatterOriginal: String): Reporter {
     return when (formatterOriginal.trim()) {
-      "json" -> JsonReporter(project, revision, gradleReleaseChannel)
-      "xml" -> XmlReporter(project, revision, gradleReleaseChannel)
-      "html" -> HtmlReporter(project, revision, gradleReleaseChannel)
-      else -> PlainTextReporter(project, revision, gradleReleaseChannel)
+      "json" -> JsonReporter(projectPath, revision, gradleReleaseChannel)
+      "xml" -> XmlReporter(projectPath, revision, gradleReleaseChannel)
+      "html" -> HtmlReporter(projectPath, revision, gradleReleaseChannel)
+      else -> PlainTextReporter(projectPath, revision, gradleReleaseChannel)
     }
   }
 
@@ -213,15 +210,9 @@ class DependencyUpdatesReporter(
 
   private fun buildUnresolvedGroup(): MutableSet<DependencyUnresolved> {
     return unresolved
-      .sortedWith { a, b ->
-        compareKeys(keyOf(a.selector), keyOf(b.selector))
-      }.map { dep ->
-        val stringWriter = StringWriter()
-        dep.problem.printStackTrace(PrintWriter(stringWriter))
-        val message = stringWriter.toString()
-
-        buildUnresolvedDependency(dep.selector, message)
-      }.toSortedSet() as TreeSet<DependencyUnresolved>
+      .sortedWith { a, b -> compareKeys(keyOf(a), keyOf(b)) }
+      .map { dep -> buildUnresolvedDependency(dep) }
+      .toSortedSet() as TreeSet<DependencyUnresolved>
   }
 
   private fun buildDependency(
@@ -259,17 +250,14 @@ class DependencyUpdatesReporter(
     return (latestByCurrent[coordinate] ?: latestVersions[key])?.version
   }
 
-  private fun buildUnresolvedDependency(
-    selector: ModuleVersionSelector,
-    message: String,
-  ): DependencyUnresolved {
+  private fun buildUnresolvedDependency(info: UnresolvedInfo): DependencyUnresolved {
     return DependencyUnresolved(
-      group = selector.group,
-      name = selector.name,
-      version = currentVersions[keyOf(selector)]?.version,
-      projectUrl = latestVersions[keyOf(selector)]?.version,
-      userReason = currentVersions[keyOf(selector)]?.userReason,
-      reason = message,
+      group = info.selectorGroup,
+      name = info.selectorName,
+      version = currentVersions[keyOf(info)]?.version,
+      projectUrl = latestVersions[keyOf(info)]?.version,
+      userReason = currentVersions[keyOf(info)]?.userReason,
+      reason = info.failureText,
     )
   }
 
@@ -344,8 +332,74 @@ class DependencyUpdatesReporter(
       }
     }
 
-    private fun keyOf(dependency: ModuleVersionSelector): Map<String, String> {
-      return mapOf("group" to dependency.group, "name" to dependency.name)
+    private fun keyOf(info: UnresolvedInfo): Map<String, String> {
+      return mapOf("group" to info.selectorGroup, "name" to info.selectorName)
     }
   }
+}
+
+/** Returns a reporter for the merged statuses of one or more projects. */
+@Suppress("LongParameterList")
+fun reporterFor(
+  statuses: List<PartialStatus>,
+  projectPath: String,
+  logger: Logger,
+  revision: String,
+  outputFormatterArgument: OutputFormatterArgument,
+  outputDir: File,
+  reportfileName: String?,
+  checkForGradleUpdate: Boolean,
+  gradleVersionsApiBaseUrl: String,
+  gradleReleaseChannel: String,
+): DependencyUpdatesReporter {
+  val versions = VersionMapping(logger, statuses)
+  val unresolved = statuses.mapNotNullTo(mutableSetOf()) { it.unresolved }
+  val projectUrls =
+    statuses
+      .filter { !it.projectUrl.isNullOrEmpty() }
+      .associateBy(
+        { mapOf("group" to it.group, "name" to it.name) },
+        { it.projectUrl.toString() },
+      )
+
+  val currentVersions = toKeyedMap(versions.current)
+  val latestVersions =
+    versions.latest
+      .associateBy({ mapOf("group" to it.groupId, "name" to it.artifactId) }, { it })
+  val upToDateVersions = toKeyedMap(versions.upToDate)
+  val downgradeVersions = toKeyedMap(versions.downgrade)
+  val upgradeVersions = toKeyedMap(versions.upgrade)
+
+  // Check for Gradle updates.
+  val gradleUpdateChecker = GradleUpdateChecker(checkForGradleUpdate, gradleVersionsApiBaseUrl)
+
+  return DependencyUpdatesReporter(
+    projectPath, logger, revision, outputFormatterArgument, outputDir,
+    reportfileName, currentVersions, latestVersions, upToDateVersions, downgradeVersions,
+    upgradeVersions, versions.undeclared, unresolved, projectUrls, gradleUpdateChecker,
+    gradleReleaseChannel, versions.latestByCurrent,
+  )
+}
+
+/** Returns the coordinates keyed by their group and name, disambiguating a repeated name. */
+private fun toKeyedMap(coordinates: Set<Coordinate>): Map<Map<String, String>, Coordinate> {
+  val map = HashMap<Map<String, String>, Coordinate>()
+  for (coordinate in coordinates) {
+    var i = 0
+    while (true) {
+      val artifactId = coordinate.artifactId + if (i == 0) "" else "[${i + 1}]"
+      val keyMap =
+        linkedMapOf<String, String>().apply {
+          put("group", coordinate.groupId)
+          put("name", artifactId)
+        }
+      if (!map.containsKey(keyMap)) {
+        map[keyMap] = coordinate
+        break
+      }
+
+      ++i
+    }
+  }
+  return map
 }

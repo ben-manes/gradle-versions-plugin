@@ -12,10 +12,20 @@ import java.io.OutputStream
  * A HTML reporter for the dependency updates results.
  */
 class HtmlReporter(
-  override val project: Project,
+  override val projectPath: String,
   override val revision: String,
   override val gradleReleaseChannel: String,
-) : AbstractReporter(project, revision, gradleReleaseChannel) {
+) : AbstractReporter(projectPath, revision, gradleReleaseChannel) {
+  @Deprecated(
+    "Use the constructor that takes the project's path.",
+    ReplaceWith("HtmlReporter(project.path, revision, gradleReleaseChannel)"),
+  )
+  constructor(
+    project: Project,
+    revision: String,
+    gradleReleaseChannel: String,
+  ) : this(project.path, revision, gradleReleaseChannel)
+
   override fun write(
     printStream: OutputStream,
     result: Result,

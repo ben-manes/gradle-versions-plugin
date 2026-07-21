@@ -18,10 +18,20 @@ import javax.xml.transform.stream.StreamResult
  * A XML reporter for the dependency updates results.
  */
 class XmlReporter(
-  override val project: Project,
+  override val projectPath: String,
   override val revision: String,
   override val gradleReleaseChannel: String,
-) : AbstractReporter(project, revision, gradleReleaseChannel) {
+) : AbstractReporter(projectPath, revision, gradleReleaseChannel) {
+  @Deprecated(
+    "Use the constructor that takes the project's path.",
+    ReplaceWith("XmlReporter(project.path, revision, gradleReleaseChannel)"),
+  )
+  constructor(
+    project: Project,
+    revision: String,
+    gradleReleaseChannel: String,
+  ) : this(project.path, revision, gradleReleaseChannel)
+
   override fun write(
     printStream: OutputStream,
     result: Result,

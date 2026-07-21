@@ -9,14 +9,18 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.Resolution
 import groovy.lang.Closure
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
-import org.gradle.api.GradleException
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.specs.Spec
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
-import org.gradle.util.GradleVersion
+import java.io.File
 import javax.annotation.Nullable
 
 /**
@@ -24,10 +28,17 @@ import javax.annotation.Nullable
  */
 open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
+  /** The settings the per-project producers read, held here so that they are configured as one. */
+  @get:Internal
+  internal val parameters = DependencyUpdatesParameters()
+
   /** Returns the resolution revision level. */
-  @Input
-  var revision: String = "milestone"
-    get() = (System.getProperties()["revision"] ?: field) as String
+  @get:Input
+  var revision: String
+    get() = (System.getProperties()["revision"] ?: parameters.revision ?: "milestone") as String
+    set(value) {
+      parameters.revision = value
+    }
 
   /** Returns the resolution revision level. */
   @Input
@@ -37,7 +48,14 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   /** Returns the outputDir destination. */
   @Input
   var outputDir: String =
-    "${project.buildDir.path.replace(project.projectDir.path + "/", "")}/dependencyUpdates"
+    run {
+      // Kept absolute when the build directory cannot be made project relative, which is thrown for
+      // a build directory redirected to another windows drive, or would otherwise read as the root.
+      val buildDirectory = project.layout.buildDirectory.get().asFile
+      val relative = buildDirectory.relativeToOrNull(project.layout.projectDirectory.asFile)
+      val base = if (relative == null || relative.path.isEmpty()) buildDirectory else relative
+      "${base.path}/dependencyUpdates"
+    }
     get() = (System.getProperties()["outputDir"] ?: field) as String
 
   /** Returns the filename of the report. */
@@ -97,58 +115,104 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   @Input
   var gradleVersionsApiBaseUrl: String = "https://services.gradle.org/versions/"
 
-  @Input
-  var checkConstraints: Boolean = false
+  @get:Input
+  var checkConstraints: Boolean
+    get() = parameters.checkConstraints ?: false
+    set(value) {
+      parameters.checkConstraints = value
+    }
 
-  @Internal
-  var filterConfigurations: Spec<Configuration> = Spec<Configuration> { true }
+  @get:Internal
+  var filterConfigurations: Spec<Configuration>
+    get() = parameters.filterConfigurations ?: ALL_CONFIGURATIONS
+    set(value) {
+      parameters.filterConfigurations = value
+    }
 
-  @Input
-  var checkBuildEnvironmentConstraints: Boolean = false
+  @get:Input
+  var checkBuildEnvironmentConstraints: Boolean
+    get() = parameters.checkBuildEnvironmentConstraints ?: false
+    set(value) {
+      parameters.checkBuildEnvironmentConstraints = value
+    }
 
   @Internal
   @Nullable
+  @Transient
   var resolutionStrategy: Closure<Any>? = null
+    set(value) {
+      field = value
+      // The producers read the strategy while configuring, so an assignment must be adapted as it
+      // is made rather than when the task executes.
+      if (value != null) {
+        // Written directly rather than through resolutionStrategy(Action), which clears this
+        // property and would leave it reading back as unset.
+        parameters.resolutionStrategy =
+          Action<ResolutionStrategyWithCurrent> { current -> project.configure(current, value) }
+        parameters.resolutionStrategySet = true
+        logger.warn(
+          "dependencyUpdates.resolutionStrategy: " +
+            "Remove the assignment operator, \"=\", when setting this task property",
+        )
+      }
+    }
 
-  @Nullable
-  private var resolutionStrategyAction: Action<in ResolutionStrategyWithCurrent>? = null
+  /** The partial results of each project, wired by the plugin from the aggregation variants. */
+  @get:InputFiles
+  @get:PathSensitive(PathSensitivity.NONE)
+  val partialResults: ConfigurableFileCollection = project.files()
+
+  /** Captured at configuration time; replaces `project.path` at execution. */
+  @Internal
+  var projectPath: String = project.path
+
+  /** The project paths expected to contribute partial results, wired by the plugin. */
+  @Internal
+  var aggregatedProjectPaths: Set<String> = emptySet()
+
+  /** Captured at configuration time; replaces `project.file()` at execution. */
+  @get:Internal
+  val projectDirectory: DirectoryProperty =
+    project.objects.directoryProperty().convention(project.layout.projectDirectory)
 
   init {
     description = "Displays the dependency updates for the project."
     group = "Help"
     outputs.upToDateWhen { false }
-
-    callIncompatibleWithConfigurationCache()
   }
 
+  /** Merges the partial results of every project and writes the report. */
   @TaskAction
   fun dependencyUpdates() {
-    requireNoParallel()
-    project.evaluationDependsOnChildren()
-    if (resolutionStrategy != null) {
-      val closure = resolutionStrategy!!
-      resolutionStrategy { current -> project.configure(current, closure) }
+    val partials =
+      partialResults.files
+        .map { PartialResult.fromJson(it.readText()) }
+        .sortedBy { it.projectPath }
+    val missing = aggregatedProjectPaths - partials.map { it.projectPath }.toSet()
+    if (missing.isNotEmpty()) {
       logger.warn(
-        "dependencyUpdates.resolutionStrategy: " +
-          "Remove the assignment operator, \"=\", when setting this task property",
+        "The dependency updates report is missing ${missing.sorted().joinToString(", ")}. A project " +
+          "must apply the com.github.ben-manes.versions plugin to be aggregated when isolated " +
+          "projects is enabled, and projects that share a group and name are aggregated as one.",
       )
     }
-    val evaluator =
-      DependencyUpdates(
-        project, resolutionStrategyAction, revision,
-        outputFormatter(), outputDir, reportfileName, checkForGradleUpdate, gradleVersionsApiBaseUrl,
-        gradleReleaseChannel, checkConstraints, checkBuildEnvironmentConstraints,
-        filterConfigurations,
-      )
-    val reporter = evaluator.run()
-    reporter.write()
+    val statuses =
+      mergeStatuses(partials.flatMap { it.statuses }) +
+        mergeStatuses(partials.flatMap { it.buildscriptStatuses })
+
+    reporterFor(
+      statuses, projectPath, logger, revision, outputFormatter(), outputDirectory(), reportfileName,
+      checkForGradleUpdate, gradleVersionsApiBaseUrl, gradleReleaseChannel,
+    ).write()
   }
 
-  private fun requireNoParallel() {
-    if (GradleVersion.current() > GradleVersion.version("9.0") &&
-      project.gradle.startParameter.isParallelProjectExecutionEnabled
-    ) {
-      throw GradleException("Parallel project execution is not supported, run this task with --no-parallel")
+  /** Returns the report destination, resolved against the project directory as `project.file`. */
+  private fun outputDirectory(): File {
+    val destination = File(outputDir)
+    return if (destination.isAbsolute) {
+      destination
+    } else {
+      File(projectDirectory.get().asFile, outputDir)
     }
   }
 
@@ -174,7 +238,8 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
    * @param resolutionStrategy the resolution strategy
    */
   fun resolutionStrategy(resolutionStrategy: Action<in ResolutionStrategyWithCurrent>? = null) {
-    this.resolutionStrategyAction = resolutionStrategy
+    parameters.resolutionStrategy = resolutionStrategy
+    parameters.resolutionStrategySet = true
     this.resolutionStrategy = null
   }
 
@@ -193,10 +258,5 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
    */
   fun outputFormatter(action: Action<Result>) {
     outputFormatterArgument = OutputFormatterArgument.CustomAction(action)
-  }
-
-  private fun callIncompatibleWithConfigurationCache() {
-    this::class.members.find { it.name == "notCompatibleWithConfigurationCache" }
-      ?.call(this, "The gradle-versions-plugin isn't compatible with the configuration cache")
   }
 }
