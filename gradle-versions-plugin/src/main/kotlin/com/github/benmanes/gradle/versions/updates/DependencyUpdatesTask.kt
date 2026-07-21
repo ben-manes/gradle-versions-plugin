@@ -9,7 +9,6 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.Resolution
 import groovy.lang.Closure
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
-import org.gradle.api.GradleException
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
@@ -21,7 +20,6 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
-import org.gradle.util.GradleVersion
 import java.io.File
 import javax.annotation.Nullable
 
@@ -143,9 +141,9 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   var resolutionStrategy: Closure<Any>? = null
     set(value) {
       field = value
-      // The aggregation topology reads the strategy while configuring, unlike the block below that
-      // adapts it when the task executes, so an assignment must be adapted as it is made.
-      if (value != null && isAggregationEnabled()) {
+      // The producers read the strategy while configuring, so an assignment must be adapted as it
+      // is made rather than when the task executes.
+      if (value != null) {
         // Written directly rather than through resolutionStrategy(Action), which clears this
         // property and would leave it reading back as unset.
         parameters.resolutionStrategy =
@@ -180,41 +178,11 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
     description = "Displays the dependency updates for the project."
     group = "Help"
     outputs.upToDateWhen { false }
-
-    if (!isAggregationEnabled()) {
-      callIncompatibleWithConfigurationCache()
-    }
-  }
-
-  @TaskAction
-  fun dependencyUpdates() {
-    if (isAggregationEnabled()) {
-      aggregateUpdates()
-      return
-    }
-    requireNoParallel()
-    project.evaluationDependsOnChildren()
-    if (resolutionStrategy != null) {
-      val closure = resolutionStrategy!!
-      resolutionStrategy { current -> project.configure(current, closure) }
-      logger.warn(
-        "dependencyUpdates.resolutionStrategy: " +
-          "Remove the assignment operator, \"=\", when setting this task property",
-      )
-    }
-    val evaluator =
-      DependencyUpdates(
-        project, parameters.resolutionStrategy, revision,
-        outputFormatter(), outputDir, reportfileName, checkForGradleUpdate, gradleVersionsApiBaseUrl,
-        gradleReleaseChannel, checkConstraints, checkBuildEnvironmentConstraints,
-        filterConfigurations,
-      )
-    val reporter = evaluator.run()
-    reporter.write()
   }
 
   /** Merges the partial results of every project and writes the report. */
-  private fun aggregateUpdates() {
+  @TaskAction
+  fun dependencyUpdates() {
     val partials =
       partialResults.files
         .map { PartialResult.fromJson(it.readText()) }
@@ -231,7 +199,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
       mergeStatuses(partials.flatMap { it.statuses }) +
         mergeStatuses(partials.flatMap { it.buildscriptStatuses })
 
-    DependencyUpdates.reporterFor(
+    reporterFor(
       statuses, projectPath, logger, revision, outputFormatter(), outputDirectory(), reportfileName,
       checkForGradleUpdate, gradleVersionsApiBaseUrl, gradleReleaseChannel,
     ).write()
@@ -244,14 +212,6 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
       destination
     } else {
       File(projectDirectory.get().asFile, outputDir)
-    }
-  }
-
-  private fun requireNoParallel() {
-    if (GradleVersion.current() > GradleVersion.version("9.0") &&
-      project.gradle.startParameter.isParallelProjectExecutionEnabled
-    ) {
-      throw GradleException("Parallel project execution is not supported, run this task with --no-parallel")
     }
   }
 
@@ -297,10 +257,5 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
    */
   fun outputFormatter(action: Action<Result>) {
     outputFormatterArgument = OutputFormatterArgument.CustomAction(action)
-  }
-
-  private fun callIncompatibleWithConfigurationCache() {
-    this::class.members.find { it.name == "notCompatibleWithConfigurationCache" }
-      ?.call(this, "The gradle-versions-plugin isn't compatible with the configuration cache")
   }
 }

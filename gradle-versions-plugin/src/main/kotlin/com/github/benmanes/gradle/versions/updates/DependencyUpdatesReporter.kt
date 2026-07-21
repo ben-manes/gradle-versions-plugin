@@ -337,3 +337,69 @@ class DependencyUpdatesReporter(
     }
   }
 }
+
+/** Returns a reporter for the merged statuses of one or more projects. */
+@Suppress("LongParameterList")
+fun reporterFor(
+  statuses: List<PartialStatus>,
+  projectPath: String,
+  logger: Logger,
+  revision: String,
+  outputFormatterArgument: OutputFormatterArgument,
+  outputDir: File,
+  reportfileName: String?,
+  checkForGradleUpdate: Boolean,
+  gradleVersionsApiBaseUrl: String,
+  gradleReleaseChannel: String,
+): DependencyUpdatesReporter {
+  val versions = VersionMapping(logger, statuses)
+  val unresolved = statuses.mapNotNullTo(mutableSetOf()) { it.unresolved }
+  val projectUrls =
+    statuses
+      .filter { !it.projectUrl.isNullOrEmpty() }
+      .associateBy(
+        { mapOf("group" to it.group, "name" to it.name) },
+        { it.projectUrl.toString() },
+      )
+
+  val currentVersions = toKeyedMap(versions.current)
+  val latestVersions =
+    versions.latest
+      .associateBy({ mapOf("group" to it.groupId, "name" to it.artifactId) }, { it })
+  val upToDateVersions = toKeyedMap(versions.upToDate)
+  val downgradeVersions = toKeyedMap(versions.downgrade)
+  val upgradeVersions = toKeyedMap(versions.upgrade)
+
+  // Check for Gradle updates.
+  val gradleUpdateChecker = GradleUpdateChecker(checkForGradleUpdate, gradleVersionsApiBaseUrl)
+
+  return DependencyUpdatesReporter(
+    projectPath, logger, revision, outputFormatterArgument, outputDir,
+    reportfileName, currentVersions, latestVersions, upToDateVersions, downgradeVersions,
+    upgradeVersions, versions.undeclared, unresolved, projectUrls, gradleUpdateChecker,
+    gradleReleaseChannel, versions.latestByCurrent,
+  )
+}
+
+/** Returns the coordinates keyed by their group and name, disambiguating a repeated name. */
+private fun toKeyedMap(coordinates: Set<Coordinate>): Map<Map<String, String>, Coordinate> {
+  val map = HashMap<Map<String, String>, Coordinate>()
+  for (coordinate in coordinates) {
+    var i = 0
+    while (true) {
+      val artifactId = coordinate.artifactId + if (i == 0) "" else "[${i + 1}]"
+      val keyMap =
+        linkedMapOf<String, String>().apply {
+          put("group", coordinate.groupId)
+          put("name", artifactId)
+        }
+      if (!map.containsKey(keyMap)) {
+        map[keyMap] = coordinate
+        break
+      }
+
+      ++i
+    }
+  }
+  return map
+}

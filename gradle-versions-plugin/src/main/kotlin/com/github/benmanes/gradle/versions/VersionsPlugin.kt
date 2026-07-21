@@ -1,7 +1,6 @@
 package com.github.benmanes.gradle.versions
 
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
-import com.github.benmanes.gradle.versions.updates.isAggregationEnabled
 import com.github.benmanes.gradle.versions.updates.registerAggregation
 import org.gradle.api.Action
 import org.gradle.api.GradleException
@@ -31,9 +30,7 @@ class VersionsPlugin : Plugin<Project> {
             },
           )
         }
-      if (isAggregationEnabled()) {
-        registerAggregation(project, task)
-      }
+      registerAggregation(project, task)
     }
   }
 

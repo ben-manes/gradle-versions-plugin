@@ -80,18 +80,13 @@ final class KotlinMultiplatformAggregationSpec extends Specification {
       .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
   }
 
-  def 'Aggregates a multiplatform project as the legacy topology does'() {
+  def 'Aggregates a multiplatform project consistently across the configuration cache'() {
     when:
-    run(ARGUMENTS + ['--no-parallel', '-Dcom.github.benmanes.versions.aggregate=false'])
-    def legacy = report()
-    def aggregateRun =
-      run(ARGUMENTS + ['--no-parallel', '-Dcom.github.benmanes.versions.aggregate=true'])
+    def aggregateRun = run(ARGUMENTS + ['--no-parallel'])
     def aggregated = report()
-    run(ARGUMENTS + ['--parallel', '--configuration-cache',
-                     '-Dcom.github.benmanes.versions.aggregate=true'])
+    run(ARGUMENTS + ['--parallel', '--configuration-cache'])
     def stored = report()
-    def hitRun = run(ARGUMENTS + ['--parallel', '--configuration-cache',
-                                  '-Dcom.github.benmanes.versions.aggregate=true'])
+    def hitRun = run(ARGUMENTS + ['--parallel', '--configuration-cache'])
     def reused = report()
 
     then:
@@ -99,10 +94,9 @@ final class KotlinMultiplatformAggregationSpec extends Specification {
     aggregateRun.task(':jvm:dependencyUpdatesPartial').outcome == SUCCESS
     hitRun.output.contains('Reusing configuration cache')
     !hitRun.output.contains('The dependency updates report is missing')
-    legacy.outdated.dependencies*.name.contains('kotlinx-coroutines-core')
-    legacy.outdated.dependencies*.name.contains('guice')
-    aggregated == legacy
-    stored == legacy
-    reused == legacy
+    aggregated.outdated.dependencies*.name.contains('kotlinx-coroutines-core')
+    aggregated.outdated.dependencies*.name.contains('guice')
+    stored == aggregated
+    reused == aggregated
   }
 }

@@ -2,6 +2,7 @@ package com.github.benmanes.gradle.versions
 
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
+import groovy.json.JsonSlurper
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
@@ -60,7 +61,7 @@ final class AggregationSpec extends Specification {
 
   def 'Aggregates the updates of every project'() {
     when:
-    def result = run(['dependencyUpdates', '-Dcom.github.benmanes.versions.aggregate=true'])
+    def result = run(['dependencyUpdates'])
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
@@ -85,7 +86,7 @@ final class AggregationSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = run(['dependencyUpdates', '-Dcom.github.benmanes.versions.aggregate=true'])
+    def result = run(['dependencyUpdates'])
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
@@ -97,10 +98,8 @@ final class AggregationSpec extends Specification {
 
   def 'Aggregates in parallel with the configuration cache'() {
     when:
-    def first = run(['dependencyUpdates', '-Dcom.github.benmanes.versions.aggregate=true',
-                     '--parallel', '--configuration-cache'])
-    def second = run(['dependencyUpdates', '-Dcom.github.benmanes.versions.aggregate=true',
-                      '--parallel', '--configuration-cache'])
+    def first = run(['dependencyUpdates', '--parallel', '--configuration-cache'])
+    def second = run(['dependencyUpdates', '--parallel', '--configuration-cache'])
 
     then:
     first.task(':dependencyUpdates').outcome == SUCCESS
@@ -120,8 +119,7 @@ final class AggregationSpec extends Specification {
     def result = GradleRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
-      .withArguments('dependencyUpdates', '-Dcom.github.benmanes.versions.aggregate=true',
-        '--parallel', '--configuration-cache')
+      .withArguments('dependencyUpdates', '--parallel', '--configuration-cache')
       .withPluginClasspath()
       .build()
 
@@ -134,23 +132,19 @@ final class AggregationSpec extends Specification {
     gradleVersion << ['9.0.0', '9.6.1']
   }
 
-  def 'Reports the same results as the legacy topology'() {
-    given:
-    def arguments = ['dependencyUpdates', '-DoutputFormatter=json', '--no-parallel']
-
+  def 'Reports every projects producer in the merged report'() {
     when:
-    def legacyRun = run(arguments + ['-Dcom.github.benmanes.versions.aggregate=false'])
-    def legacy = new File(testProjectDir.root, 'build/dependencyUpdates/report.json').text
-    def aggregateRun = run(arguments + ['-Dcom.github.benmanes.versions.aggregate=true'])
-    def aggregated = new File(testProjectDir.root, 'build/dependencyUpdates/report.json').text
+    def result = run(['dependencyUpdates', '-DoutputFormatter=json', '--no-parallel'])
+    def report = new JsonSlurper()
+      .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
 
     then:
-    legacyRun.task(':app:dependencyUpdatesPartial') == null
-    aggregateRun.task(':app:dependencyUpdatesPartial').outcome == SUCCESS
-    aggregated == legacy
+    result.task(':app:dependencyUpdatesPartial').outcome == SUCCESS
+    result.task(':lib:dependencyUpdatesPartial').outcome == SUCCESS
+    report.outdated.dependencies*.name.containsAll(['guice', 'guava'])
   }
 
-  def 'Reports the same results as the legacy topology at the revision given by a system property'() {
+  def 'Resolves at the revision given by a system property'() {
     given:
     new File(testProjectDir.root, 'build.gradle') <<
       """
@@ -166,22 +160,18 @@ final class AggregationSpec extends Specification {
           }
         }
       """.stripIndent()
-    def arguments = ['dependencyUpdates', '-DoutputFormatter=json', '-Drevision=release',
-                     '--no-parallel']
 
     when:
-    def legacyRun = run(arguments + ['-Dcom.github.benmanes.versions.aggregate=false'])
-    def legacy = new File(testProjectDir.root, 'build/dependencyUpdates/report.json').text
-    def aggregateRun = run(arguments + ['-Dcom.github.benmanes.versions.aggregate=true'])
-    def aggregated = new File(testProjectDir.root, 'build/dependencyUpdates/report.json').text
+    def result = run(['dependencyUpdates', '-DoutputFormatter=json', '-Drevision=release',
+                      '--no-parallel'])
+    def report = new File(testProjectDir.root, 'build/dependencyUpdates/report.json').text
 
     then:
-    legacyRun.task(':dependencyUpdates').outcome == SUCCESS
-    aggregateRun.task(':dependencyUpdates').outcome == SUCCESS
+    result.task(':dependencyUpdates').outcome == SUCCESS
     // The release candidate is a milestone, so the release revision holds guava at 15.0. A producer
     // that resolved at the default revision instead would offer 16.0-rc1 as the later version.
-    !legacy.contains('16.0-rc1')
-    aggregated == legacy
+    report.contains('"guava"')
+    !report.contains('16.0-rc1')
   }
 
   def 'Aggregates sibling projects that share a group and name'() {
@@ -224,8 +214,7 @@ final class AggregationSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = run(['dependencyUpdates', '-Dcom.github.benmanes.versions.aggregate=true',
-                      '--no-parallel'])
+    def result = run(['dependencyUpdates', '--no-parallel'])
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
@@ -253,8 +242,7 @@ final class AggregationSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = run(['dependencyUpdates', '-Dcom.github.benmanes.versions.aggregate=true',
-                      '--no-parallel'])
+    def result = run(['dependencyUpdates', '--no-parallel'])
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
@@ -280,8 +268,7 @@ final class AggregationSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = run([':app:dependencyUpdates', '--no-parallel',
-                      '-Dcom.github.benmanes.versions.aggregate=true'])
+    def result = run([':app:dependencyUpdates', '--no-parallel'])
 
     then:
     result.task(':app:dependencyUpdates').outcome == SUCCESS
@@ -300,8 +287,7 @@ final class AggregationSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = run(['dependencyUpdates', '-Dcom.github.benmanes.versions.aggregate=true',
-                      '--no-parallel'])
+    def result = run(['dependencyUpdates', '--no-parallel'])
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
@@ -325,8 +311,7 @@ final class AggregationSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = run(['dumpAggregationGraph', '-Dcom.github.benmanes.versions.aggregate=true',
-                      '--no-parallel'])
+    def result = run(['dumpAggregationGraph', '--no-parallel'])
 
     then:
     result.task(':dumpAggregationGraph').outcome == SUCCESS

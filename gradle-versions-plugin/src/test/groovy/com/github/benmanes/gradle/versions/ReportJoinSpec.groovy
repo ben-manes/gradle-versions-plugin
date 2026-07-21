@@ -3,7 +3,6 @@ package com.github.benmanes.gradle.versions
 import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 
 import com.github.benmanes.gradle.versions.reporter.result.Result
-import com.github.benmanes.gradle.versions.updates.DependencyUpdates
 import com.github.benmanes.gradle.versions.updates.OutputFormatterArgument
 import groovy.json.JsonSlurper
 import org.gradle.api.Action
@@ -121,7 +120,7 @@ final class ReportJoinSpec extends Specification {
   }
 
   private static void reportWith(project, OutputFormatterArgument formatter) {
-    new DependencyUpdates(project, null, 'milestone', formatter, 'build', 'report', false,
-      'https://services.gradle.org/versions/', RELEASE_CANDIDATE.id).run().write()
+    ProjectEvaluator.evaluate(project, null, 'milestone', formatter, 'build', 'report', false,
+      'https://services.gradle.org/versions/', RELEASE_CANDIDATE.id).write()
   }
 }

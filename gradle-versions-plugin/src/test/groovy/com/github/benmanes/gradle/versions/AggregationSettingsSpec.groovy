@@ -6,7 +6,6 @@ import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import spock.lang.Specification
-import spock.lang.Unroll
 
 /**
  * Pins three settings-plumbing gaps in the aggregation topology's per-project parameter
@@ -61,12 +60,10 @@ final class AggregationSettingsSpec extends Specification {
   }
 
   def 'Honors dependencyUpdates configuration added from the root build script own afterEvaluate'() {
-    // The plugin's own project.afterEvaluate (which freezes the task settings for the per-project
+    // The plugin's own project.afterEvaluate (which realizes the task for the per-project
     // producers) is registered during `apply`, before the root build script body runs. A root
-    // afterEvaluate written in the build script therefore registers, and so also runs, after the
-    // freeze -- so the aggregate topology must not silently drop what it configures. The legacy
-    // topology has no such freeze moment: it reads the task at execution time, so it is a valid
-    // oracle for what the setting should have done.
+    // afterEvaluate written in the build script therefore registers, and so also runs, after it,
+    // so the producers must read the settings as last configured rather than as first realized.
     given:
     new File(testProjectDir.root, 'build.gradle') <<
       """
@@ -78,21 +75,16 @@ final class AggregationSettingsSpec extends Specification {
           }
         }
       """.stripIndent()
-    def arguments = ['dependencyUpdates', '-DoutputFormatter=json', '--no-parallel']
 
     when:
-    def legacyRun = run(arguments + ['-Dcom.github.benmanes.versions.aggregate=false'])
-    def legacy = new File(testProjectDir.root, 'build/dependencyUpdates/report.json').text
-    def aggregateRun = run(arguments + ['-Dcom.github.benmanes.versions.aggregate=true'])
-    def aggregated = new File(testProjectDir.root, 'build/dependencyUpdates/report.json').text
+    def result = run(['dependencyUpdates', '-DoutputFormatter=json', '--no-parallel'])
+    def report = new File(testProjectDir.root, 'build/dependencyUpdates/report.json').text
 
     then:
-    legacyRun.task(':dependencyUpdates').outcome == SUCCESS
-    aggregateRun.task(':dependencyUpdates').outcome == SUCCESS
-    // The legacy report holds guava at 15.0: the root afterEvaluate's rejectVersionIf reached it.
-    legacy.contains('"guava"') && !legacy.contains('16.0-rc1')
-    // The aggregate report must agree, but today silently ignores the post-freeze configuration.
-    aggregated == legacy
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    // The report holds guava at 15.0: the root afterEvaluate's rejectVersionIf reached it.
+    report.contains('"guava"')
+    !report.contains('16.0-rc1')
   }
 
   def 'Honors an explicit subproject setting that equals the default over a non-default ancestor'() {
@@ -124,8 +116,7 @@ final class AggregationSettingsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = run([':app:dependencyUpdates', '--no-parallel',
-                      '-Dcom.github.benmanes.versions.aggregate=true'])
+    def result = run([':app:dependencyUpdates', '--no-parallel'])
 
     then:
     result.task(':app:dependencyUpdates').outcome == SUCCESS
@@ -168,8 +159,7 @@ final class AggregationSettingsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = run([':app:dependencyUpdates', '--no-parallel',
-                      '-Dcom.github.benmanes.versions.aggregate=true'])
+    def result = run([':app:dependencyUpdates', '--no-parallel'])
 
     then:
     result.task(':app:dependencyUpdates').outcome == SUCCESS
@@ -181,8 +171,7 @@ final class AggregationSettingsSpec extends Specification {
     result.output.contains('com.google.guava:guava')
   }
 
-  @Unroll
-  def 'Reads back an assigned resolutionStrategy closure on the #topology topology'() {
+  def 'Reads back an assigned resolutionStrategy closure'() {
     given:
     new File(testProjectDir.root, 'build.gradle') <<
       """
@@ -207,7 +196,7 @@ final class AggregationSettingsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = run([':readBack', ':dependencyUpdates', '--no-parallel'] + arguments)
+    def result = run([':readBack', ':dependencyUpdates', '--no-parallel'])
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
@@ -215,10 +204,5 @@ final class AggregationSettingsSpec extends Specification {
     // this?" silently applies its own strategy over the user's.
     result.output.contains('readBack=true')
     result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
-
-    where:
-    arguments << [['-Dcom.github.benmanes.versions.aggregate=false'],
-                  ['-Dcom.github.benmanes.versions.aggregate=true']]
-    topology = arguments.contains('-Dcom.github.benmanes.versions.aggregate=true') ? 'aggregate' : 'legacy'
   }
 }

@@ -12,8 +12,7 @@ import spock.lang.Unroll
 @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/948')
 final class AggregationConfigurationCacheSpec extends Specification {
   private static final List<String> ARGUMENTS =
-    ['dependencyUpdates', '--no-parallel', '-Dcom.github.benmanes.versions.aggregate=true',
-     '--configuration-cache']
+    ['dependencyUpdates', '--no-parallel', '--configuration-cache']
 
   @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
   private File repository

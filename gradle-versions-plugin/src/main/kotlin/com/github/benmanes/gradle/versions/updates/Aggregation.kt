@@ -13,7 +13,6 @@ import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
 import org.gradle.api.specs.Spec
 import org.gradle.api.tasks.TaskProvider
-import org.gradle.util.GradleVersion
 import java.util.concurrent.ConcurrentHashMap
 
 internal const val PARTIAL_TASK_NAME = "dependencyUpdatesPartial"
@@ -22,21 +21,9 @@ private const val AGGREGATION_CONFIGURATION = "dependencyUpdatesAggregation"
 private const val RESULTS_CONFIGURATION = "aggregateDependencyUpdatesResults"
 private const val PARAMETERS_SERVICE = "dependencyUpdatesParameters"
 private const val VERIFICATION_TYPE = "dependency-updates"
-private const val AGGREGATE_PROPERTY = "com.github.benmanes.versions.aggregate"
 
 /** The filter applied when a task leaves the configurations unrestricted. */
 internal val ALL_CONFIGURATIONS = Spec<Configuration> { true }
-
-/**
- * Returns whether the per-project producer and root accumulator topology is opted into,
- * defaulting to enabled on Gradle 8.4 and newer.
- */
-internal fun isAggregationEnabled(): Boolean =
-  when (System.getProperty(AGGREGATE_PROPERTY)) {
-    "true" -> true
-    "false" -> false
-    else -> GradleVersion.current().baseVersion >= GradleVersion.version("8.4")
-  }
 
 /** Returns whether isolated projects is enabled, which forbids configuring the other projects. */
 internal fun isIsolatedProjectsEnabled(project: Project): Boolean =

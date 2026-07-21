@@ -24,7 +24,6 @@ import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseCh
 import com.github.benmanes.gradle.versions.reporter.Reporter
 import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.updates.Coordinate
-import com.github.benmanes.gradle.versions.updates.DependencyUpdates
 import org.gradle.api.artifacts.ComponentSelection
 import com.github.benmanes.gradle.versions.updates.UnresolvedInfo
 import org.gradle.testfixtures.ProjectBuilder
@@ -655,8 +654,9 @@ final class DependencyUpdatesSpec extends Specification {
     if (gradleVersionsApiBaseUrl == null) {
       gradleVersionsApiBaseUrl = "https://services.gradle.org/versions/"
     }
-    new DependencyUpdates(project, resolutionStrategy, revision, buildOutputFormatter(outputFormatter), outputDir,
-      reportfileName, checkForGradleUpdate, gradleVersionsApiBaseUrl, gradleReleaseChannel, false, false, configurationFilter).run()
+    ProjectEvaluator.evaluate(project, resolutionStrategy, revision,
+      buildOutputFormatter(outputFormatter), outputDir, reportfileName, checkForGradleUpdate,
+      gradleVersionsApiBaseUrl, gradleReleaseChannel, false, false, configurationFilter)
   }
 
   private static OutputFormatterArgument buildOutputFormatter(outputFormatter) {
