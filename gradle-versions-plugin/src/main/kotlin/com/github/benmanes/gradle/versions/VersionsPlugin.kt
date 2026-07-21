@@ -38,20 +38,13 @@ class VersionsPlugin : Plugin<Project> {
   }
 
   private fun requireMinimumGradleVersion() {
-    if (GradleVersion.current() < GradleVersion.version("5.0")) {
-      throw GradleException("Gradle 5.0 or greater is required to apply the com.github.ben-manes.versions plugin.")
+    if (GradleVersion.current() < GradleVersion.version("8.4")) {
+      throw GradleException("Gradle 8.4 or greater is required to apply the com.github.ben-manes.versions plugin.")
     }
   }
 
   private fun requireSupportedSaxParser() {
-    val isRestrictedInPatch =
-      GradleVersion.current() >= GradleVersion.version("7.6.3") &&
-        GradleVersion.current() <= GradleVersion.version("8.0")
-    val isRestrictedInMajor =
-      GradleVersion.current() >= GradleVersion.version("8.4") &&
-        GradleVersion.current() <= GradleVersion.version("8.10.2")
-
-    if (isRestrictedInPatch || isRestrictedInMajor) {
+    if (GradleVersion.current() <= GradleVersion.version("8.10.2")) {
       try {
         val factory = SAXParserFactory.newInstance()
         factory.newSAXParser().setProperty("http://javax.xml.XMLConstants/property/accessExternalSchema", "")

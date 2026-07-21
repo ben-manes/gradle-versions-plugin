@@ -48,14 +48,6 @@ final class DifferentGradleVersionsSpec extends Specification {
         apply plugin: 'java'
         apply plugin: "com.github.ben-manes.versions"
 
-        // Gradle 7.0+ do not allow directly using compile configuration so we monkey patch
-        // an implementation configuration in for older Gradle versions.
-        if (configurations.findByName('implementation') == null) {
-          configurations.create('implementation') {
-            extendsFrom configurations.compile
-          }
-        }
-
         repositories {
           maven {
             url '${mavenRepoUrl}'
@@ -78,18 +70,12 @@ final class DifferentGradleVersionsSpec extends Specification {
         """.stripIndent()
 
     when:
-    def arguments = ['dependencyUpdates']
-    // Warning mode reporting only supported on recent versions
-    // Gradle 8.x deprecated configurations for removal in 9.0; ignore as unrelated
-    def majorVersion = gradleVersion.substring(0, gradleVersion.indexOf('.')).toInteger()
-    if ((majorVersion >= 6) && (majorVersion != 8)) {
-      arguments.add('--warning-mode=fail')
-    }
-    arguments.add('-S')
+    // Gradle 8.x deprecated configurations for removal in 9.0, so --warning-mode=fail would fail
+    // the build on a deprecation that is not the plugin's.
     def result = GradleRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
-      .withArguments(arguments)
+      .withArguments('dependencyUpdates', '-S')
       .build()
 
     then:
@@ -98,34 +84,6 @@ final class DifferentGradleVersionsSpec extends Specification {
 
     where:
     gradleVersion << [
-      '5.1.1',
-      '5.2.1',
-      '5.3.1',
-      '5.4.1',
-      '5.5.1',
-      '5.6.4',
-      '6.0.1',
-      '6.1.1',
-      '6.2.2',
-      '6.3',
-      '6.4',
-      '6.4.1',
-      '6.5.1',
-      '6.6.1',
-      '6.7.1',
-      '6.8.3',
-      '6.9.2',
-      '7.0.2',
-      '7.1.1',
-      '7.2',
-      '7.3.3',
-      '7.4.2',
-      '7.5.1',
-      '7.6.4',
-      '8.0.2',
-      '8.1.1',
-      '8.2.1',
-      '8.3',
       '8.4',
       '8.5',
       '8.6',
@@ -166,7 +124,7 @@ final class DifferentGradleVersionsSpec extends Specification {
 
     when:
     def result = GradleRunner.create()
-      .withGradleVersion('7.4.2') // 7.5.1+ breaks, keep 1 version behind
+      .withGradleVersion('8.4') // the running version must be behind the release channels
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .build()
@@ -285,18 +243,16 @@ final class DifferentGradleVersionsSpec extends Specification {
 
     when:
     def result = GradleRunner.create()
-      .withGradleVersion('6.2') // for dependency verification
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .build()
 
     then:
-    result.output.contains('Dependency verification is an incubating feature.')
     result.output.contains('com.google.inject:guice [3.0 -> 3.1]')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
-  def 'dependencyUpdates task completes without errors if configuration cache is enabled with Gradle 7.4+'() {
+  def 'dependencyUpdates task completes without errors if configuration cache is enabled'() {
     given:
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
@@ -332,71 +288,5 @@ final class DifferentGradleVersionsSpec extends Specification {
     then:
     result.output.contains('BUILD SUCCESSFUL')
     result.task(':dependencyUpdates').outcome == SUCCESS
-  }
-
-  @Unroll
-  def 'dependencyUpdates task fails if configuration cache is enabled with Gradle #gradleVersion'() {
-    given:
-    buildFile = testProjectDir.newFile('build.gradle')
-    buildFile <<
-      """
-        buildscript {
-          dependencies {
-            classpath files($classpathString)
-          }
-        }
-
-        apply plugin: 'java'
-        apply plugin: "com.github.ben-manes.versions"
-
-        // Gradle 7.0+ do not allow directly using compile configuration so we monkey patch
-        // an implementation configuration in for older Gradle versions.
-        if (configurations.findByName('implementation') == null) {
-          configurations.create('implementation') {
-            extendsFrom configurations.compile
-          }
-        }
-
-        repositories {
-          maven {
-            url '${mavenRepoUrl}'
-          }
-        }
-
-        dependencies {
-          implementation 'com.google.inject:guice:2.0'
-        }
-        """.stripIndent()
-
-    when:
-    def arguments = ['dependencyUpdates']
-    // Warning mode reporting only supported on recent versions.
-    if (gradleVersion.substring(0, gradleVersion.indexOf('.')).toInteger() >= 6) {
-      arguments.add('--warning-mode=fail')
-    }
-    arguments.add('-S')
-    arguments.add('--configuration-cache')
-    def result = GradleRunner.create()
-      .withGradleVersion(gradleVersion)
-      .withProjectDir(testProjectDir.root)
-      .withArguments(arguments)
-      .buildAndFail()
-
-    then:
-    result.output.contains('FAILURE: Build failed with an exception.')
-    result.output.contains('Configuration cache problems found in this build.')
-    result.task(':dependencyUpdates').outcome == SUCCESS
-
-    where:
-    gradleVersion << [
-      '6.6.1',
-      '6.7.1',
-      '6.8.3',
-      '6.9.2',
-      '7.0.2',
-      '7.1.1',
-      '7.2',
-      '7.3.3', // 7.4.2+ breaks
-    ]
   }
 }
