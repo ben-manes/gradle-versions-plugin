@@ -721,9 +721,6 @@ tasks.named("dependencyUpdates").configure {
 }
 ```
 
-With the configuration cache enabled, the closure cannot use `project` or the task's properties.
-Read what it needs from its `result` argument, or copy the value into a variable defined outside
-the closure.
 </details>
 
 [kotlin_dsl]: https://github.com/gradle/kotlin-dsl
