@@ -155,7 +155,9 @@ final class ConstraintsSpec extends Specification {
       .build()
 
     then:
-    !result.output.contains('org.apache.logging.log4j:log4j-core [2.16.0 -> ')
+    // Gradle constrains its own buildscript classpath, and which version it pins moves with the
+    // gradle version, so no version may be reported rather than no particular one.
+    !result.output.contains('org.apache.logging.log4j:log4j-core [')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 

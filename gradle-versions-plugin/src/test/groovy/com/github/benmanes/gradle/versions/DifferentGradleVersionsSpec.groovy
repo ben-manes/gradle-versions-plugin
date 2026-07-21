@@ -70,8 +70,8 @@ final class DifferentGradleVersionsSpec extends Specification {
         """.stripIndent()
 
     when:
-    // Gradle 8.x deprecated configurations for removal in 9.0, so --warning-mode=fail would fail
-    // the build on a deprecation that is not the plugin's.
+    // --warning-mode=fail is not used: resolving through copied configurations warns that they are
+    // deprecated for removal in 9.0.
     def result = GradleRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
