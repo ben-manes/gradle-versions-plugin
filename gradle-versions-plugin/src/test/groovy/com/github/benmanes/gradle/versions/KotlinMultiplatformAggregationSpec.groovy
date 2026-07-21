@@ -76,11 +76,8 @@ final class KotlinMultiplatformAggregationSpec extends Specification {
   }
 
   private def report() {
-    def json = new JsonSlurper()
+    return new JsonSlurper()
       .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
-    // A failure reason holds the stack trace of the call site, which differs by topology.
-    json.unresolved.dependencies.each { it.reason = null }
-    return json
   }
 
   def 'Aggregates a multiplatform project as the legacy topology does'() {

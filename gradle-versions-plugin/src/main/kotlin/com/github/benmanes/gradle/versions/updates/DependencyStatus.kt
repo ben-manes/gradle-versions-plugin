@@ -2,8 +2,6 @@ package com.github.benmanes.gradle.versions.updates
 
 import org.gradle.api.artifacts.component.ModuleComponentSelector
 import org.gradle.api.artifacts.result.UnresolvedDependencyResult
-import java.io.PrintWriter
-import java.io.StringWriter
 
 /**
  * The version status of a dependency.
@@ -45,13 +43,12 @@ class DependencyStatus {
     val info =
       unresolved?.let { dependency ->
         val selector = dependency.attempted as ModuleComponentSelector
-        val stringWriter = StringWriter()
-        dependency.failure.printStackTrace(PrintWriter(stringWriter))
+        val failure = dependency.failure
         UnresolvedInfo(
           selector.group,
           selector.module,
           selector.version,
-          stringWriter.toString(),
+          failure.message ?: failure.toString(),
         )
       }
     return PartialStatus(
