@@ -81,7 +81,7 @@ final class AggregationSettingsSpec extends Specification {
     def arguments = ['dependencyUpdates', '-DoutputFormatter=json', '--no-parallel']
 
     when:
-    def legacyRun = run(arguments)
+    def legacyRun = run(arguments + ['-Dcom.github.benmanes.versions.aggregate=false'])
     def legacy = new File(testProjectDir.root, 'build/dependencyUpdates/report.json').text
     def aggregateRun = run(arguments + ['-Dcom.github.benmanes.versions.aggregate=true'])
     def aggregated = new File(testProjectDir.root, 'build/dependencyUpdates/report.json').text
@@ -217,7 +217,8 @@ final class AggregationSettingsSpec extends Specification {
     result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
 
     where:
-    arguments << [[], ['-Dcom.github.benmanes.versions.aggregate=true']]
-    topology = arguments ? 'aggregate' : 'legacy'
+    arguments << [['-Dcom.github.benmanes.versions.aggregate=false'],
+                  ['-Dcom.github.benmanes.versions.aggregate=true']]
+    topology = arguments.contains('-Dcom.github.benmanes.versions.aggregate=true') ? 'aggregate' : 'legacy'
   }
 }

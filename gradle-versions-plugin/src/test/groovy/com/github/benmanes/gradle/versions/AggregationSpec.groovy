@@ -139,7 +139,7 @@ final class AggregationSpec extends Specification {
     def arguments = ['dependencyUpdates', '-DoutputFormatter=json', '--no-parallel']
 
     when:
-    def legacyRun = run(arguments)
+    def legacyRun = run(arguments + ['-Dcom.github.benmanes.versions.aggregate=false'])
     def legacy = new File(testProjectDir.root, 'build/dependencyUpdates/report.json').text
     def aggregateRun = run(arguments + ['-Dcom.github.benmanes.versions.aggregate=true'])
     def aggregated = new File(testProjectDir.root, 'build/dependencyUpdates/report.json').text
@@ -170,7 +170,7 @@ final class AggregationSpec extends Specification {
                      '--no-parallel']
 
     when:
-    def legacyRun = run(arguments)
+    def legacyRun = run(arguments + ['-Dcom.github.benmanes.versions.aggregate=false'])
     def legacy = new File(testProjectDir.root, 'build/dependencyUpdates/report.json').text
     def aggregateRun = run(arguments + ['-Dcom.github.benmanes.versions.aggregate=true'])
     def aggregated = new File(testProjectDir.root, 'build/dependencyUpdates/report.json').text

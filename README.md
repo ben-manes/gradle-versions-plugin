@@ -150,6 +150,22 @@ In a multi-project build, running this task in the root project will generate a 
 report for dependency updates in all subprojects. Alternatively, you can run the task separately in
 each subproject to generate separate reports for each subproject.
 
+#### Configuration cache
+
+On Gradle 8.4 and newer, the task supports the configuration cache. Each project resolves its own
+dependencies into a partial result, and the root task merges those into a single report, so no
+project reads another project's configurations. Older Gradle versions keep the previous behavior,
+which is not configuration-cache compatible.
+
+The resolution happens while the cache entry is stored, not while the task runs. Everything set on
+`dependencyUpdates`—`revision`, `checkConstraints`, `filterConfigurations`, `resolutionStrategy`
+and `rejectVersionIf`—has therefore been applied by the time the partial results are written, and
+a build that reuses the cache entry replays them.
+
+A report served from a reused entry is not stale. The dependency metadata read while resolving is
+tracked as a cache input, so publishing a new version of a dependency invalidates the entry and the
+next build resolves again.
+
 #### Revisions
 
 The `revision` task property controls the [Ivy resolution strategy][ivy_resolution_strategy] for determining what constitutes
@@ -725,6 +741,24 @@ tasks.named("dependencyUpdates").configure {
   }
 }
 ```
+
+> A custom `outputFormatter` closure is serialized into the configuration cache entry, and Gradle
+> strips a serialized closure's owner and delegate. The closure may read its own argument, its own
+> local variables and fully qualified types, but it cannot reach the build script or the task:
+> `project`, `revision` and `gradleReleaseChannel` are all unavailable, and referencing one fails
+> the build with "Cannot reference a Gradle script object from a Groovy closure". Pass what the
+> formatter needs through its `Result` argument, or capture the value in a local before the closure:
+>
+> ```groovy
+> def projectPath = project.path
+> tasks.named("dependencyUpdates").configure {
+>   outputFormatter = { result ->
+>     def reporter = new com.github.benmanes.gradle.versions.reporter.PlainTextReporter(
+>       projectPath, 'milestone', 'current')
+>     reporter.write(System.out, result)
+>   }
+> }
+> ```
 </details>
 
 [kotlin_dsl]: https://github.com/gradle/kotlin-dsl
