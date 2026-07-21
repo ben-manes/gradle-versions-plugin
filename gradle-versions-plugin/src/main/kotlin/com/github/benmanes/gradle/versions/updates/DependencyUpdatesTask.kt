@@ -48,13 +48,14 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   /** Returns the outputDir destination. */
   @Input
   var outputDir: String =
-    "${
-      project.layout.buildDirectory
-        .get()
-        .asFile
-        .relativeTo(project.layout.projectDirectory.asFile)
-        .path
-    }/dependencyUpdates"
+    run {
+      // Kept absolute when the build directory cannot be made project relative, which is thrown for
+      // a build directory redirected to another windows drive, or would otherwise read as the root.
+      val buildDirectory = project.layout.buildDirectory.get().asFile
+      val relative = buildDirectory.relativeToOrNull(project.layout.projectDirectory.asFile)
+      val base = if (relative == null || relative.path.isEmpty()) buildDirectory else relative
+      "${base.path}/dependencyUpdates"
+    }
     get() = (System.getProperties()["outputDir"] ?: field) as String
 
   /** Returns the filename of the report. */

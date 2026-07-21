@@ -38,6 +38,19 @@ final class DependencyUpdatesSpec extends Specification {
 
   private static final String NONE_VERSION = 'none'
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/pull/994')
+  def 'Default outputDir stays absolute when the build directory is the project directory'() {
+    given:
+    def project = singleProject()
+    project.layout.buildDirectory.set(project.layout.projectDirectory)
+    project.pluginManager.apply('com.github.ben-manes.versions')
+
+    expect:
+    // An empty relative path would default the report to the filesystem root.
+    def outputDir = new File(project.tasks.getByName('dependencyUpdates').outputDir)
+    outputDir.canonicalPath.startsWith(project.projectDir.canonicalPath)
+  }
+
   def 'Single project with no dependencies for many formats'() {
     given:
     def project = singleProject()
