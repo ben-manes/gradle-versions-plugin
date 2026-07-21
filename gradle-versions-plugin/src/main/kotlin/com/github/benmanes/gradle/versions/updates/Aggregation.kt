@@ -146,22 +146,25 @@ internal fun registerAggregation(
     )
   }
 
+  // Declared for every project so that computing the aggregate's dependencies configures each of
+  // them, which configure on demand skips when the task is invoked by its path rather than by name.
+  for (aggregated in project.allprojects) {
+    project.dependencies.add(
+      AGGREGATION_CONFIGURATION,
+      project.dependencies.project(mapOf("path" to aggregated.path)),
+    )
+  }
+
   if (isIsolatedProjectsEnabled(project)) {
     // Isolated projects forbids registering a task in another project, so each applies the plugin
-    // and the results are collected as artifacts of a project dependency instead. A project that
-    // does not apply the plugin has no producer and is omitted, which only a settings plugin could
-    // fix; gradle.lifecycle.beforeProject is never invoked for a callback added by a project.
+    // and the results are collected as artifacts of those dependencies alone. A project that does
+    // not apply the plugin has no producer and is omitted, which only a settings plugin could fix;
+    // gradle.lifecycle.beforeProject is never invoked for a callback added by a project.
     // https://docs.gradle.org/current/userguide/isolated_projects.html
     registerProducer(project, service)
-    for (aggregated in project.allprojects) {
-      project.dependencies.add(
-        AGGREGATION_CONFIGURATION,
-        project.dependencies.project(mapOf("path" to aggregated.path)),
-      )
-    }
   } else {
-    // Wired as task outputs rather than as project dependencies, which would drop every project
-    // that shares a group and name with a sibling as a module conflict.
+    // The results are wired as task outputs too, as module conflict resolution would otherwise drop
+    // every project that shares a group and name with a sibling from the artifacts.
     project.allprojects { aggregated ->
       val partial = registerProducer(aggregated, service)
       accumulator.configure { task -> task.partialResults.from(partial.flatMap { it.outputFile }) }
