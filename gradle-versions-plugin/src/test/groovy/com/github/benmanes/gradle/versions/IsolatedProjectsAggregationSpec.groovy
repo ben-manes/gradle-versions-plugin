@@ -162,4 +162,27 @@ final class IsolatedProjectsAggregationSpec extends Specification {
     !result.output.contains('com.google.guava:guava')
     result.output.contains('The dependency updates report is missing :lib')
   }
+
+  def 'Omits a project that has no build script from the warning'() {
+    given:
+    new File(testProjectDir.root, 'settings.gradle').text =
+      "include 'app', 'lib', 'container:nested'"
+    testProjectDir.newFolder('container', 'nested')
+    testProjectDir.newFile('container/nested/build.gradle') <<
+      """
+        plugins {
+          id 'java'
+          id 'com.github.ben-manes.versions'
+        }
+      """.stripIndent()
+
+    when:
+    def result = run()
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    // A container project cannot apply the plugin without a build script of its own, so warning
+    // about it would report what the user has no way to act on.
+    !result.output.contains('The dependency updates report is missing')
+  }
 }

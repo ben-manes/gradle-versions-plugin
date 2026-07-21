@@ -129,8 +129,11 @@ internal fun registerAggregation(
       }
     }
 
-  // Reading the paths across projects is permitted under isolated projects, unlike configuring.
-  val aggregatedPaths = project.allprojects.map { it.path }.toSet()
+  // Reading the paths across projects is permitted under isolated projects, unlike configuring. A
+  // project with no build script cannot apply the plugin there, so naming it in the completeness
+  // warning would report what the user has no way to act on.
+  val aggregatedPaths =
+    project.allprojects.filter { it.buildFile.exists() }.map { it.path }.toSet()
   accumulator.configure { task ->
     task.projectPath = project.path
     task.aggregatedProjectPaths = aggregatedPaths
