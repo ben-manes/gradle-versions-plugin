@@ -5,6 +5,7 @@ import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.CURRENT
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.NIGHTLY
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
+import org.gradle.api.Project
 import java.io.OutputStream
 
 /**
@@ -15,6 +16,16 @@ class PlainTextReporter(
   override val revision: String,
   override val gradleReleaseChannel: String,
 ) : AbstractReporter(projectPath, revision, gradleReleaseChannel) {
+  @Deprecated(
+    "Use the constructor that takes the project's path.",
+    ReplaceWith("PlainTextReporter(project.path, revision, gradleReleaseChannel)"),
+  )
+  constructor(
+    project: Project,
+    revision: String,
+    gradleReleaseChannel: String,
+  ) : this(project.path, revision, gradleReleaseChannel)
+
   /** Writes the report to the print stream. The stream is not automatically closed. */
   override fun write(
     printStream: OutputStream,

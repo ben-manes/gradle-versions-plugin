@@ -3,6 +3,7 @@ package com.github.benmanes.gradle.versions.reporter
 import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import org.gradle.api.Project
 import java.io.OutputStream
 
 /**
@@ -13,6 +14,16 @@ class JsonReporter(
   override val revision: String,
   override val gradleReleaseChannel: String,
 ) : AbstractReporter(projectPath, revision, gradleReleaseChannel) {
+  @Deprecated(
+    "Use the constructor that takes the project's path.",
+    ReplaceWith("JsonReporter(project.path, revision, gradleReleaseChannel)"),
+  )
+  constructor(
+    project: Project,
+    revision: String,
+    gradleReleaseChannel: String,
+  ) : this(project.path, revision, gradleReleaseChannel)
+
   override fun write(
     printStream: OutputStream,
     result: Result,

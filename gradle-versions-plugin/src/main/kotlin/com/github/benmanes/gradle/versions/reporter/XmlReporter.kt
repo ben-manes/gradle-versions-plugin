@@ -4,6 +4,7 @@ import com.github.benmanes.gradle.versions.reporter.result.Dependency
 import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.reporter.result.VersionAvailable
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResult
+import org.gradle.api.Project
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import java.io.OutputStream
@@ -21,6 +22,16 @@ class XmlReporter(
   override val revision: String,
   override val gradleReleaseChannel: String,
 ) : AbstractReporter(projectPath, revision, gradleReleaseChannel) {
+  @Deprecated(
+    "Use the constructor that takes the project's path.",
+    ReplaceWith("XmlReporter(project.path, revision, gradleReleaseChannel)"),
+  )
+  constructor(
+    project: Project,
+    revision: String,
+    gradleReleaseChannel: String,
+  ) : this(project.path, revision, gradleReleaseChannel)
+
   override fun write(
     printStream: OutputStream,
     result: Result,
