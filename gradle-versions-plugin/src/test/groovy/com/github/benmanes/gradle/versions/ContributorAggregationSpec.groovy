@@ -80,6 +80,9 @@ final class ContributorAggregationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
+    // Guards the flag itself: the property is a silent no-op on a Gradle whose spelling differs
+    // (pre-9.7 uses org.gradle.unsafe.isolated-projects), which would pass the non-isolated branch.
+    result.output.contains('Isolated Projects is an incubating feature.')
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
     result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
     !result.output.contains('The dependency updates report is missing')
@@ -275,6 +278,8 @@ final class ContributorAggregationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
+    // The eviction only occurs on the isolated path, so prove the flag engaged before asserting it.
+    result.output.contains('Isolated Projects is an incubating feature.')
     // Colliding projects aggregate as one, so a warning names the dropped project by group and name.
     result.output.contains('The dependency updates report is missing')
     result.output.contains('share a group and name')
