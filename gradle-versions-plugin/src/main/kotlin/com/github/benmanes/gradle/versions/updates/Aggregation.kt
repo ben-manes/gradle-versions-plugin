@@ -15,7 +15,9 @@ import org.gradle.api.specs.Spec
 import org.gradle.api.tasks.TaskProvider
 import java.util.concurrent.ConcurrentHashMap
 
-internal const val PARTIAL_TASK_NAME = "dependencyUpdatesPartial"
+// Not prefixed with "dependencyUpdates": a project with only a producer would otherwise let
+// Gradle's task abbreviation match "dependencyUpdates" to it and silently succeed with no report.
+internal const val PARTIAL_TASK_NAME = "partialDependencyUpdates"
 private const val ELEMENTS_CONFIGURATION = "dependencyUpdatesElements"
 private const val AGGREGATION_CONFIGURATION = "dependencyUpdatesAggregation"
 private const val RESULTS_CONFIGURATION = "aggregateDependencyUpdatesResults"
@@ -101,9 +103,7 @@ internal fun registerAggregation(
   project: Project,
   accumulator: TaskProvider<DependencyUpdatesTask>,
 ) {
-  val service =
-    project.gradle.sharedServices
-      .registerIfAbsent(PARAMETERS_SERVICE, DependencyUpdatesParametersService::class.java) { }
+  val service = parametersService(project)
   accumulator.configure { task -> service.get().register(project.path, task.parameters) }
   // Realizes the task, so that a configuration block on a task that nothing else realizes is still
   // applied before the producers read the settings.
@@ -176,6 +176,14 @@ internal fun registerAggregation(
 }
 
 /** Registers the task and outgoing variant that publish a single project's statuses. */
+internal fun registerProducer(project: Project): TaskProvider<DependencyUpdatesPartialTask> =
+  registerProducer(project, parametersService(project))
+
+/** Returns the build's shared parameters service, registering it if this is the first use. */
+private fun parametersService(project: Project): Provider<DependencyUpdatesParametersService> =
+  project.gradle.sharedServices
+    .registerIfAbsent(PARAMETERS_SERVICE, DependencyUpdatesParametersService::class.java) { }
+
 private fun registerProducer(
   project: Project,
   service: Provider<DependencyUpdatesParametersService>,

@@ -90,8 +90,8 @@ final class KotlinMultiplatformAggregationSpec extends Specification {
     def reused = report()
 
     then:
-    aggregateRun.task(':kmp:dependencyUpdatesPartial').outcome == SUCCESS
-    aggregateRun.task(':jvm:dependencyUpdatesPartial').outcome == SUCCESS
+    aggregateRun.task(':kmp:partialDependencyUpdates').outcome == SUCCESS
+    aggregateRun.task(':jvm:partialDependencyUpdates').outcome == SUCCESS
     hitRun.output.contains('Reusing configuration cache')
     !hitRun.output.contains('The dependency updates report is missing')
     aggregated.outdated.dependencies*.name.contains('kotlinx-coroutines-core')
