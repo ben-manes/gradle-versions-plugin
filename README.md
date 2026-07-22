@@ -28,6 +28,10 @@ checks for updates to Gradle itself.
 
 ## Usage
 
+The plugin was originally published under the `com.github.ben-manes.versions` id. That id is
+deprecated but keeps receiving releases, so existing builds continue to see updates; use
+`io.github.ben-manes.versions` in new builds.
+
 You can add this plugin to your top-level build script using the following configuration:
 
 ### `plugins` block:
@@ -170,6 +174,9 @@ plugins {
 The convention plugin's own build must have the plugin on its classpath, e.g. as an
 `implementation("io.github.ben-manes:gradle-versions-plugin:$version")` dependency in
 `buildSrc/build.gradle.kts`.
+
+Unlike the grandfathered main plugin, the contributor plugin has no `com.github.ben-manes` id: it
+is only available as `io.github.ben-manes.versions.contributor`.
 
 The contributor plugin registers only the producer that feeds the aggregate report, so
 `dependencyUpdates` remains a single task in the root project. The main plugin is a superset of
