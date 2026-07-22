@@ -192,8 +192,9 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
     if (missing.isNotEmpty()) {
       logger.warn(
         "The dependency updates report is missing ${missing.sorted().joinToString(", ")}. A project " +
-          "must apply the com.github.ben-manes.versions plugin to be aggregated when isolated " +
-          "projects is enabled, and projects that share a group and name are aggregated as one.",
+          "must apply the com.github.ben-manes.versions or com.github.ben-manes.versions.contributor " +
+          "plugin to be aggregated when isolated projects is enabled, and projects that share a " +
+          "group and name are aggregated as one.",
       )
     }
     val statuses =
