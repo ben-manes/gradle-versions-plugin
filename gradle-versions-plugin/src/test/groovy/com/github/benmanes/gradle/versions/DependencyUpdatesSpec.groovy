@@ -43,7 +43,7 @@ final class DependencyUpdatesSpec extends Specification {
     given:
     def project = singleProject()
     project.layout.buildDirectory.set(project.layout.projectDirectory)
-    project.pluginManager.apply('com.github.ben-manes.versions')
+    project.pluginManager.apply('io.github.ben-manes.versions')
 
     expect:
     // An empty relative path would default the report to the filesystem root.

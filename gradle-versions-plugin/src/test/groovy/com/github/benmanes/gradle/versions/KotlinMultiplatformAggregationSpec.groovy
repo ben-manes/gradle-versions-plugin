@@ -24,7 +24,7 @@ final class KotlinMultiplatformAggregationSpec extends Specification {
     testProjectDir.newFile('build.gradle') <<
       """
         plugins {
-          id 'com.github.ben-manes.versions'
+          id 'io.github.ben-manes.versions'
           id 'org.jetbrains.kotlin.multiplatform' version '${KOTLIN_VERSION}' apply false
         }
 

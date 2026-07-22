@@ -46,7 +46,7 @@ final class DifferentGradleVersionsSpec extends Specification {
         }
 
         apply plugin: 'java'
-        apply plugin: "com.github.ben-manes.versions"
+        apply plugin: "io.github.ben-manes.versions"
 
         repositories {
           maven {
@@ -106,7 +106,7 @@ final class DifferentGradleVersionsSpec extends Specification {
         }
 
         apply plugin: 'java'
-        apply plugin: "com.github.ben-manes.versions"
+        apply plugin: "io.github.ben-manes.versions"
 
         repositories {
           maven {
@@ -154,7 +154,7 @@ final class DifferentGradleVersionsSpec extends Specification {
         }
 
         apply plugin: 'java'
-        apply plugin: "com.github.ben-manes.versions"
+        apply plugin: "io.github.ben-manes.versions"
 
         repositories {
           maven {
@@ -264,7 +264,7 @@ final class DifferentGradleVersionsSpec extends Specification {
         }
 
         apply plugin: 'java'
-        apply plugin: "com.github.ben-manes.versions"
+        apply plugin: "io.github.ben-manes.versions"
 
         repositories {
           maven {

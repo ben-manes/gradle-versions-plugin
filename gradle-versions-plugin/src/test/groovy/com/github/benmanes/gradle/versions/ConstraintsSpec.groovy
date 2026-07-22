@@ -23,7 +23,7 @@ final class ConstraintsSpec extends Specification {
       """
         plugins {
           id 'java-library'
-          id 'com.github.ben-manes.versions'
+          id 'io.github.ben-manes.versions'
         }
 
         tasks.dependencyUpdates {
@@ -62,7 +62,7 @@ final class ConstraintsSpec extends Specification {
       """
         plugins {
           id 'java-library'
-          id 'com.github.ben-manes.versions'
+          id 'io.github.ben-manes.versions'
         }
 
         tasks.dependencyUpdates {
@@ -103,7 +103,7 @@ final class ConstraintsSpec extends Specification {
       """
         plugins {
           id 'java-library'
-          id 'com.github.ben-manes.versions'
+          id 'io.github.ben-manes.versions'
         }
 
         repositories {
@@ -139,7 +139,7 @@ final class ConstraintsSpec extends Specification {
       """
         plugins {
             java
-            id("com.github.ben-manes.versions")
+            id("io.github.ben-manes.versions")
         }
 
         tasks.withType<com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask> {
@@ -170,7 +170,7 @@ final class ConstraintsSpec extends Specification {
       """
         plugins {
             java
-            id("com.github.ben-manes.versions")
+            id("io.github.ben-manes.versions")
         }
         repositories {
             maven {
@@ -210,7 +210,7 @@ final class ConstraintsSpec extends Specification {
       """
         plugins {
             java
-            id("com.github.ben-manes.versions")
+            id("io.github.ben-manes.versions")
         }
         repositories {
             maven {

@@ -20,7 +20,7 @@ final class ConfigureOnDemandAggregationSpec extends Specification {
     testProjectDir.newFile('build.gradle') <<
       """
         plugins {
-          id 'com.github.ben-manes.versions'
+          id 'io.github.ben-manes.versions'
         }
       """.stripIndent()
     testProjectDir.newFolder('app')

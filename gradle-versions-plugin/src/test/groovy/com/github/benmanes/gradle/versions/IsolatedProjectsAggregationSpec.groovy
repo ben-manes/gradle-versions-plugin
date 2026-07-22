@@ -22,7 +22,7 @@ final class IsolatedProjectsAggregationSpec extends Specification {
     testProjectDir.newFile('build.gradle') <<
       """
         plugins {
-          id 'com.github.ben-manes.versions'
+          id 'io.github.ben-manes.versions'
         }
       """.stripIndent()
     testProjectDir.newFolder('app')
@@ -30,7 +30,7 @@ final class IsolatedProjectsAggregationSpec extends Specification {
       """
         plugins {
           id 'java'
-          id 'com.github.ben-manes.versions'
+          id 'io.github.ben-manes.versions'
         }
 
         repositories {
@@ -48,7 +48,7 @@ final class IsolatedProjectsAggregationSpec extends Specification {
       """
         plugins {
           id 'java'
-          id 'com.github.ben-manes.versions'
+          id 'io.github.ben-manes.versions'
         }
 
         repositories {
@@ -172,7 +172,7 @@ final class IsolatedProjectsAggregationSpec extends Specification {
       """
         plugins {
           id 'java'
-          id 'com.github.ben-manes.versions'
+          id 'io.github.ben-manes.versions'
         }
       """.stripIndent()
 

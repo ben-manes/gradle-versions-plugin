@@ -53,6 +53,13 @@ gradlePlugin {
       description = properties["POM_DESCRIPTION"].toString()
       tags.set(listOf("dependencies", "versions", "updates"))
     }
+    create("legacyVersionsPlugin") {
+      id = properties["PLUGIN_LEGACY_NAME"].toString()
+      implementationClass = properties["PLUGIN_LEGACY_NAME_CLASS"].toString()
+      displayName = properties["POM_LEGACY_NAME"].toString()
+      description = properties["POM_LEGACY_DESCRIPTION"].toString()
+      tags.set(listOf("dependencies", "versions", "updates"))
+    }
     create("versionsContributorPlugin") {
       id = properties["PLUGIN_CONTRIBUTOR_NAME"].toString()
       implementationClass = properties["PLUGIN_CONTRIBUTOR_NAME_CLASS"].toString()

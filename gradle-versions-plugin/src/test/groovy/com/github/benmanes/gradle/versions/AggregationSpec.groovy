@@ -22,7 +22,7 @@ final class AggregationSpec extends Specification {
     testProjectDir.newFile('build.gradle') <<
       """
         plugins {
-          id 'com.github.ben-manes.versions'
+          id 'io.github.ben-manes.versions'
         }
 
         allprojects {
@@ -181,7 +181,7 @@ final class AggregationSpec extends Specification {
     new File(testProjectDir.root, 'build.gradle').text =
       """
         plugins {
-          id 'com.github.ben-manes.versions'
+          id 'io.github.ben-manes.versions'
         }
 
         allprojects {
@@ -255,7 +255,7 @@ final class AggregationSpec extends Specification {
     new File(testProjectDir.root, 'build.gradle') <<
       """
         subprojects {
-          apply plugin: 'com.github.ben-manes.versions'
+          apply plugin: 'io.github.ben-manes.versions'
         }
       """.stripIndent()
     new File(testProjectDir.root, 'app/build.gradle') <<

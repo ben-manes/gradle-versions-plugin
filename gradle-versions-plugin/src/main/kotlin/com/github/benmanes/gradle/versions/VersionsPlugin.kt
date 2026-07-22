@@ -16,7 +16,7 @@ import javax.xml.parsers.SAXParserFactory
  */
 class VersionsPlugin : Plugin<Project> {
   override fun apply(project: Project) {
-    requireMinimumGradleVersion("com.github.ben-manes.versions")
+    requireMinimumGradleVersion("io.github.ben-manes.versions")
 
     val tasks = project.tasks
     if (!tasks.names.contains("dependencyUpdates")) {

@@ -1,5 +1,5 @@
 [![Build](https://github.com/ben-manes/gradle-versions-plugin/workflows/build/badge.svg)](https://github.com/ben-manes/gradle-versions-plugin/actions)
-[![gradlePluginPortal](https://img.shields.io/maven-metadata/v/https/plugins.gradle.org/m2/com/github/ben-manes/versions/com.github.ben-manes.versions.gradle.plugin/maven-metadata.xml.svg?label=gradlePluginPortal)](https://plugins.gradle.org/plugin/com.github.ben-manes.versions)
+[![gradlePluginPortal](https://img.shields.io/maven-metadata/v/https/plugins.gradle.org/m2/io/github/ben-manes/versions/io.github.ben-manes.versions.gradle.plugin/maven-metadata.xml.svg?label=gradlePluginPortal)](https://plugins.gradle.org/plugin/io.github.ben-manes.versions)
 
 # Gradle Versions Plugin
 
@@ -28,6 +28,13 @@ checks for updates to Gradle itself.
 
 ## Usage
 
+The plugin was originally published under the `com.github.ben-manes.versions` id. That id is
+deprecated but keeps receiving releases, so existing builds continue to see updates; use
+`io.github.ben-manes.versions` in new builds. If you apply the plugin through a `buildscript` or
+`initscript` `classpath` dependency rather than the `plugins` block, update the coordinate to
+`io.github.ben-manes:gradle-versions-plugin`—the old `com.github.ben-manes:gradle-versions-plugin`
+coordinate receives no further releases.
+
 You can add this plugin to your top-level build script using the following configuration:
 
 ### `plugins` block:
@@ -35,14 +42,14 @@ You can add this plugin to your top-level build script using the following confi
 
 ```groovy
 plugins {
-  id "com.github.ben-manes.versions" version "$version"
+  id "io.github.ben-manes.versions" version "$version"
 }
 ```
 or via the
 
 ### `buildscript` block:
 ```groovy
-apply plugin: "com.github.ben-manes.versions"
+apply plugin: "io.github.ben-manes.versions"
 
 buildscript {
   repositories {
@@ -50,7 +57,7 @@ buildscript {
   }
 
   dependencies {
-    classpath "com.github.ben-manes:gradle-versions-plugin:$version"
+    classpath "io.github.ben-manes:gradle-versions-plugin:$version"
   }
 }
 ```
@@ -69,7 +76,7 @@ initscript {
   }
 
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:+'
+    classpath 'io.github.ben-manes:gradle-versions-plugin:+'
   }
 }
 
@@ -96,7 +103,7 @@ initscript {
     gradlePluginPortal()
   }
   dependencies {
-    classpath("com.github.ben-manes:gradle-versions-plugin:+")
+    classpath("io.github.ben-manes:gradle-versions-plugin:+")
   }
 }
 
@@ -156,24 +163,27 @@ so configuring the root project's task covers every project unless a subproject 
 
 Under [isolated projects](https://docs.gradle.org/current/userguide/isolated_projects.html) a
 project plugin cannot register a task in another project, so a project only contributes to the
-aggregate report if it applies a plugin itself. Keep applying `com.github.ben-manes.versions` in
-the root project, and apply `com.github.ben-manes.versions.contributor` in every other project,
+aggregate report if it applies a plugin itself. Keep applying `io.github.ben-manes.versions` in
+the root project, and apply `io.github.ben-manes.versions.contributor` in every other project,
 typically from a convention plugin they already share:
 
 ```kotlin
 // buildSrc/src/main/kotlin/my-conventions.gradle.kts
 plugins {
-  id("com.github.ben-manes.versions.contributor")
+  id("io.github.ben-manes.versions.contributor")
 }
 ```
 
 The convention plugin's own build must have the plugin on its classpath, e.g. as an
-`implementation("com.github.ben-manes:gradle-versions-plugin:$version")` dependency in
+`implementation("io.github.ben-manes:gradle-versions-plugin:$version")` dependency in
 `buildSrc/build.gradle.kts`.
+
+Unlike the grandfathered main plugin, the contributor plugin has no `com.github.ben-manes` id: it
+is only available as `io.github.ben-manes.versions.contributor`.
 
 The contributor plugin registers only the producer that feeds the aggregate report, so
 `dependencyUpdates` remains a single task in the root project. The main plugin is a superset of
-the contributor plugin: a project that applies `com.github.ben-manes.versions` instead still feeds
+the contributor plugin: a project that applies `io.github.ben-manes.versions` instead still feeds
 the aggregate report, and also gets its own `dependencyUpdates` task covering itself and its
 subprojects. So for a separate per-project report, apply the main plugin to that project—there is
 no need to apply both. Running `dependencyUpdates` by name then includes that project's report,

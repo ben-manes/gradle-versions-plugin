@@ -23,7 +23,7 @@ final class JavaLibrarySpec extends Specification {
       """
         plugins {
           id 'java-library'
-          id 'com.github.ben-manes.versions'
+          id 'io.github.ben-manes.versions'
         }
 
         repositories {
