@@ -21,7 +21,7 @@ internal const val PARTIAL_TASK_NAME = "partialDependencyUpdates"
 private const val ELEMENTS_CONFIGURATION = "dependencyUpdatesElements"
 private const val AGGREGATION_CONFIGURATION = "dependencyUpdatesAggregation"
 private const val RESULTS_CONFIGURATION = "aggregateDependencyUpdatesResults"
-private const val PARAMETERS_SERVICE = "dependencyUpdatesParameters"
+internal const val PARAMETERS_SERVICE = "dependencyUpdatesParameters"
 private const val VERIFICATION_TYPE = "dependency-updates"
 
 /** The filter applied when a task leaves the configurations unrestricted. */
@@ -178,7 +178,7 @@ internal fun registerAggregation(
 }
 
 /** Registers the task and outgoing variant that publish a single project's statuses. */
-private fun registerProducer(
+internal fun registerProducer(
   project: Project,
   service: Provider<DependencyUpdatesParametersService>,
 ): TaskProvider<DependencyUpdatesPartialTask> {

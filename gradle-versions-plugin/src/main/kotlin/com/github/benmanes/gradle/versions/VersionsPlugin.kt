@@ -16,7 +16,7 @@ import javax.xml.parsers.SAXParserFactory
  */
 class VersionsPlugin : Plugin<Project> {
   override fun apply(project: Project) {
-    requireMinimumGradleVersion()
+    requireMinimumGradleVersion("com.github.ben-manes.versions")
 
     val tasks = project.tasks
     if (!tasks.names.contains("dependencyUpdates")) {
@@ -31,12 +31,6 @@ class VersionsPlugin : Plugin<Project> {
           )
         }
       registerAggregation(project, task)
-    }
-  }
-
-  private fun requireMinimumGradleVersion() {
-    if (GradleVersion.current() < GradleVersion.version("8.4")) {
-      throw GradleException("Gradle 8.4 or greater is required to apply the com.github.ben-manes.versions plugin.")
     }
   }
 
@@ -60,5 +54,11 @@ class VersionsPlugin : Plugin<Project> {
         )
       }
     }
+  }
+}
+
+internal fun requireMinimumGradleVersion(pluginId: String) {
+  if (GradleVersion.current() < GradleVersion.version("8.4")) {
+    throw GradleException("Gradle 8.4 or greater is required to apply the $pluginId plugin.")
   }
 }
