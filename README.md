@@ -16,6 +16,7 @@ checks for updates to Gradle itself.
   - [Related plugins](#related-plugins)
 - [dependencyUpdates](#dependencyupdates)
   - [Multi-project build](#multi-project-build)
+  - [Isolated projects](#isolated-projects)
   - [Revisions](#revisions)
   - [RejectVersionsIf and componentSelection](#rejectversionsif-and-componentselection)
   - [Gradle Release Channel](#gradle-release-channel)
@@ -144,6 +145,39 @@ field explaining failures or missing information. The update check may be disabl
 In a multi-project build, running this task in the root project will generate a consolidated/merged
 report for dependency updates in all subprojects. Alternatively, you can run the task separately in
 each subproject to generate separate reports for each subproject.
+
+The report is aggregated from a task in each project, so it is compatible with parallel execution
+and the configuration cache. Each project takes the settings that control resolution (`revision`,
+`rejectVersionIf` or a full `resolutionStrategy`, `filterConfigurations`, `checkConstraints`, and
+`checkBuildEnvironmentConstraints`) from the nearest project up the hierarchy whose task set them,
+so configuring the root project's task covers every project unless a subproject configures its own.
+
+#### Isolated projects
+
+Under [isolated projects](https://docs.gradle.org/current/userguide/isolated_projects.html) a
+project plugin cannot register a task in another project, so a project only contributes to the
+aggregate report if it applies a plugin itself. Keep applying `com.github.ben-manes.versions` in
+the root project, and apply `com.github.ben-manes.versions.contributor` in every other project,
+typically from a convention plugin they already share:
+
+```kotlin
+// buildSrc/src/main/kotlin/my-conventions.gradle.kts
+plugins {
+  id("com.github.ben-manes.versions.contributor")
+}
+```
+
+The contributor plugin registers only the task that feeds the aggregate report, so
+`dependencyUpdates` remains a single task in the root project. The main plugin is a superset of
+the contributor plugin: a project that applies `com.github.ben-manes.versions` instead still feeds
+the aggregate report, and also gets its own `dependencyUpdates` task covering itself and its
+subprojects. So for a separate per-project report, apply the main plugin to that project—there is
+no need to apply both. Running `dependencyUpdates` by name then includes that project's report,
+as it always has when the plugin is applied to more than one project; run a single task by its
+path to get just that report (e.g., `:subproject:dependencyUpdates`).
+
+Under isolated projects, contributing projects that share a group and name are aggregated as one;
+the console warns about any project the report is missing.
 
 #### Revisions
 
@@ -371,8 +405,8 @@ Have a look at [`examples/groovy`](https://github.com/ben-manes/gradle-versions-
 $ ./gradlew publishToMavenLocal
 
 # Try out the samples
-$ ./gradlew -p examples/groovy dependencyUpdate
-$ ./gradlew -p examples/kotlin dependencyUpdate
+$ ./gradlew -p examples/groovy dependencyUpdates
+$ ./gradlew -p examples/kotlin dependencyUpdates
 ```
 
 ### Report format
