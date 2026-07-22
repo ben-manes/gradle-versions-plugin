@@ -22,10 +22,10 @@ final class KotlinDslUsageSpec extends Specification {
 
         plugins {
           java
-          id("com.github.ben-manes.versions")
+          id("io.github.ben-manes.versions")
         }
 
-        apply(plugin = "com.github.ben-manes.versions")
+        apply(plugin = "io.github.ben-manes.versions")
 
         repositories {
           maven(url = "${mavenRepoUrl}")

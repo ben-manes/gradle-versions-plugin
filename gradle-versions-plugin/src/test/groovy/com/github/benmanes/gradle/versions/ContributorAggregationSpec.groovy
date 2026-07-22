@@ -23,7 +23,7 @@ final class ContributorAggregationSpec extends Specification {
     testProjectDir.newFile('build.gradle') <<
       """
         plugins {
-          id 'com.github.ben-manes.versions'
+          id 'io.github.ben-manes.versions'
         }
       """.stripIndent()
     testProjectDir.newFolder('app')
@@ -31,7 +31,7 @@ final class ContributorAggregationSpec extends Specification {
       """
         plugins {
           id 'java'
-          id 'com.github.ben-manes.versions.contributor'
+          id 'io.github.ben-manes.versions.contributor'
         }
 
         repositories {
@@ -49,7 +49,7 @@ final class ContributorAggregationSpec extends Specification {
       """
         plugins {
           id 'java'
-          id 'com.github.ben-manes.versions.contributor'
+          id 'io.github.ben-manes.versions.contributor'
         }
 
         repositories {
@@ -122,8 +122,8 @@ final class ContributorAggregationSpec extends Specification {
       """
         plugins {
           id 'java'
-          id 'com.github.ben-manes.versions'
-          id 'com.github.ben-manes.versions.contributor'
+          id 'io.github.ben-manes.versions'
+          id 'io.github.ben-manes.versions.contributor'
         }
 
         repositories {
@@ -181,7 +181,7 @@ final class ContributorAggregationSpec extends Specification {
     new File(testProjectDir.root, 'build.gradle').text =
       """
         plugins {
-          id 'com.github.ben-manes.versions.contributor'
+          id 'io.github.ben-manes.versions.contributor'
         }
       """.stripIndent()
 
@@ -227,7 +227,7 @@ final class ContributorAggregationSpec extends Specification {
     new File(testProjectDir.root, 'build.gradle').text =
       """
         plugins {
-          id 'com.github.ben-manes.versions'
+          id 'io.github.ben-manes.versions'
         }
       """.stripIndent()
     ['a', 'b'].each { parent ->
@@ -237,7 +237,7 @@ final class ContributorAggregationSpec extends Specification {
       """
         plugins {
           id 'java'
-          id 'com.github.ben-manes.versions.contributor'
+          id 'io.github.ben-manes.versions.contributor'
         }
 
         group = 'com.example'
@@ -256,7 +256,7 @@ final class ContributorAggregationSpec extends Specification {
       """
         plugins {
           id 'java'
-          id 'com.github.ben-manes.versions.contributor'
+          id 'io.github.ben-manes.versions.contributor'
         }
 
         group = 'com.example'

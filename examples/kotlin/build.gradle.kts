@@ -8,11 +8,11 @@ buildscript {
   }
 
   dependencies {
-    classpath("com.github.ben-manes:gradle-versions-plugin:+")
+    classpath("io.github.ben-manes:gradle-versions-plugin:+")
   }
 }
 
-apply(plugin = "com.github.ben-manes.versions")
+apply(plugin = "io.github.ben-manes.versions")
 
 repositories {
   mavenCentral()

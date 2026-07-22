@@ -22,7 +22,7 @@ final class AggregationSettingsSpec extends Specification {
     testProjectDir.newFile('build.gradle') <<
       """
         plugins {
-          id 'com.github.ben-manes.versions'
+          id 'io.github.ben-manes.versions'
         }
 
         allprojects {
@@ -95,7 +95,7 @@ final class AggregationSettingsSpec extends Specification {
     new File(testProjectDir.root, 'build.gradle') <<
       """
         subprojects {
-          apply plugin: 'com.github.ben-manes.versions'
+          apply plugin: 'io.github.ben-manes.versions'
         }
 
         tasks.dependencyUpdates {
@@ -133,7 +133,7 @@ final class AggregationSettingsSpec extends Specification {
     new File(testProjectDir.root, 'build.gradle') <<
       """
         subprojects {
-          apply plugin: 'com.github.ben-manes.versions'
+          apply plugin: 'io.github.ben-manes.versions'
         }
 
         tasks.dependencyUpdates {

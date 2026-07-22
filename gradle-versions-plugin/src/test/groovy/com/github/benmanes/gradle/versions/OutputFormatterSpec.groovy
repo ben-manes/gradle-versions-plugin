@@ -45,7 +45,7 @@ final class OutputFormatterSpec extends Specification {
         }
 
         apply plugin: 'java'
-        apply plugin: 'com.github.ben-manes.versions'
+        apply plugin: 'io.github.ben-manes.versions'
 
         repositories {
           maven {
@@ -86,7 +86,7 @@ final class OutputFormatterSpec extends Specification {
         }
 
         apply plugin: 'java'
-        apply plugin: 'com.github.ben-manes.versions'
+        apply plugin: 'io.github.ben-manes.versions'
 
         repositories {
           maven {
@@ -126,7 +126,7 @@ final class OutputFormatterSpec extends Specification {
         }
 
         apply plugin: 'java'
-        apply plugin: 'com.github.ben-manes.versions'
+        apply plugin: 'io.github.ben-manes.versions'
 
         repositories {
           maven {
@@ -168,7 +168,7 @@ final class OutputFormatterSpec extends Specification {
         }
 
         apply plugin: 'java'
-        apply plugin: 'com.github.ben-manes.versions'
+        apply plugin: 'io.github.ben-manes.versions'
 
         repositories {
           maven {
@@ -228,7 +228,7 @@ final class OutputFormatterSpec extends Specification {
         }
 
         apply plugin: 'java'
-        apply plugin: 'com.github.ben-manes.versions'
+        apply plugin: 'io.github.ben-manes.versions'
 
         repositories {
           maven {
@@ -355,7 +355,7 @@ final class OutputFormatterSpec extends Specification {
         }
 
         apply plugin: 'java'
-        apply plugin: 'com.github.ben-manes.versions'
+        apply plugin: 'io.github.ben-manes.versions'
 
         repositories {
           maven {
@@ -469,7 +469,7 @@ final class OutputFormatterSpec extends Specification {
         }
 
         apply plugin: 'java'
-        apply plugin: 'com.github.ben-manes.versions'
+        apply plugin: 'io.github.ben-manes.versions'
 
         repositories {
           maven {
@@ -549,7 +549,7 @@ Failed to determine the latest version for the following dependencies (use --inf
         }
 
         apply plugin: 'java'
-        apply plugin: 'com.github.ben-manes.versions'
+        apply plugin: 'io.github.ben-manes.versions'
 
         repositories {
           maven {
