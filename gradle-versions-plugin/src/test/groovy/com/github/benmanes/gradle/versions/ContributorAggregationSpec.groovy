@@ -167,6 +167,10 @@ final class ContributorAggregationSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('Configuration cache entry reused.')
+    // The aggregated content must survive the cache hit, not just the task outcome.
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    !result.output.contains('The dependency updates report is missing')
   }
 
   def 'Fails to match dependencyUpdates when only the contributor plugin is applied'() {
@@ -190,5 +194,93 @@ final class ContributorAggregationSpec extends Specification {
     // The producer's name must not let task abbreviation resolve 'dependencyUpdates' to it, which
     // would run the internal task and succeed with no report.
     result.output.contains("Cannot locate tasks that match ':dependencyUpdates'")
+  }
+
+  def 'Fails to match dependencyUpdates in a contributor-only subproject'() {
+    when:
+    // :app applies only the contributor plugin in the setup fixture, so its producer must exist.
+    def producer = run(':app:partialDependencyUpdates')
+
+    then:
+    producer.task(':app:partialDependencyUpdates').outcome == SUCCESS
+
+    when:
+    def result = GradleRunner.create()
+      .withGradleVersion('9.7.0-rc-1')
+      .withProjectDir(testProjectDir.root)
+      .withArguments(':app:dependencyUpdates')
+      .withPluginClasspath()
+      .buildAndFail()
+
+    then:
+    // The producer's name must not let task abbreviation resolve 'dependencyUpdates' to it, which
+    // would run the internal task and succeed with no report.
+    result.output.contains("Cannot locate tasks that match ':app:dependencyUpdates'")
+  }
+
+  def 'Aggregates projects that share a group and name as one'() {
+    given:
+    new File(testProjectDir.root, 'settings.gradle').text = "include 'a:api', 'b:api'"
+    new File(testProjectDir.root, 'build.gradle').text =
+      """
+        plugins {
+          id 'com.github.ben-manes.versions'
+        }
+      """.stripIndent()
+    ['a', 'b'].each { parent ->
+      testProjectDir.newFolder(parent, 'api')
+    }
+    new File(testProjectDir.root, 'a/api/build.gradle') <<
+      """
+        plugins {
+          id 'java'
+          id 'com.github.ben-manes.versions.contributor'
+        }
+
+        group = 'com.example'
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation 'com.google.inject:guice:2.0'
+        }
+      """.stripIndent()
+    new File(testProjectDir.root, 'b/api/build.gradle') <<
+      """
+        plugins {
+          id 'java'
+          id 'com.github.ben-manes.versions.contributor'
+        }
+
+        group = 'com.example'
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation 'com.google.guava:guava:15.0'
+        }
+      """.stripIndent()
+
+    when:
+    def result = run('dependencyUpdates', '-Dorg.gradle.isolated-projects=true',
+      '--configuration-cache')
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    // Colliding projects aggregate as one, so a warning names the dropped project by group and name.
+    result.output.contains('The dependency updates report is missing')
+    result.output.contains('share a group and name')
+    // Exactly one survives module conflict resolution; which one wins is not guaranteed.
+    def guiceLine = 'com.google.inject:guice [2.0 -> 3.1]'
+    def guavaLine = 'com.google.guava:guava [15.0 -> 16.0-rc1]'
+    result.output.contains(guiceLine) != result.output.contains(guavaLine)
   }
 }
