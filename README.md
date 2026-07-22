@@ -167,7 +167,11 @@ plugins {
 }
 ```
 
-The contributor plugin registers only the task that feeds the aggregate report, so
+The convention plugin's own build must have the plugin on its classpath, e.g. as an
+`implementation("com.github.ben-manes:gradle-versions-plugin:$version")` dependency in
+`buildSrc/build.gradle.kts`.
+
+The contributor plugin registers only the producer that feeds the aggregate report, so
 `dependencyUpdates` remains a single task in the root project. The main plugin is a superset of
 the contributor plugin: a project that applies `com.github.ben-manes.versions` instead still feeds
 the aggregate report, and also gets its own `dependencyUpdates` task covering itself and its
