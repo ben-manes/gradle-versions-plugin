@@ -15,7 +15,9 @@ import org.gradle.api.specs.Spec
 import org.gradle.api.tasks.TaskProvider
 import java.util.concurrent.ConcurrentHashMap
 
-internal const val PARTIAL_TASK_NAME = "dependencyUpdatesPartial"
+// Not prefixed with "dependencyUpdates": a project with only a producer would otherwise let
+// Gradle's task abbreviation match "dependencyUpdates" to it and silently succeed with no report.
+internal const val PARTIAL_TASK_NAME = "partialDependencyUpdates"
 private const val ELEMENTS_CONFIGURATION = "dependencyUpdatesElements"
 private const val AGGREGATION_CONFIGURATION = "dependencyUpdatesAggregation"
 private const val RESULTS_CONFIGURATION = "aggregateDependencyUpdatesResults"

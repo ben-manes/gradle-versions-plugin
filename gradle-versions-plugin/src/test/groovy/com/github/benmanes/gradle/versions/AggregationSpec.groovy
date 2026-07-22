@@ -139,8 +139,8 @@ final class AggregationSpec extends Specification {
       .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
 
     then:
-    result.task(':app:dependencyUpdatesPartial').outcome == SUCCESS
-    result.task(':lib:dependencyUpdatesPartial').outcome == SUCCESS
+    result.task(':app:partialDependencyUpdates').outcome == SUCCESS
+    result.task(':lib:partialDependencyUpdates').outcome == SUCCESS
     report.outdated.dependencies*.name.containsAll(['guice', 'guava'])
   }
 
