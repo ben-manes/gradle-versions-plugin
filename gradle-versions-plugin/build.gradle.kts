@@ -56,7 +56,7 @@ gradlePlugin {
     create("legacyVersionsPlugin") {
       id = properties["PLUGIN_LEGACY_NAME"].toString()
       implementationClass = properties["PLUGIN_LEGACY_NAME_CLASS"].toString()
-      displayName = properties["POM_NAME"].toString()
+      displayName = properties["POM_LEGACY_NAME"].toString()
       description = properties["POM_LEGACY_DESCRIPTION"].toString()
       tags.set(listOf("dependencies", "versions", "updates"))
     }

@@ -49,6 +49,30 @@ final class LegacyPluginIdSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
+  def 'current io.github id does not warn'() {
+    given:
+    testProjectDir.newFile('build.gradle') <<
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'io.github.ben-manes.versions'
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .build()
+
+    then:
+    !result.output.contains('is deprecated')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
   def 'applying both the deprecated and the current id is harmless'() {
     given:
     testProjectDir.newFile('build.gradle') <<

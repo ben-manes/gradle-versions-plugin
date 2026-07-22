@@ -30,7 +30,10 @@ checks for updates to Gradle itself.
 
 The plugin was originally published under the `com.github.ben-manes.versions` id. That id is
 deprecated but keeps receiving releases, so existing builds continue to see updates; use
-`io.github.ben-manes.versions` in new builds.
+`io.github.ben-manes.versions` in new builds. If you apply the plugin through a `buildscript` or
+`initscript` `classpath` dependency rather than the `plugins` block, update the coordinate to
+`io.github.ben-manes:gradle-versions-plugin`—the old `com.github.ben-manes:gradle-versions-plugin`
+coordinate receives no further releases.
 
 You can add this plugin to your top-level build script using the following configuration:
 
