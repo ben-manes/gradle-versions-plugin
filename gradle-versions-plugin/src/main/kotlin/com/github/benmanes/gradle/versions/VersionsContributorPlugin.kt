@@ -1,7 +1,5 @@
 package com.github.benmanes.gradle.versions
 
-import com.github.benmanes.gradle.versions.updates.DependencyUpdatesParametersService
-import com.github.benmanes.gradle.versions.updates.PARAMETERS_SERVICE
 import com.github.benmanes.gradle.versions.updates.registerProducer
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -19,10 +17,6 @@ import org.gradle.api.Project
 class VersionsContributorPlugin : Plugin<Project> {
   override fun apply(project: Project) {
     requireMinimumGradleVersion("com.github.ben-manes.versions.contributor")
-
-    val service =
-      project.gradle.sharedServices
-        .registerIfAbsent(PARAMETERS_SERVICE, DependencyUpdatesParametersService::class.java) { }
-    registerProducer(project, service)
+    registerProducer(project)
   }
 }
