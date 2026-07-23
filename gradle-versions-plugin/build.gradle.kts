@@ -1,3 +1,5 @@
+import org.gradle.plugin.compatibility.compatibility
+
 plugins {
   alias(libs.plugins.kotlin.jvm)
   alias(libs.plugins.dokka)
@@ -52,6 +54,11 @@ gradlePlugin {
       displayName = properties["POM_NAME"].toString()
       description = properties["POM_DESCRIPTION"].toString()
       tags.set(listOf("dependencies", "versions", "updates"))
+      compatibility {
+        features {
+          configurationCache = true
+        }
+      }
     }
     create("legacyVersionsPlugin") {
       id = properties["PLUGIN_LEGACY_NAME"].toString()
@@ -59,6 +66,11 @@ gradlePlugin {
       displayName = properties["POM_LEGACY_NAME"].toString()
       description = properties["POM_LEGACY_DESCRIPTION"].toString()
       tags.set(listOf("dependencies", "versions", "updates"))
+      compatibility {
+        features {
+          configurationCache = true
+        }
+      }
     }
     create("versionsContributorPlugin") {
       id = properties["PLUGIN_CONTRIBUTOR_NAME"].toString()
@@ -66,6 +78,11 @@ gradlePlugin {
       displayName = properties["POM_CONTRIBUTOR_NAME"].toString()
       description = properties["POM_CONTRIBUTOR_DESCRIPTION"].toString()
       tags.set(listOf("dependencies", "versions", "updates"))
+      compatibility {
+        features {
+          configurationCache = true
+        }
+      }
     }
   }
 }
