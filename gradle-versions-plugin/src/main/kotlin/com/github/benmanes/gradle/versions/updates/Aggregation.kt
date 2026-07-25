@@ -140,6 +140,10 @@ internal fun registerAggregation(
     task.projectDirectory.set(project.layout.projectDirectory)
     task.partialResults.from(
       results.map { configuration ->
+        // https://github.com/ben-manes/gradle-versions-plugin/issues/781
+        // A build that locks all of its configurations would lock this one too, which holds only
+        // the project dependencies that the plugin declares and has no lock state of its own.
+        configuration.resolutionStrategy.deactivateDependencyLocking()
         configuration.incoming
           .artifactView { view ->
             view.componentFilter { id -> id is ProjectComponentIdentifier }

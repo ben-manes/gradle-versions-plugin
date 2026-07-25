@@ -165,6 +165,10 @@ class Resolver(
     // They are queried separately above as added dependencies.
     copy.dependencyConstraints.clear()
 
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/781
+    // The copy inherits activated dependency locking but has no lock state of its own.
+    copy.resolutionStrategy.deactivateDependencyLocking()
+
     addRevisionFilter(copy, revision)
     addAttributes(copy, configuration)
     addCustomResolutionStrategy(copy, current.coordinates)
@@ -305,6 +309,9 @@ class Resolver(
 
     val coordinates = hashMapOf<Coordinate.Key, Coordinate>()
     val copy = configuration.copyRecursive().setTransitive(transitive)
+
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/781
+    copy.resolutionStrategy.deactivateDependencyLocking()
 
     disableAutoTargetJvm(copy)
     val root = copy.incoming.resolutionResult.root
