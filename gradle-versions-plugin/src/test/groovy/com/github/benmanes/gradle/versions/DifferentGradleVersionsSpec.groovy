@@ -54,7 +54,7 @@ final class DifferentGradleVersionsSpec extends Specification {
 
         repositories {
           maven {
-            url '${mavenRepoUrl}'
+            url = '${mavenRepoUrl}'
           }
         }
 
@@ -99,6 +99,7 @@ final class DifferentGradleVersionsSpec extends Specification {
     '8.9'         | 'all'
     '8.10'        | 'all'
     '8.11.1'      | 'fail'
+    '9.6.1'       | 'fail'
   }
 
   @Unroll
