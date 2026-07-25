@@ -8,7 +8,6 @@ import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.VerificationType
 import org.gradle.api.internal.StartParameterInternal
-import org.gradle.api.plugins.JvmEcosystemPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
@@ -193,11 +192,6 @@ private fun registerProducer(
   project: Project,
   service: Provider<DependencyUpdatesParametersService>,
 ): TaskProvider<DependencyUpdatesPartialTask> {
-  // https://github.com/ben-manes/gradle-versions-plugin/issues/746
-  // The query copies request a target jvm version, which only this plugin's schema rules can
-  // interpret. Without it a project that applies no jvm plugin cannot resolve a jvm dependency.
-  project.pluginManager.apply(JvmEcosystemPlugin::class.java)
-
   val tasks = project.tasks
   if (tasks.names.contains(PARTIAL_TASK_NAME)) {
     return tasks.named(PARTIAL_TASK_NAME, DependencyUpdatesPartialTask::class.java)

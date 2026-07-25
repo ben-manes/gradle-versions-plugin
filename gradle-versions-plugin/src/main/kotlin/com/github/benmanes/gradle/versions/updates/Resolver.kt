@@ -234,9 +234,14 @@ class Resolver(
   }
 
   private fun disableAutoTargetJvm(configuration: Configuration) {
-    // Disable the auto target jvm for the configuration
+    // Disable the auto target jvm inherited from the copied configuration
     // https://github.com/ben-manes/gradle-versions-plugin/issues/727#issuecomment-1427132589
-    configuration.attributes.attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, Integer.MAX_VALUE)
+    // Only override an inherited value: injecting the attribute where no jvm plugin registered its
+    // schema rules makes the request uninterpretable and fails variant selection.
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/746
+    if (configuration.attributes.contains(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE)) {
+      configuration.attributes.attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, Integer.MAX_VALUE)
+    }
   }
 
   /** Adds the attributes from the source to the target. */
