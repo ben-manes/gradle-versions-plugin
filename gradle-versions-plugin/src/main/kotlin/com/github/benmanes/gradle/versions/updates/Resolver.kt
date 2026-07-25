@@ -160,6 +160,11 @@ class Resolver(
     copy.dependencies.addAll(latest)
     copy.dependencies.addAll(inheritedKotlin)
 
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/802
+    // The copy inherits the original constraints, which would reject the dynamic query versions.
+    // They are queried separately above as added dependencies.
+    copy.dependencyConstraints.clear()
+
     addRevisionFilter(copy, revision)
     addAttributes(copy, configuration)
     addCustomResolutionStrategy(copy, current.coordinates)

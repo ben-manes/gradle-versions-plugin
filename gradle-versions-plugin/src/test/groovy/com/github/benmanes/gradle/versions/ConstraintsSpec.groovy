@@ -5,6 +5,7 @@ import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
+import spock.lang.Issue
 import spock.lang.Specification
 
 final class ConstraintsSpec extends Specification {
@@ -198,6 +199,47 @@ final class ConstraintsSpec extends Specification {
 
     then:
     result.output.contains('org.apache.logging.log4j:log4j-core [2.16.0 -> ')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/802')
+  def 'Show updates for a dependency held to a strict version by a constraint'() {
+    given:
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          api 'com.google.inject:guice:2.0'
+          constraints {
+            api('com.google.inject:guice') {
+              version {
+                strictly '2.0'
+              }
+            }
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then:
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
