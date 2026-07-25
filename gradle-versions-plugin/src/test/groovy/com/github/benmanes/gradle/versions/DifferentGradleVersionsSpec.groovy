@@ -8,6 +8,7 @@ import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -33,6 +34,9 @@ final class DifferentGradleVersionsSpec extends Specification {
     mavenRepoUrl = getClass().getResource('/maven/').toURI()
   }
 
+  // On JVMs below 17, Gradle 8.11+ emits its own deprecation for running on that JVM, so the
+  // rows with warnings fatal only run on Java 17, and Gradle 9 requires it anyway.
+  @IgnoreIf({ data.warningMode == 'fail' && !jvm.java17Compatible })
   @Unroll
   def 'dependencyUpdates task completes without errors with Gradle #gradleVersion'() {
     given:
@@ -70,12 +74,15 @@ final class DifferentGradleVersionsSpec extends Specification {
         """.stripIndent()
 
     when:
-    // --warning-mode=fail is not used: resolving through copied configurations warns that they are
-    // deprecated for removal in 9.0.
+    // Gradle 8.3 through 8.10 warns that the copied query configurations are deprecated for
+    // dependency declaration, so those versions cannot run under --warning-mode=fail. The
+    // configuration role that emitted it was dropped in 8.11, and the copies are the only
+    // deprecation the plugin produces, so later versions run with warnings fatal.
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/749
     def result = GradleRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
-      .withArguments('dependencyUpdates', '-S')
+      .withArguments('dependencyUpdates', '-S', "--warning-mode=$warningMode")
       .build()
 
     then:
@@ -83,14 +90,15 @@ final class DifferentGradleVersionsSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
-    gradleVersion << [
-      '8.4',
-      '8.5',
-      '8.6',
-      '8.7',
-      '8.8',
-      '8.9',
-    ]
+    gradleVersion | warningMode
+    '8.4'         | 'all'
+    '8.5'         | 'all'
+    '8.6'         | 'all'
+    '8.7'         | 'all'
+    '8.8'         | 'all'
+    '8.9'         | 'all'
+    '8.10'        | 'all'
+    '8.11.1'      | 'fail'
   }
 
   @Unroll
