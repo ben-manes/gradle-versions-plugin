@@ -36,7 +36,7 @@ fun String.isNonStable(): Boolean {
   return isStable.not()
 }
 
-tasks.withType<DependencyUpdatesTask> {
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
 
   // Example 1: reject all non stable versions
   rejectVersionIf {
