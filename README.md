@@ -20,8 +20,10 @@ checks for updates to Gradle itself.
   - [Revisions](#revisions)
   - [RejectVersionsIf and componentSelection](#rejectversionsif-and-componentselection)
   - [Gradle Release Channel](#gradle-release-channel)
+  - [Gradle Versions Api Base URL](#gradle-versions-api-base-url)
   - [Constraints](#constraints)
-  - [Kotlin DSL](#kotlin-dsl)
+  - [Optional parameters](#optional-parameters)
+  - [Configuration filter](#configuration-filter)
   - [Try out the samples](#try-out-the-samples)
   - [Report format](#report-format)
 <!-- /TOC -->
@@ -39,18 +41,55 @@ You can add this plugin to your top-level build script using the following confi
 
 ### `plugins` block:
 
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+plugins {
+  id("io.github.ben-manes.versions") version "$version"
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
 
 ```groovy
 plugins {
   id "io.github.ben-manes.versions" version "$version"
 }
 ```
+
+</details>
+
 or via the
 
 ### `buildscript` block:
-```groovy
-apply plugin: "io.github.ben-manes.versions"
 
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+buildscript {
+  repositories {
+    gradlePluginPortal()
+  }
+
+  dependencies {
+    classpath("io.github.ben-manes:gradle-versions-plugin:$version")
+  }
+}
+
+apply(plugin = "io.github.ben-manes.versions")
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
 buildscript {
   repositories {
     gradlePluginPortal()
@@ -60,19 +99,55 @@ buildscript {
     classpath "io.github.ben-manes:gradle-versions-plugin:$version"
   }
 }
+
+apply plugin: "io.github.ben-manes.versions"
 ```
+
+</details>
+
+Prefer the `plugins` block: it is the modern replacement for `buildscript`-based plugin
+application.
 
 ### Using a Gradle init script ###
 You can also transparently add the plugin to every Gradle project that you run via a [Gradle init script](https://docs.gradle.org/current/userguide/init_scripts.html):
 
 <details open>
+<summary>Kotlin</summary>
+
+`$HOME/.gradle/init.d/add-versions-plugin.init.gradle.kts`
+```kotlin
+import com.github.benmanes.gradle.versions.VersionsPlugin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+initscript {
+  repositories {
+    gradlePluginPortal()
+  }
+
+  dependencies {
+    classpath("io.github.ben-manes:gradle-versions-plugin:+")
+  }
+}
+
+allprojects {
+  apply<VersionsPlugin>()
+
+  tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+    // configure the task, for example wrt. resolution strategies
+  }
+}
+```
+
+</details>
+
+<details>
 <summary>Groovy</summary>
 
 `$HOME/.gradle/init.d/add-versions-plugin.gradle`
 ```groovy
 initscript {
   repositories {
-     gradlePluginPortal()
+    gradlePluginPortal()
   }
 
   dependencies {
@@ -84,33 +159,6 @@ allprojects {
   apply plugin: com.github.benmanes.gradle.versions.VersionsPlugin
 
   tasks.named("dependencyUpdates").configure {
-    // configure the task, for example wrt. resolution strategies
-  }
-}
-```
-
-</details>
-
-<details open>
-<summary>Kotlin</summary>
-
-`$HOME/.gradle/init.d/add-versions-plugin.init.gradle.kts`
-```kotlin
-import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
-
-initscript {
-  repositories {
-    gradlePluginPortal()
-  }
-  dependencies {
-    classpath("io.github.ben-manes:gradle-versions-plugin:+")
-  }
-}
-
-allprojects {
-  apply<com.github.benmanes.gradle.versions.VersionsPlugin>()
-
-  tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
     // configure the task, for example wrt. resolution strategies
   }
 }
@@ -167,12 +215,29 @@ aggregate report if it applies a plugin itself. Keep applying `io.github.ben-man
 the root project, and apply `io.github.ben-manes.versions.contributor` in every other project,
 typically from a convention plugin they already share:
 
+<details open>
+<summary>Kotlin</summary>
+
 ```kotlin
 // buildSrc/src/main/kotlin/my-conventions.gradle.kts
 plugins {
   id("io.github.ben-manes.versions.contributor")
 }
 ```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
+// buildSrc/src/main/groovy/my-conventions.gradle
+plugins {
+  id 'io.github.ben-manes.versions.contributor'
+}
+```
+
+</details>
 
 The convention plugin's own build must have the plugin on its classpath, e.g. as an
 `implementation("io.github.ben-manes:gradle-versions-plugin:$version")` dependency in
@@ -205,7 +270,7 @@ The following strategies are natively supported by Gradle:
 
 The strategy can be specified either on the task or as a system property for ad hoc usage:
 
-```groovy
+```bash
 gradle dependencyUpdates -Drevision=release
 ```
 
@@ -215,6 +280,20 @@ To further define which version to accept, you need to define what means an unst
 no agreed standard on this, but this is a good starting point:
 
 <details open>
+<summary>Kotlin</summary>
+
+```kotlin
+fun String.isNonStable(): Boolean {
+  val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { uppercase().contains(it) }
+  val regex = "^[0-9,.v-]+(-r)?$".toRegex()
+  val isStable = stableKeyword || regex.matches(this)
+  return isStable.not()
+}
+```
+
+</details>
+
+<details>
 <summary>Groovy</summary>
 
 ```groovy
@@ -227,26 +306,64 @@ def isNonStable = { String version ->
 
 </details>
 
-<details open>
-<summary>Kotlin</summary>
-
-```kotlin
-fun isNonStable(version: String): Boolean {
-    val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.uppercase().contains(it) }
-    val regex = "^[0-9,.v-]+(-r)?$".toRegex()
-    val isStable = stableKeyword || regex.matches(version)
-    return isStable.not()
-}
-```
-
-</details>
-
 You can then configure [Component Selection Rules][component_selection_rules].
 The current version of a component can be retrieved with the `currentVersion` property.
 You can either use the simplified syntax `rejectVersionIf { ... }` or configure a complete resolution strategy.
 
 
 <details open>
+<summary>Kotlin</summary>
+
+<!--  Always modify first examples/kotlin and make sure that it works. THEN modify the README -->
+
+Example 1: reject all non stable versions
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+// https://github.com/ben-manes/gradle-versions-plugin
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  rejectVersionIf {
+    candidate.version.isNonStable()
+  }
+}
+```
+
+Example 2: disallow release candidates as upgradable versions from stable versions
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+// https://github.com/ben-manes/gradle-versions-plugin
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  rejectVersionIf {
+    candidate.version.isNonStable() && !currentVersion.isNonStable()
+  }
+}
+```
+
+Example 3: using the full syntax
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+// https://github.com/ben-manes/gradle-versions-plugin
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  resolutionStrategy {
+    componentSelection {
+      all {
+        if (candidate.version.isNonStable() && !currentVersion.isNonStable()) {
+          reject("Release candidate")
+        }
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
 <summary>Groovy</summary>
 
 <!--  Always modify first examples/groovy and make sure that it works. THEN modify the README -->
@@ -257,7 +374,7 @@ Example 1: reject all non stable versions
 // https://github.com/ben-manes/gradle-versions-plugin
 tasks.named("dependencyUpdates").configure {
   rejectVersionIf {
-    isNonStable(it.candidate.version)
+    isNonStable(candidate.version)
   }
 }
 ```
@@ -268,7 +385,7 @@ Example 2: disallow release candidates as upgradable versions from stable versio
 // https://github.com/ben-manes/gradle-versions-plugin
 tasks.named("dependencyUpdates").configure {
   rejectVersionIf {
-    isNonStable(it.candidate.version) && !isNonStable(it.currentVersion)
+    isNonStable(candidate.version) && !isNonStable(currentVersion)
   }
 }
 ```
@@ -281,7 +398,7 @@ tasks.named("dependencyUpdates").configure {
   resolutionStrategy {
     componentSelection {
       all {
-        if (isNonStable(it.candidate.version) && !isNonStable(it.currentVersion)) {
+        if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
           reject('Release candidate')
         }
       }
@@ -290,56 +407,6 @@ tasks.named("dependencyUpdates").configure {
 }
 ```
 
-</details>
-<details open>
-<summary>Kotlin</summary>
-
-<!--  Always modify first examples/kotlin and make sure that it works. THEN modify the README -->
-
-Example 1: reject all non stable versions
-
-```kotlin
-import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
-
-// https://github.com/ben-manes/gradle-versions-plugin
-tasks.withType<DependencyUpdatesTask> {
-  rejectVersionIf {
-    isNonStable(candidate.version)
-  }
-}
-```
-
-Example 2: disallow release candidates as upgradable versions from stable versions
-
-```kotlin
-import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
-
-// https://github.com/ben-manes/gradle-versions-plugin
-tasks.withType<DependencyUpdatesTask> {
-  rejectVersionIf {
-    isNonStable(candidate.version) && !isNonStable(currentVersion)
-  }
-}
-```
-
-Example 3: using the full syntax
-
-```kotlin
-import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
-
-// https://github.com/ben-manes/gradle-versions-plugin
-tasks.withType<DependencyUpdatesTask> {
-  resolutionStrategy {
-    componentSelection {
-      all(Action<ComponentSelectionWithCurrent> {
-        if (isNonStable(candidate.version) && !isNonStable(currentVersion)) {
-          reject("Release candidate")
-        }
-      })
-    }
-  }
-}
-```
 </details>
 
 #### Gradle Release Channel
@@ -352,9 +419,29 @@ The `gradleReleaseChannel` task property controls which release channel of the G
 
 The default is `release-candidate`. The value can be changed as shown below:
 
-```groovy
-dependencyUpdates.gradleReleaseChannel="current"
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  gradleReleaseChannel = "current"
+}
 ```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
+tasks.named("dependencyUpdates").configure {
+  gradleReleaseChannel = "current"
+}
+```
+
+</details>
 
 #### Gradle Versions Api Base URL
 
@@ -371,23 +458,43 @@ attribute of the `dependencyUpdates` task.
 If you want to check external constraints (defined in init scripts or by Gradle since 7.3.2) you can do so by specifying the `checkBuildEnvironmentConstraints`
 attribute of the `dependencyUpdates` task.
 
-```groovy
-tasks.named("dependencyUpdates").configure {
-    checkConstraints = true
-    checkBuildEnvironmentConstraints = true
-}
-```
-
-#### Kotlin DSL
-
-If using Gradle's [kotlin-dsl][kotlin_dsl], you could configure the `dependencyUpdates` like this:
+<details open>
+<summary>Kotlin</summary>
 
 ```kotlin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
-tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  checkConstraints = true
+  checkBuildEnvironmentConstraints = true
+}
+```
 
-  // optional parameters
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
+tasks.named("dependencyUpdates").configure {
+  checkConstraints = true
+  checkBuildEnvironmentConstraints = true
+}
+```
+
+</details>
+
+#### Optional parameters
+
+The `dependencyUpdates` task takes several optional parameters to adjust its behavior:
+
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
   checkForGradleUpdate = true
   outputFormatter = "json"
   outputDir = "build/dependencyUpdates"
@@ -395,19 +502,52 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
 }
 ```
 
-Note: Do use the `plugins { .. }` syntax if you use the Kotlin DSL.
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
+tasks.named("dependencyUpdates").configure {
+  checkForGradleUpdate = true
+  outputFormatter = "json"
+  outputDir = "build/dependencyUpdates"
+  reportfileName = "report"
+}
+```
+
+</details>
 
 #### Configuration filter
 You can change which dependency configurations the plugin checks for updates like this:
 
-```groovy
-// https://github.com/ben-manes/gradle-versions-plugin
-tasks.named("dependencyUpdates").configure {
-  filterConfigurations {
-    it.name.equals("runtimeClasspath") || it.name.equals("compileClasspath")
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  filterConfigurations = Spec<Configuration> {
+    it.name == "runtimeClasspath" || it.name == "compileClasspath"
   }
 }
 ```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
+tasks.named("dependencyUpdates").configure {
+  filterConfigurations {
+    it.name == "runtimeClasspath" || it.name == "compileClasspath"
+  }
+}
+```
+
+</details>
 
 
 #### Try out the samples
@@ -435,21 +575,21 @@ The task property `outputFormatter` controls the report output format. The follo
 
 You can also set multiple output formats using comma as the separator:
 
-```groovy
+```bash
 gradle dependencyUpdates -Drevision=release -DoutputFormatter=json,xml,html
 ```
 
 The task property `outputDir` controls the output directory for the report  file(s). The directory will be created if it does not exist.
 The default value is set to `build/dependencyUpdates`
 
-```groovy
+```bash
 gradle dependencyUpdates -Drevision=release -DoutputFormatter=json -DoutputDir=/any/path/with/permission
 ```
 
 Last the property `reportfileName` sets the filename (without extension) of the generated report. It defaults to `report`.
 The extension will be set according to the used output format.
 
-```groovy
+```bash
 gradle dependencyUpdates -Drevision=release -DoutputFormatter=json -DreportfileName=myCustomReport
 ```
 
@@ -485,7 +625,7 @@ Gradle updates:
 ```
 </details>
 
-Alternatively, the report may be outputed to a structured file.
+Alternatively, the report may be output to a structured file.
 
 <details>
 <summary>Json report</summary>
@@ -727,9 +867,50 @@ Alternatively, the report may be outputed to a structured file.
 <details>
 <summary>Custom report</summary>
 
-If you need to create a report in a custom format, you can set the `dependencyUpdates` tasks's `outputFormatter` property to a Closure. The closure will be called with a single argument that is an instance of [com.github.benmanes.gradle.versions.reporter.result.Result](gradle-versions-plugin/src/main/kotlin/com/github/benmanes/gradle/versions/reporter/result/Result.kt).
+If you need to create a report in a custom format, you can provide a formatter function to the
+`dependencyUpdates` task's `outputFormatter`. The formatter receives the analysis as an instance
+of [com.github.benmanes.gradle.versions.reporter.result.Result](gradle-versions-plugin/src/main/kotlin/com/github/benmanes/gradle/versions/reporter/result/Result.kt):
+in the Kotlin DSL it is the receiver of the formatter block, and in Groovy it is passed as the
+closure argument.
 
 For example, if you wanted to create an html table for the upgradable dependencies, you could use:
+
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  outputFormatter {
+    val updatable = outdated.dependencies
+    if (updatable.isNotEmpty()) {
+      val table = buildString {
+        appendLine("<table>")
+        appendLine("  <thead>")
+        appendLine("    <tr><td>Group</td><td>Module</td><td>Current version</td><td>Latest version</td></tr>")
+        appendLine("  </thead>")
+        appendLine("  <tbody>")
+        updatable.forEach { dependency ->
+          appendLine(
+            "    <tr><td>${dependency.group}</td><td>${dependency.name}</td>" +
+              "<td>${dependency.version}</td>" +
+              "<td>${dependency.available.release ?: dependency.available.milestone}</td></tr>"
+          )
+        }
+        appendLine("  </tbody>")
+        appendLine("</table>")
+      }
+      println(table)
+    }
+  }
+}
+```
+
+</details>
+
+<details open>
+<summary>Groovy</summary>
 
 ```groovy
 tasks.named("dependencyUpdates").configure {
@@ -771,6 +952,7 @@ tasks.named("dependencyUpdates").configure {
 
 </details>
 
-[kotlin_dsl]: https://github.com/gradle/kotlin-dsl
+</details>
+
 [ivy_resolution_strategy]: https://ant.apache.org/ivy/history/2.4.0/settings/version-matchers.html#Latest%20(Status)%20Matcher
 [component_selection_rules]: https://docs.gradle.org/current/userguide/dynamic_versions.html#sec:component_selection_rules
