@@ -134,16 +134,24 @@ internal fun registerAggregation(
   // warning would report what the user has no way to act on.
   val aggregatedPaths =
     project.allprojects.filter { it.buildFile.exists() }.map { it.path }.toSet()
+
+  // https://github.com/ben-manes/gradle-versions-plugin/issues/781
+  // https://github.com/ben-manes/gradle-versions-plugin/issues/1004
+  // A build that locks all of its configurations would lock this one too, which holds only the
+  // project dependencies that the plugin declares and has no lock state of its own. Deactivated
+  // after every project is evaluated, so that a locking hook registered from a build script's own
+  // afterEvaluate does not win, and before the task graph is computed, which a composite build
+  // does while the strategy is still mutable.
+  project.gradle.projectsEvaluated {
+    results.get().resolutionStrategy.deactivateDependencyLocking()
+  }
+
   accumulator.configure { task ->
     task.projectPath = project.path
     task.aggregatedProjectPaths = aggregatedPaths
     task.projectDirectory.set(project.layout.projectDirectory)
     task.partialResults.from(
       results.map { configuration ->
-        // https://github.com/ben-manes/gradle-versions-plugin/issues/781
-        // A build that locks all of its configurations would lock this one too, which holds only
-        // the project dependencies that the plugin declares and has no lock state of its own.
-        configuration.resolutionStrategy.deactivateDependencyLocking()
         configuration.incoming
           .artifactView { view ->
             view.componentFilter { id -> id is ProjectComponentIdentifier }
