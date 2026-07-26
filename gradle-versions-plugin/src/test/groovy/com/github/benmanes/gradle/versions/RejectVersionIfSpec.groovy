@@ -356,4 +356,23 @@ final class RejectVersionIfSpec extends Specification {
     closureState.startsWith("${Closure.OWNER_FIRST}|")
     !closureState.contains('ComponentSelectionWithCurrent')
   }
+
+  def 'an unresolved dependency reports the cause that failed it'() {
+    given: 'a filter that throws, which Gradle reports as an unresolved dependency'
+    buildFile = writeBuildFile('candidate.version == noSuchProperty')
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+    def report = new JsonSlurper().parseText(new File(reportFolder, 'report.json').text)
+
+    then: 'the reason names the failing rule instead of stopping at the resolution failure'
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    report.unresolved.dependencies*.name == ['guava']
+    report.unresolved.dependencies[0].reason.contains('Could not resolve com.google.guava:guava')
+    report.unresolved.dependencies[0].reason.contains('noSuchProperty')
+  }
 }
