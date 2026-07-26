@@ -208,6 +208,65 @@ final class CompositeBuildSpec extends Specification {
     'an afterEvaluate hook' | 'afterEvaluate { configurations.all { resolutionStrategy.activateDependencyLocking() } }'
   }
 
+  // The composite computes its task graph under configure on demand before projectsEvaluated
+  // fires, so no lifecycle callback can mutate the results strategy in time.
+  private void compositeUsingConfigureOnDemand() {
+    testProjectDir.newFile('settings.gradle') << "includeBuild 'child'"
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          api 'com.google.inject:guice:2.0'
+        }
+      """.stripIndent()
+    includedBuild('child')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1006')
+  def 'Reports the updates of a composite build with configure on demand'() {
+    given:
+    compositeUsingConfigureOnDemand()
+
+    when:
+    def result = run(':dependencyUpdates', '--configure-on-demand')
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+  }
+
+  // Gradle 9 requires JVM 17. The guard that rejects the mutation is worded differently there,
+  // and only this combination matches a build that sets all three properties in gradle.properties.
+  @Requires({ jvm.java17Compatible })
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1006')
+  def 'Reports the updates of a composite build with configure on demand in parallel'() {
+    given:
+    compositeUsingConfigureOnDemand()
+
+    when:
+    def result = GradleRunner.create()
+      .withGradleVersion('9.6.1')
+      .withProjectDir(testProjectDir.root)
+      .withArguments(':dependencyUpdates', '--configure-on-demand', '--parallel',
+        '--configuration-cache')
+      .withPluginClasspath()
+      .build()
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+  }
+
   def 'Reports the updates of an included build from the including build'() {
     given:
     testProjectDir.newFile('settings.gradle') << "includeBuild 'child'"
