@@ -70,6 +70,32 @@ final class KotlinDslUsageSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
+  def 'rejectVersionIf binds to the ComponentFilter overload from kotlin-dsl'() {
+    given:
+    buildFile << '''
+      tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+          checkForGradleUpdate = true
+          outputFormatter = "json"
+          outputDir = "build/dependencyUpdates"
+          reportfileName = "report"
+          rejectVersionIf {
+            candidate.version == "3.1"
+          }
+        }
+    '''
+
+    when:
+    def result = GradleRunner.create()
+      .withPluginClasspath()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .build()
+
+    then:
+    result.output.contains('''com.google.inject:guice [2.0 -> 3.0]''')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
   @Unroll
   def "user friendly kotlin-dsl with #outputFormatter produces #expectedOutput"() {
     given:
