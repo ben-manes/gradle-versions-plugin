@@ -8,6 +8,7 @@ import org.junit.rules.TemporaryFolder
 import spock.lang.Issue
 import spock.lang.Requires
 import spock.lang.Specification
+import spock.lang.Unroll
 
 // Gradle 9 requires JVM 17.
 @Requires({ jvm.java17Compatible })
@@ -68,10 +69,14 @@ final class SettingsPluginAggregationSpec extends Specification {
   }
 
   private def run(List<String> arguments) {
+    return runWith([':dependencyUpdates'] + arguments)
+  }
+
+  private def runWith(List<String> arguments) {
     return GradleRunner.create()
       .withGradleVersion('9.7.0-rc-1')
       .withProjectDir(testProjectDir.root)
-      .withArguments([':dependencyUpdates'] + arguments)
+      .withArguments(arguments)
       .withPluginClasspath()
       .build()
   }
@@ -146,18 +151,41 @@ final class SettingsPluginAggregationSpec extends Specification {
     settingsApplying(true)
 
     when:
-    def result = GradleRunner.create()
-      .withGradleVersion('9.7.0-rc-1')
-      .withProjectDir(testProjectDir.root)
-      .withArguments(['dependencyUpdates'] + ISOLATED)
-      .withPluginClasspath()
-      .build()
+    def result = runWith(['dependencyUpdates'] + ISOLATED)
 
     then:
     // Only the root has the reporting task, so the bare name runs one task and one merged report.
     result.tasks.findAll { it.path.endsWith(':dependencyUpdates') }*.path == [':dependencyUpdates']
     result.output.count('com.google.inject:guice [2.0 -> 3.1]') == 1
     !result.output.contains('The dependency updates report is missing')
+  }
+
+  @Unroll
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1006')
+  def 'Aggregates every project with configure on demand when invoked #invocation'() {
+    given:
+    createBuild([])
+    settingsApplying(true)
+    // An included build computes the task graph while the aggregate's configuration is still being
+    // set up, which is what configure on demand then resolves too early. Single threaded, which a
+    // root-only application survives: every project has a producer here, so there is no ordering
+    // left that hides it.
+    testProjectDir.newFolder('included')
+    new File(testProjectDir.root, 'included/settings.gradle').text = ''
+    new File(testProjectDir.root, 'included/build.gradle').text = ''
+    new File(testProjectDir.root, 'settings.gradle') << "includeBuild 'included'\n"
+
+    when:
+    def result = runWith([invocation, '--configure-on-demand', '--no-parallel'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    !result.output.contains('The dependency updates report is missing')
+
+    where:
+    invocation << [':dependencyUpdates', 'dependencyUpdates']
   }
 
   def 'Applies once when a project also applies the plugin itself'() {
