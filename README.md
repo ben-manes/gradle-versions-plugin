@@ -309,6 +309,7 @@ def isNonStable = { String version ->
 You can then configure [Component Selection Rules][component_selection_rules].
 The current version of a component can be retrieved with the `currentVersion` property.
 You can either use the simplified syntax `rejectVersionIf { ... }` or configure a complete resolution strategy.
+Multiple registrations compose, so a candidate is rejected if any registered filter rejects it.
 
 
 <details open>

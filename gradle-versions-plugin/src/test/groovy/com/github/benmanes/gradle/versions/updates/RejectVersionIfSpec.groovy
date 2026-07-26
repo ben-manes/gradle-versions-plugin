@@ -147,6 +147,187 @@ final class RejectVersionIfSpec extends Specification {
     report.current.dependencies*.name == ['guava']
   }
 
+  def 'two rejectVersionIf calls both apply'() {
+    given: 'each filter targets a different dependency, so either alone leaves the other unfiltered'
+    buildFile = writeScript('''
+      dependencies {
+        implementation 'com.google.inject:guice:2.0'
+      }
+
+      tasks.named('dependencyUpdates').configure {
+        outputFormatter = 'json'
+        checkForGradleUpdate = false
+        rejectVersionIf {
+          candidate.version == '16.0-rc1'
+        }
+        rejectVersionIf {
+          candidate.version == '3.1'
+        }
+      }
+      ''')
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+    def report = new JsonSlurper().parseText(new File(reportFolder, 'report.json').text)
+
+    then: 'guava has no update (its only candidate was rejected) and guice stops at 3.0'
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    report.current.dependencies*.name == ['guava']
+    report.outdated.dependencies*.name == ['guice']
+    report.outdated.dependencies[0].available.milestone == '3.0'
+  }
+
+  def 'rejectVersionIf then resolutionStrategy both apply'() {
+    given:
+    buildFile = writeScript('''
+      dependencies {
+        implementation 'com.google.inject:guice:2.0'
+      }
+
+      tasks.named('dependencyUpdates').configure {
+        outputFormatter = 'json'
+        checkForGradleUpdate = false
+        rejectVersionIf {
+          candidate.version == '16.0-rc1'
+        }
+        resolutionStrategy {
+          componentSelection {
+            all {
+              if (candidate.version == '3.1') {
+                reject('rejected by componentSelection')
+              }
+            }
+          }
+        }
+      }
+      ''')
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+    def report = new JsonSlurper().parseText(new File(reportFolder, 'report.json').text)
+
+    then: 'the rejectVersionIf filter and the componentSelection rule both took effect'
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    report.current.dependencies*.name == ['guava']
+    report.outdated.dependencies*.name == ['guice']
+    report.outdated.dependencies[0].available.milestone == '3.0'
+  }
+
+  def 'resolutionStrategy then rejectVersionIf both apply'() {
+    given:
+    buildFile = writeScript('''
+      dependencies {
+        implementation 'com.google.inject:guice:2.0'
+      }
+
+      tasks.named('dependencyUpdates').configure {
+        outputFormatter = 'json'
+        checkForGradleUpdate = false
+        resolutionStrategy {
+          componentSelection {
+            all {
+              if (candidate.version == '3.1') {
+                reject('rejected by componentSelection')
+              }
+            }
+          }
+        }
+        rejectVersionIf {
+          candidate.version == '16.0-rc1'
+        }
+      }
+      ''')
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+    def report = new JsonSlurper().parseText(new File(reportFolder, 'report.json').text)
+
+    then: 'the componentSelection rule and the rejectVersionIf filter both took effect'
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    report.current.dependencies*.name == ['guava']
+    report.outdated.dependencies*.name == ['guice']
+    report.outdated.dependencies[0].available.milestone == '3.0'
+  }
+
+  def 'resolutionStrategy with no argument clears a previously registered rejectVersionIf'() {
+    given:
+    buildFile = writeScript('''
+      dependencies {
+        implementation 'com.google.inject:guice:2.0'
+      }
+
+      tasks.named('dependencyUpdates').configure {
+        rejectVersionIf {
+          candidate.version == '3.1'
+        }
+        resolutionStrategy()
+      }
+      ''')
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then: 'the reset escape hatch wins, so nothing is rejected'
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+  }
+
+  def 'the deprecated resolutionStrategy property assignment replaces a previously registered rejectVersionIf'() {
+    given: 'the rejectVersionIf filter targets guava, so a survived guava rejection would prove it was clobbered'
+    buildFile = writeScript('''
+      dependencies {
+        implementation 'com.google.inject:guice:2.0'
+      }
+
+      tasks.named('dependencyUpdates').configure {
+        outputFormatter = 'json'
+        checkForGradleUpdate = false
+        rejectVersionIf {
+          candidate.version == '16.0-rc1'
+        }
+        resolutionStrategy = {
+          componentSelection {
+            all {
+              if (candidate.version == '3.1') {
+                reject('rejected by componentSelection')
+              }
+            }
+          }
+        }
+      }
+      ''')
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+    def report = new JsonSlurper().parseText(new File(reportFolder, 'report.json').text)
+
+    then: 'the assignment replaced the guava filter rather than composing with it, so guava is outdated again'
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    report.outdated.dependencies*.name.sort() == ['guava', 'guice']
+    report.outdated.dependencies.find { it.name == 'guava' }.available.milestone == '16.0-rc1'
+    report.outdated.dependencies.find { it.name == 'guice' }.available.milestone == '3.0'
+  }
+
   def 'the closure supplied by the build script is left unmodified'() {
     given:
     buildFile = writeScript('''

@@ -250,12 +250,23 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   }
 
   /**
-   * Sets the [resolutionStrategy] to the provided strategy.
+   * Accumulates the provided strategy with any previously registered one, or clears every
+   * previously registered strategy when called with no argument.
    *
    * @param resolutionStrategy the resolution strategy
    */
+  @JvmOverloads
   fun resolutionStrategy(resolutionStrategy: Action<in ResolutionStrategyWithCurrent>? = null) {
-    parameters.resolutionStrategy = resolutionStrategy
+    val existing = parameters.resolutionStrategy
+    parameters.resolutionStrategy =
+      if (resolutionStrategy == null || existing == null) {
+        resolutionStrategy
+      } else {
+        Action<ResolutionStrategyWithCurrent> { current ->
+          existing.execute(current)
+          resolutionStrategy.execute(current)
+        }
+      }
     parameters.resolutionStrategySet = true
     this.resolutionStrategy = null
   }
