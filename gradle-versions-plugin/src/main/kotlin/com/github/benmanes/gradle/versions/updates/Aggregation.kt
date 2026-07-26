@@ -20,7 +20,6 @@ import java.util.concurrent.ConcurrentHashMap
 internal const val PARTIAL_TASK_NAME = "partialDependencyUpdates"
 private const val ELEMENTS_CONFIGURATION = "dependencyUpdatesElements"
 private const val AGGREGATION_CONFIGURATION = "dependencyUpdatesAggregation"
-private const val RESULTS_CONFIGURATION = "aggregateDependencyUpdatesResults"
 private const val PARAMETERS_SERVICE = "dependencyUpdatesParameters"
 private const val VERIFICATION_TYPE = "dependency-updates"
 
@@ -113,11 +112,20 @@ internal fun registerAggregation(
     project.configurations.dependencyScope(AGGREGATION_CONFIGURATION) { configuration ->
       configuration.description = "Collects the projects to aggregate dependency updates from."
     }
+  // https://github.com/ben-manes/gradle-versions-plugin/issues/781
+  // https://github.com/ben-manes/gradle-versions-plugin/issues/1004
+  // Detached, so that a build which locks all of its configurations does not lock this one, which
+  // holds only the project dependencies that the plugin declares and has no lock state of its own.
+  // A container configuration cannot opt out: deactivating the locking at creation is undone by the
+  // build's own `configurations.all` hook, and deactivating it afterwards has no moment that is
+  // late enough to win yet early enough for every build, as configure on demand and composite
+  // builds resolve this configuration before `projectsEvaluated` fires.
   val results =
-    project.configurations.resolvable(RESULTS_CONFIGURATION) { configuration ->
-      configuration.description = "Resolves the dependency update results to aggregate."
-      configuration.extendsFrom(aggregation.get())
-      configuration.attributes { attributes ->
+    project.configurations.detachedConfiguration().apply {
+      // A detached configuration is created in the legacy role, and this one resolves the results
+      // of the projects it depends on, the root project included, so it must not match itself.
+      isCanBeConsumed = false
+      attributes { attributes ->
         attributes.attribute(
           Category.CATEGORY_ATTRIBUTE,
           project.objects.named(Category::class.java, Category.VERIFICATION),
@@ -128,6 +136,9 @@ internal fun registerAggregation(
         )
       }
     }
+  // Mirrored rather than extended, which a detached configuration forbids, so that a project
+  // declared in the build's own dependencies block is still aggregated.
+  aggregation.get().dependencies.all { dependency -> results.dependencies.add(dependency) }
 
   // Reading the paths across projects is permitted under isolated projects, unlike configuring. A
   // project with no build script cannot apply the plugin there, so naming it in the completeness
@@ -135,29 +146,16 @@ internal fun registerAggregation(
   val aggregatedPaths =
     project.allprojects.filter { it.buildFile.exists() }.map { it.path }.toSet()
 
-  // https://github.com/ben-manes/gradle-versions-plugin/issues/781
-  // https://github.com/ben-manes/gradle-versions-plugin/issues/1004
-  // A build that locks all of its configurations would lock this one too, which holds only the
-  // project dependencies that the plugin declares and has no lock state of its own. Deactivated
-  // after every project is evaluated, so that a locking hook registered from a build script's own
-  // afterEvaluate does not win, and before the task graph is computed, which a composite build
-  // does while the strategy is still mutable.
-  project.gradle.projectsEvaluated {
-    results.get().resolutionStrategy.deactivateDependencyLocking()
-  }
-
   accumulator.configure { task ->
     task.projectPath = project.path
     task.aggregatedProjectPaths = aggregatedPaths
     task.projectDirectory.set(project.layout.projectDirectory)
     task.partialResults.from(
-      results.map { configuration ->
-        configuration.incoming
-          .artifactView { view ->
-            view.componentFilter { id -> id is ProjectComponentIdentifier }
-            view.lenient(true)
-          }.files
-      },
+      results.incoming
+        .artifactView { view ->
+          view.componentFilter { id -> id is ProjectComponentIdentifier }
+          view.lenient(true)
+        }.files,
     )
   }
 

@@ -299,9 +299,25 @@ final class AggregationSpec extends Specification {
     given:
     new File(testProjectDir.root, 'build.gradle') <<
       """
+        // Declares the attribute pair the plugin's results configuration requests (Aggregation.kt),
+        // which is detached and so has no name to resolve it by here.
+        def probe = configurations.dependencyScope('probeAggregation')
+        def results = configurations.resolvable('probeAggregationResults') {
+          extendsFrom probe.get()
+          attributes {
+            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.VERIFICATION))
+            attribute(
+              VerificationType.VERIFICATION_TYPE_ATTRIBUTE,
+              objects.named(VerificationType, 'dependency-updates'))
+          }
+        }
+        dependencies {
+          probeAggregation project(':app')
+          probeAggregation project(':lib')
+        }
+
         tasks.register('dumpAggregationGraph') {
-          def resolutionResult =
-            configurations.aggregateDependencyUpdatesResults.incoming.resolutionResult
+          def resolutionResult = results.get().incoming.resolutionResult
           doLast {
             resolutionResult.allDependencies.each {
               println "GRAPHEDGE \${it.class.simpleName} \${it.requested}"
@@ -315,6 +331,10 @@ final class AggregationSpec extends Specification {
 
     then:
     result.task(':dumpAggregationGraph').outcome == SUCCESS
+    // Both projects are edges of the graph, so that the absence of a traversal below them is the
+    // property under test rather than an empty graph.
+    result.output.contains('GRAPHEDGE DefaultResolvedDependencyResult project :app')
+    result.output.contains('GRAPHEDGE DefaultResolvedDependencyResult project :lib')
     !result.output.contains('UnresolvedDependencyResult')
   }
 }
