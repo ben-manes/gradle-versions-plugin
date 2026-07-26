@@ -7,12 +7,14 @@ import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import spock.lang.Issue
 import spock.lang.Specification
+import spock.lang.Unroll
 
 final class DependencyLockingSpec extends Specification {
   @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
 
+  @Unroll
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/781')
-  def 'Show updates for a build using strict dependency locking'() {
+  def 'Show updates for a build using strict dependency locking activated by #activation'() {
     given:
     def mavenRepoUrl = getClass().getResource('/maven/').toURI()
     def buildFile = testProjectDir.newFile('build.gradle')
@@ -33,9 +35,7 @@ final class DependencyLockingSpec extends Specification {
           lockMode = LockMode.STRICT
         }
 
-        configurations.all {
-          resolutionStrategy.activateDependencyLocking()
-        }
+        ${script}
 
         dependencies {
           api 'com.google.inject:guice:2.0'
@@ -52,5 +52,11 @@ final class DependencyLockingSpec extends Specification {
     then:
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
     result.task(':dependencyUpdates').outcome == SUCCESS
+
+    where:
+    activation               | script
+    'a top-level hook'       | 'configurations.all { resolutionStrategy.activateDependencyLocking() }'
+    'an afterEvaluate hook'  | 'afterEvaluate { configurations.all { resolutionStrategy.activateDependencyLocking() } }'
+    'lockAllConfigurations'  | 'dependencyLocking { lockAllConfigurations() }'
   }
 }
