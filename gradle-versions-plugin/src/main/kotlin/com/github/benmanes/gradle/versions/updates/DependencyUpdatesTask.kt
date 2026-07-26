@@ -7,6 +7,7 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentF
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.lang.Closure
+import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Configuration
@@ -234,12 +235,38 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   }
 
   /**
-   * Sets the [resolutionStrategy] to the provided strategy.
+   * Registers a Groovy [closure] as the reject filter, resolving `candidate` against the
+   * selection whether the closure uses the bare implicit receiver or an explicit parameter.
+   */
+  fun rejectVersionIf(closure: Closure<*>) {
+    rejectVersionIf(
+      ComponentFilter { current ->
+        // Selections are evaluated concurrently, so give each its own copy to set the delegate on.
+        val invocation = closure.clone() as Closure<*>
+        invocation.delegate = current
+        DefaultTypeTransformation.castToBoolean(invocation.call(current))
+      },
+    )
+  }
+
+  /**
+   * Accumulates the provided strategy with any previously registered one, or clears every
+   * previously registered strategy when called with no argument.
    *
    * @param resolutionStrategy the resolution strategy
    */
+  @JvmOverloads
   fun resolutionStrategy(resolutionStrategy: Action<in ResolutionStrategyWithCurrent>? = null) {
-    parameters.resolutionStrategy = resolutionStrategy
+    val existing = parameters.resolutionStrategy
+    parameters.resolutionStrategy =
+      if (resolutionStrategy == null || existing == null) {
+        resolutionStrategy
+      } else {
+        Action<ResolutionStrategyWithCurrent> { current ->
+          existing.execute(current)
+          resolutionStrategy.execute(current)
+        }
+      }
     parameters.resolutionStrategySet = true
     this.resolutionStrategy = null
   }

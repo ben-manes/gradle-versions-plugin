@@ -44,11 +44,16 @@ class DependencyStatus {
       unresolved?.let { dependency ->
         val selector = dependency.attempted as ModuleComponentSelector
         val failure = dependency.failure
+        val reason =
+          generateSequence(failure) { it.cause }
+            .take(MAX_FAILURE_CAUSES)
+            .map { it.message ?: it.toString() }
+            .joinToString(separator = "; ")
         UnresolvedInfo(
           selector.group,
           selector.module,
           selector.version,
-          failure.message ?: failure.toString(),
+          reason,
         )
       }
     return PartialStatus(
@@ -60,5 +65,10 @@ class DependencyStatus {
       projectUrl,
       info,
     )
+  }
+
+  private companion object {
+    /** Guards against a cause chain that cycles back on itself. */
+    const val MAX_FAILURE_CAUSES = 20
   }
 }
