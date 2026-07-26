@@ -198,8 +198,37 @@ field explaining failures or missing information. The update check may be disabl
 #### Multi-project build
 
 In a multi-project build, running this task in the root project will generate a consolidated/merged
-report for dependency updates in all subprojects. Alternatively, you can run the task separately in
-each subproject to generate separate reports for each subproject.
+report for dependency updates in all subprojects. The recommended setup is to apply the settings
+plugin once in the settings script, which covers every project of the build:
+
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+// settings.gradle.kts
+plugins {
+  id("io.github.ben-manes.versions.settings")
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
+// settings.gradle
+plugins {
+  id 'io.github.ben-manes.versions.settings'
+}
+```
+
+</details>
+
+The root project receives the `dependencyUpdates` task and every other project contributes to its
+report, so no project applies a plugin itself and a root build script is not required. Because
+the settings plugin puts the plugin on every project's classpath, a
+project that applies `io.github.ben-manes.versions` as well must request it without a version.
 
 The report is aggregated from a task in each project, so it is compatible with parallel execution
 and the configuration cache. Each project takes the settings that control resolution (`revision`,
@@ -207,11 +236,26 @@ and the configuration cache. Each project takes the settings that control resolu
 `checkBuildEnvironmentConstraints`) from the nearest project up the hierarchy whose task set them,
 so configuring the root project's task covers every project unless a subproject configures its own.
 
+Two limitations. An **included build** is a separate build with its own settings, so its projects
+are not covered—apply the settings plugin in its `settings.gradle` too. This is not new to the
+settings plugin, and `buildSrc` is likewise excluded. And a **root project that registers its own
+task named `dependencyUpdates`** conflicts with the task the plugin registers, because the settings
+plugin is applied before the root build script and the task name is then taken; rename that task.
+
+Alternatively, apply `io.github.ben-manes.versions` to a project to give it a `dependencyUpdates`
+task of its own, reporting on itself and its subprojects—alongside the settings plugin for a
+separate per-project report, or in every project as the traditional setup that predates it. Run a
+single task by its path to get just that report (e.g., `:subproject:dependencyUpdates`).
+
 #### Isolated projects
 
 Under [isolated projects](https://docs.gradle.org/current/userguide/isolated_projects.html) a
 project plugin cannot register a task in another project, so a project only contributes to the
-aggregate report if it applies a plugin itself. Keep applying `io.github.ben-manes.versions` in
+aggregate report if it applies a plugin itself. The settings plugin covers this: it applies a
+plugin to each project as the project is evaluated, so the recommended setup above works
+unchanged.
+
+A build that cannot apply the settings plugin can keep applying `io.github.ben-manes.versions` in
 the root project, and apply `io.github.ben-manes.versions.contributor` in every other project,
 typically from a convention plugin they already share:
 
@@ -250,10 +294,7 @@ The contributor plugin registers only the producer that feeds the aggregate repo
 `dependencyUpdates` remains a single task in the root project. The main plugin is a superset of
 the contributor plugin: a project that applies `io.github.ben-manes.versions` instead still feeds
 the aggregate report, and also gets its own `dependencyUpdates` task covering itself and its
-subprojects. So for a separate per-project report, apply the main plugin to that project—there is
-no need to apply both. Running `dependencyUpdates` by name then includes that project's report,
-as it always has when the plugin is applied to more than one project; run a single task by its
-path to get just that report (e.g., `:subproject:dependencyUpdates`).
+subprojects.
 
 Under isolated projects, contributing projects that share a group and name are aggregated as one;
 the console warns about any project the report is missing.
