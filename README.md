@@ -226,8 +226,9 @@ plugins {
 </details>
 
 The root project receives the `dependencyUpdates` task and every other project contributes to its
-report, so no project applies a plugin itself and a root build script is not required. Because
-the settings plugin puts the plugin on every project's classpath, a
+report, so no project applies a plugin itself and a root build script is not required. It also
+reports the versions of the plugins that the settings script declares, which no project's
+buildscript carries. Because the settings plugin puts the plugin on every project's classpath, a
 project that applies `io.github.ben-manes.versions` as well must request it without a version.
 
 The report is aggregated from a task in each project, so it is compatible with parallel execution
