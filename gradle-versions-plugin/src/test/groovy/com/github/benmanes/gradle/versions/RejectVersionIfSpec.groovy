@@ -1,4 +1,4 @@
-package com.github.benmanes.gradle.versions.updates
+package com.github.benmanes.gradle.versions
 
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
