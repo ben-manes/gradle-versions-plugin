@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.example.settings-demo</groupId>
+  <artifactId>com.example.settings-demo.gradle.plugin</artifactId>
+  <version>1.0</version>
+  <packaging>pom</packaging>
+  <name>Example Settings Plugin Marker</name>
+</project>

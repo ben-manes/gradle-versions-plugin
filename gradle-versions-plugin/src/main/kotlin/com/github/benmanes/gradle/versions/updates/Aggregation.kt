@@ -8,6 +8,7 @@ import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.VerificationType
 import org.gradle.api.internal.StartParameterInternal
+import org.gradle.api.invocation.Gradle
 import org.gradle.api.provider.Provider
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
@@ -60,6 +61,14 @@ internal abstract class DependencyUpdatesParametersService :
   BuildService<BuildServiceParameters.None> {
   private val byPath = ConcurrentHashMap<String, DependencyUpdatesParameters>()
 
+  /**
+   * The settings script's own classpath, which the settings plugin publishes here rather than
+   * capturing in the hook that reaches each project, as isolated projects forbids sharing that
+   * state between the projects a hook configures.
+   */
+  @Volatile
+  var settingsConfigurations: List<Configuration> = emptyList()
+
   /** Publishes the settings of the given project's task to the projects that resolve with them. */
   fun register(
     path: String,
@@ -102,7 +111,7 @@ internal fun registerAggregation(
   project: Project,
   accumulator: TaskProvider<DependencyUpdatesTask>,
 ) {
-  val service = parametersService(project)
+  val service = parametersService(project.gradle)
   accumulator.configure { task -> service.get().register(project.path, task.parameters) }
   // Realizes the task, so that a configuration block on a task that nothing else realizes is still
   // applied before the producers read the settings.
@@ -187,11 +196,19 @@ internal fun registerAggregation(
 
 /** Registers the task and outgoing variant that publish a single project's statuses. */
 internal fun registerProducer(project: Project): TaskProvider<DependencyUpdatesPartialTask> =
-  registerProducer(project, parametersService(project))
+  registerProducer(project, parametersService(project.gradle))
+
+/** Publishes the settings script's classpath to the project that accumulates the report. */
+internal fun publishSettingsClasspath(
+  gradle: Gradle,
+  configurations: List<Configuration>,
+) {
+  parametersService(gradle).get().settingsConfigurations = configurations
+}
 
 /** Returns the build's shared parameters service, registering it if this is the first use. */
-private fun parametersService(project: Project): Provider<DependencyUpdatesParametersService> =
-  project.gradle.sharedServices
+private fun parametersService(gradle: Gradle): Provider<DependencyUpdatesParametersService> =
+  gradle.sharedServices
     .registerIfAbsent(PARAMETERS_SERVICE, DependencyUpdatesParametersService::class.java) { }
 
 private fun registerProducer(
@@ -216,9 +233,18 @@ private fun registerProducer(
             project.configurations
               .toList()
               .filter { it.isCanBeResolved && parameters.filterConfigurations.isSatisfiedBy(it) }
+          // The settings script's classpath holds the plugins its own plugins block declares, which
+          // no project's buildscript does. It is reported once, from the project that accumulates.
+          // https://github.com/ben-manes/gradle-versions-plugin/issues/367
+          val settingsConfigurations =
+            // Compared by path rather than to project.rootProject, which isolated projects forbids.
+            if (project.path == ":") {
+              service.get().settingsConfigurations
+            } else {
+              emptyList()
+            }
           val buildscriptConfigurations =
-            project.buildscript.configurations
-              .toList()
+            (project.buildscript.configurations.toList() + settingsConfigurations)
               .filter { it.isCanBeResolved }
 
           PartialResult(

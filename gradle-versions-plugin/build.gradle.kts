@@ -84,5 +84,17 @@ gradlePlugin {
         }
       }
     }
+    create("versionsSettingsPlugin") {
+      id = properties["PLUGIN_SETTINGS_NAME"].toString()
+      implementationClass = properties["PLUGIN_SETTINGS_NAME_CLASS"].toString()
+      displayName = properties["POM_SETTINGS_NAME"].toString()
+      description = properties["POM_SETTINGS_DESCRIPTION"].toString()
+      tags.set(listOf("dependencies", "versions", "updates"))
+      compatibility {
+        features {
+          configurationCache = true
+        }
+      }
+    }
   }
 }
