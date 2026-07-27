@@ -1012,6 +1012,14 @@ receives the analysis as an instance of
 in the Kotlin DSL it is the receiver of the formatter block, and in Groovy it is
 passed as the closure argument.
 
+> [!IMPORTANT]
+> The formatter runs at execution time, so it cannot reach the project or the
+> build script from inside the closure. Read what it needs into local variables
+> beforehand, as shown in [Migrating from prior
+> versions](#v0540-and-earlier). Gradle's [configuration cache
+> requirements](https://docs.gradle.org/current/userguide/configuration_cache_requirements.html)
+> cover the underlying rules.
+
 For example, if you wanted to create an html table for the upgradable
 dependencies, you could use:
 
@@ -1056,35 +1064,21 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
 tasks.named("dependencyUpdates").configure {
   outputFormatter = { result ->
     def updatable = result.outdated.dependencies
-    if (!updatable.isEmpty()){
-      def writer = new StringWriter()
-      def html = new groovy.xml.MarkupBuilder(writer)
-
-      html.html {
-        body {
-          table {
-            thead {
-              tr {
-                td("Group")
-                td("Module")
-                td("Current version")
-                td("Latest version")
-              }
-            }
-            tbody {
-              updatable.each { dependency->
-                tr {
-                  td(dependency.group)
-                  td(dependency.name)
-                  td(dependency.version)
-                  td(dependency.available.release ?: dependency.available.milestone)
-                }
-              }
-            }
-          }
-        }
+    if (!updatable.isEmpty()) {
+      def table = new StringBuilder()
+      table.append("<table>\n")
+      table.append("  <thead>\n")
+      table.append("    <tr><td>Group</td><td>Module</td><td>Current version</td><td>Latest version</td></tr>\n")
+      table.append("  </thead>\n")
+      table.append("  <tbody>\n")
+      updatable.each { dependency ->
+        table.append("    <tr><td>${dependency.group}</td><td>${dependency.name}</td>")
+        table.append("<td>${dependency.version}</td>")
+        table.append("<td>${dependency.available.release ?: dependency.available.milestone}</td></tr>\n")
       }
-      println writer.toString()
+      table.append("  </tbody>\n")
+      table.append("</table>")
+      println table
     }
   }
 }
@@ -1453,7 +1447,59 @@ v0.55.0 also reworks how the merged report of a multi-project build is
 produced: it is aggregated from a task in each project, which adds support for
 parallel execution, the configuration cache, and isolated projects (see
 [Multi-project builds](#multi-project-builds)). The report content and task
-configuration are unchanged. Then continue with the v0.55.0 steps above.
+configuration are unchanged.
+
+A custom `outputFormatter` runs at execution time, so its closure cannot reach
+the project or the build script from there (see [Report
+format](#report-format)). Read what it needs into local variables inside the
+`configure` block, and use the `PlainTextReporter` constructor that takes the
+project path.
+
+<details open>
+<summary>Kotlin</summary>
+
+"build.gradle.kts":
+```kotlin
+import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
+  val projectPath = project.path
+
+  outputFormatter {
+    PlainTextReporter(projectPath, revision, gradleReleaseChannel).write(System.out, this)
+  }
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+"build.gradle":
+```groovy
+import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
+
+tasks.named("dependencyUpdates").configure {
+  def projectPath = project.path
+  def taskRevision = revision
+  def releaseChannel = gradleReleaseChannel
+
+  outputFormatter { result ->
+    new PlainTextReporter(projectPath, taskRevision, releaseChannel).write(System.out, result)
+  }
+}
+```
+
+</details>
+
+Groovy also needs `revision` and `gradleReleaseChannel` read up front, because
+the closure is coerced to an `Action` without a delegate. In a precompiled
+script plugin a top-level `val` is a field of the script, so hoisting the value
+out of the `configure` block does not work.
+
+Then continue with the v0.55.0 steps above.
 
 ## Related plugins
 
