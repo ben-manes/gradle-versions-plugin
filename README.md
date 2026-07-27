@@ -1064,35 +1064,21 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
 tasks.named("dependencyUpdates").configure {
   outputFormatter = { result ->
     def updatable = result.outdated.dependencies
-    if (!updatable.isEmpty()){
-      def writer = new StringWriter()
-      def html = new groovy.xml.MarkupBuilder(writer)
-
-      html.html {
-        body {
-          table {
-            thead {
-              tr {
-                td("Group")
-                td("Module")
-                td("Current version")
-                td("Latest version")
-              }
-            }
-            tbody {
-              updatable.each { dependency->
-                tr {
-                  td(dependency.group)
-                  td(dependency.name)
-                  td(dependency.version)
-                  td(dependency.available.release ?: dependency.available.milestone)
-                }
-              }
-            }
-          }
-        }
+    if (!updatable.isEmpty()) {
+      def table = new StringBuilder()
+      table.append("<table>\n")
+      table.append("  <thead>\n")
+      table.append("    <tr><td>Group</td><td>Module</td><td>Current version</td><td>Latest version</td></tr>\n")
+      table.append("  </thead>\n")
+      table.append("  <tbody>\n")
+      updatable.each { dependency ->
+        table.append("    <tr><td>${dependency.group}</td><td>${dependency.name}</td>")
+        table.append("<td>${dependency.version}</td>")
+        table.append("<td>${dependency.available.release ?: dependency.available.milestone}</td></tr>\n")
       }
-      println writer.toString()
+      table.append("  </tbody>\n")
+      table.append("</table>")
+      println table
     }
   }
 }
