@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout Project
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
 
       - name: Validate Gradle Wrapper
         uses: gradle/wrapper-validation-action@v3
