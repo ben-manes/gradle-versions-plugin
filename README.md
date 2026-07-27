@@ -1,4 +1,4 @@
-[![Build](https://github.com/ben-manes/gradle-versions-plugin/workflows/build/badge.svg)](https://github.com/ben-manes/gradle-versions-plugin/actions)
+[![Build](https://github.com/ben-manes/gradle-versions-plugin/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/ben-manes/gradle-versions-plugin/actions/workflows/build.yml)
 [![gradlePluginPortal](https://img.shields.io/maven-metadata/v/https/plugins.gradle.org/m2/io/github/ben-manes/versions/io.github.ben-manes.versions.gradle.plugin/maven-metadata.xml.svg?label=gradlePluginPortal)](https://plugins.gradle.org/plugin/io.github.ben-manes.versions)
 
 # Gradle Versions Plugin
