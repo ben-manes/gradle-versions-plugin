@@ -61,6 +61,25 @@ final class ReporterLogLevelSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/726')
+  def 'The unresolved hint suggests --info only when it is not already enabled'() {
+    given:
+    buildFileWith('')
+
+    when:
+    def result = run(arguments)
+
+    then:
+    result.output.contains('Failed to determine the latest version for the following dependencies')
+    result.output.contains('use --info for details') == hinted
+    result.task(':dependencyUpdates').outcome == SUCCESS
+
+    where:
+    arguments                       || hinted
+    ['dependencyUpdates']           || true
+    ['dependencyUpdates', '--info'] || false
+  }
+
   private void buildFileWith(String extraConfiguration) {
     testProjectDir.newFile('build.gradle') <<
       """

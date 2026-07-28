@@ -71,6 +71,7 @@ class DependencyUpdatesReporter(
           projectPath,
           revision,
           gradleReleaseChannel,
+          logger.isInfoEnabled,
         )
       plainTextReporter.write(System.out, buildBaseObject())
     }
@@ -114,7 +115,7 @@ class DependencyUpdatesReporter(
       "json" -> JsonReporter(projectPath, revision, gradleReleaseChannel)
       "xml" -> XmlReporter(projectPath, revision, gradleReleaseChannel)
       "html" -> HtmlReporter(projectPath, revision, gradleReleaseChannel)
-      else -> PlainTextReporter(projectPath, revision, gradleReleaseChannel)
+      else -> PlainTextReporter(projectPath, revision, gradleReleaseChannel, logger.isInfoEnabled)
     }
   }
 

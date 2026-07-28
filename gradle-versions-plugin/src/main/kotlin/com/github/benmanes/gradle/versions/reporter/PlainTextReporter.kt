@@ -10,11 +10,15 @@ import java.io.OutputStream
 
 /**
  * A plain text reporter for the dependency updates results.
+ *
+ * @property isInfoEnabled Whether the build already runs at the info level, so that the report does
+ * not suggest enabling it.
  */
 class PlainTextReporter(
   override val projectPath: String,
   override val revision: String,
   override val gradleReleaseChannel: String,
+  private val isInfoEnabled: Boolean = false,
 ) : AbstractReporter(projectPath, revision, gradleReleaseChannel) {
   @Deprecated(
     "Use the constructor that takes the project's path.",
@@ -141,9 +145,10 @@ class PlainTextReporter(
   ) {
     val unresolved = result.unresolved.dependencies
     if (unresolved.isNotEmpty()) {
+      val hint = if (isInfoEnabled) "" else " (use --info for details)"
       printStream.println()
       printStream.println(
-        "Failed to determine the latest version for the following dependencies (use --info for details):",
+        "Failed to determine the latest version for the following dependencies$hint:",
       )
       for (dependency in unresolved) {
         printStream.println(" - " + label(dependency))
