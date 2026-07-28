@@ -59,6 +59,18 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
     }
   }
 
+  // Example 4: disallow candidates less mature than the current version
+  val qualifiers = listOf("preview", "alpha", "beta", "m", "cr", "rc") // order is important
+  fun maturityLevel(version: String): Int {
+    val index = qualifiers.indexOfFirst {
+      version.matches(".*[.\\-]$it[.\\-\\d]*".toRegex(RegexOption.IGNORE_CASE))
+    }
+    return if (index < 0) qualifiers.size else index
+  }
+  rejectVersionIf {
+    maturityLevel(candidate.version) < maturityLevel(currentVersion)
+  }
+
   // optional parameters
   checkForGradleUpdate = true
   outputFormatter = "json"
