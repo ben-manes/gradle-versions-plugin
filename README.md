@@ -334,6 +334,27 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
 }
 ```
 
+Example 4: disallow candidates less mature than the current version, so an `-rc`
+keeps being offered `-rc` updates but never a `-beta`
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  val qualifiers = listOf("preview", "alpha", "beta", "m", "cr", "rc") // order is important
+  fun maturityLevel(version: String): Int {
+    val index = qualifiers.indexOfFirst {
+      version.matches(".*[.\\-]$it[.\\-\\d]*".toRegex(RegexOption.IGNORE_CASE))
+    }
+    return if (index < 0) qualifiers.size else index
+  }
+
+  rejectVersionIf {
+    maturityLevel(candidate.version) < maturityLevel(currentVersion)
+  }
+}
+```
+
 </details>
 
 <details>
@@ -374,6 +395,23 @@ tasks.named("dependencyUpdates").configure {
         }
       }
     }
+  }
+}
+```
+
+Example 4: disallow candidates less mature than the current version, so an `-rc`
+keeps being offered `-rc` updates but never a `-beta`
+
+```groovy
+tasks.named("dependencyUpdates").configure {
+  def qualifiers = ['preview', 'alpha', 'beta', 'm', 'cr', 'rc'] // order is important
+  def maturityLevel = { String version ->
+    def index = qualifiers.findIndexOf { version ==~ /(?i).*[.\-]$it[.\-\d]*/ }
+    return (index < 0) ? qualifiers.size() : index
+  }
+
+  rejectVersionIf {
+    maturityLevel(candidate.version) < maturityLevel(currentVersion)
   }
 }
 ```
