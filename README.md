@@ -592,6 +592,10 @@ following values are supported:
 * `Closure`: will be called with the result of the dependency update analysis
   (from Kotlin, use the `outputFormatter(Action<Result>)` function instead)
 
+The console summary is printed at the lifecycle log level, so `--quiet` suppresses
+it. The report file is still written; read it, or drop `--quiet`, if a script was
+piping the console output.
+
 You can also set multiple output formats using comma as the separator:
 
 ```bash

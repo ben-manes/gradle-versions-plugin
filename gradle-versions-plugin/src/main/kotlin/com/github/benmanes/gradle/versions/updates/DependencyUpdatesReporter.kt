@@ -65,7 +65,7 @@ class DependencyUpdatesReporter(
 ) {
   @Synchronized
   fun write() {
-    if (outputFormatterArgument !is OutputFormatterArgument.CustomAction) {
+    if (outputFormatterArgument !is OutputFormatterArgument.CustomAction && logger.isLifecycleEnabled) {
       val plainTextReporter =
         PlainTextReporter(
           projectPath,
