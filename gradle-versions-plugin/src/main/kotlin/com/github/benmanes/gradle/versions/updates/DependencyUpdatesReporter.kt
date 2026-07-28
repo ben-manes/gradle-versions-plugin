@@ -256,7 +256,7 @@ class DependencyUpdatesReporter(
       group = info.selectorGroup,
       name = info.selectorName,
       version = currentVersions[keyOf(info)]?.version,
-      projectUrl = latestVersions[keyOf(info)]?.version,
+      projectUrl = projectUrls[keyOf(info)],
       userReason = currentVersions[keyOf(info)]?.userReason,
       reason = info.failureText,
     )
