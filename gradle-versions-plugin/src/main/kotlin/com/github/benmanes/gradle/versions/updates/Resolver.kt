@@ -477,7 +477,7 @@ class Resolver(
           if (artifact is ResolvedArtifactResult) {
             val file = artifact.file
             project.logger.info("Pom file for $id is $file")
-            var url = getUrlFromPom(file)
+            var url = interpolate(getUrlFromPom(file), id)
             if (!url.isNullOrEmpty()) {
               project.logger.info("Found url for $id: $url")
               return url.trim()
@@ -531,11 +531,32 @@ class Resolver(
   )
 
   companion object {
+    private val PROJECT_PROPERTY = Regex("""\$\{project\.(groupId|artifactId|version)}""")
+    private val ABSOLUTE_URL = Regex("""^[a-zA-Z][a-zA-Z0-9+.-]*://""")
+
     private fun getUrlFromPom(file: File): String? {
       val pom = XmlSlurper(false, false).parse(file)
-      val url = (pom.getProperty("url") as NodeChildren?)?.text()
-      return url
+      return (pom.getProperty("url") as NodeChildren?)?.text()
         ?: ((pom.getProperty("scm") as NodeChildren?)?.getProperty("url") as NodeChildren?)?.text()
+    }
+
+    /** Returns the url with the project properties resolved, or null if it is not usable as one. */
+    private fun interpolate(
+      url: String?,
+      id: ModuleVersionIdentifier,
+    ): String? {
+      if (url == null || !url.contains("\${")) {
+        return url
+      }
+      val resolved =
+        PROJECT_PROPERTY.replace(url) { match ->
+          when (match.groupValues[1]) {
+            "groupId" -> id.group
+            "artifactId" -> id.name
+            else -> id.version
+          }
+        }
+      return resolved.takeIf { !it.contains("\${") && ABSOLUTE_URL.containsMatchIn(it) }
     }
 
     private fun getParentFromPom(file: File): ModuleVersionIdentifier? {
