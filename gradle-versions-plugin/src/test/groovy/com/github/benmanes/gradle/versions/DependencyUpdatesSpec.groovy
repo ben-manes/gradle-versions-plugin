@@ -583,6 +583,78 @@ final class DependencyUpdatesSpec extends Specification {
     }
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/319')
+  def 'Project url interpolates the project properties'() {
+    given:
+    def project = ProjectBuilder.builder().withName('single').build()
+    addRepositoryTo(project)
+    project.configurations {
+      compile
+    }
+    project.dependencies {
+      compile 'com.example:interpolated-url:1.0'
+    }
+
+    when:
+    def reporter = evaluate(project)
+    reporter.write()
+
+    then:
+    with(reporter) {
+      projectUrls == [
+        ['group': 'com.example', 'name': 'interpolated-url']: 'https://example.com/com.example/interpolated-url/1.0'
+      ]
+    }
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/758')
+  def 'Project url with an unresolvable placeholder falls back to the parent pom'() {
+    given:
+    def project = ProjectBuilder.builder().withName('single').build()
+    addRepositoryTo(project)
+    project.configurations {
+      compile
+    }
+    project.dependencies {
+      compile 'com.example:unresolved-url:1.0'
+    }
+
+    when:
+    def reporter = evaluate(project)
+    reporter.write()
+
+    then:
+    with(reporter) {
+      projectUrls == [
+        ['group': 'com.example', 'name': 'unresolved-url']: 'https://example.com/parent/'
+      ]
+    }
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/319')
+  def 'Project url that interpolates to a relative path falls back to the parent pom'() {
+    given:
+    def project = ProjectBuilder.builder().withName('single').build()
+    addRepositoryTo(project)
+    project.configurations {
+      compile
+    }
+    project.dependencies {
+      compile 'com.example:bare-placeholder-url:1.0'
+    }
+
+    when:
+    def reporter = evaluate(project)
+    reporter.write()
+
+    then:
+    with(reporter) {
+      projectUrls == [
+        ['group': 'com.example', 'name': 'bare-placeholder-url']: 'https://example.com/parent/'
+      ]
+    }
+  }
+
   def 'Constructor takes gradle release channel'() {
     given:
     def project = ProjectBuilder.builder().withName('single').build()
