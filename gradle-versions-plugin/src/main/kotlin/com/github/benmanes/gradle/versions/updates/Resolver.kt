@@ -169,7 +169,7 @@ class Resolver(
     // The copy inherits activated dependency locking but has no lock state of its own.
     copy.resolutionStrategy.deactivateDependencyLocking()
 
-    addRevisionFilter(copy, revision)
+    addRevisionFilter(copy, revision, current.coordinates)
     addAttributes(copy, configuration)
     addCustomResolutionStrategy(copy, current.coordinates)
 
@@ -265,15 +265,22 @@ class Resolver(
   private fun addRevisionFilter(
     configuration: Configuration,
     revision: String,
+    currentCoordinates: Map<Coordinate.Key, Coordinate>,
   ) {
     configuration.resolutionStrategy { componentSelection ->
       componentSelection.componentSelection { rules ->
         val revisionFilter = { selection: ComponentSelection, metadata: ComponentMetadata? ->
+          // A module published only as a snapshot has no candidate that a milestone or release
+          // revision accepts, so the version the build already uses is exempt from the check.
+          // https://github.com/ben-manes/gradle-versions-plugin/issues/475
+          val candidate = Coordinate.from(selection.candidate)
+          val isCurrent = currentCoordinates[candidate.key]?.version == candidate.version
           val accepted =
             (metadata == null) ||
               ((revision == "release") && (metadata.status == "release")) ||
               ((revision == "milestone") && (metadata.status != "integration")) ||
-              (revision == "integration") || (selection.candidate.version == "none")
+              (revision == "integration") || (selection.candidate.version == "none") ||
+              isCurrent
           if (!accepted) {
             selection.reject("Component status ${metadata?.status} rejected by revision $revision")
           }

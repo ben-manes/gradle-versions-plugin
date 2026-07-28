@@ -408,6 +408,115 @@ final class DependencyUpdatesSpec extends Specification {
     }
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/475')
+  def 'Single project with a snapshot-only module reports up to date'() {
+    given:
+    def project = singleProject()
+    addRepositoryTo(project)
+    project.configurations {
+      upToDate
+    }
+    project.dependencies {
+      upToDate 'com.example:snapshot-only:1.0-SNAPSHOT'
+    }
+
+    when:
+    def reporter = evaluate(project)
+    reporter.write()
+
+    then:
+    with(reporter) {
+      unresolved.isEmpty()
+      upgradeVersions.isEmpty()
+      downgradeVersions.isEmpty()
+      (upToDateVersions.get(['group': 'com.example', 'name': 'snapshot-only']).getVersion() ==
+        '1.0-SNAPSHOT')
+    }
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/475')
+  def 'Single project with a snapshot module having a newer release still reports the upgrade'() {
+    given:
+    def project = singleProject()
+    addRepositoryTo(project)
+    project.configurations {
+      upgradesFound
+    }
+    project.dependencies {
+      upgradesFound 'com.example:snapshot-mixed:1.0-SNAPSHOT'
+    }
+
+    when:
+    def reporter = evaluate(project)
+    reporter.write()
+
+    then:
+    with(reporter) {
+      unresolved.isEmpty()
+      upToDateVersions.isEmpty()
+      (upgradeVersions.get(['group': 'com.example', 'name': 'snapshot-mixed']).getVersion() ==
+        '1.0-SNAPSHOT')
+      (latestVersions.get(['group': 'com.example', 'name': 'snapshot-mixed']).getVersion() ==
+        '1.5')
+    }
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/475')
+  def 'Single project already on the newest snapshot of a mixed module reports up to date'() {
+    given:
+    def project = singleProject()
+    addRepositoryTo(project)
+    project.configurations {
+      upToDate
+    }
+    project.dependencies {
+      // No milestone/release candidate exceeds this snapshot, so the module is up to date at it.
+      upToDate 'com.example:snapshot-mixed:2.0-SNAPSHOT'
+    }
+
+    when:
+    def reporter = evaluate(project)
+    reporter.write()
+
+    then:
+    with(reporter) {
+      unresolved.isEmpty()
+      downgradeVersions.isEmpty()
+      (upToDateVersions.get(['group': 'com.example', 'name': 'snapshot-mixed']).getVersion() ==
+        '2.0-SNAPSHOT')
+    }
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/475')
+  def 'Single project where a snapshot exemption does not carry to another module'() {
+    given:
+    def project = singleProject()
+    addRepositoryTo(project)
+    project.configurations {
+      upToDate
+    }
+    project.dependencies {
+      // snapshot-peer also publishes 1.0.1-SNAPSHOT and 2.0-SNAPSHOT, the latter being the version
+      // snapshot-mixed is exempted at, so neither may be offered as an upgrade of snapshot-peer.
+      upToDate 'com.example:snapshot-peer:1.0'
+      upToDate 'com.example:snapshot-mixed:2.0-SNAPSHOT'
+    }
+
+    when:
+    def reporter = evaluate(project, 'release')
+    reporter.write()
+
+    then:
+    with(reporter) {
+      unresolved.isEmpty()
+      upgradeVersions.isEmpty()
+      (upToDateVersions.get(['group': 'com.example', 'name': 'snapshot-peer']).getVersion() ==
+        '1.0')
+      (upToDateVersions.get(['group': 'com.example', 'name': 'snapshot-mixed']).getVersion() ==
+        '2.0-SNAPSHOT')
+    }
+  }
+
   def 'Single project with annotation processor'() {
     given:
     def project = singleProject()
