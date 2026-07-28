@@ -76,7 +76,7 @@ class DependencyUpdatesReporter(
     }
 
     if (outputFormatterArgument is OutputFormatterArgument.BuiltIn && outputFormatterArgument.formatterNames.isEmpty()) {
-      logger.lifecycle("Skip generating report to file (outputFormatter is empty)")
+      logger.info("Skip generating report to file (outputFormatter is empty)")
       return
     }
 

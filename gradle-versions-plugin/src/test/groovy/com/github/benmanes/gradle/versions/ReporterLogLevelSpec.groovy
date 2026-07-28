@@ -48,6 +48,19 @@ final class ReporterLogLevelSpec extends Specification {
     ['dependencyUpdates', '--quiet'] || false
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/388')
+  def 'An empty outputFormatter does not announce the skipped report file'() {
+    given:
+    buildFileWith("outputFormatter = ''")
+
+    when:
+    def result = run(['dependencyUpdates'])
+
+    then:
+    !result.output.contains('Skip generating report to file')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
   private void buildFileWith(String extraConfiguration) {
     testProjectDir.newFile('build.gradle') <<
       """
