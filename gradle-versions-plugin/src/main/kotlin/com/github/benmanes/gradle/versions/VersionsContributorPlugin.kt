@@ -17,6 +17,9 @@ import org.gradle.api.Project
 class VersionsContributorPlugin : Plugin<Project> {
   override fun apply(project: Project) {
     requireMinimumGradleVersion("io.github.ben-manes.versions.contributor")
+    if (!claims(project)) {
+      return
+    }
     registerProducer(project)
   }
 }

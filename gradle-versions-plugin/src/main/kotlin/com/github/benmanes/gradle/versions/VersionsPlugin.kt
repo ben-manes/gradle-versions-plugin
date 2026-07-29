@@ -7,6 +7,8 @@ import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.logging.Logging
+import org.gradle.api.plugins.ExtensionAware
 import org.gradle.util.GradleVersion
 import org.xml.sax.SAXException
 import javax.xml.parsers.SAXParserFactory
@@ -17,6 +19,9 @@ import javax.xml.parsers.SAXParserFactory
 class VersionsPlugin : Plugin<Project> {
   override fun apply(project: Project) {
     requireMinimumGradleVersion("io.github.ben-manes.versions")
+    if (!claims(project)) {
+      return
+    }
 
     val tasks = project.tasks
     if (!tasks.names.contains("dependencyUpdates")) {
@@ -62,3 +67,34 @@ internal fun requireMinimumGradleVersion(pluginId: String) {
     throw GradleException("Gradle 8.4 or greater is required to apply the $pluginId plugin.")
   }
 }
+
+/**
+ * Returns whether this copy of the plugin may configure [owner], which it may not if a copy loaded
+ * by another classloader already has.
+ *
+ * An init script injects the plugin from a classpath of its own, so a build that applies the plugin
+ * as well holds two copies of every class. Gradle keys the tasks, configurations, and shared
+ * services that the plugin registers by name, and the second copy would fail to cast what the first
+ * registered to its own type. The first copy configures the build and the rest defer to it, which
+ * keeps a build that applies the plugin working when an init script injects it too. The marker is
+ * held under a plain string key and compared by reference, which every copy can do without loading
+ * a type that belongs to another.
+ */
+internal fun claims(owner: ExtensionAware): Boolean {
+  val identity = VersionsPlugin::class.java.classLoader
+  val properties = owner.extensions.extraProperties
+  if (!properties.has(OWNER_PROPERTY)) {
+    properties.set(OWNER_PROPERTY, identity)
+    return true
+  }
+  if (properties.get(OWNER_PROPERTY) === identity) {
+    return true
+  }
+  Logging.getLogger(VersionsPlugin::class.java).info(
+    "Another copy of the gradle-versions-plugin already configures {}, so this one is ignored.",
+    owner,
+  )
+  return false
+}
+
+private const val OWNER_PROPERTY = "com.github.benmanes.gradle.versions.owner"

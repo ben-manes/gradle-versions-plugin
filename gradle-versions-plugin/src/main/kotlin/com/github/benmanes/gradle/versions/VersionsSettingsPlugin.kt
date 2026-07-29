@@ -12,6 +12,9 @@ import org.gradle.api.initialization.Settings
 class VersionsSettingsPlugin : Plugin<Settings> {
   override fun apply(settings: Settings) {
     requireMinimumGradleVersion("io.github.ben-manes.versions.settings")
+    if (!claims(settings)) {
+      return
+    }
 
     // The settings script's classpath carries the versions of the plugins that its own plugins
     // block declares, which no project's buildscript does.
