@@ -37,6 +37,7 @@ Plugin](https://www.mojohaus.org/versions-maven-plugin).
 - [Samples](#samples)
 - [Compatibility](#compatibility)
 - [Migrating from prior versions](#migrating-from-prior-versions)
+  - [v0.56.0](#v0560)
   - [v0.55.0](#v0550)
   - [v0.54.0 and earlier](#v0540-and-earlier)
 - [Related plugins](#related-plugins)
@@ -1364,14 +1365,19 @@ also gets its own `dependencyUpdates` task covering itself and its subprojects.
 
 You can also transparently add the plugin to every Gradle project that you run
 via a
-[Gradle init script](https://docs.gradle.org/current/userguide/init_scripts.html):
+[Gradle init script](https://docs.gradle.org/current/userguide/init_scripts.html).
+Apply the settings plugin from `beforeSettings`, which covers every project of
+the build and works under isolated projects (see [Isolated
+projects](#isolated-projects)). Every build that runs gets its own
+`dependencyUpdates` task, so an included build is reported without being
+modified (see [Composite builds](#composite-builds)):
 
 <details open>
 <summary>Kotlin</summary>
 
 "$HOME/.gradle/init.d/add-versions-plugin.init.gradle.kts":
 ```kotlin
-import com.github.benmanes.gradle.versions.VersionsPlugin
+import com.github.benmanes.gradle.versions.VersionsSettingsPlugin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
 initscript {
@@ -1384,13 +1390,15 @@ initscript {
   }
 }
 
-allprojects {
-  apply<VersionsPlugin>()
+gradle.beforeSettings(Action<Settings> {
+  pluginManager.apply(VersionsSettingsPlugin::class.java)
+})
 
-  tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+gradle.rootProject(Action<Project> {
+  tasks.withType(DependencyUpdatesTask::class.java).configureEach {
     // configure the task, for example wrt. resolution strategies
   }
-}
+})
 ```
 
 </details>
@@ -1400,6 +1408,9 @@ allprojects {
 
 "$HOME/.gradle/init.d/add-versions-plugin.gradle":
 ```groovy
+import com.github.benmanes.gradle.versions.VersionsSettingsPlugin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
 initscript {
   repositories {
     gradlePluginPortal()
@@ -1410,16 +1421,31 @@ initscript {
   }
 }
 
-allprojects {
-  apply plugin: com.github.benmanes.gradle.versions.VersionsPlugin
+beforeSettings { settings ->
+  settings.pluginManager.apply(VersionsSettingsPlugin)
+}
 
-  tasks.named("dependencyUpdates").configure {
+gradle.rootProject {
+  tasks.withType(DependencyUpdatesTask).configureEach {
     // configure the task, for example wrt. resolution strategies
   }
 }
 ```
 
 </details>
+
+A script has no implicit import for the plugin's types, so the imports at the
+top of these snippets are required to reference them by their simple names.
+
+An init script resolves the plugin on a classpath of its own, so a build that
+applies the plugin itself holds a second copy of it. An init script reaches a
+build before the build's own scripts do, so its copy is the one that reports and
+the build's copy defers to it, which leaves such a build working as it did. For
+the same reason the plugin is absent from the
+project's own classpath, so a `plugins` block that requests it alongside an init
+script needs a version, unlike one in a build whose settings script applies the
+settings plugin (see [Other ways to apply the
+plugin](#other-ways-to-apply-the-plugin)).
 
 ## Samples
 
@@ -1449,6 +1475,15 @@ projects (see [Isolated projects](#isolated-projects)) are supported.
 Start at the subsection for the version your build is on and work upward: each
 subsection migrates to the version covered by the subsection above it, and the
 topmost migrates to the current release.
+
+### v0.56.0
+
+v0.57.0 supports applying the settings plugin from an init script:
+
+* An init script that applies `VersionsPlugin` to `allprojects` reports per
+  project rather than once, omits the plugins that the settings script declares,
+  and fails under isolated projects. Apply the settings plugin from
+  `beforeSettings` instead (see [Initialization script](#initialization-script)).
 
 ### v0.55.0
 
