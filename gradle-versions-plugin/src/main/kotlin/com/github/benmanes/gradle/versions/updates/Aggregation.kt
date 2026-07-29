@@ -4,6 +4,7 @@ import com.github.benmanes.gradle.versions.updates.resolutionstrategy.Resolution
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.VerificationType
@@ -170,10 +171,15 @@ internal fun registerAggregation(
 
   // Declared for every project so that computing the aggregate's dependencies configures each of
   // them, which configure on demand skips when the task is invoked by its path rather than by name.
+  // The producer's configuration is named rather than matched by its attributes, so that a project
+  // which publishes no variant is skipped instead of falling back to its `default` configuration,
+  // whose artifacts are the project's own and not a partial result to read the report from.
   for (aggregated in project.allprojects) {
     project.dependencies.add(
       AGGREGATION_CONFIGURATION,
-      project.dependencies.project(mapOf("path" to aggregated.path)),
+      project.dependencies.project(
+        mapOf("path" to aggregated.path, "configuration" to ELEMENTS_CONFIGURATION),
+      ),
     )
   }
 
@@ -263,7 +269,42 @@ private fun registerProducer(
       task.partialJson.disallowChanges()
     }
 
-  project.configurations.consumable(ELEMENTS_CONFIGURATION) { configuration ->
+  // Published once the project is configured, as whether it may carry a variant at all depends on
+  // the configurations that its plugins and build script create.
+  if (project.state.executed) {
+    publishResults(project, partial)
+  } else {
+    project.afterEvaluate { evaluated -> publishResults(evaluated, partial) }
+  }
+  return partial
+}
+
+/**
+ * Publishes the project's statuses as an outgoing variant, unless the project publishes through its
+ * `default` configuration, as one that exposes a local aar or jar file does.
+ *
+ * A project that declares no variant of its own is resolved by falling back to that configuration
+ * whatever the consumer asks for. Gradle drops the fallback as soon as the project declares any
+ * variant, so publishing one here would leave every consumer of such a project without a match. The
+ * artifacts are read rather than the variants alone, as a plugin may declare its variants from its
+ * own `afterEvaluate` and so after this runs, while a project publishes by fallback from the build
+ * script that this is ordered behind.
+ * https://github.com/ben-manes/gradle-versions-plugin/issues/1022
+ */
+private fun publishResults(
+  project: Project,
+  partial: TaskProvider<DependencyUpdatesPartialTask>,
+) {
+  val configurations = project.configurations
+  val fallback = configurations.findByName(Dependency.DEFAULT_CONFIGURATION)
+  val publishesByFallback =
+    fallback != null && fallback.isCanBeConsumed && fallback.artifacts.isNotEmpty() &&
+      configurations.none { it.isCanBeConsumed && it.attributes.keySet().isNotEmpty() }
+  if (publishesByFallback) {
+    return
+  }
+
+  configurations.consumable(ELEMENTS_CONFIGURATION) { configuration ->
     configuration.description = "The dependency update statuses of ${project.path}."
     configuration.attributes { attributes ->
       attributes.attribute(
@@ -277,7 +318,6 @@ private fun registerProducer(
     }
     configuration.outgoing.artifact(partial.flatMap { it.outputFile })
   }
-  return partial
 }
 
 /** Returns the statuses of the project's own configurations, skipping any that fail to resolve. */
