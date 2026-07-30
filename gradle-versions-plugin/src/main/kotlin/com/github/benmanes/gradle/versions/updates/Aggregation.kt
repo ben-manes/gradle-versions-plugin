@@ -1,5 +1,6 @@
 package com.github.benmanes.gradle.versions.updates
 
+import com.github.benmanes.gradle.versions.claims
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import org.gradle.api.Action
 import org.gradle.api.Project
@@ -194,8 +195,14 @@ internal fun registerAggregation(
     // The results are wired as task outputs too, as module conflict resolution would otherwise drop
     // every project that shares a group and name with a sibling from the artifacts.
     project.allprojects { aggregated ->
-      val partial = registerProducer(aggregated, service)
-      accumulator.configure { task -> task.partialResults.from(partial.flatMap { it.outputFile }) }
+      // A project that another copy of the plugin claimed holds a producer of that copy's type,
+      // which this one cannot wire to its accumulator. That copy reports the project instead.
+      if (claims(aggregated)) {
+        val partial = registerProducer(aggregated, service)
+        accumulator.configure { task ->
+          task.partialResults.from(partial.flatMap { it.outputFile })
+        }
+      }
     }
   }
 }
