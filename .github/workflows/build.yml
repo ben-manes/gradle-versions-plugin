@@ -4,8 +4,12 @@ on:
   push:
     branches:
       - master
+    paths-ignore:
+      - 'README.md'
   pull_request:
     types: [ opened, labeled, unlabeled, synchronize ]
+    paths-ignore:
+      - 'README.md'
 
 env:
   GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.daemon=false -Dkotlin.incremental=false"
