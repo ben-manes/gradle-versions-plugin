@@ -195,6 +195,15 @@ The report includes dependencies declared through a version catalog, but the
 plugin only reports—it never edits build files or the catalog. See [Related
 plugins](#related-plugins) for tools that apply updates automatically.
 
+The report also includes the dependencies that a plugin contributes lazily
+rather than the build declaring them, such as the Kotlin standard library and
+the tool versions of the `jacoco`, `checkstyle`, and `pmd` plugins. Their
+current version is whatever the contributing plugin supplies when the task
+runs, so a tool version the build never sets reports at the default bundled
+with Gradle—a version that appears nowhere in the build script. Set the
+extension's version, such as `jacoco.toolVersion`, to control what the report
+compares against.
+
 Gradle updates are checked for on the `current`, `release-candidate` and
 `nightly` release channels. The plain-text report displays Gradle updates as a
 separate category in breadcrumb style, excluding nightly builds. The XML and
