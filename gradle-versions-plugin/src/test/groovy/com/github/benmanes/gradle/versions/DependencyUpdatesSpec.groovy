@@ -517,6 +517,34 @@ final class DependencyUpdatesSpec extends Specification {
     }
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/475')
+  def 'Single project declaring a snapshot-only module dynamically reports up to date'() {
+    given:
+    def project = singleProject()
+    addRepositoryTo(project)
+    project.configurations {
+      upToDate
+    }
+    project.dependencies {
+      // The current coordinates record the resolved 1.0-SNAPSHOT rather than the '+' literal, so
+      // the exemption still matches the version the build uses.
+      upToDate 'com.example:snapshot-only:+'
+    }
+
+    when:
+    def reporter = evaluate(project, 'release')
+    reporter.write()
+
+    then:
+    with(reporter) {
+      unresolved.isEmpty()
+      upgradeVersions.isEmpty()
+      downgradeVersions.isEmpty()
+      (upToDateVersions.get(['group': 'com.example', 'name': 'snapshot-only']).getVersion() ==
+        '1.0-SNAPSHOT')
+    }
+  }
+
   def 'Single project with annotation processor'() {
     given:
     def project = singleProject()
