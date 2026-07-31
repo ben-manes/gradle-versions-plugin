@@ -108,7 +108,7 @@ The following dependencies have later milestone versions:
      https://spring.io/projects/spring-boot
 
 Gradle release-candidate updates:
- - Gradle: [8.4 -> 9.6.1 -> 9.7.0-rc-1]
+ - Gradle: [8.4 -> 9.6.1 -> 9.7.0-rc-2]
 ```
 
 ### Configuring the task
@@ -670,7 +670,7 @@ Failed to determine the latest version for the following dependencies (use --inf
  - dom4j:dom4j
 
 Gradle release-candidate updates:
- - Gradle: [8.4 -> 9.6.1 -> 9.7.0-rc-1]
+ - Gradle: [8.4 -> 9.6.1 -> 9.7.0-rc-2]
 ```
 
 </details>
@@ -866,7 +866,7 @@ Alternatively, the report may be output to a structured file.
    "isFailure": false,
    "isUpdateAvailable": true,
    "reason": "",
-   "version": "9.7.0-rc-1"
+   "version": "9.7.0-rc-2"
   },
   "nightly": {
    "isFailure": false,
@@ -1038,7 +1038,7 @@ Searched in the following locations:
             <reason/>
         </current>
         <releaseCandidate>
-            <version>9.7.0-rc-1</version>
+            <version>9.7.0-rc-2</version>
             <isUpdateAvailable>true</isUpdateAvailable>
             <isFailure>false</isFailure>
             <reason/>

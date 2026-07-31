@@ -74,7 +74,7 @@ final class SettingsPluginAggregationSpec extends Specification {
 
   private def runWith(List<String> arguments) {
     return GradleRunner.create()
-      .withGradleVersion('9.7.0-rc-1')
+      .withGradleVersion('9.7.0-rc-2')
       .withProjectDir(testProjectDir.root)
       .withArguments(arguments)
       .withPluginClasspath()

@@ -65,7 +65,7 @@ final class IsolatedProjectsAggregationSpec extends Specification {
 
   private def run() {
     return GradleRunner.create()
-      .withGradleVersion('9.7.0-rc-1')
+      .withGradleVersion('9.7.0-rc-2')
       .withProjectDir(testProjectDir.root)
       .withArguments(':dependencyUpdates', '-Dorg.gradle.isolated-projects=true',
         '--configuration-cache')

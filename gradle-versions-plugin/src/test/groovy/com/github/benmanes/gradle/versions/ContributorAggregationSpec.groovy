@@ -66,7 +66,7 @@ final class ContributorAggregationSpec extends Specification {
 
   private def run(String... arguments) {
     return GradleRunner.create()
-      .withGradleVersion('9.7.0-rc-1')
+      .withGradleVersion('9.7.0-rc-2')
       .withProjectDir(testProjectDir.root)
       .withArguments(arguments)
       .withPluginClasspath()
@@ -187,7 +187,7 @@ final class ContributorAggregationSpec extends Specification {
 
     when:
     def result = GradleRunner.create()
-      .withGradleVersion('9.7.0-rc-1')
+      .withGradleVersion('9.7.0-rc-2')
       .withProjectDir(testProjectDir.root)
       .withArguments(':dependencyUpdates')
       .withPluginClasspath()
@@ -209,7 +209,7 @@ final class ContributorAggregationSpec extends Specification {
 
     when:
     def result = GradleRunner.create()
-      .withGradleVersion('9.7.0-rc-1')
+      .withGradleVersion('9.7.0-rc-2')
       .withProjectDir(testProjectDir.root)
       .withArguments(':app:dependencyUpdates')
       .withPluginClasspath()
