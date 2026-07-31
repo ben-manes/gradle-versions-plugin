@@ -199,8 +199,14 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
       )
     }
     val statuses =
-      mergeStatuses(partials.flatMap { it.statuses }) +
-        mergeStatuses(partials.flatMap { it.buildscriptStatuses })
+      mergeStatuses(
+        partials.flatMap { partial -> partial.statuses.map { it.copy(projectPath = partial.projectPath) } },
+      ) +
+        mergeStatuses(
+          partials.flatMap { partial ->
+            partial.buildscriptStatuses.map { it.copy(projectPath = partial.projectPath) }
+          },
+        )
 
     reporterFor(
       statuses, projectPath, logger, revision, outputFormatter(), outputDirectory(), reportfileName,

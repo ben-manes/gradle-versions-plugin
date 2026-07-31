@@ -201,6 +201,13 @@ class XmlReporter(
     appendTextChild(document, dependencyElement, "version", dependency.version)
     appendTextChild(document, dependencyElement, "projectUrl", dependency.projectUrl)
     appendTextChild(document, dependencyElement, "userReason", dependency.userReason)
+    dependency.projects?.let { projects ->
+      val element = document.createElement("projects")
+      dependencyElement.appendChild(element)
+      for (project in projects) {
+        appendTextChild(document, element, "project", project)
+      }
+    }
     return dependencyElement
   }
 

@@ -70,6 +70,55 @@ final class ReportJoinSpec extends Specification {
     report.count == 2
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1032')
+  def 'A divergent version names its declaring projects'() {
+    given:
+    def root = twoProjects('com.google.inject', 'guice', '3\\.1', '2.0', '3.0')
+
+    when:
+    def result = evaluate(root)
+
+    then:
+    result.outdated.dependencies*.projects == [[':pinned'], [':open']]
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1032')
+  def 'A shared version carries no projects'() {
+    given:
+    def root = twoProjects('com.google.inject', 'guice', 'nomatch', '3.1', '3.1')
+
+    when:
+    def result = evaluate(root)
+
+    then:
+    result.current.dependencies*.projects == [null]
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1032')
+  def 'Attributes a buildscript dependency to its project'() {
+    given:
+    def root = ProjectBuilder.builder().withName('root').build()
+    def app = ProjectBuilder.builder().withName('app').withParent(root).build()
+    def localMavenRepo = getClass().getResource('/maven/')
+    for (project in [root, app]) {
+      project.buildscript.repositories {
+        maven {
+          url localMavenRepo.toURI()
+        }
+      }
+    }
+    root.buildscript.dependencies.add('classpath', 'com.google.inject:guice:2.0')
+    app.buildscript.dependencies.add('classpath', 'com.google.inject:guice:3.0')
+
+    when:
+    def result = evaluate(root)
+
+    then:
+    result.outdated.dependencies*.version.sort() == ['2.0', '3.0']
+    result.outdated.dependencies.find { it.version == '2.0' }.projects == [':']
+    result.outdated.dependencies.find { it.version == '3.0' }.projects == [':app']
+  }
+
   /**
    * A root project whose two children declare the same module, where the first child's repository
    * hides the versions matching {@code hiddenVersionRegex}. The latest version found therefore

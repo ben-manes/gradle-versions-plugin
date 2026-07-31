@@ -47,7 +47,11 @@ final class ProjectEvaluator {
     def resolver = new Resolver(project, resolutionStrategy, checkConstraints)
     return configurations.findAll { it.canBeResolved }.collectMany { Configuration configuration ->
       try {
-        return resolver.resolve(configuration, revision).collect { it.toPartialStatus() }
+        return resolver.resolve(configuration, revision).collect {
+          def status = it.toPartialStatus()
+          new PartialStatus(status.group, status.name, status.declaredVersion, status.userReason,
+            status.latestVersion, status.projectUrl, status.unresolved, project.path)
+        }
       } catch (Exception e) {
         project.logger.info("Skipping configuration ${project.path}:${configuration.name}", e)
         return []

@@ -1,5 +1,6 @@
 package com.github.benmanes.gradle.versions.reporter
 
+import com.github.benmanes.gradle.versions.reporter.result.Dependency
 import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.reporter.result.VersionAvailable
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.CURRENT
@@ -230,7 +231,8 @@ class HtmlReporter(
           dependency.name.orEmpty(),
           dependency.group.orEmpty(),
           getUrlString(dependency.projectUrl),
-          getVersionString(dependency.group.orEmpty(), dependency.name.orEmpty(), dependency.version),
+          getVersionString(dependency.group.orEmpty(), dependency.name.orEmpty(), dependency.version) +
+            declaredIn(dependency),
           getVersionString(
             dependency.group.orEmpty(),
             dependency.name.orEmpty(),
@@ -353,7 +355,7 @@ class HtmlReporter(
               dependency.group.orEmpty(),
               dependency.name.orEmpty(),
               dependency.version,
-            ),
+            ) + declaredIn(dependency),
             dependency.userReason.orEmpty(),
           )
         rows.add(rowString)
@@ -386,7 +388,7 @@ class HtmlReporter(
               dependency.group.orEmpty(),
               dependency.name.orEmpty(),
               dependency.version,
-            ),
+            ) + declaredIn(dependency),
             getVersionString(
               dependency.group.orEmpty(),
               dependency.name.orEmpty(),
@@ -457,6 +459,8 @@ class HtmlReporter(
           version,
         )
     }
+
+    private fun declaredIn(dependency: Dependency): String = dependency.projects?.let { "<br>declared in ${projectsLabel(it)}" }.orEmpty()
 
     private fun getUrlString(url: String?): String {
       if (url == null) {

@@ -4,21 +4,25 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
 /** One dependency's status, as observed by a single project. */
-data class PartialStatus(
-  val group: String,
-  val name: String,
-  val declaredVersion: String,
-  val userReason: String?,
-  val latestVersion: String,
-  val projectUrl: String?,
-  val unresolved: UnresolvedInfo?,
-) {
-  val coordinate: Coordinate
-    get() = Coordinate(group, name, declaredVersion, userReason)
+data class PartialStatus
+  @JvmOverloads
+  constructor(
+    val group: String,
+    val name: String,
+    val declaredVersion: String,
+    val userReason: String?,
+    val latestVersion: String,
+    val projectUrl: String?,
+    val unresolved: UnresolvedInfo?,
+    /** The observing project, stamped by the accumulator rather than serialized. */
+    @Transient val projectPath: String? = null,
+  ) {
+    val coordinate: Coordinate
+      get() = Coordinate(group, name, declaredVersion, userReason)
 
-  val latestCoordinate: Coordinate
-    get() = Coordinate(group, name, latestVersion, userReason)
-}
+    val latestCoordinate: Coordinate
+      get() = Coordinate(group, name, latestVersion, userReason)
+  }
 
 /** A resolution failure, as a value that survives the project boundary. */
 data class UnresolvedInfo(

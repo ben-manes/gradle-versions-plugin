@@ -1149,6 +1149,20 @@ configuration cache the dependency metadata read during resolution is tracked as
 an input, so a newly published version invalidates the cached entry rather than
 serving a stale report.
 
+When a coordinate's declared version differs across the aggregated projects, the
+plain text, JSON, XML, and HTML reports name the projects that declared each
+version, so the entry no longer reads as self-contradictory:
+
+```text
+The following dependencies have later milestone versions:
+ - org.jacoco:org.jacoco.ant [0.8.14 -> 0.8.15]
+     declared in root project
+```
+
+The plain text and HTML reports name the first five projects and count the rest
+(`declared in :app, :lib, ... and 60 others`). The JSON and XML reports always
+carry the complete list, so use one of them when a tool needs every project.
+
 With the settings plugin applied (see [Applying the
 plugin](#applying-the-plugin)), the root project receives the
 `dependencyUpdates` task and every other project contributes to it. No project
