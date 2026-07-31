@@ -232,6 +232,19 @@ private fun registerProducer(
   if (tasks.names.contains(PARTIAL_TASK_NAME)) {
     return tasks.named(PARTIAL_TASK_NAME, DependencyUpdatesPartialTask::class.java)
   }
+  // A default action runs only while the build has declared nothing of its own, so one registered
+  // here, ahead of the plugins that a project applies, names the configurations that a plugin alone
+  // filled. Reading the dependencies later cannot tell the two apart, as any configuration time
+  // reader of incoming.dependencies has by then run the actions that contribute them.
+  // https://github.com/ben-manes/gradle-versions-plugin/issues/1028
+  val filledByPlugin = ConcurrentHashMap.newKeySet<String>()
+  project.configurations.configureEach { configuration ->
+    // Only a configuration that dependencies are declared against accepts a default action, which
+    // is every configuration that a plugin contributes to.
+    if (configuration.isCanBeDeclared) {
+      configuration.defaultDependencies { filledByPlugin.add(configuration.name) }
+    }
+  }
   val partial =
     tasks.register(PARTIAL_TASK_NAME, DependencyUpdatesPartialTask::class.java) { task ->
       task.outputFile.convention(
@@ -263,12 +276,21 @@ private fun registerProducer(
           PartialResult(
             PartialResult.FORMAT_VERSION,
             project.path,
-            statusesOf(project, configurations, parameters, parameters.checkConstraints),
+            statusesOf(
+              project,
+              configurations,
+              parameters,
+              parameters.checkConstraints,
+              filledByPlugin,
+            ),
             statusesOf(
               project,
               buildscriptConfigurations,
               parameters,
               parameters.checkBuildEnvironmentConstraints,
+              // No default action is registered on the buildscript's configurations, so a project
+              // configuration sharing a name with one must not discount its declared dependencies.
+              filledByPlugin = emptySet(),
             ),
           ).toJson()
         },
@@ -333,14 +355,24 @@ private fun statusesOf(
   configurations: List<Configuration>,
   parameters: ResolvedParameters,
   checkConstraints: Boolean,
+  filledByPlugin: Set<String>,
 ): List<PartialStatus> {
   if (configurations.isEmpty()) {
     return emptyList()
   }
   val resolver = Resolver(project, parameters.resolutionStrategy, checkConstraints)
+  // Snapshotted for every configuration before the first resolution, as resolving one
+  // configuration runs the lazy actions of the configurations it extends. A build that read the
+  // dependencies while configuring has already run them, which the discount below corrects for.
+  val declaredKeys =
+    configurations.associateWith { runCatching { resolver.declaredKeys(it) }.getOrDefault(emptySet()) }
   return configurations.flatMap { configuration ->
     try {
-      resolver.resolve(configuration, parameters.revision).map { it.toPartialStatus() }
+      // Discounted after resolving, which is what runs the default actions that name the
+      // configurations whose every dependency a plugin contributed.
+      resolver.resolve(configuration, parameters.revision) {
+        declaredKeys.getValue(configuration) - keysOf(configuration, filledByPlugin)
+      }.map { it.toPartialStatus() }
     } catch (e: Exception) {
       project.logger.info("Skipping configuration ${project.path}:${configuration.name}", e)
       emptyList()

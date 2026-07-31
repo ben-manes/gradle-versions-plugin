@@ -119,6 +119,41 @@ final class ReportJoinSpec extends Specification {
     result.outdated.dependencies.find { it.version == '3.0' }.projects == [':app']
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1028')
+  def 'A version declared by any project is not marked contributed'() {
+    given:
+    def root = ProjectBuilder.builder().withName('root').build()
+    def a = ProjectBuilder.builder().withName('a').withParent(root).build()
+    def b = ProjectBuilder.builder().withName('b').withParent(root).build()
+    def localMavenRepo = getClass().getResource('/maven/')
+    for (project in [a, b]) {
+      project.repositories {
+        maven {
+          url localMavenRepo.toURI()
+        }
+      }
+    }
+    a.configurations {
+      app
+    }
+    a.dependencies {
+      app 'com.google.inject:guice:3.0'
+    }
+    b.configurations.create('tool') {
+      canBeResolved = true
+      canBeConsumed = false
+    }
+    b.configurations.tool.defaultDependencies { deps ->
+      deps.add(b.dependencies.create('com.google.inject:guice:3.0'))
+    }
+
+    when:
+    def result = evaluate(root)
+
+    then:
+    result.outdated.dependencies.find { it.name == 'guice' }.contributed == null
+  }
+
   /**
    * A root project whose two children declare the same module, where the first child's repository
    * hides the versions matching {@code hiddenVersionRegex}. The latest version found therefore

@@ -42,7 +42,9 @@ import java.util.TreeSet
  * and gradle updates.
  * @property gradleReleaseChannel The gradle release channel to use for reporting.
  * @property latestByCurrent The latest version found for each declared version.
- * @property projectsByCoordinate The projects declaring each version of a coordinate whose versions diverge.
+ * @property projectsByCoordinate The projects behind each version of a coordinate whose versions diverge.
+ * @property contributedCoordinates The coordinates that only lazy actions contributed, no project declaring them.
+ * @property configurationsByCoordinate The configurations a plugin contributed each marked coordinate into.
  *
  */
 class DependencyUpdatesReporter(
@@ -64,6 +66,8 @@ class DependencyUpdatesReporter(
   val gradleReleaseChannel: String,
   val latestByCurrent: Map<Coordinate, Coordinate> = emptyMap(),
   val projectsByCoordinate: Map<Coordinate, List<String>> = emptyMap(),
+  val contributedCoordinates: Set<Coordinate> = emptySet(),
+  val configurationsByCoordinate: Map<Coordinate, List<String>> = emptyMap(),
 ) {
   @Synchronized
   fun write() {
@@ -229,6 +233,8 @@ class DependencyUpdatesReporter(
       projectUrl = projectUrls[key],
       userReason = coordinate.userReason,
       projects = projectsByCoordinate[coordinate],
+      contributed = contributedFlag(coordinate),
+      configurations = configurationsByCoordinate[coordinate],
     )
   }
 
@@ -244,8 +250,13 @@ class DependencyUpdatesReporter(
       userReason = coordinate.userReason,
       latest = latestFor(coordinate, key).orEmpty(),
       projects = projectsByCoordinate[coordinate],
+      contributed = contributedFlag(coordinate),
+      configurations = configurationsByCoordinate[coordinate],
     )
   }
+
+  /** Returns true when the coordinate was only contributed by a plugin, otherwise null. */
+  private fun contributedFlag(coordinate: Coordinate): Boolean? = if (coordinate in contributedCoordinates) true else null
 
   /** Returns the latest version found for the declared version, if it was paired with one. */
   private fun latestFor(
@@ -256,13 +267,16 @@ class DependencyUpdatesReporter(
   }
 
   private fun buildUnresolvedDependency(info: UnresolvedInfo): DependencyUnresolved {
+    val coordinate = currentVersions[keyOf(info)]
     return DependencyUnresolved(
       group = info.selectorGroup,
       name = info.selectorName,
-      version = currentVersions[keyOf(info)]?.version,
+      version = coordinate?.version,
       projectUrl = projectUrls[keyOf(info)],
-      userReason = currentVersions[keyOf(info)]?.userReason,
+      userReason = coordinate?.userReason,
       reason = info.failureText,
+      contributed = coordinate?.let { contributedFlag(it) },
+      configurations = coordinate?.let { configurationsByCoordinate[it] },
     )
   }
 
@@ -285,6 +299,8 @@ class DependencyUpdatesReporter(
       userReason = coordinate.userReason,
       available = available,
       projects = projectsByCoordinate[coordinate],
+      contributed = contributedFlag(coordinate),
+      configurations = configurationsByCoordinate[coordinate],
     )
   }
 
@@ -360,6 +376,8 @@ fun reporterFor(
 ): DependencyUpdatesReporter {
   val versions = VersionMapping(logger, statuses)
   val projectsByCoordinate = divergentProjects(statuses)
+  val contributedCoordinates = contributedCoordinates(statuses, logger)
+  val configurationsByCoordinate = contributedConfigurations(statuses, contributedCoordinates)
   val unresolved = statuses.mapNotNullTo(mutableSetOf()) { it.unresolved }
   val projectUrls =
     statuses
@@ -384,11 +402,46 @@ fun reporterFor(
     projectPath, logger, revision, outputFormatterArgument, outputDir,
     reportfileName, currentVersions, latestVersions, upToDateVersions, downgradeVersions,
     upgradeVersions, versions.undeclared, unresolved, projectUrls, gradleUpdateChecker,
-    gradleReleaseChannel, versions.latestByCurrent, projectsByCoordinate,
+    gradleReleaseChannel, versions.latestByCurrent, projectsByCoordinate, contributedCoordinates,
+    configurationsByCoordinate,
   )
 }
 
-/** Returns the projects declaring each version of a key whose declared versions diverge. */
+/** Returns the coordinates that only lazy actions contributed, with no project declaring them. */
+private fun contributedCoordinates(
+  statuses: List<PartialStatus>,
+  logger: Logger,
+): Set<Coordinate> {
+  val byCoordinate = statuses.groupBy { it.coordinate }
+  // Withheld when the projects disagree, which is a mark that cannot be trusted rather than one
+  // that does not apply, so it is reported instead of passing as an ordinary unmarked entry.
+  for ((coordinate, group) in byCoordinate) {
+    if (group.any { it.contributed } && !group.all { it.contributed }) {
+      logger.info(
+        "The projects disagree on whether a plugin contributed ${coordinate.groupId}:" +
+          "${coordinate.artifactId}, so it is left unmarked: contributed by " +
+          group.filter { it.contributed }.mapNotNull { it.projectPath }.sorted().joinToString(", "),
+      )
+    }
+  }
+  return byCoordinate.filterValues { group -> group.all { it.contributed } }.keys
+}
+
+/**
+ * Returns the configurations each marked coordinate was contributed into, taken across the projects
+ * that observed it, so that a plugin which fills a differently named configuration per project is
+ * reported as filling both rather than either.
+ */
+private fun contributedConfigurations(
+  statuses: List<PartialStatus>,
+  contributed: Set<Coordinate>,
+): Map<Coordinate, List<String>> =
+  statuses
+    .filter { it.coordinate in contributed && it.configurations.isNotEmpty() }
+    .groupBy { it.coordinate }
+    .mapValues { (_, group) -> group.flatMap { it.configurations }.distinct().sorted() }
+
+/** Returns the projects behind each version of a key whose declared versions diverge. */
 private fun divergentProjects(statuses: List<PartialStatus>): Map<Coordinate, List<String>> {
   if (statuses.mapTo(mutableSetOf()) { it.projectPath }.size <= 1) {
     return emptyMap()

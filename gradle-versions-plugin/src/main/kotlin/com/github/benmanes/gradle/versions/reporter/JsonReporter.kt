@@ -55,6 +55,17 @@ class JsonReporter(
   }
 }
 
+/** Writes a JSON null without leaking the writer's serializeNulls setting to its caller. */
+private fun JsonWriter.absentValue() {
+  val serializeNulls = this.serializeNulls
+  this.serializeNulls = false
+  try {
+    nullValue()
+  } finally {
+    this.serializeNulls = serializeNulls
+  }
+}
+
 /** Omits an absent optional property that serializeNulls would otherwise write as null. */
 private class AbsentWhenNullAdapter {
   @ToJson
@@ -63,13 +74,7 @@ private class AbsentWhenNullAdapter {
     @AbsentWhenNull projects: List<String>?,
   ) {
     if (projects == null) {
-      val serializeNulls = writer.serializeNulls
-      writer.serializeNulls = false
-      try {
-        writer.nullValue()
-      } finally {
-        writer.serializeNulls = serializeNulls
-      }
+      writer.absentValue()
     } else {
       writer.beginArray()
       for (project in projects) {
@@ -90,4 +95,20 @@ private class AbsentWhenNullAdapter {
     reader.endArray()
     return projects
   }
+
+  @ToJson
+  fun contributedToJson(
+    writer: JsonWriter,
+    @AbsentWhenNull contributed: Boolean?,
+  ) {
+    if (contributed == null) {
+      writer.absentValue()
+    } else {
+      writer.value(contributed)
+    }
+  }
+
+  @FromJson
+  @AbsentWhenNull
+  fun contributedFromJson(reader: JsonReader): Boolean? = reader.nextBoolean()
 }

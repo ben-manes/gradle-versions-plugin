@@ -45,12 +45,17 @@ final class ProjectEvaluator {
       Action<ResolutionStrategyWithCurrent> resolutionStrategy, String revision,
       boolean checkConstraints) {
     def resolver = new Resolver(project, resolutionStrategy, checkConstraints)
-    return configurations.findAll { it.canBeResolved }.collectMany { Configuration configuration ->
+    def resolvable = configurations.findAll { it.canBeResolved }
+    // Snapshotted for every configuration before the first resolution, as resolving one
+    // configuration runs the lazy actions of the configurations it extends.
+    def declaredKeys = resolvable.collectEntries { [(it): resolver.declaredKeys(it)] }
+    return resolvable.collectMany { Configuration configuration ->
       try {
-        return resolver.resolve(configuration, revision).collect {
+        return resolver.resolve(configuration, revision, declaredKeys[configuration]).collect {
           def status = it.toPartialStatus()
           new PartialStatus(status.group, status.name, status.declaredVersion, status.userReason,
-            status.latestVersion, status.projectUrl, status.unresolved, project.path)
+            status.latestVersion, status.projectUrl, status.unresolved, status.contributed,
+            status.configurations, project.path)
         }
       } catch (Exception e) {
         project.logger.info("Skipping configuration ${project.path}:${configuration.name}", e)

@@ -10,4 +10,6 @@ data class DependencyLatest
     override val userReason: String? = null,
     val latest: String,
     @AbsentWhenNull override val projects: List<String>? = null,
+    @AbsentWhenNull override val contributed: Boolean? = null,
+    @AbsentWhenNull override val configurations: List<String>? = null,
   ) : Dependency()
