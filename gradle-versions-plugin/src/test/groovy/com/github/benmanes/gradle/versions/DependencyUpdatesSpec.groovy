@@ -18,12 +18,14 @@ package com.github.benmanes.gradle.versions
 import com.github.benmanes.gradle.versions.updates.OutputFormatterArgument
 import org.gradle.api.Action
 
+import static com.github.benmanes.gradle.versions.updates.DependencyUpdatesReporterKt.reporterFor
 import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.CURRENT
 import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 
 import com.github.benmanes.gradle.versions.reporter.Reporter
 import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.updates.Coordinate
+import com.github.benmanes.gradle.versions.updates.PartialStatus
 import org.gradle.api.artifacts.ComponentSelection
 import com.github.benmanes.gradle.versions.updates.UnresolvedInfo
 import org.gradle.testfixtures.ProjectBuilder
@@ -345,6 +347,32 @@ final class DependencyUpdatesSpec extends Specification {
     exceeded == 2
     undeclared == 2
     unresolved == 2
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/844')
+  def 'An unresolved dependency reports its project url rather than a version'() {
+    given:
+    def project = singleProject()
+    def projectUrl = 'https://code.google.com/p/google-guice/'
+    def statuses = [
+      new PartialStatus('com.google.inject', 'guice', '2.0', null, '3.1', projectUrl, null),
+      new PartialStatus('com.google.inject', 'guice', '2.0', null, 'none', null,
+        new UnresolvedInfo('com.google.inject', 'guice', '2.0', 'Could not resolve')),
+    ]
+    def unresolved = []
+    def outputFormatter = [execute: { result ->
+      unresolved = result.unresolved.dependencies.toList()
+    }] as Action<Result>
+
+    when:
+    def reporter = reporterFor(statuses, project.path, project.logger, 'milestone',
+      new OutputFormatterArgument.CustomAction(outputFormatter), project.file('build'), 'report',
+      false, 'https://services.gradle.org/versions/', RELEASE_CANDIDATE.id)
+    reporter.write()
+
+    then:
+    unresolved.size() == 1
+    unresolved.first().projectUrl == projectUrl
   }
 
   def 'Single project with flatDir repository'() {

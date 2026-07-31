@@ -65,18 +65,19 @@ class DependencyUpdatesReporter(
 ) {
   @Synchronized
   fun write() {
-    if (outputFormatterArgument !is OutputFormatterArgument.CustomAction) {
+    if (outputFormatterArgument !is OutputFormatterArgument.CustomAction && logger.isLifecycleEnabled) {
       val plainTextReporter =
         PlainTextReporter(
           projectPath,
           revision,
           gradleReleaseChannel,
+          logger.isInfoEnabled,
         )
       plainTextReporter.write(System.out, buildBaseObject())
     }
 
     if (outputFormatterArgument is OutputFormatterArgument.BuiltIn && outputFormatterArgument.formatterNames.isEmpty()) {
-      logger.lifecycle("Skip generating report to file (outputFormatter is empty)")
+      logger.info("Skip generating report to file (outputFormatter is empty)")
       return
     }
 
@@ -114,7 +115,7 @@ class DependencyUpdatesReporter(
       "json" -> JsonReporter(projectPath, revision, gradleReleaseChannel)
       "xml" -> XmlReporter(projectPath, revision, gradleReleaseChannel)
       "html" -> HtmlReporter(projectPath, revision, gradleReleaseChannel)
-      else -> PlainTextReporter(projectPath, revision, gradleReleaseChannel)
+      else -> PlainTextReporter(projectPath, revision, gradleReleaseChannel, logger.isInfoEnabled)
     }
   }
 
@@ -255,7 +256,7 @@ class DependencyUpdatesReporter(
       group = info.selectorGroup,
       name = info.selectorName,
       version = currentVersions[keyOf(info)]?.version,
-      projectUrl = latestVersions[keyOf(info)]?.version,
+      projectUrl = projectUrls[keyOf(info)],
       userReason = currentVersions[keyOf(info)]?.userReason,
       reason = info.failureText,
     )

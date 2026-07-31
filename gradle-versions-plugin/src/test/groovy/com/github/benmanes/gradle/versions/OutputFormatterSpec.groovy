@@ -622,4 +622,54 @@ Failed to determine the latest version for the following dependencies (use --inf
     assert result.output.toString().contains(expected)
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
+
+  def 'outputFormatter custom - the documented reporter constructor is callable from Groovy'() {
+    given:
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
+
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'java'
+        apply plugin: 'io.github.ben-manes.versions'
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation('com.google.inject:guice:2.0')
+        }
+
+        tasks.named('dependencyUpdates').configure {
+          def projectPath = project.path
+          def taskRevision = revision
+          def releaseChannel = gradleReleaseChannel
+
+          outputFormatter { result ->
+            new PlainTextReporter(projectPath, taskRevision, releaseChannel).write(System.out, result)
+          }
+          checkForGradleUpdate = false // future proof tests from breaking
+        }
+        """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then:
+    result.output.contains('Project Dependency Updates')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
 }
