@@ -273,8 +273,9 @@ class Resolver(
           // A module published only as a snapshot has no candidate that a milestone or release
           // revision accepts, so the version the build already uses is exempt from the check.
           // https://github.com/ben-manes/gradle-versions-plugin/issues/475
-          val candidate = Coordinate.from(selection.candidate)
-          val isCurrent = currentCoordinates[candidate.key]?.version == candidate.version
+          val candidateCoordinate = Coordinate.from(selection.candidate)
+          val isCurrent =
+            currentCoordinates[candidateCoordinate.key]?.version == candidateCoordinate.version
           val accepted =
             (metadata == null) ||
               ((revision == "release") && (metadata.status == "release")) ||
