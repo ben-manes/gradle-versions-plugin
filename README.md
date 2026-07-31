@@ -1159,6 +1159,10 @@ The following dependencies have later milestone versions:
      declared in root project
 ```
 
+The plain text and HTML reports name the first five projects and count the rest
+(`declared in :app, :lib, ... and 60 others`). The JSON and XML reports always
+carry the complete list, so use one of them when a tool needs every project.
+
 With the settings plugin applied (see [Applying the
 plugin](#applying-the-plugin)), the root project receives the
 `dependencyUpdates` task and every other project contributes to it. No project
