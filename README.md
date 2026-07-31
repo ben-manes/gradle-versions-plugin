@@ -37,6 +37,7 @@ Plugin](https://www.mojohaus.org/versions-maven-plugin).
 - [Samples](#samples)
 - [Compatibility](#compatibility)
 - [Migrating from prior versions](#migrating-from-prior-versions)
+  - [v0.57.0](#v0570)
   - [v0.56.0](#v0560)
   - [v0.55.0](#v0550)
   - [v0.54.0 and earlier](#v0540-and-earlier)
@@ -1510,6 +1511,23 @@ projects (see [Isolated projects](#isolated-projects)) are supported.
 Start at the subsection for the version your build is on and work upward: each
 subsection migrates to the version covered by the subsection above it, and the
 topmost migrates to the current release.
+
+### v0.57.0
+
+v0.58.0 routes the reporters through the build's logger and adds attribution
+lines to the reports:
+
+* The console summary now prints at the lifecycle log level, so `--quiet`
+  suppresses it. The report file is still written; read it, or drop `--quiet`,
+  if a script was piping the console output (see [Report
+  format](#report-format)).
+* An entry may carry an indented attribution line naming the projects that
+  declared a divergent version (see [Multi-project
+  builds](#multi-project-builds)) or the configuration a plugin contributed it
+  into (see [The `dependencyUpdates`
+  task](#the-dependencyupdates-task)). A tool that parses the plain
+  text report line by line has to skip them; the JSON and XML reports carry the
+  same signal as fields instead.
 
 ### v0.56.0
 
