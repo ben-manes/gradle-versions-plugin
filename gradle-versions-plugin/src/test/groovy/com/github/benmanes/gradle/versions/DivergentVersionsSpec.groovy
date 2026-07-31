@@ -23,8 +23,9 @@ final class DivergentVersionsSpec extends Specification {
     mavenRepoUrl = getClass().getResource('/maven/').toURI()
   }
 
-  private void writeBuild(String rootBuildscript = '', String rootDependencies = '') {
-    testProjectDir.newFile('settings.gradle') << "include 'app', 'lib'"
+  private void writeBuild(String rootBuildscript = '', String rootDependencies = '',
+      List<String> projects = ['app', 'lib']) {
+    testProjectDir.newFile('settings.gradle') << "include ${projects.collect { "'$it'" }.join(', ')}"
     testProjectDir.newFile('build.gradle') <<
       """
         $rootBuildscript
@@ -118,6 +119,59 @@ final class DivergentVersionsSpec extends Specification {
     result.output.contains(' - com.google.inject:guice [2.0 -> 3.1]')
     result.output.contains('     declared in :app, :lib')
     result.output.contains('     declared in root project')
+  }
+
+  def 'Elides a long project list in the human readable reports only'() {
+    given:
+    def projects = (1..7).collect { "p$it" }
+    writeBuild('', "implementation 'com.google.inject:guice:2.0'", projects)
+    projects.each { project ->
+      testProjectDir.newFolder(project)
+      testProjectDir.newFile("$project/build.gradle") <<
+        """
+          dependencies {
+            implementation 'com.google.inject:guice:3.0'
+          }
+        """.stripIndent()
+    }
+
+    when:
+    def result = run(
+      ['dependencyUpdates', '-DoutputFormatter=plain,json,html', '--no-parallel'])
+    def jsonReport = new JsonSlurper()
+      .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
+    def htmlReport = new File(testProjectDir.root, 'build/dependencyUpdates/report.html').text
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('     declared in :p1, :p2, :p3, :p4, :p5 and 2 others')
+    result.output.contains('     declared in root project')
+    htmlReport.contains('declared in :p1, :p2, :p3, :p4, :p5 and 2 others')
+    jsonReport.outdated.dependencies.find { it.version == '3.0' }.projects ==
+      projects.collect { ":$it" }
+  }
+
+  def 'Names every project of a list at the elision threshold'() {
+    given:
+    def projects = (1..6).collect { "p$it" }
+    writeBuild('', "implementation 'com.google.inject:guice:2.0'", projects)
+    projects.each { project ->
+      testProjectDir.newFolder(project)
+      testProjectDir.newFile("$project/build.gradle") <<
+        """
+          dependencies {
+            implementation 'com.google.inject:guice:3.0'
+          }
+        """.stripIndent()
+    }
+
+    when:
+    def result = run(['dependencyUpdates', '--no-parallel'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('     declared in :p1, :p2, :p3, :p4, :p5, :p6')
+    !result.output.contains('others')
   }
 
   def 'Aggregated projects that agree keep the report byte-identical'() {
