@@ -19,6 +19,10 @@ open class Dependency
     open val projectUrl: String? = null,
     open val userReason: String? = null,
     @AbsentWhenNull open val projects: List<String>? = null,
+    /** True when only plugins contributed the dependency rather than the build declaring it. */
+    @AbsentWhenNull open val contributed: Boolean? = null,
+    /** The configurations a plugin contributed the dependency into, when it contributed it. */
+    @AbsentWhenNull open val configurations: List<String>? = null,
   ) : Comparable<Dependency> {
     override fun compareTo(other: Dependency): Int {
       return compareValuesBy(

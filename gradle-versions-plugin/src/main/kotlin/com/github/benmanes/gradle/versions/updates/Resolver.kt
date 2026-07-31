@@ -50,10 +50,26 @@ class Resolver(
     logRepositories()
   }
 
+  /** Returns the declared dependency keys of the configuration, before lazy actions contribute. */
+  fun declaredKeys(configuration: Configuration): Set<Coordinate.Key> =
+    getResolvableDependencies(configuration).mapTo(hashSetOf()) { it.key }
+
   /** Returns the version status of the configuration's dependencies at the given revision. */
+  @JvmOverloads
   fun resolve(
     configuration: Configuration,
     revision: String,
+    declaredKeys: Set<Coordinate.Key> = declaredKeys(configuration),
+  ): Set<DependencyStatus> = resolve(configuration, revision) { declaredKeys }
+
+  /**
+   * Returns the version status of the configuration's dependencies at the given revision, where the
+   * keys the build declared are supplied once the lazy actions that contribute the rest have run.
+   */
+  fun resolve(
+    configuration: Configuration,
+    revision: String,
+    declaredKeys: () -> Set<Coordinate.Key>,
   ): Set<DependencyStatus> {
     // Runs the actions that contribute dependencies lazily, so that the declared set below is read
     // after them rather than before. A contribution missing from that set is discarded as an
@@ -61,17 +77,18 @@ class Resolver(
     // https://github.com/ben-manes/gradle-versions-plugin/issues/987
     configuration.incoming.dependencies
 
-    val current = getCurrentCoordinates(configuration)
+    val current = getCurrentCoordinates(configuration, declaredKeys())
     val latestConfiguration = createLatestConfiguration(configuration, revision, current)
     val root = latestConfiguration.incoming.resolutionResult.root
-    return getStatus(current.coordinates, root)
+    return getStatus(current, root)
   }
 
   /** Returns the version status of the configuration's dependencies. */
   private fun getStatus(
-    coordinates: Map<Coordinate.Key, Coordinate>,
+    current: CurrentCoordinates,
     root: ResolvedComponentResult,
   ): Set<DependencyStatus> {
+    val coordinates = current.coordinates
     val result = hashSetOf<DependencyStatus>()
     for (dependency in root.dependencies) {
       // Constraints do not carry a resolved version to report against.
@@ -85,14 +102,20 @@ class Resolver(
           val originalCoordinate = coordinates[resolvedCoordinate.key]
           val coord = originalCoordinate ?: resolvedCoordinate
           val projectUrl = getProjectUrl(moduleVersion)
-          result.add(DependencyStatus(coord, resolvedCoordinate.version, projectUrl))
+          val contributed = coord.key in current.contributedKeys
+          val configurations = current.contributedConfigurations[coord.key].orEmpty()
+          result.add(
+            DependencyStatus(coord, resolvedCoordinate.version, projectUrl, contributed, configurations),
+          )
         }
         is UnresolvedDependencyResult -> {
           val selector = dependency.attempted as? ModuleComponentSelector ?: continue
           val resolvedCoordinate = Coordinate.from(selector)
           val originalCoordinate = coordinates[resolvedCoordinate.key]
           val coord = originalCoordinate ?: resolvedCoordinate
-          result.add(DependencyStatus(coord, dependency))
+          val contributed = coord.key in current.contributedKeys
+          val configurations = current.contributedConfigurations[coord.key].orEmpty()
+          result.add(DependencyStatus(coord, dependency, contributed, configurations))
         }
       }
     }
@@ -306,7 +329,10 @@ class Resolver(
   }
 
   /** Returns the coordinates for the current (declared) dependency versions. */
-  private fun getCurrentCoordinates(configuration: Configuration): CurrentCoordinates {
+  private fun getCurrentCoordinates(
+    configuration: Configuration,
+    declaredBeforeActions: Set<Coordinate.Key>,
+  ): CurrentCoordinates {
     val declared =
       getResolvableDependencies(configuration)
         .associateBy { it.key }
@@ -314,7 +340,7 @@ class Resolver(
     // run by the time the declared set is read again. That resolution costs nothing. One holding
     // only project or file dependencies is skipped, as resolving it would not.
     if (declared.isEmpty() && configuration.allDependencies.isNotEmpty()) {
-      return CurrentCoordinates(emptyMap(), emptyMap())
+      return CurrentCoordinates(emptyMap(), emptyMap(), emptySet())
     }
 
     // https://github.com/ben-manes/gradle-versions-plugin/issues/231
@@ -380,7 +406,17 @@ class Resolver(
     // Ignore undeclared (hidden) dependencies that appear when resolving a configuration
     coordinates.keys.retainAll(declared.keys + contributed.map { it.key } + substitutions.values)
 
-    return CurrentCoordinates(coordinates, substitutions)
+    // A key only reached via a lazy action (withDependencies/defaultDependencies, or a resolution
+    // listener) is missing from the snapshot taken before any configuration was first resolved, and
+    // is not a substitution target, which traces to a real declaration.
+    val contributedKeys = coordinates.keys - declaredBeforeActions - substitutions.values.toSet()
+
+    return CurrentCoordinates(
+      coordinates,
+      substitutions,
+      contributedKeys,
+      configurationsOf(configuration, contributedKeys),
+    )
   }
 
   /** Returns the modules that a resolution rule substituted for a declared one, by declared key. */
@@ -532,10 +568,15 @@ class Resolver(
     return coordinates
   }
 
-  /** The declared dependencies as resolved, and the modules substituted for any of them. */
+  /**
+   * The declared dependencies as resolved, the modules substituted for any of them, and the keys
+   * that only a lazy action contributed rather than the build declaring them.
+   */
   private class CurrentCoordinates(
     val coordinates: Map<Coordinate.Key, Coordinate>,
     val substitutions: Map<Coordinate.Key, Coordinate.Key>,
+    val contributedKeys: Set<Coordinate.Key> = emptySet(),
+    val contributedConfigurations: Map<Coordinate.Key, List<String>> = emptyMap(),
   )
 
   companion object {
@@ -586,4 +627,67 @@ class Resolver(
       var url: String? = null
     }
   }
+}
+
+/**
+ * Returns the keys that only the named configurations hold, taken across the given one and the
+ * configurations it extends, so that the dependencies of a configuration a plugin alone filled are
+ * known.
+ *
+ * A key another configuration in the hierarchy also holds is left out, as the build declaring a
+ * module that a plugin happens to contribute elsewhere is a declaration of it and not a plugin's.
+ */
+internal fun keysOf(
+  configuration: Configuration,
+  names: Set<String>,
+): Set<Coordinate.Key> {
+  val filled = hashSetOf<Coordinate.Key>()
+  val declared = hashSetOf<Coordinate.Key>()
+  val pending = ArrayDeque(listOf(configuration))
+  val seen = hashSetOf<String>()
+  while (pending.isNotEmpty()) {
+    val next = pending.removeFirst()
+    if (!seen.add(next.name)) {
+      continue
+    }
+    next.dependencies
+      .filterIsInstance<ExternalDependency>()
+      .mapTo(if (next.name in names) filled else declared) { Coordinate.from(it as Dependency).key }
+    pending.addAll(next.extendsFrom)
+  }
+  return filled - declared
+}
+
+/**
+ * Returns the configurations that hold each of the given keys, taken across the given configuration
+ * and the ones it extends, so that a contributed dependency names where it was declared against
+ * rather than the resolvable configuration it was reached through.
+ */
+internal fun configurationsOf(
+  configuration: Configuration,
+  keys: Set<Coordinate.Key>,
+): Map<Coordinate.Key, List<String>> {
+  if (keys.isEmpty()) {
+    return emptyMap()
+  }
+  val names = hashMapOf<Coordinate.Key, MutableSet<String>>()
+  val pending = ArrayDeque(listOf(configuration))
+  val seen = hashSetOf<String>()
+  while (pending.isNotEmpty()) {
+    val next = pending.removeFirst()
+    if (!seen.add(next.name)) {
+      continue
+    }
+    val held =
+      next.dependencies.filterIsInstance<ExternalDependency>().map { Coordinate.from(it as Dependency).key } +
+        // A constraint contributes a key of its own, which the dependencies alone do not name.
+        next.dependencyConstraints.map { Coordinate.from(it).key }
+    for (key in held) {
+      if (key in keys) {
+        names.getOrPut(key) { sortedSetOf() }.add(next.name)
+      }
+    }
+    pending.addAll(next.extendsFrom)
+  }
+  return names.mapValues { (_, held) -> held.toList() }
 }

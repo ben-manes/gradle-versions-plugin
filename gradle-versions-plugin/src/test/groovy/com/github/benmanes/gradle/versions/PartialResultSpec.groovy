@@ -32,7 +32,8 @@ final class PartialResultSpec extends Specification {
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1032')
   def 'The observing project is not serialized'() {
     given:
-    def status = new PartialStatus('com.google.guava', 'guava', '1.0', null, '1.0', null, null, ':stamped-project')
+    def status = new PartialStatus(
+      'com.google.guava', 'guava', '1.0', null, '1.0', null, null, false, [], ':stamped-project')
     def result = new PartialResult(PartialResult.FORMAT_VERSION, ':', [status], [])
 
     when:
@@ -42,6 +43,39 @@ final class PartialResultSpec extends Specification {
     then:
     !json.contains('stamped-project')
     decoded.statuses[0].projectPath == null
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1028')
+  def 'A partial without the contributed key reads as declared'() {
+    given:
+    def json = '''
+      {"formatVersion":1,"projectPath":":","statuses":[{"group":"com.google.guava",
+      "name":"guava","declaredVersion":"1.0","latestVersion":"1.0"}],"buildscriptStatuses":[]}
+      '''.stripIndent()
+
+    when:
+    def decoded = PartialResult.fromJson(json)
+
+    then:
+    decoded.statuses[0].contributed == false
+    decoded.statuses[0].configurations == []
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1028')
+  def 'The contributed flag survives the round trip'() {
+    given:
+    def status =
+      new PartialStatus('com.google.guava', 'guava', '1.0', null, '1.0', null, null, true, ['tool'])
+    def result = new PartialResult(PartialResult.FORMAT_VERSION, ':', [status], [])
+
+    when:
+    def json = result.toJson()
+    def decoded = PartialResult.fromJson(json)
+
+    then:
+    json.contains('"contributed":true')
+    decoded.statuses[0].contributed
+    decoded.statuses[0].configurations == ['tool']
   }
 
   def 'Rejects an unknown format version'() {

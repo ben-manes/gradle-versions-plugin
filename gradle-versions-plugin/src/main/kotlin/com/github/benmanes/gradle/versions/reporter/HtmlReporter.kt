@@ -232,7 +232,7 @@ class HtmlReporter(
           dependency.group.orEmpty(),
           getUrlString(dependency.projectUrl),
           getVersionString(dependency.group.orEmpty(), dependency.name.orEmpty(), dependency.version) +
-            declaredIn(dependency),
+            origin(dependency),
           getVersionString(
             dependency.group.orEmpty(),
             dependency.name.orEmpty(),
@@ -355,7 +355,7 @@ class HtmlReporter(
               dependency.group.orEmpty(),
               dependency.name.orEmpty(),
               dependency.version,
-            ) + declaredIn(dependency),
+            ) + origin(dependency),
             dependency.userReason.orEmpty(),
           )
         rows.add(rowString)
@@ -388,7 +388,7 @@ class HtmlReporter(
               dependency.group.orEmpty(),
               dependency.name.orEmpty(),
               dependency.version,
-            ) + declaredIn(dependency),
+            ) + origin(dependency),
             getVersionString(
               dependency.group.orEmpty(),
               dependency.name.orEmpty(),
@@ -460,7 +460,7 @@ class HtmlReporter(
         )
     }
 
-    private fun declaredIn(dependency: Dependency): String = dependency.projects?.let { "<br>declared in ${projectsLabel(it)}" }.orEmpty()
+    private fun origin(dependency: Dependency): String = sourceLabel(dependency)?.let { "<br>$it" }.orEmpty()
 
     private fun getUrlString(url: String?): String {
       if (url == null) {

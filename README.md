@@ -200,9 +200,17 @@ rather than the build declaring them, such as the Kotlin standard library and
 the tool versions of the `jacoco`, `checkstyle`, and `pmd` plugins. Their
 current version is whatever the contributing plugin supplies when the task
 runs, so a tool version the build never sets reports at the default bundled
-with Gradle—a version that appears nowhere in the build script. Set the
-extension's version, such as `jacoco.toolVersion`, to control what the report
-compares against.
+with Gradle—a version that appears nowhere in the build script. The reports
+mark such an entry so it does not read as a resolution bug, naming the
+configuration the plugin declared it against:
+
+```text
+ - org.jacoco:org.jacoco.ant [0.8.11 -> 0.8.13]
+     contributed by a plugin into the 'jacocoAnt' configuration
+```
+
+Set the extension's version, such as `jacoco.toolVersion`, to control what the
+report compares against.
 
 Gradle updates are checked for on the `current`, `release-candidate` and
 `nightly` release channels. The plain-text report displays Gradle updates as a

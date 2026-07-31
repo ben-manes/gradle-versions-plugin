@@ -57,13 +57,18 @@ final class KotlinDependencyUpdatesSpec extends Specification {
 
     then:
     def inheritedByJvmPlugin =
-      / - org\.jetbrains\.kotlin:kotlin-compiler-embeddable \[$DECLARED_KOTLIN_VERSION -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n/
+      / - org\.jetbrains\.kotlin:kotlin-compiler-embeddable \[$DECLARED_KOTLIN_VERSION -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n\s+contributed by a plugin into the 'kotlinCompilerClasspath' configuration\n/
     result.output.find(/The following dependencies have later milestone versions:\n/ +
       (applyJvmPlugin ? inheritedByJvmPlugin : '') +
       / - org\.jetbrains\.kotlin:kotlin-gradle-plugin \[$DECLARED_KOTLIN_VERSION -> 2\..*\]/)
-    // Sorts after kotlin-gradle-plugin, so it falls past the tail of the match above.
+    // Sorts after kotlin-gradle-plugin, so it falls past the tail of the match above. Contributed
+    // via the plugin's own defaultDependencies action, unlike the classpath's own kotlin-stdlib.
     !applyJvmPlugin ||
-      result.output.contains("org.jetbrains.kotlin:kotlin-stdlib-jdk8 [$DECLARED_KOTLIN_VERSION -> 2.")
+      result.output.contains(
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk8 [$DECLARED_KOTLIN_VERSION -> 2.")
+    !applyJvmPlugin ||
+      result.output.find(
+        /org\.jetbrains\.kotlin:kotlin-stdlib-jdk8 \[$DECLARED_KOTLIN_VERSION -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n\s+contributed by a plugin into the 'api' configuration/)
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
@@ -131,7 +136,10 @@ final class KotlinDependencyUpdatesSpec extends Specification {
       .build()
 
     then:
-    result.output.find(/The following dependencies have later milestone versions:\n - org\.jetbrains\.kotlin:kotlin-compiler-embeddable \[$DECLARED_KOTLIN_VERSION -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n - org\.jetbrains\.kotlin:kotlin-klib-commonizer-embeddable \[$DECLARED_KOTLIN_VERSION -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n - org\.jetbrains\.kotlin:kotlin-scripting-compiler-embeddable \[$DECLARED_KOTLIN_VERSION -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n - org\.jetbrains\.kotlin:kotlin-stdlib \[${explicitStdLibVersion ? DECLARED_KOTLIN_STD_VERSION : DECLARED_KOTLIN_VERSION} -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n - org\.jetbrains\.kotlin\.jvm:org\.jetbrains\.kotlin\.jvm\.gradle\.plugin \[$DECLARED_KOTLIN_VERSION -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n/)
+    // The compiler and klib artifacts are contributed by the plugin's own defaultDependencies
+    // action; the scripting compiler is added eagerly and kotlin-stdlib is the build's own
+    // declaration, so neither is marked.
+    result.output.find(/The following dependencies have later milestone versions:\n - org\.jetbrains\.kotlin:kotlin-compiler-embeddable \[$DECLARED_KOTLIN_VERSION -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n\s+contributed by a plugin into the 'kotlinCompilerClasspath' configuration\n - org\.jetbrains\.kotlin:kotlin-klib-commonizer-embeddable \[$DECLARED_KOTLIN_VERSION -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n\s+contributed by a plugin into the 'kotlinKlibCommonizerClasspath' configuration\n - org\.jetbrains\.kotlin:kotlin-scripting-compiler-embeddable \[$DECLARED_KOTLIN_VERSION -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n - org\.jetbrains\.kotlin:kotlin-stdlib \[${explicitStdLibVersion ? DECLARED_KOTLIN_STD_VERSION : DECLARED_KOTLIN_VERSION} -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n - org\.jetbrains\.kotlin\.jvm:org\.jetbrains\.kotlin\.jvm\.gradle\.plugin \[$DECLARED_KOTLIN_VERSION -> 2\..*\]\n\s+https:\/\/kotlinlang\.org\/\n/)
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:

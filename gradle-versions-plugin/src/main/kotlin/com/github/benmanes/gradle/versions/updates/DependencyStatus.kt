@@ -14,19 +14,36 @@ class DependencyStatus {
   val latestVersion: String
   val unresolved: UnresolvedDependencyResult?
   val projectUrl: String?
+  val contributed: Boolean
+  val configurations: List<String>
 
-  constructor(coordinate: Coordinate, latestVersion: String, projectUrl: String?) {
+  constructor(
+    coordinate: Coordinate,
+    latestVersion: String,
+    projectUrl: String?,
+    contributed: Boolean = false,
+    configurations: List<String> = emptyList(),
+  ) {
     this.coordinate = coordinate
     this.latestVersion = latestVersion
     this.projectUrl = projectUrl
     this.unresolved = null
+    this.contributed = contributed
+    this.configurations = configurations
   }
 
-  constructor(coordinate: Coordinate, unresolved: UnresolvedDependencyResult?) {
+  constructor(
+    coordinate: Coordinate,
+    unresolved: UnresolvedDependencyResult?,
+    contributed: Boolean = false,
+    configurations: List<String> = emptyList(),
+  ) {
     this.coordinate = coordinate
     this.unresolved = unresolved
     latestVersion = "none"
     projectUrl = null
+    this.contributed = contributed
+    this.configurations = configurations
   }
 
   fun getLatestCoordinate(): Coordinate {
@@ -64,6 +81,8 @@ class DependencyStatus {
       latestVersion,
       projectUrl,
       info,
+      contributed,
+      configurations,
     )
   }
 

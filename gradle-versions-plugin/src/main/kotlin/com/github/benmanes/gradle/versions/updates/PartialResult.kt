@@ -14,6 +14,10 @@ data class PartialStatus
     val latestVersion: String,
     val projectUrl: String?,
     val unresolved: UnresolvedInfo?,
+    /** Whether only a lazy action contributed the dependency rather than the build declaring it. */
+    val contributed: Boolean = false,
+    /** The configurations a contributed dependency was declared against, empty when declared. */
+    val configurations: List<String> = emptyList(),
     /** The observing project, stamped by the accumulator rather than serialized. */
     @Transient val projectPath: String? = null,
   ) {
@@ -42,7 +46,10 @@ data class PartialResult(
   fun toJson(): String = adapter.toJson(this)
 
   companion object {
-    /** Bumped when the shape changes; stale partials are rejected rather than misread. */
+    /**
+     * Bumped when the shape changes incompatibly; a field with a compatible default reads from an
+     * older partial as that default.
+     */
     const val FORMAT_VERSION: Int = 1
 
     private val adapter =

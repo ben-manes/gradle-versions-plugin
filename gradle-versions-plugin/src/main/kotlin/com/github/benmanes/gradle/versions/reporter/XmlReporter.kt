@@ -208,6 +208,14 @@ class XmlReporter(
         appendTextChild(document, element, "project", project)
       }
     }
+    appendTextChild(document, dependencyElement, "contributed", dependency.contributed)
+    dependency.configurations?.let { configurations ->
+      val element = document.createElement("configurations")
+      dependencyElement.appendChild(element)
+      for (configuration in configurations) {
+        appendTextChild(document, element, "configuration", configuration)
+      }
+    }
     return dependencyElement
   }
 

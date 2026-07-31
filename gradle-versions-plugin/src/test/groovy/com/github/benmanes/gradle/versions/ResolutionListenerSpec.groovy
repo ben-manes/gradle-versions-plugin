@@ -34,6 +34,8 @@ final class ResolutionListenerSpec extends Specification {
       it*.version == ['15.0', '2.0']
       it*.available*.milestone == ['16.0-rc1', '3.1']
     }
+    result.outdated.dependencies.find { it.name == 'guava' }.contributed == true
+    result.outdated.dependencies.find { it.name == 'guice' }.contributed == null
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/992')

@@ -1,5 +1,6 @@
 package com.github.benmanes.gradle.versions.reporter
 
+import com.github.benmanes.gradle.versions.reporter.result.Dependency
 import java.io.OutputStream
 import java.io.PrintStream
 
@@ -24,18 +25,54 @@ fun OutputStream.println(s: String = "") {
   (this as PrintStream).println(s)
 }
 
-/** The number of projects named before a long list is elided in the human readable reports. */
-private const val MAX_LISTED_PROJECTS = 5
+/** The number of names listed before a long list is elided in the human readable reports. */
+private const val MAX_LISTED_NAMES = 5
+
+/** Returns the display list of names, eliding all but the first few of a long list. */
+private fun elidedLabel(names: List<String>): String =
+  if (names.size <= MAX_LISTED_NAMES + 1) {
+    names.joinToString(", ")
+  } else {
+    names.take(MAX_LISTED_NAMES).joinToString(", ") + " and ${names.size - MAX_LISTED_NAMES} others"
+  }
 
 /**
  * Returns the display list of the projects that declared a divergent version, eliding all but the
  * first few of a long list.
  */
-internal fun projectsLabel(projects: List<String>): String {
-  val names = projects.map { if (it == ":") "root project" else it }
-  return if (names.size <= MAX_LISTED_PROJECTS + 1) {
-    names.joinToString(", ")
+internal fun projectsLabel(projects: List<String>): String = elidedLabel(projects.map { if (it == ":") "root project" else it })
+
+/** Returns the display list of the configurations a plugin contributed a dependency into. */
+private fun configurationsLabel(names: List<String>): String {
+  val quoted = names.map { "'$it'" }
+  val listed =
+    if (quoted.size <= MAX_LISTED_NAMES + 1) {
+      if (quoted.size == 1) {
+        quoted.single()
+      } else {
+        quoted.dropLast(1).joinToString(", ") + " and ${quoted.last()}"
+      }
+    } else {
+      quoted.take(MAX_LISTED_NAMES).joinToString(", ") + " and ${quoted.size - MAX_LISTED_NAMES} more"
+    }
+  val noun = if (names.size == 1) "configuration" else "configurations"
+  return "the $listed $noun"
+}
+
+/** Returns the line describing where the dependency's version came from, or null for a declared one. */
+internal fun sourceLabel(dependency: Dependency): String? {
+  val projects = dependency.projects
+  if (dependency.contributed != true) {
+    return projects?.let { "declared in ${projectsLabel(it)}" }
+  }
+  val into =
+    dependency.configurations
+      ?.takeIf { it.isNotEmpty() }
+      ?.let { " into ${configurationsLabel(it)}" }
+      .orEmpty()
+  return if (projects == null) {
+    "contributed by a plugin$into"
   } else {
-    names.take(MAX_LISTED_PROJECTS).joinToString(", ") + " and ${names.size - MAX_LISTED_PROJECTS} others"
+    "contributed by a plugin$into in ${projectsLabel(projects)}"
   }
 }
