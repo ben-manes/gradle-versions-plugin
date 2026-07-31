@@ -29,6 +29,21 @@ final class PartialResultSpec extends Specification {
     decoded == result
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1032')
+  def 'The observing project is not serialized'() {
+    given:
+    def status = new PartialStatus('com.google.guava', 'guava', '1.0', null, '1.0', null, null, ':stamped-project')
+    def result = new PartialResult(PartialResult.FORMAT_VERSION, ':', [status], [])
+
+    when:
+    def json = result.toJson()
+    def decoded = PartialResult.fromJson(json)
+
+    then:
+    !json.contains('stamped-project')
+    decoded.statuses[0].projectPath == null
+  }
+
   def 'Rejects an unknown format version'() {
     given:
     def json = new PartialResult(99, ':', [], []).toJson()

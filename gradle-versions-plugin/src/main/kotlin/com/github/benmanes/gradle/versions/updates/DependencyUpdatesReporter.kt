@@ -42,6 +42,7 @@ import java.util.TreeSet
  * and gradle updates.
  * @property gradleReleaseChannel The gradle release channel to use for reporting.
  * @property latestByCurrent The latest version found for each declared version.
+ * @property projectsByCoordinate The projects declaring each version of a coordinate whose versions diverge.
  *
  */
 class DependencyUpdatesReporter(
@@ -62,6 +63,7 @@ class DependencyUpdatesReporter(
   val gradleUpdateChecker: GradleUpdateChecker,
   val gradleReleaseChannel: String,
   val latestByCurrent: Map<Coordinate, Coordinate> = emptyMap(),
+  val projectsByCoordinate: Map<Coordinate, List<String>> = emptyMap(),
 ) {
   @Synchronized
   fun write() {
@@ -226,6 +228,7 @@ class DependencyUpdatesReporter(
       version = coordinate.version,
       projectUrl = projectUrls[key],
       userReason = coordinate.userReason,
+      projects = projectsByCoordinate[coordinate],
     )
   }
 
@@ -240,6 +243,7 @@ class DependencyUpdatesReporter(
       projectUrl = projectUrls[key],
       userReason = coordinate.userReason,
       latest = latestFor(coordinate, key).orEmpty(),
+      projects = projectsByCoordinate[coordinate],
     )
   }
 
@@ -280,6 +284,7 @@ class DependencyUpdatesReporter(
       projectUrl = projectUrls[key],
       userReason = coordinate.userReason,
       available = available,
+      projects = projectsByCoordinate[coordinate],
     )
   }
 
@@ -354,6 +359,7 @@ fun reporterFor(
   gradleReleaseChannel: String,
 ): DependencyUpdatesReporter {
   val versions = VersionMapping(logger, statuses)
+  val projectsByCoordinate = divergentProjects(statuses)
   val unresolved = statuses.mapNotNullTo(mutableSetOf()) { it.unresolved }
   val projectUrls =
     statuses
@@ -378,8 +384,23 @@ fun reporterFor(
     projectPath, logger, revision, outputFormatterArgument, outputDir,
     reportfileName, currentVersions, latestVersions, upToDateVersions, downgradeVersions,
     upgradeVersions, versions.undeclared, unresolved, projectUrls, gradleUpdateChecker,
-    gradleReleaseChannel, versions.latestByCurrent,
+    gradleReleaseChannel, versions.latestByCurrent, projectsByCoordinate,
   )
+}
+
+/** Returns the projects declaring each version of a key whose declared versions diverge. */
+private fun divergentProjects(statuses: List<PartialStatus>): Map<Coordinate, List<String>> {
+  if (statuses.mapTo(mutableSetOf()) { it.projectPath }.size <= 1) {
+    return emptyMap()
+  }
+  return statuses
+    .filter { it.projectPath != null }
+    .groupBy { Coordinate.Key(it.group, it.name) }
+    .values
+    .filter { statusesOfKey -> statusesOfKey.mapTo(mutableSetOf()) { it.declaredVersion }.size > 1 }
+    .flatten()
+    .groupBy({ it.coordinate }, { it.projectPath!! })
+    .mapValues { (_, paths) -> paths.distinct().sorted() }
 }
 
 /** Returns the coordinates keyed by their group and name, disambiguating a repeated name. */

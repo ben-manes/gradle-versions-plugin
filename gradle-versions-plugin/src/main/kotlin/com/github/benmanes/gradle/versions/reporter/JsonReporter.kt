@@ -1,7 +1,12 @@
 package com.github.benmanes.gradle.versions.reporter
 
+import com.github.benmanes.gradle.versions.reporter.result.AbsentWhenNull
 import com.github.benmanes.gradle.versions.reporter.result.Result
+import com.squareup.moshi.FromJson
+import com.squareup.moshi.JsonReader
+import com.squareup.moshi.JsonWriter
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.ToJson
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import org.gradle.api.Project
 import java.io.OutputStream
@@ -44,7 +49,45 @@ class JsonReporter(
   companion object {
     private val moshi =
       Moshi.Builder()
+        .add(AbsentWhenNullAdapter())
         .addLast(KotlinJsonAdapterFactory())
         .build()
+  }
+}
+
+/** Omits an absent optional property that serializeNulls would otherwise write as null. */
+private class AbsentWhenNullAdapter {
+  @ToJson
+  fun toJson(
+    writer: JsonWriter,
+    @AbsentWhenNull projects: List<String>?,
+  ) {
+    if (projects == null) {
+      val serializeNulls = writer.serializeNulls
+      writer.serializeNulls = false
+      try {
+        writer.nullValue()
+      } finally {
+        writer.serializeNulls = serializeNulls
+      }
+    } else {
+      writer.beginArray()
+      for (project in projects) {
+        writer.value(project)
+      }
+      writer.endArray()
+    }
+  }
+
+  @FromJson
+  @AbsentWhenNull
+  fun fromJson(reader: JsonReader): List<String>? {
+    val projects = mutableListOf<String>()
+    reader.beginArray()
+    while (reader.hasNext()) {
+      projects.add(reader.nextString())
+    }
+    reader.endArray()
+    return projects
   }
 }

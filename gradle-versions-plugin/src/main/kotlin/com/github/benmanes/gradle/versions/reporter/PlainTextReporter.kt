@@ -77,6 +77,9 @@ class PlainTextReporter
           dependency.userReason?.let {
             printStream.println("     $it")
           }
+          dependency.projects?.let {
+            printStream.println("     declared in ${projectsLabel(it)}")
+          }
         }
       }
     }
@@ -100,6 +103,9 @@ class PlainTextReporter
           dependency.projectUrl?.let {
             printStream.println("     $it")
           }
+          dependency.projects?.let {
+            printStream.println("     declared in ${projectsLabel(it)}")
+          }
         }
       }
     }
@@ -120,6 +126,9 @@ class PlainTextReporter
           }
           dependency.projectUrl?.let {
             printStream.println("     $it")
+          }
+          dependency.projects?.let {
+            printStream.println("     declared in ${projectsLabel(it)}")
           }
         }
       }

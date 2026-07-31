@@ -23,3 +23,6 @@ fun OutputStream.print(s: String = "") {
 fun OutputStream.println(s: String = "") {
   (this as PrintStream).println(s)
 }
+
+/** Returns the display list of the projects that declared a divergent version. */
+internal fun projectsLabel(projects: List<String>): String = projects.joinToString(", ") { if (it == ":") "root project" else it }
