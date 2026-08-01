@@ -1159,6 +1159,35 @@ configuration cache the dependency metadata read during resolution is tracked as
 an input, so a newly published version invalidates the cached entry rather than
 serving a stale report.
 
+The merged report and the partial results it merges live in the aggregating
+project's build directory. `clean` removes them only if that project has a
+`clean` task, which the `base` plugin supplies. A root project that applies no
+other plugin can add `base` for that alone; the task itself does not need it.
+
+<details open>
+<summary>Kotlin</summary>
+
+"build.gradle.kts":
+```kotlin
+plugins {
+  base
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+"build.gradle":
+```groovy
+plugins {
+  id 'base'
+}
+```
+
+</details>
+
 When a coordinate's declared version differs across the aggregated projects, the
 plain text, JSON, XML, and HTML reports name the projects that declared each
 version, so the entry no longer reads as self-contradictory:
