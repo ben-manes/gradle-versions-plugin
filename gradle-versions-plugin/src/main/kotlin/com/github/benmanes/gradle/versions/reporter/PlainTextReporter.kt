@@ -162,7 +162,9 @@ class PlainTextReporter
           "Failed to determine the latest version for the following dependencies$hint:",
         )
         for (dependency in unresolved) {
-          printStream.println(" - " + label(dependency))
+          val version = dependency.version
+          val versionSuffix = if (version.isNullOrEmpty() || version == "none") "" else ":$version"
+          printStream.println(" - ${label(dependency)}$versionSuffix")
           dependency.userReason?.let {
             printStream.println("     $it")
           }
