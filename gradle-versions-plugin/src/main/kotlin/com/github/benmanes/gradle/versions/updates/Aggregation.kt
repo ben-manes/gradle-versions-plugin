@@ -208,8 +208,10 @@ internal fun registerAggregation(
         // https://github.com/ben-manes/gradle-versions-plugin/issues/1040
         val outputFile = partialsDirectory.map { it.file(partialFileName(aggregated.path)) }
         val partial = registerProducer(aggregated, service, outputFile)
+        val legacy = aggregated.layout.buildDirectory.file("dependencyUpdates/partial.json")
         accumulator.configure { task ->
           task.partialResults.from(partial.flatMap { it.outputFile })
+          task.legacyPartials.from(legacy)
         }
       }
     }

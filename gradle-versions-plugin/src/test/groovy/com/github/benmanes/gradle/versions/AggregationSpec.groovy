@@ -320,6 +320,52 @@ final class AggregationSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1040')
+  def 'Removes the partial results of an earlier release when asked'() {
+    given:
+    new File(testProjectDir.root, 'settings.gradle').text = "include ':apps:app-a'"
+    testProjectDir.newFolder('apps', 'app-a')
+    testProjectDir.newFile('apps/app-a/build.gradle') <<
+      """
+        dependencies {
+          implementation 'com.google.inject:guice:2.0'
+        }
+      """.stripIndent()
+    // As 0.55.0 through 0.57.0 left them, in a project that no clean task reaches.
+    def container = new File(testProjectDir.root, 'apps/build/dependencyUpdates/partial.json')
+    container.parentFile.mkdirs()
+    container.text = '{"formatVersion":1,"projectPath":":apps","statuses":[],"buildscriptStatuses":[]}'
+    def module = new File(testProjectDir.root, 'apps/app-a/build/dependencyUpdates/partial.json')
+    module.parentFile.mkdirs()
+    module.text = '{"formatVersion":1,"projectPath":":apps:app-a","statuses":[],"buildscriptStatuses":[]}'
+    def kept = new File(testProjectDir.root, 'apps/app-a/build/reports/keep.txt')
+    kept.parentFile.mkdirs()
+    kept.text = 'output of another task'
+
+    when:
+    def result = run(['dependencyUpdates'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    // Left alone until asked for, as the task otherwise writes nothing into another project.
+    container.exists()
+    module.exists()
+
+    when:
+    result = run(['dependencyUpdates', '--clean-legacy-partials'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    !container.exists()
+    !module.exists()
+    // The directory a container project gained goes with it, while a build directory holding
+    // anything else stays.
+    !new File(testProjectDir.root, 'apps/build').exists()
+    !new File(testProjectDir.root, 'apps/app-a/build/dependencyUpdates').exists()
+    kept.exists()
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1040')
   def 'Sweeps the partial result of a project removed from the build'() {
     given:
     def partialsDir = new File(testProjectDir.root, 'build/dependencyUpdates/partials')

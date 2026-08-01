@@ -63,12 +63,12 @@ final class IsolatedProjectsAggregationSpec extends Specification {
       """.stripIndent()
   }
 
-  private def run() {
+  private def run(List<String> arguments = []) {
     return GradleRunner.create()
       .withGradleVersion('9.7.0-rc-2')
       .withProjectDir(testProjectDir.root)
-      .withArguments(':dependencyUpdates', '-Dorg.gradle.isolated-projects=true',
-        '--configuration-cache')
+      .withArguments([':dependencyUpdates', '-Dorg.gradle.isolated-projects=true',
+        '--configuration-cache'] + arguments)
       .withPluginClasspath()
       .build()
   }
@@ -82,6 +82,23 @@ final class IsolatedProjectsAggregationSpec extends Specification {
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
     result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
     !result.output.contains('The dependency updates report is missing')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1040')
+  def 'Keeps every projects partial result where the producer wrote it'() {
+    when:
+    def result = run(['--clean-legacy-partials'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    // Every producer belongs to the project that applied the plugin, so each writes to its own
+    // build directory and the cleanup must reach none of them.
+    new File(testProjectDir.root, 'build/dependencyUpdates/partial.json').exists()
+    new File(testProjectDir.root, 'app/build/dependencyUpdates/partial.json').exists()
+    new File(testProjectDir.root, 'lib/build/dependencyUpdates/partial.json').exists()
+    !new File(testProjectDir.root, 'build/dependencyUpdates/partials').exists()
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
   }
 
   def 'Honors the root task settings in every projects producer'() {
