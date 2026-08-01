@@ -267,16 +267,16 @@ class DependencyUpdatesReporter(
   }
 
   private fun buildUnresolvedDependency(info: UnresolvedInfo): DependencyUnresolved {
-    val coordinate = currentVersions[keyOf(info)]
+    val declared = Coordinate(info.selectorGroup, info.selectorName, info.declaredVersion)
     return DependencyUnresolved(
       group = info.selectorGroup,
       name = info.selectorName,
-      version = coordinate?.version,
+      version = info.declaredVersion,
       projectUrl = projectUrls[keyOf(info)],
-      userReason = coordinate?.userReason,
+      userReason = info.userReason,
       reason = info.failureText,
-      contributed = coordinate?.let { contributedFlag(it) },
-      configurations = coordinate?.let { configurationsByCoordinate[it] },
+      contributed = contributedFlag(declared),
+      configurations = configurationsByCoordinate[declared],
     )
   }
 

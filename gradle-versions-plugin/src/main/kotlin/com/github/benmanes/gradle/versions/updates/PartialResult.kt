@@ -29,12 +29,17 @@ data class PartialStatus
   }
 
 /** A resolution failure, as a value that survives the project boundary. */
-data class UnresolvedInfo(
-  val selectorGroup: String,
-  val selectorName: String,
-  val selectorVersion: String,
-  val failureText: String,
-)
+data class UnresolvedInfo
+  @JvmOverloads
+  constructor(
+    val selectorGroup: String,
+    val selectorName: String,
+    val selectorVersion: String,
+    val failureText: String,
+    /** The version of the declaration that failed, "none" when it declared none. */
+    val declaredVersion: String = "none",
+    val userReason: String? = null,
+  )
 
 /** The statuses one project observed, as written by its producer task. */
 data class PartialResult(
