@@ -15,6 +15,13 @@ jobs:
         with:
           ref: ${{ github.event.release.tag_name }}
 
+      - name: Verify Release Version
+        run: |
+          grep -qxF "VERSION_NAME=${GITHUB_REF_NAME#v}" gradle.properties || {
+            echo "::error::Refusing to publish: ref '${GITHUB_REF_NAME}' does not match $(grep ^VERSION_NAME= gradle.properties)"
+            exit 1
+          }
+
       - name: Validate Gradle Wrapper
         uses: gradle/wrapper-validation-action@v3
 
