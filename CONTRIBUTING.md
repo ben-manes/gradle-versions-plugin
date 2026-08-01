@@ -122,18 +122,30 @@ Always create the GitHub release as a draft:
      tag would otherwise become a real one, cut from `master`, the moment the
      draft publishes.
    - `release-notes.md` is a scratch file: one bullet per change carrying its
-     issue and pull request numbers, then a `> [!NOTE]` callout when an
-     existing build has to react to the release. Lines are not wrapped, since
-     GitHub reflows them. For example:
+     issue and pull request numbers, then an alert for anything an existing
+     build has to react to. Lines are not wrapped, since GitHub reflows them.
+   - Pick the alert by what the reader has to do, and order them as listed:
+     - `> [!IMPORTANT]` for a step the reader must take, including one that
+       applies only to builds using a particular feature.
+     - `> [!TIP]` for a step the reader may want to take, such as a new
+       recommended approach where the old one still works.
+     - `> [!NOTE]` for what is worth knowing but needs no action.
 
    ```markdown
    * Fixed a pesky bug (#101, #104)
    * Added an awesome feature (#102, #105)
 
+   > [!IMPORTANT]
+   >
+   > The `frobnicate` option is gone. Replace it with `reticulate`.
+
+   > [!TIP]
+   >
+   > The new `splines` extension is the recommended way to configure the task.
+
    > [!NOTE]
    >
-   > The `dependencyUpdates` task now reticulates splines. 
-   > See [Migrating from prior versions](https://github.com/ben-manes/gradle-versions-plugin#vXYZ).
+   > The `dependencyUpdates` task now reticulates splines. See [Migrating from prior versions](https://github.com/ben-manes/gradle-versions-plugin#vXYZ).
    ```
 
 4. Publish to the portal by dispatching the workflow at the tag:
