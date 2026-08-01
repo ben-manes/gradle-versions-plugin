@@ -275,4 +275,132 @@ final class ConstraintsSpec extends Specification {
     result.output.contains('org.apache.logging.log4j:log4j-core [2.17.1 -> ')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/756')
+  def "Skip the buildscript of a project that declares no repository"() {
+    given:
+    // Gradle constrains every project's buildscript classpath to its own log4j version. Neither
+    // the empty middle project nor the leaf declares a repository to resolve that against, so
+    // only the root, whose plugins block carries the plugin management repositories, can answer.
+    testProjectDir.newFile('settings.gradle') << "include 'middle:leaf'"
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        buildscript {
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+        }
+
+        plugins {
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkBuildEnvironmentConstraints = true
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('middle', 'leaf')
+    testProjectDir.newFile('middle/leaf/build.gradle') << "apply plugin: 'java'"
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then:
+    result.output.contains('org.apache.logging.log4j:log4j-core [2.17.1 -> ')
+    !result.output.contains('Failed to determine the latest version')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/756')
+  def "Keep the buildscript of a root whose repositories come from plugin management"() {
+    given:
+    // The plugin management repositories land in the root's buildscript repositories, so a root
+    // that takes its plugins from a plugins block alone is queried rather than skipped. The fixture
+    // tops out at 2.17.0, below the 2.17.1 that Gradle constrains its classpath to, so the entry
+    // reports in the exceed section, which is only printed when the query actually ran.
+    testProjectDir.newFile('settings.gradle') <<
+      """
+        pluginManagement {
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+        }
+      """.stripIndent()
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkBuildEnvironmentConstraints = true
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then:
+    result.output.contains('org.apache.logging.log4j:log4j-core [2.17.1 <- 2.17.0]')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/756')
+  def "Report a buildscript repository that cannot answer for the classpath"() {
+    given:
+    // Declared but holding nothing, which is a misconfiguration rather than a project with no
+    // script classpath of its own, so the failure is still the user's to see.
+    def emptyRepo = testProjectDir.newFolder('empty-repository').toURI()
+    testProjectDir.newFile('settings.gradle') << "include 'declared'"
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkBuildEnvironmentConstraints = true
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('declared')
+    testProjectDir.newFile('declared/build.gradle') <<
+      """
+        buildscript {
+          repositories {
+            maven {
+              url '${emptyRepo}'
+            }
+          }
+        }
+
+        apply plugin: 'java'
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then:
+    result.output.contains('Failed to determine the latest version')
+    result.output.contains('org.apache.logging.log4j:log4j-core')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
 }
