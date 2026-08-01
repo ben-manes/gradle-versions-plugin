@@ -171,6 +171,10 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   @Internal
   var aggregatedProjectPaths: Set<String> = emptySet()
 
+  /** The directory the partial results are collected under, wired by the plugin. */
+  @get:Internal
+  val partialsDirectory: DirectoryProperty = project.objects.directoryProperty()
+
   /** Captured at configuration time; replaces `project.file()` at execution. */
   @get:Internal
   val projectDirectory: DirectoryProperty =
@@ -185,6 +189,16 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   /** Merges the partial results of every project and writes the report. */
   @TaskAction
   fun dependencyUpdates() {
+    // Sweeps the partial of any project that has left the build, which no remaining task owns. The
+    // files are wired by path rather than discovered, so a stale one is never read, only left
+    // behind. The directory stays undeclared as an output, as declaring it would overlap the
+    // producers' own output files.
+    val expected = partialResults.files
+    partialsDirectory.asFile.orNull
+      ?.listFiles()
+      ?.filter { it.isFile && it !in expected }
+      ?.forEach { it.delete() }
+
     val partials =
       partialResults.files
         .map { PartialResult.fromJson(it.readText()) }

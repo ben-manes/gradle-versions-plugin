@@ -306,13 +306,13 @@ final class ContributedDependencySpec extends Specification {
 
     when:
     def result = run(['dependencyUpdates', '--no-parallel'])
-    def partials = ['', 'app/', 'lib/'].collect {
-      new File(testProjectDir.root, "${it}build/dependencyUpdates/partial.json").text
-    }
+    def partials = new File(testProjectDir.root, 'build/dependencyUpdates/partials')
+      .listFiles().collect { it.text }
     def nl = System.lineSeparator()
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
+    partials.size() == 3
     partials.every { it.contains('"contributed":true') }
     result.output.contains(" - com.google.guava:guava [15.0 -> 16.0-rc1]${nl}     contributed by a plugin into the 'tool' configuration")
   }
