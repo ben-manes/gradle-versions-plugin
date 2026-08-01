@@ -7,7 +7,7 @@ against `master`.
 
 - Every push to the pull request runs the
   [build workflow](.github/workflows/build.yml) on JDK 8, 11 and 17. A change
-  touching only `README.md` skips it.
+  touching only `README.md` or `CONTRIBUTING.md` skips it.
 - Reference the issue a change addresses in the commit summary and in the
   pull request body, so the merge closes it:
 
