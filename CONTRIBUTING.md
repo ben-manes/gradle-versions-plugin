@@ -35,8 +35,10 @@ How a pull request lands:
 - `./gradlew build` compiles the plugin and runs its Spock specs, including
   the functional tests that drive real Gradle builds through TestKit.
 - On Windows, `gradlew.bat` stands in for `./gradlew` throughout.
-- The plugin targets Java 8 bytecode, so a change that needs a newer API
-  needs a guard.
+- The plugin targets Java 8 bytecode: it runs in the Gradle daemon's process,
+  and our minimum supported Gradle version of 8.4 still supports Java 8. A
+  change that needs a newer API needs a guard, and raising the target means
+  raising the minimum Gradle first.
 - To try a change against a real build, publish it under a version of its
   own and point the consumer at that:
 
