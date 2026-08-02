@@ -37,14 +37,12 @@ class VersionMapping(private val logger: Logger, statuses: List<PartialStatus>) 
 
   /** Groups the dependencies into up-to-date, upgrades available, or downgrade buckets.  */
   private fun organize() {
-    val latestByKey = latest.associateBy({ it.key }, { it })
     for (coordinate in current) {
       // A resolution that answered for this exact coordinate is the version to report, even when
       // another one failed on it. The failure is still carried by the unresolved set, so both the
       // update and the resolution that could not find it are reported.
       val resolved = latestByCurrent[coordinate]
-      val latestCoordinate = resolved ?: latestByKey[coordinate.key]
-      val version = latestCoordinate?.version
+      val version = resolved?.version
       logger
         .info("Comparing dependency (current: {}, latest: {})", coordinate, version ?: "unresolved")
       if (resolved == null && unresolved.contains(coordinate)) {
