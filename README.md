@@ -1546,9 +1546,18 @@ and *Note*s are things worth knowing that need no action.
 
 ### v0.58.0
 
-v0.59.0 collects the partial result of every project under the project that
-aggregates them, so a project that exists only to hold a nested `include` no
-longer gains a `build` directory of its own:
+v0.59.0 reports the version another resolution found for a dependency that
+failed to resolve, and collects the partial result of every project under the
+project that aggregates them, so a project that exists only to hold a nested
+`include` no longer gains a `build` directory of its own:
+
+> [!IMPORTANT]
+> A declared version that resolved in one place and failed in another is now
+> reported twice: once with the version found for it, and again as unresolved.
+> A dependency declared without a version doubles the same way, as undeclared
+> and unresolved. The JSON and XML reports count it in each place. A tool
+> reading `count` as a dependency total, or treating the sections as disjoint,
+> has to allow for the overlap (see [Report format](#report-format)).
 
 > [!TIP]
 > Run `./gradlew dependencyUpdates --clean-legacy-partials` once to remove the
