@@ -1551,14 +1551,10 @@ aggregates them, so a project that exists only to hold a nested `include` no
 longer gains a `build` directory of its own:
 
 > [!TIP]
-> * Run `./gradlew dependencyUpdates --clean-legacy-partials` once to remove the
->   `build/dependencyUpdates/partial.json` that earlier releases wrote into each
->   project. `clean` removes it from a project that applies a plugin of its own,
->   but a project with no build script has no `clean` task to reach it.
-> * Under isolated projects the flag removes nothing, as the report reads the
->   results as artifacts and those do not carry where an earlier release wrote
->   them. Delete the leftover `build` directory of any project that has no build
->   script of its own.
+> Run `./gradlew dependencyUpdates --clean-legacy-partials` once to remove the
+> `build/dependencyUpdates/partial.json` that earlier releases wrote into each
+> project. `clean` removes it from a project that applies a plugin of its own,
+> but a project with no build script has no `clean` task to reach it.
 
 ### v0.57.0
 

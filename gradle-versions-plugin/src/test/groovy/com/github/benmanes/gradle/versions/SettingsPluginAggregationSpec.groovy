@@ -239,6 +239,42 @@ final class SettingsPluginAggregationSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1040')
+  def 'Removes what an earlier release wrote into each project with isolated projects'() {
+    given:
+    createBuild([])
+    settingsApplying(true)
+    new File(testProjectDir.root, 'settings.gradle') << "include 'container:nested'\n"
+    testProjectDir.newFolder('container', 'nested')
+    write('container/nested/build.gradle', false, 'com.google.inject:guice:2.0')
+    // What a release before the results were collected under one directory left in each project.
+    def legacies = ['', 'app/', 'lib/', 'container/'].collect {
+      new File(testProjectDir.root, "${it}build/dependencyUpdates/partial.json")
+    }
+    legacies.each { it.parentFile.mkdirs(); it.text = '{}' }
+
+    when:
+    def result = run(ISOLATED + ['--clean-legacy-partials'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('Isolated Projects is an incubating feature.')
+    // A project with no build script has no clean task to reach it, as clean comes from the base
+    // plugin, so the opt in cleanup is the only thing that can.
+    legacies.every { !it.exists() }
+    !new File(testProjectDir.root, 'container/build').exists()
+
+    when:
+    legacies.each { it.parentFile.mkdirs(); it.text = '{}' }
+    def hit = run(ISOLATED + ['--clean-legacy-partials'])
+
+    then:
+    hit.output.contains('Configuration cache entry reused')
+    // The paths are realized before the entry is stored, as a hit configures no project to publish
+    // them again.
+    legacies.every { !it.exists() }
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1040')
   def 'Keeps the partial result of a project that conflict resolution drops'() {
     given:
     new File(testProjectDir.root, 'settings.gradle').text =

@@ -82,6 +82,16 @@ internal abstract class DependencyUpdatesParametersService :
   @Volatile
   var partialsDirectory: Provider<Directory>? = null
 
+  private val legacy = ConcurrentHashMap.newKeySet<Provider<RegularFile>>()
+
+  /** Publishes where an earlier release wrote a project's partial result. */
+  fun registerLegacy(file: Provider<RegularFile>) {
+    legacy.add(file)
+  }
+
+  /** Returns where an earlier release wrote the partial result of each project of the build. */
+  fun legacyPartials(): List<RegularFile> = legacy.map { it.get() }
+
   /** Publishes the settings of the given project's task to the projects that resolve with them. */
   fun register(
     path: String,
@@ -209,8 +219,15 @@ internal fun registerAggregation(
     // aggregate reads the projects it does not own as variant artifacts, which never cared where
     // the file lives. Compared by path rather than to project.rootProject, which is forbidden here.
     // https://github.com/ben-manes/gradle-versions-plugin/issues/1040
+    //
+    // The projects publish where an earlier release wrote their results as well, which the cleanup
+    // reaches through the same channel. Realized while the work graph is assembled, as a cached
+    // entry configures no project to publish them a second time.
     if (project.path == ":") {
       service.get().partialsDirectory = partialsDirectory
+      accumulator.configure { task ->
+        task.legacyPartials.from(project.provider { service.get().legacyPartials() })
+      }
     }
     registerProducer(project, service)
   } else {
@@ -282,6 +299,7 @@ private fun registerProducer(
   // configuration cache cannot serialize.
   val path = project.path
   val ownFile = project.layout.buildDirectory.file("dependencyUpdates/partial.json")
+  service.get().registerLegacy(ownFile)
   // A default action runs only while the build has declared nothing of its own, so one registered
   // here, ahead of the plugins that a project applies, names the configurations that a plugin alone
   // filled. Reading the dependencies later cannot tell the two apart, as any configuration time
