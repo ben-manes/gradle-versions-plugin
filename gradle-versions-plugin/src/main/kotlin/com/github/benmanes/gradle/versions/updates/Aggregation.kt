@@ -9,6 +9,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.VerificationType
+import org.gradle.api.file.RegularFile
 import org.gradle.api.internal.StartParameterInternal
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.provider.Provider
@@ -157,10 +158,12 @@ internal fun registerAggregation(
   val aggregatedPaths =
     project.allprojects.filter { it.buildFile.exists() }.map { it.path }.toSet()
 
+  val partialsDirectory = project.layout.buildDirectory.dir("dependencyUpdates/partials")
   accumulator.configure { task ->
     task.projectPath = project.path
     task.aggregatedProjectPaths = aggregatedPaths
     task.projectDirectory.set(project.layout.projectDirectory)
+    task.partialsDirectory.set(partialsDirectory)
     task.partialResults.from(
       results.incoming
         .artifactView { view ->
@@ -198,9 +201,17 @@ internal fun registerAggregation(
       // A project that another copy of the plugin claimed holds a producer of that copy's type,
       // which this one cannot wire to its accumulator. That copy reports the project instead.
       if (claims(aggregated)) {
-        val partial = registerProducer(aggregated, service)
+        // Written under the project that aggregates rather than each project's own build
+        // directory, so that a project which exists only to hold a nested include gains no build
+        // directory of its own. Isolated projects keeps the per-project default instead, as there
+        // every producer belongs to a project that applied the plugin itself.
+        // https://github.com/ben-manes/gradle-versions-plugin/issues/1040
+        val outputFile = partialsDirectory.map { it.file(partialFileName(aggregated.path)) }
+        val partial = registerProducer(aggregated, service, outputFile)
+        val legacy = aggregated.layout.buildDirectory.file("dependencyUpdates/partial.json")
         accumulator.configure { task ->
           task.partialResults.from(partial.flatMap { it.outputFile })
+          task.legacyPartials.from(legacy)
         }
       }
     }
@@ -224,9 +235,19 @@ private fun parametersService(gradle: Gradle): Provider<DependencyUpdatesParamet
   gradle.sharedServices
     .registerIfAbsent(PARAMETERS_SERVICE, DependencyUpdatesParametersService::class.java) { }
 
+/**
+ * Returns a distinct file name for the partial result of the project at [path]. The hash keeps
+ * paths that flatten alike apart, as `:lib:core` and `:lib-core` may both exist in one build.
+ */
+private fun partialFileName(path: String): String {
+  val name = if (path == ":") "root" else path.removePrefix(":").replace(':', '-')
+  return "$name-${Integer.toHexString(path.hashCode())}.json"
+}
+
 private fun registerProducer(
   project: Project,
   service: Provider<DependencyUpdatesParametersService>,
+  outputFile: Provider<RegularFile>? = null,
 ): TaskProvider<DependencyUpdatesPartialTask> {
   val tasks = project.tasks
   if (tasks.names.contains(PARTIAL_TASK_NAME)) {
@@ -248,7 +269,7 @@ private fun registerProducer(
   val partial =
     tasks.register(PARTIAL_TASK_NAME, DependencyUpdatesPartialTask::class.java) { task ->
       task.outputFile.convention(
-        project.layout.buildDirectory.file("dependencyUpdates/partial.json"),
+        outputFile ?: project.layout.buildDirectory.file("dependencyUpdates/partial.json"),
       )
       task.partialJson.set(
         // Realized after every project has been evaluated, so that the settings are read as last

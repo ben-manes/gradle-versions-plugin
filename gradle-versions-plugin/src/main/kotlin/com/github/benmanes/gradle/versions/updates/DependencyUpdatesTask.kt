@@ -21,6 +21,7 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.options.Option
 import java.io.File
 import javax.annotation.Nullable
 
@@ -171,6 +172,26 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   @Internal
   var aggregatedProjectPaths: Set<String> = emptySet()
 
+  /** The directory the partial results are collected under, wired by the plugin. */
+  @get:Internal
+  val partialsDirectory: DirectoryProperty = project.objects.directoryProperty()
+
+  /** Where each project's partial result was written before they were collected as one. */
+  @get:Internal
+  val legacyPartials: ConfigurableFileCollection = project.files()
+
+  /**
+   * Whether to remove the partial results that an earlier release wrote into each project's own
+   * build directory. Opt in, as the task otherwise writes nothing outside the project it reports
+   * from, and `clean` reaches these files in every project that applies a plugin of its own.
+   */
+  @get:Internal
+  @set:Option(
+    option = "clean-legacy-partials",
+    description = "Removes the partial results that earlier releases wrote into each project.",
+  )
+  var cleanLegacyPartials: Boolean = false
+
   /** Captured at configuration time; replaces `project.file()` at execution. */
   @get:Internal
   val projectDirectory: DirectoryProperty =
@@ -185,6 +206,33 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   /** Merges the partial results of every project and writes the report. */
   @TaskAction
   fun dependencyUpdates() {
+    // Sweeps the partial of any project that has left the build, which no remaining task owns. The
+    // files are wired by path rather than discovered, so a stale one is never read, only left
+    // behind. The directory stays undeclared as an output, as declaring it would overlap the
+    // producers' own output files.
+    val expected = partialResults.files
+    partialsDirectory.asFile.orNull
+      ?.listFiles()
+      ?.filter { it.isFile && it !in expected }
+      ?.forEach { it.delete() }
+
+    // Removes what an earlier release wrote into each project's own build directory, which `clean`
+    // cannot reach in a project that applies no plugin of its own, as `clean` comes from the base
+    // plugin. A file that a producer still writes there is held back, as one does under isolated
+    // projects. The directories are removed only while empty, which is all that delete() will do.
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/1040
+    if (cleanLegacyPartials) {
+      for (legacy in legacyPartials.files - expected) {
+        if (legacy.delete()) {
+          val reports = legacy.parentFile
+          val buildDirectory = reports.parentFile
+          if (reports.delete()) {
+            buildDirectory.delete()
+          }
+        }
+      }
+    }
+
     val partials =
       partialResults.files
         .map { PartialResult.fromJson(it.readText()) }

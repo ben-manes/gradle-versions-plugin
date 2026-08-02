@@ -295,6 +295,130 @@ final class AggregationSpec extends Specification {
     !result.output.contains('com.google.guava:guava')
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1040')
+  def 'A project without a build script gains no build directory'() {
+    given:
+    new File(testProjectDir.root, 'settings.gradle').text = "include ':apps:app-a'"
+    testProjectDir.newFolder('apps', 'app-a')
+    testProjectDir.newFile('apps/app-a/build.gradle') <<
+      """
+        dependencies {
+          implementation 'com.google.inject:guice:2.0'
+        }
+      """.stripIndent()
+
+    when:
+    def result = run(['dependencyUpdates'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    !result.output.contains('The dependency updates report is missing')
+    !new File(testProjectDir.root, 'apps/build').exists()
+    // The partial results are written under the project that aggregates them instead.
+    new File(testProjectDir.root, 'build/dependencyUpdates/partials').list().length == 3
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1040')
+  def 'Removes the partial results of an earlier release when asked'() {
+    given:
+    new File(testProjectDir.root, 'settings.gradle').text = "include ':apps:app-a'"
+    testProjectDir.newFolder('apps', 'app-a')
+    testProjectDir.newFile('apps/app-a/build.gradle') <<
+      """
+        dependencies {
+          implementation 'com.google.inject:guice:2.0'
+        }
+      """.stripIndent()
+    // As 0.55.0 through 0.57.0 left them, in a project that no clean task reaches.
+    def container = new File(testProjectDir.root, 'apps/build/dependencyUpdates/partial.json')
+    container.parentFile.mkdirs()
+    container.text = '{"formatVersion":1,"projectPath":":apps","statuses":[],"buildscriptStatuses":[]}'
+    def module = new File(testProjectDir.root, 'apps/app-a/build/dependencyUpdates/partial.json')
+    module.parentFile.mkdirs()
+    module.text = '{"formatVersion":1,"projectPath":":apps:app-a","statuses":[],"buildscriptStatuses":[]}'
+    def kept = new File(testProjectDir.root, 'apps/app-a/build/reports/keep.txt')
+    kept.parentFile.mkdirs()
+    kept.text = 'output of another task'
+
+    when:
+    def result = run(['dependencyUpdates'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    // Left alone until asked for, as the task otherwise writes nothing into another project.
+    container.exists()
+    module.exists()
+
+    when:
+    result = run(['dependencyUpdates', '--clean-legacy-partials'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    !container.exists()
+    !module.exists()
+    // The directory a container project gained goes with it, while a build directory holding
+    // anything else stays.
+    !new File(testProjectDir.root, 'apps/build').exists()
+    !new File(testProjectDir.root, 'apps/app-a/build/dependencyUpdates').exists()
+    kept.exists()
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1040')
+  def 'Sweeps the partial result of a project removed from the build'() {
+    given:
+    def partialsDir = new File(testProjectDir.root, 'build/dependencyUpdates/partials')
+
+    when:
+    run(['dependencyUpdates'])
+
+    then:
+    partialsDir.list().length == 3
+
+    when:
+    new File(testProjectDir.root, 'settings.gradle').text = "include 'app'"
+    def result = run(['dependencyUpdates'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    partialsDir.list().length == 2
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    !result.output.contains('guava')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1040')
+  def 'Aggregates a dependency declared on a project without a build script'() {
+    given:
+    new File(testProjectDir.root, 'settings.gradle').text = "include ':apps:app-a'"
+    testProjectDir.newFolder('apps', 'app-a')
+    testProjectDir.newFile('apps/app-a/build.gradle') <<
+      """
+        dependencies {
+          implementation 'com.google.inject:guice:2.0'
+        }
+      """.stripIndent()
+    new File(testProjectDir.root, 'build.gradle') <<
+      """
+        project(':apps') {
+          dependencies {
+            implementation 'com.example:jvm-library:1.0'
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = run(['dependencyUpdates'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    // The container project itself observes this dependency, so a producer skipped for the lack
+    // of a build script would silently drop it from the report.
+    result.output.contains('com.example:jvm-library [1.0 -> 2.0]')
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    !new File(testProjectDir.root, 'apps/build').exists()
+  }
+
   def 'Resolves the aggregation results without traversing the projects dependencies'() {
     given:
     new File(testProjectDir.root, 'build.gradle') <<

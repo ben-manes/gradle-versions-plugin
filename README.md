@@ -37,6 +37,7 @@ Plugin](https://www.mojohaus.org/versions-maven-plugin).
 - [Samples](#samples)
 - [Compatibility](#compatibility)
 - [Migrating from prior versions](#migrating-from-prior-versions)
+  - [v0.58.0](#v0580)
   - [v0.57.0](#v0570)
   - [v0.56.0](#v0560)
   - [v0.55.0](#v0550)
@@ -1158,6 +1159,35 @@ configuration cache the dependency metadata read during resolution is tracked as
 an input, so a newly published version invalidates the cached entry rather than
 serving a stale report.
 
+The merged report and the partial results it merges live in the aggregating
+project's build directory. `clean` removes them only if that project has a
+`clean` task, which the `base` plugin supplies. A root project that applies no
+other plugin can add `base` for that alone; the task itself does not need it.
+
+<details open>
+<summary>Kotlin</summary>
+
+"build.gradle.kts":
+```kotlin
+plugins {
+  base
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+"build.gradle":
+```groovy
+plugins {
+  id 'base'
+}
+```
+
+</details>
+
 When a coordinate's declared version differs across the aggregated projects, the
 plain text, JSON, XML, and HTML reports name the projects that declared each
 version, so the entry no longer reads as self-contradictory:
@@ -1511,6 +1541,17 @@ projects (see [Isolated projects](#isolated-projects)) are supported.
 Start at the subsection for the version your build is on and work upward: each
 subsection migrates to the version covered by the subsection above it, and the
 topmost migrates to the current release.
+
+### v0.58.0
+
+v0.59.0 collects the partial result of every project under the project that
+aggregates them, so a project that exists only to hold a nested `include` no
+longer gains a `build` directory of its own:
+
+* Run `./gradlew dependencyUpdates --clean-legacy-partials` once to remove the
+  `build/dependencyUpdates/partial.json` that earlier releases wrote into each
+  project. `clean` removes it from a project that applies a plugin of its own,
+  but a project with no build script has no `clean` task to reach it.
 
 ### v0.57.0
 
