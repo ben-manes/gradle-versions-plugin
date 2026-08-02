@@ -316,6 +316,124 @@ final class SettingsPluginAggregationSpec extends Specification {
     partial.exists()
   }
 
+  @Issue([
+    'https://github.com/ben-manes/gradle-versions-plugin/issues/1022',
+    'https://github.com/ben-manes/gradle-versions-plugin/issues/1046',
+  ])
+  def 'Aggregates a project that publishes through its default configuration'() {
+    given:
+    createBuild([])
+    settingsApplying(true)
+    new File(testProjectDir.root, 'settings.gradle') << "include 'local'\n"
+    testProjectDir.newFolder('local')
+    testProjectDir.newFile('local/local.jar')
+    // Declares no variant of its own, so that a consumer resolves it through the fallback to its
+    // default configuration, as a project that exposes a local aar or jar file does. The reported
+    // dependency is declared on a plain resolvable configuration rather than through the `java`
+    // plugin, which would give the project variants of its own and void the case.
+    new File(testProjectDir.root, 'local/build.gradle').text =
+      """
+        configurations.maybeCreate('default')
+        artifacts.add('default', file('local.jar'))
+
+        repositories {
+          maven {
+            url = '${mavenRepoUrl}'
+          }
+        }
+
+        configurations.create('tool') {
+          canBeResolved = true
+          canBeConsumed = false
+        }
+        dependencies {
+          tool 'com.example:jvm-library:1.0'
+        }
+      """.stripIndent()
+    // Resolved on its own configuration rather than the runtime classpath, which also carries the
+    // external dependency this build reports on, whose poms the test repository publishes without
+    // the files to resolve them to.
+    new File(testProjectDir.root, 'app/build.gradle') <<
+      """
+        configurations.create('local') {
+          canBeResolved = true
+          canBeConsumed = false
+        }
+        dependencies {
+          local project(':local')
+        }
+
+        tasks.register('resolve', Copy) {
+          from configurations.local
+          into layout.buildDirectory.dir('resolved')
+        }
+      """.stripIndent()
+
+    when:
+    def result = run(ISOLATED)
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.example:jvm-library [1.0 -> 2.0]')
+    !result.output.contains('The dependency updates report is missing')
+
+    when: 'a consumer resolves the project the statuses were published from'
+    def consumed = runWith([':app:resolve'] + ISOLATED)
+
+    then: 'the unattributed publication left its fallback to the default configuration intact'
+    consumed.task(':app:resolve').outcome == SUCCESS
+    new File(testProjectDir.root, 'app/build/resolved/local.jar').exists()
+  }
+
+  @Issue([
+    'https://github.com/ben-manes/gradle-versions-plugin/issues/1022',
+    'https://github.com/ben-manes/gradle-versions-plugin/issues/1047',
+  ])
+  def 'Consumes a project that publishes through its default configuration from afterEvaluate'() {
+    given:
+    createBuild([])
+    settingsApplying(true)
+    new File(testProjectDir.root, 'settings.gradle') << "include 'late'\n"
+    testProjectDir.newFolder('late')
+    testProjectDir.newFile('late/late.jar')
+    // Puts its artifact on the default configuration from its own afterEvaluate, as a plugin that
+    // declares its publication there does. The settings plugin reaches the project before its build
+    // script runs, so this callback is registered after the one that publishes the statuses.
+    new File(testProjectDir.root, 'late/build.gradle').text =
+      """
+        configurations.maybeCreate('default')
+        afterEvaluate {
+          artifacts.add('default', file('late.jar'))
+        }
+      """.stripIndent()
+    new File(testProjectDir.root, 'app/build.gradle') <<
+      """
+        configurations.create('late') {
+          canBeResolved = true
+          canBeConsumed = false
+        }
+        dependencies {
+          late project(':late')
+        }
+
+        tasks.register('resolveLate', Copy) {
+          from configurations.late
+          into layout.buildDirectory.dir('late')
+        }
+
+      """.stripIndent()
+
+    when:
+    def consumed = runWith([':app:resolveLate'] + ISOLATED)
+
+    then: 'the statuses did not cost the project the fallback its consumers resolve through'
+    consumed.task(':app:resolveLate').outcome == SUCCESS
+    new File(testProjectDir.root, 'app/build/late/late.jar').exists()
+    // Served in the artifact's place before this was left out of variant selection, rather than
+    // failing, so the consumer took the statuses onto its classpath and carried on.
+    !new File(testProjectDir.root, 'app/build/late/partial.json').exists()
+  }
+
   def 'Applies once when a project also applies the plugin itself'() {
     given:
     createBuild([':app'])

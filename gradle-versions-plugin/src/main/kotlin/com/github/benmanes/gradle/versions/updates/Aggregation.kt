@@ -419,15 +419,18 @@ private fun registerProducer(
 }
 
 /**
- * Publishes the project's statuses as an outgoing variant, unless the project publishes through its
- * `default` configuration, as one that exposes a local aar or jar file does.
+ * Publishes the project's statuses as an outgoing variant, which carries no attributes where the
+ * project declares no variant of its own, as one that exposes a local aar or jar file through its
+ * `default` configuration does.
  *
- * A project that declares no variant of its own is resolved by falling back to that configuration
- * whatever the consumer asks for. Gradle drops the fallback as soon as the project declares any
- * variant, so publishing one here would leave every consumer of such a project without a match. The
- * artifacts are read rather than the variants alone, as a plugin may declare its variants from its
- * own `afterEvaluate` and so after this runs, while a project publishes by fallback from the build
- * script that this is ordered behind.
+ * Such a project is resolved by falling back to that configuration whatever the consumer asks for,
+ * and Gradle drops the fallback as soon as the project declares an attributed variant. Attributing
+ * this one would then serve the statuses to a consumer in place of the artifact it asked for, so it
+ * is attributed only where the project has a variant of its own to be selected by instead. Whether
+ * the `default` configuration holds an artifact yet is not asked, as a plugin may add its
+ * publication from its own `afterEvaluate` and so after this runs, while the variants that decide
+ * the fallback are declared as a plugin applies. The aggregate names this configuration rather than
+ * matching it by attributes, so it reads the statuses either way.
  * https://github.com/ben-manes/gradle-versions-plugin/issues/1022
  */
 private fun publishResults(
@@ -437,23 +440,22 @@ private fun publishResults(
   val configurations = project.configurations
   val fallback = configurations.findByName(Dependency.DEFAULT_CONFIGURATION)
   val publishesByFallback =
-    fallback != null && fallback.isCanBeConsumed && fallback.artifacts.isNotEmpty() &&
+    fallback != null && fallback.isCanBeConsumed &&
       configurations.none { it.isCanBeConsumed && it.attributes.keySet().isNotEmpty() }
-  if (publishesByFallback) {
-    return
-  }
 
   configurations.consumable(ELEMENTS_CONFIGURATION) { configuration ->
     configuration.description = "The dependency update statuses of ${project.path}."
-    configuration.attributes { attributes ->
-      attributes.attribute(
-        Category.CATEGORY_ATTRIBUTE,
-        project.objects.named(Category::class.java, Category.VERIFICATION),
-      )
-      attributes.attribute(
-        VerificationType.VERIFICATION_TYPE_ATTRIBUTE,
-        project.objects.named(VerificationType::class.java, VERIFICATION_TYPE),
-      )
+    if (!publishesByFallback) {
+      configuration.attributes { attributes ->
+        attributes.attribute(
+          Category.CATEGORY_ATTRIBUTE,
+          project.objects.named(Category::class.java, Category.VERIFICATION),
+        )
+        attributes.attribute(
+          VerificationType.VERIFICATION_TYPE_ATTRIBUTE,
+          project.objects.named(VerificationType::class.java, VERIFICATION_TYPE),
+        )
+      }
     }
     configuration.outgoing.artifact(partial.flatMap { it.outputFile })
   }
