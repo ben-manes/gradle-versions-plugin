@@ -184,6 +184,48 @@ final class ReportJoinSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1050')
+  def 'A version declared without one is undeclared when a resolution answered for it'() {
+    given:
+    def root = ProjectBuilder.builder().withName('root').build()
+    // The script classpath can answer for the version-less declaration and the project cannot, so
+    // the module is both declared without a version and one a resolution failed on.
+    root.buildscript.repositories {
+      maven {
+        url getClass().getResource('/maven/').toURI()
+      }
+    }
+    root.buildscript.dependencies.add('classpath', 'com.google.inject:guice')
+    def blind = ProjectBuilder.builder().withName('blind').withParent(root).build()
+    blind.configurations {
+      app
+    }
+    blind.dependencies.add('app', 'com.google.inject:guice')
+
+    when:
+    def result = evaluate(root)
+
+    then:
+    result.undeclared.dependencies*.name == ['guice']
+    result.unresolved.dependencies*.name == ['guice']
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1050')
+  def 'A version reported against a failure is counted in each section that holds it'() {
+    given:
+    def root = blindAndSeeing()
+
+    when:
+    writeReport(root, 'json')
+
+    then:
+    def report = new JsonSlurper().parse(new File(root.projectDir, 'build/report.json'))
+    report.outdated.dependencies*.version == ['2.0']
+    report.unresolved.dependencies*.name == ['guice']
+    // The one module is reported twice, so the total counts it once per section it appears in.
+    report.count == 2
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1050')
   def 'A project that could not resolve a version is still named behind it'() {
     given:
     def root = blindAndSeeing()
