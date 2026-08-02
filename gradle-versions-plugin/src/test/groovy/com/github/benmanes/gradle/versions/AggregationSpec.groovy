@@ -419,6 +419,58 @@ final class AggregationSpec extends Specification {
     !new File(testProjectDir.root, 'apps/build').exists()
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1048')
+  def 'Aggregates a project declared from outside the aggregating projects tree'() {
+    given:
+    new File(testProjectDir.root, 'settings.gradle').text = "include 'agg', 'tool'"
+    new File(testProjectDir.root, 'build.gradle').text = ''
+    testProjectDir.newFolder('agg')
+    new File(testProjectDir.root, 'agg/build.gradle').text =
+      """
+        plugins {
+          id 'io.github.ben-manes.versions'
+        }
+
+        // Named rather than reached by allprojects, which does not cover a sibling.
+        dependencies {
+          dependencyUpdatesAggregation project(':tool')
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('tool')
+    // Applies base, so it has a consumable default configuration and no variant of its own, which
+    // is what decides whether its statuses carry attributes.
+    new File(testProjectDir.root, 'tool/build.gradle').text =
+      """
+        plugins {
+          id 'base'
+          id 'io.github.ben-manes.versions'
+        }
+
+        repositories {
+          maven {
+            url = '${mavenRepoUrl}'
+          }
+        }
+
+        configurations.create('tool') {
+          canBeResolved = true
+          canBeConsumed = false
+        }
+        dependencies {
+          tool 'com.example:jvm-library:1.0'
+        }
+      """.stripIndent()
+
+    when:
+    def result = run([':agg:dependencyUpdates'])
+
+    then:
+    result.task(':agg:dependencyUpdates').outcome == SUCCESS
+    // Reached by naming the producer's configuration, so it does not depend on the statuses
+    // carrying attributes for a match.
+    result.output.contains('com.example:jvm-library [1.0 -> 2.0]')
+  }
+
   def 'Resolves the aggregation results without traversing the projects dependencies'() {
     given:
     new File(testProjectDir.root, 'build.gradle') <<

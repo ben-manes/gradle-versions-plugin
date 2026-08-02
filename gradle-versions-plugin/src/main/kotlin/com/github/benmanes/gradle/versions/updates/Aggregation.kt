@@ -7,6 +7,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.VerificationType
@@ -169,8 +170,21 @@ internal fun registerAggregation(
       }
     }
   // Mirrored rather than extended, which a detached configuration forbids, so that a project
-  // declared in the build's own dependencies block is still aggregated.
-  aggregation.get().dependencies.all { dependency -> results.dependencies.add(dependency) }
+  // declared in the build's own dependencies block is still aggregated. The producer's
+  // configuration is named on the way through, as it is for the projects below, so that a project
+  // declaring no variant of its own is read by name rather than fallen back to its `default`
+  // configuration, whose artifacts are the project's own and not a partial result. Every module
+  // dependency is named rather than the project ones alone, as an included build is declared by
+  // its coordinates and substituted onto its project only once the graph resolves.
+  aggregation.get().dependencies.all { dependency ->
+    results.dependencies.add(
+      if (dependency is ModuleDependency) {
+        dependency.copy().apply { targetConfiguration = ELEMENTS_CONFIGURATION }
+      } else {
+        dependency
+      },
+    )
+  }
 
   // Reading the paths across projects is permitted under isolated projects, unlike configuring. A
   // project with no build script cannot apply the plugin there, so naming it in the completeness
