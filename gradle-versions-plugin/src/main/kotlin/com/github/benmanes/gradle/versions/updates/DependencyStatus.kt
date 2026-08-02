@@ -71,6 +71,8 @@ class DependencyStatus {
           selector.module,
           selector.version,
           reason,
+          coordinate.version,
+          coordinate.userReason,
         )
       }
     return PartialStatus(

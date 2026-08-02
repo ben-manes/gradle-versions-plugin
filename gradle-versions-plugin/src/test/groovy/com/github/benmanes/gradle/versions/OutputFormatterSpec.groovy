@@ -7,6 +7,7 @@ import groovy.xml.XmlParser
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
+import spock.lang.Issue
 import spock.lang.Specification
 
 final class OutputFormatterSpec extends Specification {
@@ -456,6 +457,43 @@ final class OutputFormatterSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1043')
+  def 'outputFormatter plain - omits the version an unresolved dependency never declared'() {
+    given:
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'java'
+        apply plugin: 'io.github.ben-manes.versions'
+
+        dependencies {
+          implementation 'com.github.ben-manes:unresolvable'
+        }
+
+        dependencyUpdates {
+          checkForGradleUpdate = false
+        }
+        """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then:
+    result.output.contains(' - com.github.ben-manes:unresolvable\n')
+    !result.output.contains('unresolvable:none')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
   def 'outputFormatter plain - outputs text output with user reasons'() {
     given:
     def reportFile = new File(reportFolder, "report.txt")
@@ -523,9 +561,9 @@ The following dependencies have later milestone versions:
      https://code.google.com/p/google-guice/
 
 Failed to determine the latest version for the following dependencies (use --info for details):
- - com.github.ben-manes:unresolvable
+ - com.github.ben-manes:unresolvable:1.0
      Life is hard
- - com.github.ben-manes:unresolvable2
+ - com.github.ben-manes:unresolvable2:1.0
 """.replace('\r', '').replace('\n', System.lineSeparator())
     def actual = reportFile.text
 
@@ -612,10 +650,10 @@ The following dependencies have later milestone versions:
      https://code.google.com/p/google-guice/
 
 Failed to determine the latest version for the following dependencies (use --info for details):
- - com.github.ben-manes:unresolvable
+ - com.github.ben-manes:unresolvable:1.0
      Life is hard
- - com.github.ben-manes:unresolvable2
- - com.github.ben-manes:unresolvable3
+ - com.github.ben-manes:unresolvable2:1.0
+ - com.github.ben-manes:unresolvable3:1.0
 """.replace('\r', '').replace('\n', System.lineSeparator())
 
     then:

@@ -78,6 +78,24 @@ final class PartialResultSpec extends Specification {
     decoded.statuses[0].configurations == ['tool']
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1043')
+  def 'A partial without the declared unresolved version reads as none'() {
+    given:
+    def json = '''
+      {"formatVersion":1,"projectPath":":","statuses":[{"group":"com.google.guava",
+      "name":"guava","declaredVersion":"none","latestVersion":"none","unresolved":
+      {"selectorGroup":"com.google.guava","selectorName":"guava","selectorVersion":"+",
+      "failureText":"boom"}}],"buildscriptStatuses":[]}
+      '''.stripIndent()
+
+    when:
+    def decoded = PartialResult.fromJson(json)
+
+    then:
+    decoded.statuses[0].unresolved.declaredVersion == 'none'
+    decoded.statuses[0].unresolved.userReason == null
+  }
+
   def 'Rejects an unknown format version'() {
     given:
     def json = new PartialResult(99, ':', [], []).toJson()
