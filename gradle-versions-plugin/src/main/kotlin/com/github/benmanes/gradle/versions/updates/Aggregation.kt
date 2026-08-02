@@ -3,6 +3,7 @@ package com.github.benmanes.gradle.versions.updates
 import com.github.benmanes.gradle.versions.claims
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import org.gradle.api.Action
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
@@ -263,7 +264,19 @@ private fun registerProducer(
     // Only a configuration that dependencies are declared against accepts a default action, which
     // is every configuration that a plugin contributes to.
     if (configuration.isCanBeDeclared) {
-      configuration.defaultDependencies { filledByPlugin.add(configuration.name) }
+      try {
+        configuration.defaultDependencies { filledByPlugin.add(configuration.name) }
+      } catch (e: GradleException) {
+        // A configuration that has taken part in a resolution refuses a default action, so a
+        // project that applies this plugin after one did would fail to apply it at all. The mark
+        // is a best effort attribution, which is worth losing for that configuration but not the
+        // build. Its state does not answer this, as a configuration observed by another's
+        // resolution refuses one while still reporting itself as unresolved.
+        project.logger.info(
+          "Skipping the plugin mark for configuration ${project.path}:${configuration.name}",
+          e,
+        )
+      }
     }
   }
   val partial =
