@@ -65,7 +65,12 @@ How a pull request lands:
   output or a behavior that is now off by default, also gets a subsection in
   the README's
   [Migrating from prior versions](README.md#migrating-from-prior-versions),
-  written for someone upgrading from the last release.
+  written for someone upgrading from the last release. A subsection opens with
+  a sentence naming what the release changed, then carries at most one alert of
+  each kind, picked and ordered the same way as in the [release
+  notes](#releasing). An alert covering more than one item takes a bullet per
+  item rather than repeating the alert, and a snippet the items call for sits
+  inside that alert, at the bottom when more than one item shares it.
 
 ## Releasing
 
@@ -132,21 +137,19 @@ Always create the GitHub release as a draft:
      - `> [!TIP]` for a step the reader may want to take, such as a new
        recommended approach where the old one still works.
      - `> [!NOTE]` for what is worth knowing but needs no action.
+   - The text starts on the line after the marker, with no blank `>` between.
 
    ```markdown
    * Fixed a pesky bug (#101, #104)
    * Added an awesome feature (#102, #105)
 
    > [!IMPORTANT]
-   >
    > The `frobnicate` option is gone. Replace it with `reticulate`.
 
    > [!TIP]
-   >
    > The new `splines` extension is the recommended way to configure the task.
 
    > [!NOTE]
-   >
    > The `dependencyUpdates` task now reticulates splines. See [Migrating from prior versions](https://github.com/ben-manes/gradle-versions-plugin#vXYZ).
    ```
 

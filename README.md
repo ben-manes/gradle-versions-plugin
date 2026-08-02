@@ -1075,11 +1075,11 @@ in the Kotlin DSL it is the receiver of the formatter block, and in Groovy it is
 passed as the closure argument.
 
 > [!IMPORTANT]
-> The formatter runs at execution time, so it cannot reach the project or the
-> build script from inside the closure. Read what it needs into local variables
-> beforehand, as shown in [Migrating from prior
-> versions](#v0540-and-earlier). Gradle's [configuration cache
-> requirements](https://docs.gradle.org/current/userguide/configuration_cache_requirements.html)
+> Under the configuration cache, the formatter cannot reach the project or the
+> build script from inside the closure, because it runs at execution time. Read
+> what it needs into local variables beforehand, as shown in
+> [Migrating from prior versions](#v0540-and-earlier). Gradle's
+> [configuration cache requirements](https://docs.gradle.org/current/userguide/configuration_cache_requirements.html)
 > cover the underlying rules.
 
 For example, if you wanted to create an html table for the upgradable
@@ -1538,9 +1538,11 @@ projects (see [Isolated projects](#isolated-projects)) are supported.
 
 ## Migrating from prior versions
 
-Start at the subsection for the version your build is on and work upward: each
-subsection migrates to the version covered by the subsection above it, and the
-topmost migrates to the current release.
+To migrate to the current version, start at the section for the version your
+build is on and work upward. Each section migrates to the version covered by
+the section above it, and the topmost migrates to the current release.
+*Important*s are must-dos, *Tip*s are actions you should or may want to take,
+and *Note*s are things worth knowing that need no action.
 
 ### v0.58.0
 
@@ -1548,123 +1550,136 @@ v0.59.0 collects the partial result of every project under the project that
 aggregates them, so a project that exists only to hold a nested `include` no
 longer gains a `build` directory of its own:
 
-* Run `./gradlew dependencyUpdates --clean-legacy-partials` once to remove the
-  `build/dependencyUpdates/partial.json` that earlier releases wrote into each
-  project. `clean` removes it from a project that applies a plugin of its own,
-  but a project with no build script has no `clean` task to reach it.
+> [!TIP]
+> Run `./gradlew dependencyUpdates --clean-legacy-partials` once to remove the
+> `build/dependencyUpdates/partial.json` that earlier releases wrote into each
+> project. `clean` removes it from a project that applies a plugin of its own,
+> but a project with no build script has no `clean` task to reach it.
 
 ### v0.57.0
 
 v0.58.0 routes the reporters through the build's logger and adds attribution
 lines to the reports:
 
-* The console summary now prints at the lifecycle log level, so `--quiet`
-  suppresses it. The report file is still written; read it, or drop `--quiet`,
-  if a script was piping the console output (see [Report
-  format](#report-format)).
-* An entry may carry an indented attribution line naming the projects that
-  declared a divergent version (see [Multi-project
-  builds](#multi-project-builds)) or the configuration a plugin contributed it
-  into (see [The `dependencyUpdates`
-  task](#the-dependencyupdates-task)). A tool that parses the plain
-  text report line by line has to skip them; the JSON and XML reports carry the
-  same signal as fields instead.
+> [!IMPORTANT]
+> * The console summary now prints at the lifecycle log level, so `--quiet`
+>   suppresses it. The report file is still written; read it, or drop
+>   `--quiet`, if a script was piping the console output (see
+>   [Report format](#report-format)).
+> * An entry may carry an indented attribution line naming the projects that
+>   declared a divergent version (see
+>   [Multi-project builds](#multi-project-builds)) or the configuration a
+>   plugin contributed it into (see
+>   [The `dependencyUpdates` task](#the-dependencyupdates-task)). A tool that
+>   parses the plain text report line by line has to skip them; the JSON and
+>   XML reports carry the same signal as fields instead.
 
 ### v0.56.0
 
 v0.57.0 supports applying the settings plugin from an init script:
 
-* An init script that applies `VersionsPlugin` to `allprojects` reports per
-  project rather than once, omits the plugins that the settings script declares,
-  and fails under isolated projects. Apply the settings plugin from
-  `beforeSettings` instead (see [Initialization script](#initialization-script)).
+> [!IMPORTANT]
+> An init script that applies `VersionsPlugin` to `allprojects` reports per
+> project rather than once, omits the plugins that the settings script declares,
+> and fails under isolated projects. Apply the settings plugin from
+> `beforeSettings` instead (see
+> [Initialization script](#initialization-script)).
 
 ### v0.55.0
 
 v0.56.0 adds the settings plugin and makes it the recommended setup:
 
-* Apply `io.github.ben-manes.versions.settings` in the settings script (see
-  [Applying the plugin](#applying-the-plugin)) and remove `io.github.ben-manes.versions` from your build
-  scripts. A project that keeps the main plugin for a separate per-project
-  report must request it without a version, because the settings plugin
-  already puts the plugin on every project's classpath.
-* A build that applied `io.github.ben-manes.versions.contributor` from a
-  convention plugin for isolated projects support no longer needs it: the
-  settings plugin covers every project. The contributor plugin remains
-  available for builds that cannot apply a settings plugin.
+> [!TIP]
+> Apply `io.github.ben-manes.versions.settings` in the settings script (see
+> [Applying the plugin](#applying-the-plugin)) and remove
+> `io.github.ben-manes.versions` from your build scripts. A project that keeps
+> the main plugin for a separate per-project report must request it without a
+> version, because the settings plugin already puts the plugin on every
+> project's classpath.
 
-Task configuration is unchanged: configure `dependencyUpdates` in the root build
-script as before.
+> [!NOTE]
+> * A build that applied `io.github.ben-manes.versions.contributor` from a
+>   convention plugin for isolated projects support no longer needs it: the
+>   settings plugin covers every project. The contributor plugin remains
+>   available for builds that cannot apply a settings plugin.
+> * Task configuration is unchanged: configure `dependencyUpdates` in the root
+>   build script as before.
 
 ### v0.54.0 and earlier
 
 v0.55.0 moves the plugin from the `com.github.ben-manes` namespace to
 `io.github.ben-manes` and raises the minimum supported Gradle version to 8.4:
 
-* Switch the plugin ID from `com.github.ben-manes.versions` to
-  `io.github.ben-manes.versions`. The legacy ID is deprecated but keeps
-  receiving releases, so this can happen at your convenience; only the main
-  plugin has a legacy ID.
-* Move a `buildscript` or `initscript` `classpath` dependency to the
-  `io.github.ben-manes:gradle-versions-plugin` coordinate. v0.54.0 is the last
-  release published under `com.github.ben-manes:gradle-versions-plugin`, so
-  the old coordinate no longer sees updates.
+> [!IMPORTANT]
+> * Move a `buildscript` or `initscript` `classpath` dependency to the
+>   `io.github.ben-manes:gradle-versions-plugin` coordinate. v0.54.0 is the
+>   last release published under
+>   `com.github.ben-manes:gradle-versions-plugin`, so the old coordinate no
+>   longer sees updates.
+> * Under the configuration cache, a custom `outputFormatter` cannot reach the
+>   project or the build script from inside the closure, because it runs at
+>   execution time (see [Report format](#report-format)). Read what it needs
+>   into local variables inside the `configure` block, and use the
+>   `PlainTextReporter` constructor that takes the project path, as shown
+>   below.
+>
+> <details open>
+> <summary>Kotlin</summary>
+>
+> "build.gradle.kts":
+> ```kotlin
+> import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
+> import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+>
+> tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
+>   val projectPath = project.path
+>
+>   outputFormatter {
+>     PlainTextReporter(projectPath, revision, gradleReleaseChannel).write(System.out, this)
+>   }
+> }
+> ```
+>
+> </details>
+>
+> <details>
+> <summary>Groovy</summary>
+>
+> "build.gradle":
+> ```groovy
+> import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
+>
+> tasks.named("dependencyUpdates").configure {
+>   def projectPath = project.path
+>   def taskRevision = revision
+>   def releaseChannel = gradleReleaseChannel
+>
+>   outputFormatter { result ->
+>     new PlainTextReporter(projectPath, taskRevision, releaseChannel).write(System.out, result)
+>   }
+> }
+> ```
+>
+> </details>
+>
+> Groovy also needs `revision` and `gradleReleaseChannel` read up front, because
+> the closure is coerced to an `Action` without a delegate. In a precompiled
+> script plugin a top-level `val` is a field of the script, so hoisting the
+> value out of the `configure` block does not work.
 
-v0.55.0 also reworks how the merged report of a multi-project build is
-produced: it is aggregated from a task in each project, which adds support for
-parallel execution, the configuration cache, and isolated projects (see
-[Multi-project builds](#multi-project-builds)). The report content and task
-configuration are unchanged.
+> [!TIP]
+> Switch the plugin ID from `com.github.ben-manes.versions` to
+> `io.github.ben-manes.versions`. The legacy ID is deprecated but keeps
+> receiving releases, so this can happen at your convenience; only the main
+> plugin has a legacy ID.
 
-A custom `outputFormatter` runs at execution time, so its closure cannot reach
-the project or the build script from there (see [Report
-format](#report-format)). Read what it needs into local variables inside the
-`configure` block, and use the `PlainTextReporter` constructor that takes the
-project path.
-
-<details open>
-<summary>Kotlin</summary>
-
-"build.gradle.kts":
-```kotlin
-import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
-import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
-
-tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
-  val projectPath = project.path
-
-  outputFormatter {
-    PlainTextReporter(projectPath, revision, gradleReleaseChannel).write(System.out, this)
-  }
-}
-```
-
-</details>
-
-<details>
-<summary>Groovy</summary>
-
-"build.gradle":
-```groovy
-import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
-
-tasks.named("dependencyUpdates").configure {
-  def projectPath = project.path
-  def taskRevision = revision
-  def releaseChannel = gradleReleaseChannel
-
-  outputFormatter { result ->
-    new PlainTextReporter(projectPath, taskRevision, releaseChannel).write(System.out, result)
-  }
-}
-```
-
-</details>
-
-Groovy also needs `revision` and `gradleReleaseChannel` read up front, because
-the closure is coerced to an `Action` without a delegate. In a precompiled
-script plugin a top-level `val` is a field of the script, so hoisting the value
-out of the `configure` block does not work.
+> [!NOTE]
+> v0.55.0 also reworks how the merged report of a multi-project build is
+> produced: it is aggregated from a task in each project, which adds support for
+> parallel execution, the configuration cache, and isolated projects (see
+> [Multi-project builds](#multi-project-builds)). The report content is
+> unchanged, as is task configuration apart from a custom `outputFormatter`
+> under the configuration cache.
 
 Then continue with the v0.55.0 steps above.
 
