@@ -188,6 +188,98 @@ final class SettingsPluginAggregationSpec extends Specification {
     invocation << [':dependencyUpdates', 'dependencyUpdates']
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1040')
+  def 'Collects the partial results under the root with isolated projects'() {
+    given:
+    createBuild([])
+    new File(testProjectDir.root, 'settings.gradle').text =
+      """
+        plugins {
+          id 'io.github.ben-manes.versions.settings'
+        }
+
+        include 'app', 'lib', 'container:nested'
+
+        gradle.lifecycle.beforeProject { project ->
+          if (project.path == ':container') {
+            project.pluginManager.apply('java')
+            project.repositories.maven { url = '${mavenRepoUrl}' }
+            project.dependencies.add('implementation', 'com.example:jvm-library:1.0')
+          }
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('container', 'nested')
+    write('container/nested/build.gradle', false, 'com.google.inject:guice:2.0')
+
+    when:
+    def result = run(ISOLATED)
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    // Guards the flag itself: the property is a silent no-op on a Gradle whose spelling differs
+    // (pre-9.7 uses org.gradle.unsafe.isolated-projects), which would pass the non-isolated branch.
+    result.output.contains('Isolated Projects is an incubating feature.')
+    // A project that exists only to hold a nested include has no build script to apply a plugin
+    // from, so the settings plugin reaches it and an earlier release gave it a build directory to
+    // hold the partial result. The producer writes under the aggregating project instead.
+    !new File(testProjectDir.root, 'container/build').exists()
+    new File(testProjectDir.root, 'build/dependencyUpdates/partials').list().length == 5
+    // The container is still resolved, as the settings script can carry a dependency into a project
+    // that has no build script of its own.
+    result.output.contains('com.example:jvm-library [1.0 -> 2.0]')
+
+    when:
+    def hit = run(ISOLATED)
+
+    then:
+    hit.output.contains('Configuration cache entry reused')
+    // The destination is realized before the entry is stored, so a hit writes where the store did.
+    !new File(testProjectDir.root, 'container/build').exists()
+    hit.output.contains('com.example:jvm-library [1.0 -> 2.0]')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1040')
+  def 'Keeps the partial result of a project that conflict resolution drops'() {
+    given:
+    new File(testProjectDir.root, 'settings.gradle').text =
+      """
+        plugins {
+          id 'io.github.ben-manes.versions.settings'
+        }
+
+        include 'core:api', 'feature:api'
+
+        gradle.lifecycle.beforeProject { project ->
+          project.group = 'com.example'
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('core', 'api')
+    testProjectDir.newFolder('feature', 'api')
+    write('build.gradle', false, null)
+    write('core/api/build.gradle', false, 'com.google.guava:guava:15.0')
+    write('feature/api/build.gradle', true, 'com.google.inject:guice:2.0')
+
+    when:
+    def own = runWith([':feature:api:dependencyUpdates'] + ISOLATED)
+    def partial = new File(testProjectDir.root, 'build/dependencyUpdates/partials')
+      .listFiles().find { it.name.startsWith('feature-api-') }
+
+    then:
+    own.task(':feature:api:dependencyUpdates').outcome == SUCCESS
+    own.output.contains('Isolated Projects is an incubating feature.')
+    partial != null
+
+    when:
+    def root = runWith([':dependencyUpdates'] + ISOLATED)
+
+    then:
+    root.task(':dependencyUpdates').outcome == SUCCESS
+    // Module conflict resolution aggregates two projects that share a group and name as one, so the
+    // artifacts name fewer projects than the build has producers. The results of the other project
+    // are still its own, and its report reads them from where it wrote them.
+    partial.exists()
+  }
+
   def 'Applies once when a project also applies the plugin itself'() {
     given:
     createBuild([':app'])

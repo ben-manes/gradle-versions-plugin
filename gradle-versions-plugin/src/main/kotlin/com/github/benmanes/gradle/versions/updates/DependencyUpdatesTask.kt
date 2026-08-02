@@ -172,7 +172,10 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   @Internal
   var aggregatedProjectPaths: Set<String> = emptySet()
 
-  /** The directory the partial results are collected under, wired by the plugin. */
+  /**
+   * The directory the partial results are collected under, wired by the plugin only where it also
+   * knows every project that owns one, as the sweep below would otherwise remove a result in use.
+   */
   @get:Internal
   val partialsDirectory: DirectoryProperty = project.objects.directoryProperty()
 

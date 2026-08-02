@@ -10,6 +10,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.VerificationType
+import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
 import org.gradle.api.internal.StartParameterInternal
 import org.gradle.api.invocation.Gradle
@@ -72,6 +73,14 @@ internal abstract class DependencyUpdatesParametersService :
    */
   @Volatile
   var settingsConfigurations: List<Configuration> = emptyList()
+
+  /**
+   * The directory that the partial results are collected under, which the project at the root path
+   * publishes here rather than each producer reading its layout, as isolated projects forbids that
+   * between projects. Null outside an isolated projects build where that project aggregates.
+   */
+  @Volatile
+  var partialsDirectory: Provider<Directory>? = null
 
   /** Publishes the settings of the given project's task to the projects that resolve with them. */
   fun register(
@@ -164,7 +173,6 @@ internal fun registerAggregation(
     task.projectPath = project.path
     task.aggregatedProjectPaths = aggregatedPaths
     task.projectDirectory.set(project.layout.projectDirectory)
-    task.partialsDirectory.set(partialsDirectory)
     task.partialResults.from(
       results.incoming
         .artifactView { view ->
@@ -194,8 +202,24 @@ internal fun registerAggregation(
     // not apply the plugin has no producer and is omitted, which only a settings plugin could fix;
     // gradle.lifecycle.beforeProject is never invoked for a callback added by a project.
     // https://docs.gradle.org/current/userguide/isolated_projects.html
+    //
+    // The destination is published for the producers that those projects register, as a settings
+    // plugin reaches a project that has no build script and it would otherwise be given a build
+    // directory to hold nothing else. Only the project at the root path publishes, as a mid tree
+    // aggregate reads the projects it does not own as variant artifacts, which never cared where
+    // the file lives. Compared by path rather than to project.rootProject, which is forbidden here.
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/1040
+    if (project.path == ":") {
+      service.get().partialsDirectory = partialsDirectory
+    }
     registerProducer(project, service)
   } else {
+    // Swept only here, as the artifacts are all that name the projects under isolated projects and
+    // they omit the ones that conflict resolution merges away, whose results their own report still
+    // reads from where its producer wrote them. A result that no project of the build still owns is
+    // left behind there rather than risk removing one in use, and is never read, as the results are
+    // wired by path rather than discovered.
+    accumulator.configure { task -> task.partialsDirectory.set(partialsDirectory) }
     // The results are wired as task outputs too, as module conflict resolution would otherwise drop
     // every project that shares a group and name with a sibling from the artifacts.
     project.allprojects { aggregated ->
@@ -204,8 +228,8 @@ internal fun registerAggregation(
       if (claims(aggregated)) {
         // Written under the project that aggregates rather than each project's own build
         // directory, so that a project which exists only to hold a nested include gains no build
-        // directory of its own. Isolated projects keeps the per-project default instead, as there
-        // every producer belongs to a project that applied the plugin itself.
+        // directory of its own. Passed rather than published, as this project registers the
+        // producer itself and so needs no channel to reach it.
         // https://github.com/ben-manes/gradle-versions-plugin/issues/1040
         val outputFile = partialsDirectory.map { it.file(partialFileName(aggregated.path)) }
         val partial = registerProducer(aggregated, service, outputFile)
@@ -254,6 +278,10 @@ private fun registerProducer(
   if (tasks.names.contains(PARTIAL_TASK_NAME)) {
     return tasks.named(PARTIAL_TASK_NAME, DependencyUpdatesPartialTask::class.java)
   }
+  // Read here so that the destination below captures these rather than the project, which the
+  // configuration cache cannot serialize.
+  val path = project.path
+  val ownFile = project.layout.buildDirectory.file("dependencyUpdates/partial.json")
   // A default action runs only while the build has declared nothing of its own, so one registered
   // here, ahead of the plugins that a project applies, names the configurations that a plugin alone
   // filled. Reading the dependencies later cannot tell the two apart, as any configuration time
@@ -282,7 +310,12 @@ private fun registerProducer(
   val partial =
     tasks.register(PARTIAL_TASK_NAME, DependencyUpdatesPartialTask::class.java) { task ->
       task.outputFile.convention(
-        outputFile ?: project.layout.buildDirectory.file("dependencyUpdates/partial.json"),
+        outputFile ?: project.provider {
+          // Realized once every project is configured, so the destination is read whatever order
+          // the projects that publish and consume it were configured in. A build where no project
+          // aggregates, as one that only contributes to another build's report, keeps its own.
+          service.get().partialsDirectory?.get()?.file(partialFileName(path)) ?: ownFile.get()
+        },
       )
       task.partialJson.set(
         // Realized after every project has been evaluated, so that the settings are read as last
