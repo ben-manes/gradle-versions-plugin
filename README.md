@@ -665,10 +665,10 @@ Failed to compare versions for the following dependencies because they were decl
  - com.google.code.gson:gson
 
 Failed to determine the latest version for the following dependencies (use --info for details):
- - com.github.ben-manes:unresolvable
- - com.github.ben-manes:unresolvable2
- - com.google.guava:guava
-     23.0
+ - com.github.ben-manes:unresolvable:1.0
+ - com.github.ben-manes:unresolvable2:1.0
+ - com.google.guava:guava:15.0
+     https://github.com/google/guava
  - dom4j:dom4j
 
 Gradle release-candidate updates:
@@ -836,7 +836,7 @@ Alternatively, the report may be output to a structured file.
     "group": "com.google.guava",
     "name": "guava",
     "version": "15.0",
-    "projectUrl": "23.0",
+    "projectUrl": "https://github.com/google/guava",
     "userReason": null,
     "reason": "Could not resolve com.google.guava:guava:+."
    },
@@ -1014,7 +1014,7 @@ Searched in the following locations:
                 <group>com.google.guava</group>
                 <name>guava</name>
                 <version>15.0</version>
-                <projectUrl>23.0</projectUrl>
+                <projectUrl>https://github.com/google/guava</projectUrl>
                 <reason>Could not resolve com.google.guava:guava:+.</reason>
             </unresolvedDependency>
             <unresolvedDependency>
@@ -1552,18 +1552,24 @@ project that aggregates them, so a project that exists only to hold a nested
 `include` no longer gains a `build` directory of its own:
 
 > [!IMPORTANT]
-> A declared version that resolved in one place and failed in another is now
-> reported twice: once with the version found for it, and again as unresolved.
-> A dependency declared without a version doubles the same way, as undeclared
-> and unresolved. The JSON and XML reports count it in each place. A tool
-> reading `count` as a dependency total, or treating the sections as disjoint,
-> has to allow for the overlap (see [Report format](#report-format)).
+> * A declared version that resolved in one place and failed in another is now
+>   reported twice: once with the version found for it, and again as
+>   unresolved. A dependency declared without a version doubles the same way, as
+>   undeclared and unresolved. The JSON and XML reports count it in each place.
+>   A tool reading `count` as a dependency total, or treating the sections as
+>   disjoint, has to allow for the overlap (see
+>   [Report format](#report-format)).
+> * The unresolved section of the plain text report now names the declared
+>   version, as every other section does. A tool that parses that section line
+>   by line has to allow it.
 
 > [!TIP]
 > Run `./gradlew dependencyUpdates --clean-legacy-partials` once to remove the
 > `build/dependencyUpdates/partial.json` that earlier releases wrote into each
-> project. `clean` removes it from a project that applies a plugin of its own,
-> but a project with no build script has no `clean` task to reach it.
+> project. The `clean` task removes it from a project that directly or
+> indirectly applies the
+> [Base plugin](https://docs.gradle.org/current/userguide/base_plugin.html), but
+> a project with no build script has no `clean` task.
 
 ### v0.57.0
 
