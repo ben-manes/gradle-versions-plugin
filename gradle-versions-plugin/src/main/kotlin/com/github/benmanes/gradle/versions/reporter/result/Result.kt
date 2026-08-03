@@ -5,7 +5,8 @@ import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
 /**
  * The result of a dependency update analysis.
  *
- * @property count The overall number of dependencies in the project.
+ * @property count The number of dependencies reported, counting one that appears in more than one
+ * section once for each of them.
  * @property current The up-to-date dependencies.
  * @property outdated The dependencies that can be updated.
  * @property exceeded The dependencies whose versions are newer than the ones that are available

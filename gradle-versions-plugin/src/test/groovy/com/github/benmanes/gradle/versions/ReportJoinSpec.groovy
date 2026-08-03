@@ -154,6 +154,164 @@ final class ReportJoinSpec extends Specification {
     result.outdated.dependencies.find { it.name == 'guice' }.contributed == null
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1050')
+  def 'A version another project resolved is reported with the version it found'() {
+    given:
+    def root = blindAndSeeing()
+
+    when:
+    def result = evaluate(root)
+
+    then:
+    result.outdated.dependencies*.version == ['2.0']
+    result.outdated.dependencies.first().available.milestone == '3.1'
+    // The resolution that could not answer is still reported, as it is the user's to see.
+    result.unresolved.dependencies*.name == ['guice']
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1050')
+  def 'A version that no project resolved is still reported as unresolved'() {
+    given:
+    // Only 2.0 is answered, so the failure on 3.0 is another version of an answered module.
+    def root = blindAndSeeing('3.0')
+
+    when:
+    def result = evaluate(root)
+
+    then:
+    result.unresolved.dependencies*.name == ['guice']
+    result.outdated.dependencies*.version == ['2.0']
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1050')
+  def 'A version declared without one is undeclared when a resolution answered for it'() {
+    given:
+    def root = ProjectBuilder.builder().withName('root').build()
+    // The script classpath can answer for the version-less declaration and the project cannot, so
+    // the module is both declared without a version and one a resolution failed on.
+    root.buildscript.repositories {
+      maven {
+        url getClass().getResource('/maven/').toURI()
+      }
+    }
+    root.buildscript.dependencies.add('classpath', 'com.google.inject:guice')
+    def blind = ProjectBuilder.builder().withName('blind').withParent(root).build()
+    blind.configurations {
+      app
+    }
+    blind.dependencies.add('app', 'com.google.inject:guice')
+
+    when:
+    def result = evaluate(root)
+
+    then:
+    result.undeclared.dependencies*.name == ['guice']
+    result.unresolved.dependencies*.name == ['guice']
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1050')
+  def 'A version reported against a failure is counted in each section that holds it'() {
+    given:
+    def root = blindAndSeeing()
+
+    when:
+    writeReport(root, 'json')
+
+    then:
+    def report = new JsonSlurper().parse(new File(root.projectDir, 'build/report.json'))
+    report.outdated.dependencies*.version == ['2.0']
+    report.unresolved.dependencies*.name == ['guice']
+    // The one module is reported twice, so the total counts it once per section it appears in.
+    report.count == 2
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1050')
+  def 'A project that could not resolve a version is still named behind it'() {
+    given:
+    def root = blindAndSeeing()
+    def ahead = ProjectBuilder.builder().withName('ahead').withParent(root).build()
+    ahead.repositories {
+      maven {
+        url getClass().getResource('/maven/').toURI()
+      }
+    }
+    ahead.configurations {
+      app
+    }
+    ahead.dependencies {
+      app 'com.google.inject:guice:3.0'
+    }
+
+    when:
+    def result = evaluate(root)
+
+    then:
+    // Dropping the blind project's status outright would leave 2.0 named against :seeing alone.
+    result.outdated.dependencies.find { it.version == '2.0' }.projects == [':blind', ':seeing']
+    result.outdated.dependencies.find { it.version == '3.0' }.projects == [':ahead']
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1050')
+  def 'A version a project declared but could not resolve is not marked contributed'() {
+    given:
+    def root = ProjectBuilder.builder().withName('root').build()
+    def blind = ProjectBuilder.builder().withName('blind').withParent(root).build()
+    def seeing = ProjectBuilder.builder().withName('seeing').withParent(root).build()
+    seeing.repositories {
+      maven {
+        url getClass().getResource('/maven/').toURI()
+      }
+    }
+    // Declared by the project with no repository to resolve it against, and contributed by a
+    // plugin in the project that can, so only the failing project's status marks it as declared.
+    blind.configurations {
+      app
+    }
+    blind.dependencies {
+      app 'com.google.inject:guice:2.0'
+    }
+    seeing.configurations.create('tool') {
+      canBeResolved = true
+      canBeConsumed = false
+    }
+    seeing.configurations.tool.defaultDependencies { deps ->
+      deps.add(seeing.dependencies.create('com.google.inject:guice:2.0'))
+    }
+
+    when:
+    def result = evaluate(root)
+
+    then:
+    result.outdated.dependencies.find { it.name == 'guice' }.contributed == null
+  }
+
+  /**
+   * A root project whose two children declare the same module, where only {@code :seeing} has a
+   * repository to resolve it against. It answers for 2.0, while {@code :blind} resolves nothing.
+   */
+  private def blindAndSeeing(String blindVersion = '2.0') {
+    def root = ProjectBuilder.builder().withName('root').build()
+    def blind = ProjectBuilder.builder().withName('blind').withParent(root).build()
+    def seeing = ProjectBuilder.builder().withName('seeing').withParent(root).build()
+    seeing.repositories {
+      maven {
+        url getClass().getResource('/maven/').toURI()
+      }
+    }
+    for (project in [blind, seeing]) {
+      project.configurations {
+        app
+      }
+    }
+    blind.dependencies {
+      app "com.google.inject:guice:$blindVersion"
+    }
+    seeing.dependencies {
+      app 'com.google.inject:guice:2.0'
+    }
+    return root
+  }
+
   /**
    * A root project whose two children declare the same module, where the first child's repository
    * hides the versions matching {@code hiddenVersionRegex}. The latest version found therefore
