@@ -377,7 +377,7 @@ fun reporterFor(
   val versions = VersionMapping(logger, statuses)
   val projectsByCoordinate = divergentProjects(statuses)
   val contributedCoordinates = contributedCoordinates(statuses, logger)
-  val configurationsByCoordinate = contributedConfigurations(statuses, contributedCoordinates)
+  val configurationsByCoordinate = namedConfigurations(statuses, contributedCoordinates)
   val unresolved = statuses.mapNotNullTo(mutableSetOf()) { it.unresolved }
   val projectUrls =
     statuses
@@ -428,18 +428,29 @@ private fun contributedCoordinates(
 }
 
 /**
- * Returns the configurations each marked coordinate was contributed into, taken across the projects
- * that observed it, so that a plugin which fills a differently named configuration per project is
- * reported as filling both rather than either.
+ * Returns the configurations each coordinate names, taken across the projects that observed it, so
+ * that a plugin which fills a differently named configuration per project is reported as filling
+ * both rather than either.
+ *
+ * A marked coordinate names whichever configurations were seen, as the mark already says a plugin
+ * put it there. An unmarked one is named only where every project that observed it declared it
+ * against a configuration of its own, so that a project declaring it ordinarily is not described as
+ * declaring it somewhere it did not. A project reaches the same dependency through every resolvable
+ * configuration that extends the one holding it, so naming one of them is enough for that project.
  */
-private fun contributedConfigurations(
+private fun namedConfigurations(
   statuses: List<PartialStatus>,
   contributed: Set<Coordinate>,
 ): Map<Coordinate, List<String>> =
   statuses
-    .filter { it.coordinate in contributed && it.configurations.isNotEmpty() }
     .groupBy { it.coordinate }
-    .mapValues { (_, group) -> group.flatMap { it.configurations }.distinct().sorted() }
+    .filter { (coordinate, group) ->
+      coordinate in contributed ||
+        group.groupBy { it.projectPath }.values.all { project ->
+          project.any { it.configurations.isNotEmpty() }
+        }
+    }.mapValues { (_, group) -> group.flatMap { it.configurations }.distinct().sorted() }
+    .filterValues { it.isNotEmpty() }
 
 /** Returns the projects behind each version of a key whose declared versions diverge. */
 private fun divergentProjects(statuses: List<PartialStatus>): Map<Coordinate, List<String>> {

@@ -392,6 +392,7 @@ private fun registerProducer(
               parameters,
               parameters.checkConstraints,
               filledByPlugin,
+              nameDeclaringConfiguration = true,
             ),
             statusesOf(
               project,
@@ -401,6 +402,9 @@ private fun registerProducer(
               // No default action is registered on the buildscript's configurations, so a project
               // configuration sharing a name with one must not discount its declared dependencies.
               filledByPlugin = emptySet(),
+              // Every buildscript dependency is declared directly on the resolvable classpath
+              // configuration, so naming it would describe a script rather than a plugin.
+              nameDeclaringConfiguration = false,
             ),
           ).toJson()
         },
@@ -468,6 +472,7 @@ private fun statusesOf(
   parameters: ResolvedParameters,
   checkConstraints: Boolean,
   filledByPlugin: Set<String>,
+  nameDeclaringConfiguration: Boolean,
 ): List<PartialStatus> {
   if (configurations.isEmpty()) {
     return emptyList()
@@ -482,7 +487,7 @@ private fun statusesOf(
     try {
       // Discounted after resolving, which is what runs the default actions that name the
       // configurations whose every dependency a plugin contributed.
-      resolver.resolve(configuration, parameters.revision) {
+      resolver.resolve(configuration, parameters.revision, nameDeclaringConfiguration) {
         declaredKeys.getValue(configuration) - keysOf(configuration, filledByPlugin)
       }.map { it.toPartialStatus() }
     } catch (e: Exception) {

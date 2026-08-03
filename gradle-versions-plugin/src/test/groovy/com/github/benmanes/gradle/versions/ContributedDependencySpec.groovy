@@ -237,6 +237,188 @@ final class ContributedDependencySpec extends Specification {
       " - com.google.guava:guava [15.0 -> 16.0-rc1]${nl}     contributed by a plugin into the 'implementation' configuration")
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1055')
+  def 'Names the resolvable configuration a dependency was declared directly against'() {
+    given:
+    writeBuild(
+      """
+        apply plugin: 'java'
+
+        configurations.create('pluginClasspath') {
+          canBeResolved = true
+          canBeConsumed = false
+        }
+
+        dependencies {
+          pluginClasspath 'com.google.guava:guava:15.0'
+        }
+      """.stripIndent())
+
+    when:
+    def result = run(['dependencyUpdates'])
+    def nl = System.lineSeparator()
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains(
+      " - com.google.guava:guava [15.0 -> 16.0-rc1]${nl}     declared in the 'pluginClasspath' configuration")
+    !result.output.contains('contributed by a plugin')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1055')
+  def 'Names the configuration when another resolvable one also reaches the dependency'() {
+    given:
+    writeBuild(
+      """
+        apply plugin: 'java'
+
+        configurations.create('pluginClasspath') {
+          canBeResolved = true
+          canBeConsumed = false
+        }
+        configurations.compileClasspath.extendsFrom(configurations.pluginClasspath)
+
+        dependencies {
+          pluginClasspath 'com.google.guava:guava:15.0'
+        }
+      """.stripIndent())
+
+    when:
+    def result = run(['dependencyUpdates'])
+    def nl = System.lineSeparator()
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains(
+      " - com.google.guava:guava [15.0 -> 16.0-rc1]${nl}     declared in the 'pluginClasspath' configuration")
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1055')
+  def 'Names a stock configuration that is declarable and resolvable'() {
+    given:
+    writeBuild(
+      """
+        apply plugin: 'java'
+
+        dependencies {
+          annotationProcessor 'com.google.guava:guava:15.0'
+        }
+      """.stripIndent())
+
+    when:
+    def result = run(['dependencyUpdates'])
+    def nl = System.lineSeparator()
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains(
+      " - com.google.guava:guava [15.0 -> 16.0-rc1]${nl}     declared in the 'annotationProcessor' configuration")
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1055')
+  def 'Leaves an ordinary dependency without a configuration'() {
+    given:
+    writeBuild(
+      """
+        apply plugin: 'java'
+
+        dependencies {
+          implementation 'com.google.guava:guava:15.0'
+        }
+      """.stripIndent())
+
+    when:
+    def result = run(['dependencyUpdates'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains(' - com.google.guava:guava [15.0 -> 16.0-rc1]')
+    !result.output.contains('declared in the')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1055')
+  def 'Leaves a buildscript classpath dependency without a configuration'() {
+    given:
+    testProjectDir.newFile('build.gradle') <<
+      """
+        buildscript {
+          repositories {
+            mavenCentral()
+          }
+          dependencies {
+            classpath 'com.google.code.findbugs:jsr305:3.0.1'
+          }
+        }
+
+        plugins {
+          id 'io.github.ben-manes.versions'
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencyUpdates {
+          checkForGradleUpdate = false
+        }
+      """.stripIndent()
+
+    when:
+    def result = run(['dependencyUpdates'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains(' - com.google.code.findbugs:jsr305 [3.0.1 -> ')
+    !result.output.contains('declared in the')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1055')
+  def 'Omits the configuration when another project declares the dependency ordinarily'() {
+    given:
+    testProjectDir.newFile('settings.gradle') << "include 'app'\ninclude 'lib'"
+    writeBuild(
+      """
+        allprojects {
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+        }
+      """.stripIndent())
+    testProjectDir.newFolder('app')
+    testProjectDir.newFile('app/build.gradle') <<
+      """
+        configurations.create('pluginClasspath') {
+          canBeResolved = true
+          canBeConsumed = false
+        }
+
+        dependencies {
+          pluginClasspath 'com.google.guava:guava:15.0'
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('lib')
+    testProjectDir.newFile('lib/build.gradle') <<
+      """
+        apply plugin: 'java'
+
+        dependencies {
+          implementation 'com.google.guava:guava:15.0'
+        }
+      """.stripIndent()
+
+    when:
+    def result = run(['dependencyUpdates', '--no-parallel'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains(' - com.google.guava:guava [15.0 -> 16.0-rc1]')
+    !result.output.contains('declared in the')
+  }
+
   def 'Names every configuration a plugin contributed the coordinate into'() {
     given:
     testProjectDir.newFile('settings.gradle') << "include 'app'\ninclude 'lib'"
