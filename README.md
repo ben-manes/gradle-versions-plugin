@@ -1566,8 +1566,10 @@ project that aggregates them, so a project that exists only to hold a nested
 > [!TIP]
 > Run `./gradlew dependencyUpdates --clean-legacy-partials` once to remove the
 > `build/dependencyUpdates/partial.json` that earlier releases wrote into each
-> project. `clean` removes it from a project that applies a plugin of its own,
-> but a project with no build script has no `clean` task to reach it.
+> project. The `clean` task removes it from a project that directly or
+> indirectly applies the
+> [Base plugin](https://docs.gradle.org/current/userguide/base_plugin.html), but
+> a project with no build script has no `clean` task.
 
 ### v0.57.0
 
