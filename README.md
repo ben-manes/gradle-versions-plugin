@@ -1552,12 +1552,16 @@ project that aggregates them, so a project that exists only to hold a nested
 `include` no longer gains a `build` directory of its own:
 
 > [!IMPORTANT]
-> A declared version that resolved in one place and failed in another is now
-> reported twice: once with the version found for it, and again as unresolved.
-> A dependency declared without a version doubles the same way, as undeclared
-> and unresolved. The JSON and XML reports count it in each place. A tool
-> reading `count` as a dependency total, or treating the sections as disjoint,
-> has to allow for the overlap (see [Report format](#report-format)).
+> * A declared version that resolved in one place and failed in another is now
+>   reported twice: once with the version found for it, and again as
+>   unresolved. A dependency declared without a version doubles the same way, as
+>   undeclared and unresolved. The JSON and XML reports count it in each place.
+>   A tool reading `count` as a dependency total, or treating the sections as
+>   disjoint, has to allow for the overlap (see
+>   [Report format](#report-format)).
+> * The unresolved section of the plain text report now names the declared
+>   version, as every other section does. A tool that parses that section line
+>   by line has to allow it.
 
 > [!TIP]
 > Run `./gradlew dependencyUpdates --clean-legacy-partials` once to remove the
