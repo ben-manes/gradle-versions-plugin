@@ -64,10 +64,14 @@ final class IsolatedProjectsAggregationSpec extends Specification {
   }
 
   private def run(List<String> arguments = []) {
+    return runWith(':dependencyUpdates', arguments)
+  }
+
+  private def runWith(String task, List<String> arguments = []) {
     return GradleRunner.create()
       .withGradleVersion('9.7.0-rc-2')
       .withProjectDir(testProjectDir.root)
-      .withArguments([':dependencyUpdates', '-Dorg.gradle.isolated-projects=true',
+      .withArguments([task, '-Dorg.gradle.isolated-projects=true',
         '--configuration-cache'] + arguments)
       .withPluginClasspath()
       .build()
@@ -85,20 +89,42 @@ final class IsolatedProjectsAggregationSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1040')
-  def 'Keeps every projects partial result where the producer wrote it'() {
+  def 'Collects every projects partial result under the aggregating project'() {
     when:
     def result = run(['--clean-legacy-partials'])
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    // Every producer belongs to the project that applied the plugin, so each writes to its own
-    // build directory and the cleanup must reach none of them.
-    new File(testProjectDir.root, 'build/dependencyUpdates/partial.json').exists()
-    new File(testProjectDir.root, 'app/build/dependencyUpdates/partial.json').exists()
-    new File(testProjectDir.root, 'lib/build/dependencyUpdates/partial.json').exists()
-    !new File(testProjectDir.root, 'build/dependencyUpdates/partials').exists()
+    // Guards the flag itself: the property is a silent no-op on a Gradle whose spelling differs
+    // (pre-9.7 uses org.gradle.unsafe.isolated-projects), which would pass the non-isolated branch.
+    result.output.contains('Isolated Projects is an incubating feature.')
+    // The root publishes where the results are collected and each project's own producer reads it
+    // from there, so isolated projects writes them where every other mode does.
+    new File(testProjectDir.root, 'build/dependencyUpdates/partials').list().length == 3
+    !new File(testProjectDir.root, 'build/dependencyUpdates/partial.json').exists()
+    !new File(testProjectDir.root, 'app/build/dependencyUpdates/partial.json').exists()
+    !new File(testProjectDir.root, 'lib/build/dependencyUpdates/partial.json').exists()
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
     result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1040')
+  def 'Keeps its own partial result where the root project collects none'() {
+    given:
+    new File(testProjectDir.root, 'build.gradle').text = ''
+
+    when:
+    def result = runWith(':app:dependencyUpdates')
+
+    then:
+    result.task(':app:dependencyUpdates').outcome == SUCCESS
+    result.output.contains('Isolated Projects is an incubating feature.')
+    // Only the project at the root path publishes where the results are collected, as one that
+    // aggregates from further down reads the projects it does not own as variant artifacts, which
+    // never cared where the file lives. Its own producer falls back to its build directory.
+    new File(testProjectDir.root, 'app/build/dependencyUpdates/partial.json').exists()
+    !new File(testProjectDir.root, 'build/dependencyUpdates/partials').exists()
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
   }
 
   def 'Honors the root task settings in every projects producer'() {

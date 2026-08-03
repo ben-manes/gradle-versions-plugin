@@ -3,12 +3,15 @@ package com.github.benmanes.gradle.versions.updates
 import com.github.benmanes.gradle.versions.claims
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import org.gradle.api.Action
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.VerificationType
+import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
 import org.gradle.api.internal.StartParameterInternal
 import org.gradle.api.invocation.Gradle
@@ -71,6 +74,24 @@ internal abstract class DependencyUpdatesParametersService :
    */
   @Volatile
   var settingsConfigurations: List<Configuration> = emptyList()
+
+  /**
+   * The directory that the partial results are collected under, which the project at the root path
+   * publishes here rather than each producer reading its layout, as isolated projects forbids that
+   * between projects. Null outside an isolated projects build where that project aggregates.
+   */
+  @Volatile
+  var partialsDirectory: Provider<Directory>? = null
+
+  private val legacy = ConcurrentHashMap.newKeySet<Provider<RegularFile>>()
+
+  /** Publishes where an earlier release wrote a project's partial result. */
+  fun registerLegacy(file: Provider<RegularFile>) {
+    legacy.add(file)
+  }
+
+  /** Returns where an earlier release wrote the partial result of each project of the build. */
+  fun legacyPartials(): List<RegularFile> = legacy.map { it.get() }
 
   /** Publishes the settings of the given project's task to the projects that resolve with them. */
   fun register(
@@ -149,8 +170,21 @@ internal fun registerAggregation(
       }
     }
   // Mirrored rather than extended, which a detached configuration forbids, so that a project
-  // declared in the build's own dependencies block is still aggregated.
-  aggregation.get().dependencies.all { dependency -> results.dependencies.add(dependency) }
+  // declared in the build's own dependencies block is still aggregated. The producer's
+  // configuration is named on the way through, as it is for the projects below, so that a project
+  // declaring no variant of its own is read by name rather than fallen back to its `default`
+  // configuration, whose artifacts are the project's own and not a partial result. Every module
+  // dependency is named rather than the project ones alone, as an included build is declared by
+  // its coordinates and substituted onto its project only once the graph resolves.
+  aggregation.get().dependencies.all { dependency ->
+    results.dependencies.add(
+      if (dependency is ModuleDependency) {
+        dependency.copy().apply { targetConfiguration = ELEMENTS_CONFIGURATION }
+      } else {
+        dependency
+      },
+    )
+  }
 
   // Reading the paths across projects is permitted under isolated projects, unlike configuring. A
   // project with no build script cannot apply the plugin there, so naming it in the completeness
@@ -163,7 +197,6 @@ internal fun registerAggregation(
     task.projectPath = project.path
     task.aggregatedProjectPaths = aggregatedPaths
     task.projectDirectory.set(project.layout.projectDirectory)
-    task.partialsDirectory.set(partialsDirectory)
     task.partialResults.from(
       results.incoming
         .artifactView { view ->
@@ -193,8 +226,31 @@ internal fun registerAggregation(
     // not apply the plugin has no producer and is omitted, which only a settings plugin could fix;
     // gradle.lifecycle.beforeProject is never invoked for a callback added by a project.
     // https://docs.gradle.org/current/userguide/isolated_projects.html
+    //
+    // The destination is published for the producers that those projects register, as a settings
+    // plugin reaches a project that has no build script and it would otherwise be given a build
+    // directory to hold nothing else. Only the project at the root path publishes, as a mid tree
+    // aggregate reads the projects it does not own as variant artifacts, which never cared where
+    // the file lives. Compared by path rather than to project.rootProject, which is forbidden here.
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/1040
+    //
+    // The projects publish where an earlier release wrote their results as well, which the cleanup
+    // reaches through the same channel. Realized while the work graph is assembled, as a cached
+    // entry configures no project to publish them a second time.
+    if (project.path == ":") {
+      service.get().partialsDirectory = partialsDirectory
+      accumulator.configure { task ->
+        task.legacyPartials.from(project.provider { service.get().legacyPartials() })
+      }
+    }
     registerProducer(project, service)
   } else {
+    // Swept only here, as the artifacts are all that name the projects under isolated projects and
+    // they omit the ones that conflict resolution merges away, whose results their own report still
+    // reads from where its producer wrote them. A result that no project of the build still owns is
+    // left behind there rather than risk removing one in use, and is never read, as the results are
+    // wired by path rather than discovered.
+    accumulator.configure { task -> task.partialsDirectory.set(partialsDirectory) }
     // The results are wired as task outputs too, as module conflict resolution would otherwise drop
     // every project that shares a group and name with a sibling from the artifacts.
     project.allprojects { aggregated ->
@@ -203,8 +259,8 @@ internal fun registerAggregation(
       if (claims(aggregated)) {
         // Written under the project that aggregates rather than each project's own build
         // directory, so that a project which exists only to hold a nested include gains no build
-        // directory of its own. Isolated projects keeps the per-project default instead, as there
-        // every producer belongs to a project that applied the plugin itself.
+        // directory of its own. Passed rather than published, as this project registers the
+        // producer itself and so needs no channel to reach it.
         // https://github.com/ben-manes/gradle-versions-plugin/issues/1040
         val outputFile = partialsDirectory.map { it.file(partialFileName(aggregated.path)) }
         val partial = registerProducer(aggregated, service, outputFile)
@@ -253,6 +309,11 @@ private fun registerProducer(
   if (tasks.names.contains(PARTIAL_TASK_NAME)) {
     return tasks.named(PARTIAL_TASK_NAME, DependencyUpdatesPartialTask::class.java)
   }
+  // Read here so that the destination below captures these rather than the project, which the
+  // configuration cache cannot serialize.
+  val path = project.path
+  val ownFile = project.layout.buildDirectory.file("dependencyUpdates/partial.json")
+  service.get().registerLegacy(ownFile)
   // A default action runs only while the build has declared nothing of its own, so one registered
   // here, ahead of the plugins that a project applies, names the configurations that a plugin alone
   // filled. Reading the dependencies later cannot tell the two apart, as any configuration time
@@ -263,13 +324,30 @@ private fun registerProducer(
     // Only a configuration that dependencies are declared against accepts a default action, which
     // is every configuration that a plugin contributes to.
     if (configuration.isCanBeDeclared) {
-      configuration.defaultDependencies { filledByPlugin.add(configuration.name) }
+      try {
+        configuration.defaultDependencies { filledByPlugin.add(configuration.name) }
+      } catch (e: GradleException) {
+        // A configuration that has taken part in a resolution refuses a default action, so a
+        // project that applies this plugin after one did would fail to apply it at all. The mark
+        // is a best effort attribution, which is worth losing for that configuration but not the
+        // build. Its state does not answer this, as a configuration observed by another's
+        // resolution refuses one while still reporting itself as unresolved.
+        project.logger.info(
+          "Skipping the plugin mark for configuration ${project.path}:${configuration.name}",
+          e,
+        )
+      }
     }
   }
   val partial =
     tasks.register(PARTIAL_TASK_NAME, DependencyUpdatesPartialTask::class.java) { task ->
       task.outputFile.convention(
-        outputFile ?: project.layout.buildDirectory.file("dependencyUpdates/partial.json"),
+        outputFile ?: project.provider {
+          // Realized once every project is configured, so the destination is read whatever order
+          // the projects that publish and consume it were configured in. A build where no project
+          // aggregates, as one that only contributes to another build's report, keeps its own.
+          service.get().partialsDirectory?.get()?.file(partialFileName(path)) ?: ownFile.get()
+        },
       )
       task.partialJson.set(
         // Realized after every project has been evaluated, so that the settings are read as last
@@ -341,15 +419,18 @@ private fun registerProducer(
 }
 
 /**
- * Publishes the project's statuses as an outgoing variant, unless the project publishes through its
- * `default` configuration, as one that exposes a local aar or jar file does.
+ * Publishes the project's statuses as an outgoing variant, which carries no attributes where the
+ * project declares no variant of its own, as one that exposes a local aar or jar file through its
+ * `default` configuration does.
  *
- * A project that declares no variant of its own is resolved by falling back to that configuration
- * whatever the consumer asks for. Gradle drops the fallback as soon as the project declares any
- * variant, so publishing one here would leave every consumer of such a project without a match. The
- * artifacts are read rather than the variants alone, as a plugin may declare its variants from its
- * own `afterEvaluate` and so after this runs, while a project publishes by fallback from the build
- * script that this is ordered behind.
+ * Such a project is resolved by falling back to that configuration whatever the consumer asks for,
+ * and Gradle drops the fallback as soon as the project declares an attributed variant. Attributing
+ * this one would then serve the statuses to a consumer in place of the artifact it asked for, so it
+ * is attributed only where the project has a variant of its own to be selected by instead. Whether
+ * the `default` configuration holds an artifact yet is not asked, as a plugin may add its
+ * publication from its own `afterEvaluate` and so after this runs, while the variants that decide
+ * the fallback are declared as a plugin applies. The aggregate names this configuration rather than
+ * matching it by attributes, so it reads the statuses either way.
  * https://github.com/ben-manes/gradle-versions-plugin/issues/1022
  */
 private fun publishResults(
@@ -359,23 +440,22 @@ private fun publishResults(
   val configurations = project.configurations
   val fallback = configurations.findByName(Dependency.DEFAULT_CONFIGURATION)
   val publishesByFallback =
-    fallback != null && fallback.isCanBeConsumed && fallback.artifacts.isNotEmpty() &&
+    fallback != null && fallback.isCanBeConsumed &&
       configurations.none { it.isCanBeConsumed && it.attributes.keySet().isNotEmpty() }
-  if (publishesByFallback) {
-    return
-  }
 
   configurations.consumable(ELEMENTS_CONFIGURATION) { configuration ->
     configuration.description = "The dependency update statuses of ${project.path}."
-    configuration.attributes { attributes ->
-      attributes.attribute(
-        Category.CATEGORY_ATTRIBUTE,
-        project.objects.named(Category::class.java, Category.VERIFICATION),
-      )
-      attributes.attribute(
-        VerificationType.VERIFICATION_TYPE_ATTRIBUTE,
-        project.objects.named(VerificationType::class.java, VERIFICATION_TYPE),
-      )
+    if (!publishesByFallback) {
+      configuration.attributes { attributes ->
+        attributes.attribute(
+          Category.CATEGORY_ATTRIBUTE,
+          project.objects.named(Category::class.java, Category.VERIFICATION),
+        )
+        attributes.attribute(
+          VerificationType.VERIFICATION_TYPE_ATTRIBUTE,
+          project.objects.named(VerificationType::class.java, VERIFICATION_TYPE),
+        )
+      }
     }
     configuration.outgoing.artifact(partial.flatMap { it.outputFile })
   }

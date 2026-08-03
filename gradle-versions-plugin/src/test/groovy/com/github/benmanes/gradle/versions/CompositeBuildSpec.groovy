@@ -357,6 +357,68 @@ final class CompositeBuildSpec extends Specification {
     result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1048')
+  def 'Aggregates an included build named by its coordinates that publishes by fallback'() {
+    given:
+    testProjectDir.newFile('settings.gradle') << "includeBuild 'child'"
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'io.github.ben-manes.versions'
+        }
+
+        dependencies {
+          dependencyUpdatesAggregation 'com.example:child:1.0'
+        }
+      """.stripIndent()
+    // Substituted onto the included build's project, so the aggregation holds a module dependency
+    // rather than a project one, and its artifact is added late enough to leave the project without
+    // a variant of its own to be selected by.
+    includedBuild(
+      'child',
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'io.github.ben-manes.versions'
+
+        group = 'com.example'
+        version = '1.0'
+
+        configurations.maybeCreate('default')
+        afterEvaluate {
+          artifacts.add('default', file('child.jar'))
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        configurations.create('tool') {
+          canBeResolved = true
+          canBeConsumed = false
+        }
+
+        dependencies {
+          tool 'com.example:jvm-library:1.0'
+        }
+      """.stripIndent(),
+    )
+    testProjectDir.newFile('child/child.jar')
+
+    when:
+    def result = run('dependencyUpdates')
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.example:jvm-library [1.0 -> 2.0]')
+  }
+
   def 'Reuses the configuration cache across runs of a composite build'() {
     given:
     testProjectDir.newFile('settings.gradle') << "includeBuild 'child'"

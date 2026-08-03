@@ -188,6 +188,252 @@ final class SettingsPluginAggregationSpec extends Specification {
     invocation << [':dependencyUpdates', 'dependencyUpdates']
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1040')
+  def 'Collects the partial results under the root with isolated projects'() {
+    given:
+    createBuild([])
+    new File(testProjectDir.root, 'settings.gradle').text =
+      """
+        plugins {
+          id 'io.github.ben-manes.versions.settings'
+        }
+
+        include 'app', 'lib', 'container:nested'
+
+        gradle.lifecycle.beforeProject { project ->
+          if (project.path == ':container') {
+            project.pluginManager.apply('java')
+            project.repositories.maven { url = '${mavenRepoUrl}' }
+            project.dependencies.add('implementation', 'com.example:jvm-library:1.0')
+          }
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('container', 'nested')
+    write('container/nested/build.gradle', false, 'com.google.inject:guice:2.0')
+
+    when:
+    def result = run(ISOLATED)
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    // Guards the flag itself: the property is a silent no-op on a Gradle whose spelling differs
+    // (pre-9.7 uses org.gradle.unsafe.isolated-projects), which would pass the non-isolated branch.
+    result.output.contains('Isolated Projects is an incubating feature.')
+    // A project that exists only to hold a nested include has no build script to apply a plugin
+    // from, so the settings plugin reaches it and an earlier release gave it a build directory to
+    // hold the partial result. The producer writes under the aggregating project instead.
+    !new File(testProjectDir.root, 'container/build').exists()
+    new File(testProjectDir.root, 'build/dependencyUpdates/partials').list().length == 5
+    // The container is still resolved, as the settings script can carry a dependency into a project
+    // that has no build script of its own.
+    result.output.contains('com.example:jvm-library [1.0 -> 2.0]')
+
+    when:
+    def hit = run(ISOLATED)
+
+    then:
+    hit.output.contains('Configuration cache entry reused')
+    // The destination is realized before the entry is stored, so a hit writes where the store did.
+    !new File(testProjectDir.root, 'container/build').exists()
+    hit.output.contains('com.example:jvm-library [1.0 -> 2.0]')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1040')
+  def 'Removes what an earlier release wrote into each project with isolated projects'() {
+    given:
+    createBuild([])
+    settingsApplying(true)
+    new File(testProjectDir.root, 'settings.gradle') << "include 'container:nested'\n"
+    testProjectDir.newFolder('container', 'nested')
+    write('container/nested/build.gradle', false, 'com.google.inject:guice:2.0')
+    // What a release before the results were collected under one directory left in each project.
+    def legacies = ['', 'app/', 'lib/', 'container/'].collect {
+      new File(testProjectDir.root, "${it}build/dependencyUpdates/partial.json")
+    }
+    legacies.each { it.parentFile.mkdirs(); it.text = '{}' }
+
+    when:
+    def result = run(ISOLATED + ['--clean-legacy-partials'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('Isolated Projects is an incubating feature.')
+    // A project with no build script has no clean task to reach it, as clean comes from the base
+    // plugin, so the opt in cleanup is the only thing that can.
+    legacies.every { !it.exists() }
+    !new File(testProjectDir.root, 'container/build').exists()
+
+    when:
+    legacies.each { it.parentFile.mkdirs(); it.text = '{}' }
+    def hit = run(ISOLATED + ['--clean-legacy-partials'])
+
+    then:
+    hit.output.contains('Configuration cache entry reused')
+    // The paths are realized before the entry is stored, as a hit configures no project to publish
+    // them again.
+    legacies.every { !it.exists() }
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1040')
+  def 'Keeps the partial result of a project that conflict resolution drops'() {
+    given:
+    new File(testProjectDir.root, 'settings.gradle').text =
+      """
+        plugins {
+          id 'io.github.ben-manes.versions.settings'
+        }
+
+        include 'core:api', 'feature:api'
+
+        gradle.lifecycle.beforeProject { project ->
+          project.group = 'com.example'
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('core', 'api')
+    testProjectDir.newFolder('feature', 'api')
+    write('build.gradle', false, null)
+    write('core/api/build.gradle', false, 'com.google.guava:guava:15.0')
+    write('feature/api/build.gradle', true, 'com.google.inject:guice:2.0')
+
+    when:
+    def own = runWith([':feature:api:dependencyUpdates'] + ISOLATED)
+    def partial = new File(testProjectDir.root, 'build/dependencyUpdates/partials')
+      .listFiles().find { it.name.startsWith('feature-api-') }
+
+    then:
+    own.task(':feature:api:dependencyUpdates').outcome == SUCCESS
+    own.output.contains('Isolated Projects is an incubating feature.')
+    partial != null
+
+    when:
+    def root = runWith([':dependencyUpdates'] + ISOLATED)
+
+    then:
+    root.task(':dependencyUpdates').outcome == SUCCESS
+    // Module conflict resolution aggregates two projects that share a group and name as one, so the
+    // artifacts name fewer projects than the build has producers. The results of the other project
+    // are still its own, and its report reads them from where it wrote them.
+    partial.exists()
+  }
+
+  @Issue([
+    'https://github.com/ben-manes/gradle-versions-plugin/issues/1022',
+    'https://github.com/ben-manes/gradle-versions-plugin/issues/1046',
+  ])
+  def 'Aggregates a project that publishes through its default configuration'() {
+    given:
+    createBuild([])
+    settingsApplying(true)
+    new File(testProjectDir.root, 'settings.gradle') << "include 'local'\n"
+    testProjectDir.newFolder('local')
+    testProjectDir.newFile('local/local.jar')
+    // Declares no variant of its own, so that a consumer resolves it through the fallback to its
+    // default configuration, as a project that exposes a local aar or jar file does. The reported
+    // dependency is declared on a plain resolvable configuration rather than through the `java`
+    // plugin, which would give the project variants of its own and void the case.
+    new File(testProjectDir.root, 'local/build.gradle').text =
+      """
+        configurations.maybeCreate('default')
+        artifacts.add('default', file('local.jar'))
+
+        repositories {
+          maven {
+            url = '${mavenRepoUrl}'
+          }
+        }
+
+        configurations.create('tool') {
+          canBeResolved = true
+          canBeConsumed = false
+        }
+        dependencies {
+          tool 'com.example:jvm-library:1.0'
+        }
+      """.stripIndent()
+    // Resolved on its own configuration rather than the runtime classpath, which also carries the
+    // external dependency this build reports on, whose poms the test repository publishes without
+    // the files to resolve them to.
+    new File(testProjectDir.root, 'app/build.gradle') <<
+      """
+        configurations.create('local') {
+          canBeResolved = true
+          canBeConsumed = false
+        }
+        dependencies {
+          local project(':local')
+        }
+
+        tasks.register('resolve', Copy) {
+          from configurations.local
+          into layout.buildDirectory.dir('resolved')
+        }
+      """.stripIndent()
+
+    when:
+    def result = run(ISOLATED)
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.example:jvm-library [1.0 -> 2.0]')
+    !result.output.contains('The dependency updates report is missing')
+
+    when: 'a consumer resolves the project the statuses were published from'
+    def consumed = runWith([':app:resolve'] + ISOLATED)
+
+    then: 'the unattributed publication left its fallback to the default configuration intact'
+    consumed.task(':app:resolve').outcome == SUCCESS
+    new File(testProjectDir.root, 'app/build/resolved/local.jar').exists()
+  }
+
+  @Issue([
+    'https://github.com/ben-manes/gradle-versions-plugin/issues/1022',
+    'https://github.com/ben-manes/gradle-versions-plugin/issues/1047',
+  ])
+  def 'Consumes a project that publishes through its default configuration from afterEvaluate'() {
+    given:
+    createBuild([])
+    settingsApplying(true)
+    new File(testProjectDir.root, 'settings.gradle') << "include 'late'\n"
+    testProjectDir.newFolder('late')
+    testProjectDir.newFile('late/late.jar')
+    // Puts its artifact on the default configuration from its own afterEvaluate, as a plugin that
+    // declares its publication there does. The settings plugin reaches the project before its build
+    // script runs, so this callback is registered after the one that publishes the statuses.
+    new File(testProjectDir.root, 'late/build.gradle').text =
+      """
+        configurations.maybeCreate('default')
+        afterEvaluate {
+          artifacts.add('default', file('late.jar'))
+        }
+      """.stripIndent()
+    new File(testProjectDir.root, 'app/build.gradle') <<
+      """
+        configurations.create('late') {
+          canBeResolved = true
+          canBeConsumed = false
+        }
+        dependencies {
+          late project(':late')
+        }
+
+        tasks.register('resolveLate', Copy) {
+          from configurations.late
+          into layout.buildDirectory.dir('late')
+        }
+
+      """.stripIndent()
+
+    when:
+    def consumed = runWith([':app:resolveLate'] + ISOLATED)
+
+    then: 'the statuses did not cost the project the fallback its consumers resolve through'
+    consumed.task(':app:resolveLate').outcome == SUCCESS
+    new File(testProjectDir.root, 'app/build/late/late.jar').exists()
+    // Served in the artifact's place before this was left out of variant selection, rather than
+    // failing, so the consumer took the statuses onto its classpath and carried on.
+    !new File(testProjectDir.root, 'app/build/late/partial.json').exists()
+  }
+
   def 'Applies once when a project also applies the plugin itself'() {
     given:
     createBuild([':app'])

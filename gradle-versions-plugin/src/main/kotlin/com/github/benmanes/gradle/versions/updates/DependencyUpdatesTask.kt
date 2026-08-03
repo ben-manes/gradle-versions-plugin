@@ -172,7 +172,10 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   @Internal
   var aggregatedProjectPaths: Set<String> = emptySet()
 
-  /** The directory the partial results are collected under, wired by the plugin. */
+  /**
+   * The directory the partial results are collected under, wired by the plugin only where it also
+   * knows every project that owns one, as the sweep below would otherwise remove a result in use.
+   */
   @get:Internal
   val partialsDirectory: DirectoryProperty = project.objects.directoryProperty()
 
@@ -218,8 +221,8 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
     // Removes what an earlier release wrote into each project's own build directory, which `clean`
     // cannot reach in a project that applies no plugin of its own, as `clean` comes from the base
-    // plugin. A file that a producer still writes there is held back, as one does under isolated
-    // projects. The directories are removed only while empty, which is all that delete() will do.
+    // plugin. A file that a producer still writes is held back. The directories are removed only
+    // while empty, which is all that delete() will do.
     // https://github.com/ben-manes/gradle-versions-plugin/issues/1040
     if (cleanLegacyPartials) {
       for (legacy in legacyPartials.files - expected) {
