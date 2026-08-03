@@ -5,6 +5,8 @@ import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
+import spock.lang.IgnoreIf
+import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -37,8 +39,11 @@ final class KotlinDslUsageSpec extends Specification {
         """.stripIndent()
   }
 
+  // Gradle 9 requires JVM 17.
+  @IgnoreIf({ data.gradleVersion.startsWith('9') && !jvm.java17Compatible })
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/941')
   @Unroll
-  def "user friendly kotlin-dsl"() {
+  def "user friendly kotlin-dsl with Gradle #gradleVersion"() {
     given:
     buildFile << '''
       tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
@@ -60,6 +65,7 @@ final class KotlinDslUsageSpec extends Specification {
 
     when:
     def result = GradleRunner.create()
+      .withGradleVersion(gradleVersion)
       .withPluginClasspath()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
@@ -68,6 +74,9 @@ final class KotlinDslUsageSpec extends Specification {
     then:
     result.output.contains('''com.google.inject:guice [2.0 -> 3.0]''')
     result.task(':dependencyUpdates').outcome == SUCCESS
+
+    where:
+    gradleVersion << ['8.4', '9.6.1']
   }
 
   def 'rejectVersionIf binds to the ComponentFilter overload from kotlin-dsl'() {
