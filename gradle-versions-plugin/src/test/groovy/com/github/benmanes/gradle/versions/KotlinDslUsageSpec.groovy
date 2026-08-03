@@ -79,6 +79,46 @@ final class KotlinDslUsageSpec extends Specification {
     gradleVersion << ['8.4', '9.6.1']
   }
 
+  // Gradle 9 requires JVM 17.
+  @IgnoreIf({ data.gradleVersion.startsWith('9') && !jvm.java17Compatible })
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/941')
+  @Unroll
+  def "withModule takes an untyped kotlin-dsl lambda with Gradle #gradleVersion"() {
+    given:
+    buildFile << '''
+      tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+          checkForGradleUpdate = true
+          outputFormatter = "json"
+          outputDir = "build/dependencyUpdates"
+          reportfileName = "report"
+          resolutionStrategy {
+            componentSelection {
+              withModule("com.google.inject:guice") {
+                if (candidate.version == "3.1" && currentVersion != "") {
+                  reject("Guice 3.1 not allowed")
+                }
+              }
+            }
+          }
+        }
+    '''
+
+    when:
+    def result = GradleRunner.create()
+      .withGradleVersion(gradleVersion)
+      .withPluginClasspath()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .build()
+
+    then:
+    result.output.contains('''com.google.inject:guice [2.0 -> 3.0]''')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+
+    where:
+    gradleVersion << ['8.4', '9.6.1']
+  }
+
   def 'rejectVersionIf binds to the ComponentFilter overload from kotlin-dsl'() {
     given:
     buildFile << '''
