@@ -37,6 +37,7 @@ Plugin](https://www.mojohaus.org/versions-maven-plugin).
 - [Samples](#samples)
 - [Compatibility](#compatibility)
 - [Migrating from prior versions](#migrating-from-prior-versions)
+  - [v0.59.0](#v0590)
   - [v0.58.0](#v0580)
   - [v0.57.0](#v0570)
   - [v0.56.0](#v0560)
@@ -213,6 +214,21 @@ configuration the plugin declared it against:
 
 Set the extension's version, such as `jacoco.toolVersion`, to control what the
 report compares against.
+
+A plugin that fills its classpath when it is applied, rather than when the
+configuration is first resolved, cannot be told apart from the build declaring
+the dependency. Such an entry names the configuration it was declared against
+instead:
+
+```text
+ - org.jetbrains.kotlin:kotlin-build-tools-impl [2.4.0 -> 2.4.10]
+     declared in the 'kotlinAbiValidationCompatClasspath' configuration
+```
+
+A configuration the build declares against directly, such as a tool
+configuration of its own, is named the same way. Use
+[`filterConfigurations`](#configuration-filter) to leave a configuration out of
+the report entirely.
 
 Gradle updates are checked for on the `current`, `release-candidate` and
 `nightly` release channels. The plain-text report displays Gradle updates as a
@@ -508,6 +524,46 @@ tasks.named("dependencyUpdates").configure {
 ```
 
 </details>
+
+Because each entry names the configuration it was declared against (see [The
+`dependencyUpdates` task](#the-dependencyupdates-task)), a build can leave out
+a configuration a plugin fills for its own tooling. The Kotlin Gradle Plugin's
+ABI validation classpath is one, holding a version the build never set:
+
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  filterConfigurations = Spec<Configuration> {
+    it.name != "kotlinAbiValidationCompatClasspath"
+  }
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
+tasks.named("dependencyUpdates").configure {
+  filterConfigurations {
+    it.name != "kotlinAbiValidationCompatClasspath"
+  }
+}
+```
+
+</details>
+
+Take the names from your own report rather than matching on a prefix. They belong
+to the plugins rather than to Gradle and they differ between plugin versions, and
+a broad match leaves out more than intended: the Kotlin Gradle Plugin's compiler
+plugin classpaths hold the compiler plugins a build adds itself. The Android
+Gradle Plugin declares into families of its own, such as `androidLintTool` and
+`unified-test-platform-*`.
 
 #### Optional parameters
 
@@ -1543,6 +1599,18 @@ build is on and work upward. Each section migrates to the version covered by
 the section above it, and the topmost migrates to the current release.
 *Important*s are must-dos, *Tip*s are actions you should or may want to take,
 and *Note*s are things worth knowing that need no action.
+
+### v0.59.0
+
+v0.60.0 names the configuration a dependency was declared directly against, so a
+plugin that fills a classpath of its own when it is applied no longer reads as
+the build declaring the dependency:
+
+> [!IMPORTANT]
+> An entry can now carry an attribution line where it carried none, naming the
+> configuration the dependency was declared against. A tool that parses the plain
+> text report line by line has to skip it, as it already does for the other
+> attribution lines (see [Report format](#report-format)).
 
 ### v0.58.0
 

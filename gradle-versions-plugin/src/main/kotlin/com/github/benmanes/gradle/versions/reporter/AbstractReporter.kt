@@ -42,7 +42,7 @@ private fun elidedLabel(names: List<String>): String =
  */
 internal fun projectsLabel(projects: List<String>): String = elidedLabel(projects.map { if (it == ":") "root project" else it })
 
-/** Returns the display list of the configurations a plugin contributed a dependency into. */
+/** Returns the display list of the configurations a dependency was declared against. */
 private fun configurationsLabel(names: List<String>): String {
   val quoted = names.map { "'$it'" }
   val listed =
@@ -62,14 +62,18 @@ private fun configurationsLabel(names: List<String>): String {
 /** Returns the line describing where the dependency's version came from, or null for a declared one. */
 internal fun sourceLabel(dependency: Dependency): String? {
   val projects = dependency.projects
+  val names = dependency.configurations?.takeIf { it.isNotEmpty() }
   if (dependency.contributed != true) {
-    return projects?.let { "declared in ${projectsLabel(it)}" }
+    // A configuration is named only when the dependency was declared directly against a resolvable
+    // one, which is how a plugin adding its own classpath eagerly leaves it.
+    val where = names?.let { "declared in ${configurationsLabel(it)}" }
+    return when {
+      where == null -> projects?.let { "declared in ${projectsLabel(it)}" }
+      projects == null -> where
+      else -> "$where in ${projectsLabel(projects)}"
+    }
   }
-  val into =
-    dependency.configurations
-      ?.takeIf { it.isNotEmpty() }
-      ?.let { " into ${configurationsLabel(it)}" }
-      .orEmpty()
+  val into = names?.let { " into ${configurationsLabel(it)}" }.orEmpty()
   return if (projects == null) {
     "contributed by a plugin$into"
   } else {

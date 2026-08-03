@@ -269,7 +269,7 @@ final class DivergentVersionsSpec extends Specification {
     htmlReport.contains('declared in :app')
   }
 
-  def 'Leaves a single project report unchanged'() {
+  def 'Names no project in a single project report'() {
     given:
     testProjectDir.newFile('build.gradle') <<
       """
@@ -305,6 +305,9 @@ final class DivergentVersionsSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
     result.output.contains('com.google.inject:guice [3.0 -> 3.1]')
-    !result.output.contains('declared in')
+    // The resolvable configuration the second version was declared against is named, which is where
+    // it was declared rather than which project declared it.
+    result.output.contains("declared in the 'second' configuration")
+    !result.output.contains('declared in root project')
   }
 }

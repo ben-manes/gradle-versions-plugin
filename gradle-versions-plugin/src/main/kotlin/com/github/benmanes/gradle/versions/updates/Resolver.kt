@@ -70,6 +70,17 @@ class Resolver(
     configuration: Configuration,
     revision: String,
     declaredKeys: () -> Set<Coordinate.Key>,
+  ): Set<DependencyStatus> = resolve(configuration, revision, false, declaredKeys)
+
+  /**
+   * Returns the version status as above, naming the configuration of a dependency declared directly
+   * against it when asked, which the buildscript's configurations are resolved without.
+   */
+  internal fun resolve(
+    configuration: Configuration,
+    revision: String,
+    nameDeclaringConfiguration: Boolean,
+    declaredKeys: () -> Set<Coordinate.Key>,
   ): Set<DependencyStatus> {
     // Runs the actions that contribute dependencies lazily, so that the declared set below is read
     // after them rather than before. A contribution missing from that set is discarded as an
@@ -77,7 +88,7 @@ class Resolver(
     // https://github.com/ben-manes/gradle-versions-plugin/issues/987
     configuration.incoming.dependencies
 
-    val current = getCurrentCoordinates(configuration, declaredKeys())
+    val current = getCurrentCoordinates(configuration, declaredKeys(), nameDeclaringConfiguration)
     val latestConfiguration = createLatestConfiguration(configuration, revision, current)
     val root = latestConfiguration.incoming.resolutionResult.root
     return getStatus(current, root)
@@ -332,6 +343,7 @@ class Resolver(
   private fun getCurrentCoordinates(
     configuration: Configuration,
     declaredBeforeActions: Set<Coordinate.Key>,
+    nameDeclaringConfiguration: Boolean,
   ): CurrentCoordinates {
     val declared =
       getResolvableDependencies(configuration)
@@ -411,11 +423,22 @@ class Resolver(
     // is not a substitution target, which traces to a real declaration.
     val contributedKeys = coordinates.keys - declaredBeforeActions - substitutions.values.toSet()
 
+    // A plugin that adds its private classpath eagerly, at apply time, is indistinguishable from a
+    // declaration by the time the snapshot above is taken, so what it leaves behind is named instead:
+    // a dependency declared directly on a resolvable configuration. A build declares against one it
+    // cannot resolve, and a resolvable classpath inherits its dependencies rather than holding them.
+    val declaringKeys =
+      if (nameDeclaringConfiguration) {
+        coordinates.keys intersect configuration.externalKeys().toSet()
+      } else {
+        emptySet()
+      }
+
     return CurrentCoordinates(
       coordinates,
       substitutions,
       contributedKeys,
-      configurationsOf(configuration, contributedKeys),
+      configurationsOf(configuration, contributedKeys + declaringKeys),
     )
   }
 
@@ -650,13 +673,17 @@ internal fun keysOf(
     if (!seen.add(next.name)) {
       continue
     }
-    next.dependencies
-      .filterIsInstance<ExternalDependency>()
-      .mapTo(if (next.name in names) filled else declared) { Coordinate.from(it as Dependency).key }
+    (if (next.name in names) filled else declared).addAll(next.externalKeys())
     pending.addAll(next.extendsFrom)
   }
   return filled - declared
 }
+
+/** Returns the keys of the external dependencies the configuration itself holds. */
+internal fun Configuration.externalKeys(): List<Coordinate.Key> =
+  dependencies
+    .filterIsInstance<ExternalDependency>()
+    .map { Coordinate.from(it as Dependency).key }
 
 /**
  * Returns the configurations that hold each of the given keys, taken across the given configuration
@@ -679,7 +706,7 @@ internal fun configurationsOf(
       continue
     }
     val held =
-      next.dependencies.filterIsInstance<ExternalDependency>().map { Coordinate.from(it as Dependency).key } +
+      next.externalKeys() +
         // A constraint contributes a key of its own, which the dependencies alone do not name.
         next.dependencyConstraints.map { Coordinate.from(it).key }
     for (key in held) {
