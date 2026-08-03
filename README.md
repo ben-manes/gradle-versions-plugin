@@ -665,10 +665,10 @@ Failed to compare versions for the following dependencies because they were decl
  - com.google.code.gson:gson
 
 Failed to determine the latest version for the following dependencies (use --info for details):
- - com.github.ben-manes:unresolvable
- - com.github.ben-manes:unresolvable2
- - com.google.guava:guava
-     23.0
+ - com.github.ben-manes:unresolvable:1.0
+ - com.github.ben-manes:unresolvable2:1.0
+ - com.google.guava:guava:15.0
+     https://github.com/google/guava
  - dom4j:dom4j
 
 Gradle release-candidate updates:
@@ -836,7 +836,7 @@ Alternatively, the report may be output to a structured file.
     "group": "com.google.guava",
     "name": "guava",
     "version": "15.0",
-    "projectUrl": "23.0",
+    "projectUrl": "https://github.com/google/guava",
     "userReason": null,
     "reason": "Could not resolve com.google.guava:guava:+."
    },
@@ -1014,7 +1014,7 @@ Searched in the following locations:
                 <group>com.google.guava</group>
                 <name>guava</name>
                 <version>15.0</version>
-                <projectUrl>23.0</projectUrl>
+                <projectUrl>https://github.com/google/guava</projectUrl>
                 <reason>Could not resolve com.google.guava:guava:+.</reason>
             </unresolvedDependency>
             <unresolvedDependency>
