@@ -403,4 +403,83 @@ final class ConstraintsSpec extends Specification {
     result.output.contains('org.apache.logging.log4j:log4j-core')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
+
+  def "Report a module the consumer declares for a version the platform supplies"() {
+    given: 'log4j is a published BOM whose dependencyManagement names log4j-core'
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          api $platform('org.apache.logging.log4j:log4j:2.16.0')
+          api 'org.apache.logging.log4j:log4j-core'
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then: 'the versionless declaration is checked, at the version the platform supplied'
+    result.output.contains('org.apache.logging.log4j:log4j-core [2.16.0 -> 2.17.0]')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+
+    where:
+    platform << ['platform', 'enforcedPlatform']
+  }
+
+  def "Do not enumerate a consumed platform's own constraints"() {
+    given: 'the platform constrains log4j-core, and the consumer never declares it'
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          api platform('org.apache.logging.log4j:log4j:2.16.0')
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then: 'the platform itself is reported, the module it constrains is not'
+    result.output.contains('org.apache.logging.log4j:log4j [2.16.0 -> 2.17.0]')
+    !result.output.contains('log4j-core')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
 }

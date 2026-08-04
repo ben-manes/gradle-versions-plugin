@@ -456,15 +456,29 @@ tasks.named("dependencyUpdates").configure {
 
 #### Constraints
 
-If you use constraints, for example to define a BOM using the
-[`java-platform`](https://docs.gradle.org/current/userguide/java_platform_plugin.html)
-plugin or to
+If you
 [manage](https://docs.gradle.org/current/userguide/dependency_constraints.html)
-transitive dependency versions, you can enable checking of constraints by
-specifying the `checkConstraints` attribute of the `dependencyUpdates` task. If
-you want to check external constraints (defined in init scripts or by Gradle
-itself) you can do so by specifying the `checkBuildEnvironmentConstraints`
-attribute of the `dependencyUpdates` task.
+transitive dependency versions with a `constraints` block, you can enable
+checking of constraints by specifying the `checkConstraints` attribute of the
+`dependencyUpdates` task. If you want to check external constraints (defined in
+init scripts or by Gradle itself) you can do so by specifying the
+`checkBuildEnvironmentConstraints` attribute of the `dependencyUpdates` task.
+
+The attribute covers the constraints a project declares, on its own
+configurations or on ones they extend. A project applying the
+[`java-platform`](https://docs.gradle.org/current/userguide/java_platform_plugin.html)
+plugin to define a BOM declares its constraints that way, so running the task on
+the platform project reports them.
+
+A project that *consumes* a platform does not declare that platform's
+constraints, under any of `platform("group:artifact:version")`,
+`enforcedPlatform`, or `platform(project(":platform"))`. Gradle hands those
+versions to the consumer as resolution metadata, which `checkConstraints` does
+not read, so they are not enumerated in the consumer's report. This does not
+affect the modules the consumer declares itself: a versionless declaration whose
+version the platform supplies is reported and offered updates as usual. Only a
+module the consumer never declares is absent, and the platform project's own
+report covers those.
 
 <details open>
 <summary>Kotlin</summary>
