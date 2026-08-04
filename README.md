@@ -398,14 +398,14 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
 }
 ```
 
-Example 5: do not offer a version the build already rejected
+Example 5: keep the report inside the bound the build already declares
 
 ```kotlin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
 tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
   rejectVersionIf {
-    candidate.version in versionConstraint?.rejectedVersions.orEmpty()
+    !satisfiesDeclaredBound
   }
 }
 ```
@@ -471,30 +471,35 @@ tasks.named("dependencyUpdates").configure {
 }
 ```
 
-Example 5: do not offer a version the build already rejected
+Example 5: keep the report inside the bound the build already declares
 
 ```groovy
 tasks.named("dependencyUpdates").configure {
   rejectVersionIf {
-    versionConstraint?.rejectedVersions?.contains(candidate.version)
+    !satisfiesDeclaredBound
   }
 }
 ```
 
 </details>
 
-Three things to know before writing a rule against a declared bound.
-`rejectedVersions` returns the selectors the build declared, so the comparison
-above matches an exact `reject("2.9.0")` but not a `reject("[2.9,)")`, which
-arrives as that string. Narrowing the candidate set can surface metadata that
-the unbounded query stepped over, which moves a module from an upgrade line to
-the unresolved section rather than failing the build. And a module whose only
-declaration is a constraint reports that constraint as its current version, so
-`currentVersion` may read `[2.0, 3.1[` rather than a resolved version.
+`satisfiesDeclaredBound` reads a declared range the way dependency resolution
+reads it, so `strictly "[5.3, 6["` admits 5.3.26 and excludes 6.0.1, and
+`reject "[3.0,)"` excludes everything from 3.0 up. Only `strictly` and `reject`
+bound a candidate: a `require` version is a floor resolution may rise above, and
+a `prefer` version only breaks a tie, so a plain `implementation("group:name:1.2.3")`
+is not held back by this rule.
 
-`strictVersion`, `requiredVersion` and `preferredVersion` are available for
-richer rules. Testing a candidate against a declared range needs your own
-version comparison, since Gradle does not expose its own to build scripts.
+Two things to know before writing a rule against a declared bound. Narrowing the
+candidate set can surface metadata that the unbounded query stepped over, which
+moves a module from an upgrade line to the unresolved section rather than
+failing the build. And a module whose only declaration is a constraint reports
+that constraint as its current version, so `currentVersion` may read
+`[2.0, 3.1[` rather than a resolved version.
+
+The declared `strictVersion`, `requiredVersion`, `preferredVersion` and
+`rejectedVersions` remain available on `versionConstraint` for rules that need
+something other than the bound.
 
 #### Constraints
 

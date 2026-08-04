@@ -72,9 +72,9 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
     maturityLevel(candidate.version) < maturityLevel(currentVersion)
   }
 
-  // Example 5: do not offer a version the build already rejected
+  // Example 5: keep the report inside the bound the build already declares
   rejectVersionIf {
-    candidate.version in versionConstraint?.rejectedVersions.orEmpty()
+    !satisfiesDeclaredBound
   }
 
   // optional parameters
@@ -90,8 +90,7 @@ dependencies {
   "bom"("dom4j:dom4j")
   "bounded"("com.google.code.gson:gson") {
     version {
-      require("2.8.9")
-      reject("2.9.0")
+      strictly("[2.8, 2.11[")
     }
   }
   "upToDate"("backport-util-concurrent:backport-util-concurrent:3.1")

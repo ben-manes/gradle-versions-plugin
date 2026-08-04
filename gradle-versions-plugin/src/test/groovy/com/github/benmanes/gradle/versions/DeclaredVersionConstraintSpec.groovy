@@ -6,8 +6,10 @@ import groovy.json.JsonSlurper
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
+import spock.lang.IgnoreIf
 import spock.lang.Issue
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  * A component selection rule can only respect what the build declared if the declared
@@ -20,9 +22,21 @@ final class DeclaredVersionConstraintSpec extends Specification {
   private String reportFolder
   private String mavenRepoUrl
 
+  private String classpathString
+
   def 'setup'() {
     reportFolder = "${testProjectDir.root.path.replaceAll('\\\\', '/')}/build/dependencyUpdates"
     mavenRepoUrl = getClass().getResource('/maven/').toURI()
+
+    def pluginClasspathResource = getClass().classLoader.getResource('plugin-classpath.txt')
+    if (pluginClasspathResource == null) {
+      throw new IllegalStateException(
+        'Did not find plugin classpath resource, run `testClasses` build task.')
+    }
+    classpathString = pluginClasspathResource.readLines()
+      .collect { it.replace('\\', '\\\\') }
+      .collect { "'$it'" }
+      .join(', ')
   }
 
   private void writeBuildFile(String declarations, String taskBody) {
@@ -115,7 +129,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
       """,
       """
         rejectVersionIf {
-          versionConstraint?.rejectedVersions?.contains(candidate.version)
+          !satisfiesDeclaredBound
         }
       """)
 
@@ -178,7 +192,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
           outputFormatter = "json"
           checkForGradleUpdate = false
           rejectVersionIf {
-            candidate.version in versionConstraint?.rejectedVersions.orEmpty()
+            !satisfiesDeclaredBound
           }
         }
       """.stripIndent()
@@ -189,6 +203,138 @@ final class DeclaredVersionConstraintSpec extends Specification {
     then:
     report().outdated.dependencies*.name == ['guice']
     report().outdated.dependencies[0].available.milestone == '3.0'
+  }
+
+  def 'a declared range bounds the report, and an in-range upgrade is still offered'() {
+    given: 'guice resolves to 2.0, while 2.1, 2.2 and 3.0 are inside the range and 3.1 is not'
+    writeBuildFile(
+      """
+        api 'com.google.inject:guice:2.0'
+        constraints {
+          api('com.google.inject:guice') {
+            version {
+              strictly '[2.0, 3.1['
+            }
+          }
+        }
+      """,
+      """
+        checkConstraints = true
+        rejectVersionIf {
+          !satisfiesDeclaredBound
+        }
+      """)
+
+    when:
+    run()
+
+    then: 'the top of the declared range, not the 3.1 the unbounded query finds'
+    report().outdated.dependencies*.name == ['guice']
+    report().outdated.dependencies[0].available.milestone == '3.0'
+    report().unresolved.dependencies.isEmpty()
+  }
+
+  def 'a module with no declared bound is not held back'() {
+    given: 'a plain declaration is a floor resolution may rise above, not a bound'
+    writeBuildFile(
+      """
+        api 'com.google.guava:guava:15.0'
+        api 'com.google.inject:guice:2.0'
+      """,
+      """
+        rejectVersionIf {
+          !satisfiesDeclaredBound
+        }
+      """)
+
+    when:
+    run()
+
+    then: 'every upgrade still shows; bounding on a bare require would empty the report'
+    report().outdated.dependencies*.name == ['guava', 'guice']
+    report().outdated.dependencies.find { it.name == 'guava' }.available.milestone == '16.0-rc1'
+    report().outdated.dependencies.find { it.name == 'guice' }.available.milestone == '3.1'
+  }
+
+  def 'a rejected range is honored, not compared as a string'() {
+    given: 'the rejected range names no version literally, so a string comparison would miss it'
+    writeBuildFile(
+      """
+        api('com.google.inject:guice') {
+          version {
+            require '2.0'
+            reject '[3.1,)'
+          }
+        }
+      """,
+      """
+        rejectVersionIf {
+          !satisfiesDeclaredBound
+        }
+      """)
+
+    when:
+    run()
+
+    then: '3.1 falls inside the rejected range, so 3.0 is the offer'
+    report().outdated.dependencies*.name == ['guice']
+    report().outdated.dependencies[0].available.milestone == '3.0'
+  }
+
+  // The bound is read with the parser dependency resolution uses, which Gradle does not publish, so
+  // the ends of the supported range are pinned. The versions between them do not move it
+  // independently of these two.
+  @IgnoreIf({ data.gradleVersion.startsWith('9') && !jvm.java17Compatible })
+  @Unroll
+  def 'a declared range is read the same way on Gradle #gradleVersion'() {
+    given:
+    testProjectDir.newFile('build.gradle') <<
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'java-library'
+        apply plugin: 'io.github.ben-manes.versions'
+
+        repositories {
+          maven {
+            url = '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          api('com.google.inject:guice') {
+            version {
+              strictly '[2.0, 3.1['
+            }
+          }
+        }
+
+        tasks.named('dependencyUpdates').configure {
+          checkForGradleUpdate = false
+          rejectVersionIf {
+            !satisfiesDeclaredBound
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withGradleVersion(gradleVersion)
+      .build()
+
+    then: '3.1 sits outside the declared range on both, so the report stops at 3.0'
+    result.output.contains('com.google.inject:guice')
+    !result.output.contains('-> 3.1]')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+
+    where:
+    gradleVersion << ['8.4', '9.6.1']
   }
 
   def 'a rule cannot rewrite the constraint the build declared'() {
