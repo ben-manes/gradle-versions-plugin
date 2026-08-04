@@ -404,6 +404,48 @@ final class ConstraintsSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
+  def "Report the reason a constraint was declared with"() {
+    given: 'a dependency states its reason in the report, and a constraint should read the same'
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          constraints {
+            api('com.google.inject:guice:2.0') {
+              because 'a constraint reason'
+            }
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then:
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('a constraint reason')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
   def "Report a module the consumer declares for a version the platform supplies"() {
     given: 'log4j is a published BOM whose dependencyManagement names log4j-core'
     buildFile = testProjectDir.newFile('build.gradle')
@@ -480,48 +522,6 @@ final class ConstraintsSpec extends Specification {
     then: 'the platform itself is reported, the module it constrains is not'
     result.output.contains('org.apache.logging.log4j:log4j [2.16.0 -> 2.17.0]')
     !result.output.contains('log4j-core')
-    result.task(':dependencyUpdates').outcome == SUCCESS
-  }
-
-  def "Report the reason a constraint was declared with"() {
-    given: 'a dependency states its reason in the report, and a constraint should read the same'
-    buildFile = testProjectDir.newFile('build.gradle')
-    buildFile <<
-      """
-        plugins {
-          id 'java-library'
-          id 'io.github.ben-manes.versions'
-        }
-
-        tasks.dependencyUpdates {
-          checkConstraints = true
-        }
-
-        repositories {
-          maven {
-            url '${mavenRepoUrl}'
-          }
-        }
-
-        dependencies {
-          constraints {
-            api('com.google.inject:guice:2.0') {
-              because 'a constraint reason'
-            }
-          }
-        }
-      """.stripIndent()
-
-    when:
-    def result = GradleRunner.create()
-      .withProjectDir(testProjectDir.root)
-      .withArguments('dependencyUpdates')
-      .withPluginClasspath()
-      .build()
-
-    then:
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
-    result.output.contains('a constraint reason')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 }

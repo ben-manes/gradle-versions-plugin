@@ -318,9 +318,16 @@ def isNonStable = { String version ->
 You can then configure [Component Selection
 Rules](https://docs.gradle.org/current/userguide/dynamic_versions.html#sec:component_selection_rules).
 The current version of a component can be retrieved with the `currentVersion`
-property. You can either use the simplified syntax `rejectVersionIf { ... }` or
-configure a complete resolution strategy. Multiple registrations compose, so a
-candidate is rejected if any registered filter rejects it.
+property, and the constraint its declaration stated with `versionConstraint`,
+Gradle's own
+[`VersionConstraint`](https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/VersionConstraint.html).
+The query that finds candidates is deliberately unbounded, so a rule that wants
+the report to respect what the build declared reads it from `versionConstraint`
+rather than restating it. It is null for a module no declaration was matched to,
+such as one a substitution rule resolved to, so guard for that. You can either
+use the simplified syntax `rejectVersionIf { ... }` or configure a complete 
+resolution strategy. Multiple registrations compose, so a candidate is rejected 
+if any registered filter rejects it.
 
 <details open>
 <summary>Kotlin</summary>
@@ -391,6 +398,18 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
 }
 ```
 
+Example 5: do not offer a version the build already rejected
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  rejectVersionIf {
+    candidate.version in versionConstraint?.rejectedVersions.orEmpty()
+  }
+}
+```
+
 </details>
 
 <details>
@@ -452,7 +471,30 @@ tasks.named("dependencyUpdates").configure {
 }
 ```
 
+Example 5: do not offer a version the build already rejected
+
+```groovy
+tasks.named("dependencyUpdates").configure {
+  rejectVersionIf {
+    versionConstraint?.rejectedVersions?.contains(candidate.version)
+  }
+}
+```
+
 </details>
+
+Three things to know before writing a rule against a declared bound.
+`rejectedVersions` returns the selectors the build declared, so the comparison
+above matches an exact `reject("2.9.0")` but not a `reject("[2.9,)")`, which
+arrives as that string. Narrowing the candidate set can surface metadata that
+the unbounded query stepped over, which moves a module from an upgrade line to
+the unresolved section rather than failing the build. And a module whose only
+declaration is a constraint reports that constraint as its current version, so
+`currentVersion` may read `[2.0, 3.1[` rather than a resolved version.
+
+`strictVersion`, `requiredVersion` and `preferredVersion` are available for
+richer rules. Testing a candidate against a declared range needs your own
+version comparison, since Gradle does not expose its own to build scripts.
 
 #### Constraints
 

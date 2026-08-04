@@ -21,6 +21,7 @@ repositories {
 
 configurations {
   bom
+  bounded
   upToDate
   exceedLatest
   platform
@@ -69,12 +70,23 @@ tasks.named("dependencyUpdates").configure {
   rejectVersionIf {
     maturityLevel(candidate.version) < maturityLevel(currentVersion)
   }
+
+  // Example 5: do not offer a version the build already rejected
+  rejectVersionIf {
+    versionConstraint?.rejectedVersions?.contains(candidate.version)
+  }
 }
 
 dependencies {
   bom 'org.springframework.boot:spring-boot-dependencies:1.5.8.RELEASE',
       'com.google.code.gson:gson',
       'dom4j:dom4j'
+  bounded('com.google.code.gson:gson') {
+    version {
+      require '2.8.9'
+      reject '2.9.0'
+    }
+  }
   upToDate 'backport-util-concurrent:backport-util-concurrent:3.1',
            'backport-util-concurrent:backport-util-concurrent-java12:3.1',
 	    'org.openjdk.jmh:jmh-parent:1.25.2'

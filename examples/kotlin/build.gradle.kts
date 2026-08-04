@@ -20,6 +20,7 @@ repositories {
 
 configurations {
   register("bom")
+  register("bounded")
   register("upToDate")
   register("exceedLatest")
   register("platform")
@@ -71,6 +72,11 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
     maturityLevel(candidate.version) < maturityLevel(currentVersion)
   }
 
+  // Example 5: do not offer a version the build already rejected
+  rejectVersionIf {
+    candidate.version in versionConstraint?.rejectedVersions.orEmpty()
+  }
+
   // optional parameters
   checkForGradleUpdate = true
   outputFormatter = "json"
@@ -82,6 +88,12 @@ dependencies {
   "bom"("org.springframework.boot:spring-boot-dependencies:1.5.8.RELEASE")
   "bom"("com.google.code.gson:gson")
   "bom"("dom4j:dom4j")
+  "bounded"("com.google.code.gson:gson") {
+    version {
+      require("2.8.9")
+      reject("2.9.0")
+    }
+  }
   "upToDate"("backport-util-concurrent:backport-util-concurrent:3.1")
   "upToDate"("backport-util-concurrent:backport-util-concurrent-java12:3.1")
   "exceedLatest"("com.google.guava:guava:99.0-SNAPSHOT")
