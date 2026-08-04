@@ -482,4 +482,46 @@ final class ConstraintsSpec extends Specification {
     !result.output.contains('log4j-core')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
+
+  def "Report the reason a constraint was declared with"() {
+    given: 'a dependency states its reason in the report, and a constraint should read the same'
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          constraints {
+            api('com.google.inject:guice:2.0') {
+              because 'a constraint reason'
+            }
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then:
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('a constraint reason')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
 }

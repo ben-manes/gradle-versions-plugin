@@ -1,6 +1,7 @@
 package com.github.benmanes.gradle.versions.updates
 
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.DependencyConstraint
 import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ModuleVersionSelector
@@ -72,8 +73,15 @@ class Coordinate(
       return Coordinate(dependency.group, dependency.name, dependency.version, dependency.reason)
     }
 
+    // A dependency constraint reaches this overload as well, and unlike a bare selector it states
+    // a reason of its own.
     fun from(selector: ModuleVersionSelector): Coordinate {
-      return Coordinate(selector.group, selector.name, selector.version)
+      return Coordinate(
+        selector.group,
+        selector.name,
+        selector.version,
+        (selector as? DependencyConstraint)?.reason,
+      )
     }
 
     fun from(identifier: ModuleVersionIdentifier): Coordinate {
