@@ -21,6 +21,16 @@ class ComponentSelectionRulesWithCurrent(
     return this
   }
 
+  @JvmSynthetic
+  fun all(selectionAction: ComponentSelectionWithCurrent.() -> Unit): ComponentSelectionRulesWithCurrent {
+    delegate.all {
+      wrapComponentSelection(it)?.let { wrapped ->
+        wrapped.selectionAction()
+      }
+    }
+    return this
+  }
+
   fun all(closure: Closure<*>): ComponentSelectionRulesWithCurrent {
     delegate.all {
       wrapComponentSelection(it)?.let { wrapped ->
@@ -50,6 +60,19 @@ class ComponentSelectionRulesWithCurrent(
     delegate.withModule(id) {
       wrapComponentSelection(it)?.let { wrapped ->
         selectionAction.execute(wrapped)
+      }
+    }
+    return this
+  }
+
+  @JvmSynthetic
+  fun withModule(
+    id: Any,
+    selectionAction: ComponentSelectionWithCurrent.() -> Unit,
+  ): ComponentSelectionRulesWithCurrent {
+    delegate.withModule(id) {
+      wrapComponentSelection(it)?.let { wrapped ->
+        wrapped.selectionAction()
       }
     }
     return this

@@ -68,6 +68,21 @@ jobs:
           cd examples/groovy/ && ../../gradlew dU && cd -
           cd examples/kotlin/ && ../../gradlew dU && cd -
 
+      # The wrapper pins the examples to the minimum supported Gradle, so the Kotlin DSL
+      # sample never sees the release line that binds its lambdas differently.
+      # https://github.com/ben-manes/gradle-versions-plugin/issues/941
+      - name: Provision Gradle 9
+        if: matrix.java-version == 17
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: '9.6.1'
+
+      - name: Run examples on Gradle 9
+        if: matrix.java-version == 17
+        run: |
+          cd examples/groovy/ && gradle dU && cd -
+          cd examples/kotlin/ && gradle dU && cd -
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v6
         if: always()
