@@ -490,12 +490,17 @@ bound a candidate: a `require` version is a floor resolution may rise above, and
 a `prefer` version only breaks a tie, so a plain `implementation("group:name:1.2.3")`
 is not held back by this rule.
 
-Two things to know before writing a rule against a declared bound. Narrowing the
-candidate set can surface metadata that the unbounded query stepped over, which
-moves a module from an upgrade line to the unresolved section rather than
-failing the build. And a module whose only declaration is a constraint reports
-that constraint as its current version, so `currentVersion` may read
-`[2.0, 3.1[` rather than a resolved version.
+Three things to know before writing a rule against a declared bound. Rejecting
+every candidate for a module, including the version it currently resolves to,
+does not fail the build: the module moves to the unresolved section and its
+upgrade line goes with it. A bound naming a version that was never published
+does that, so a `strictly "1.2.3"` pointing at nothing reports as a resolution
+failure rather than as up to date.
+
+Narrowing the candidate set can also surface metadata that the unbounded query
+stepped over, with the same result. And a module whose only declaration is a
+constraint reports that constraint as its current version, so `currentVersion`
+may read `[2.0, 3.1[` rather than a resolved version.
 
 The declared `strictVersion`, `requiredVersion`, `preferredVersion` and
 `rejectedVersions` remain available on `versionConstraint` for rules that need
@@ -1665,13 +1670,18 @@ and *Note*s are things worth knowing that need no action.
 
 v0.60.0 names the configuration a dependency was declared directly against, so a
 plugin that fills a classpath of its own when it is applied no longer reads as
-the build declaring the dependency:
+the build declaring the dependency, and states the reason a dependency
+constraint was declared with:
 
 > [!IMPORTANT]
-> An entry can now carry an attribution line where it carried none, naming the
-> configuration the dependency was declared against. A tool that parses the plain
-> text report line by line has to skip it, as it already does for the other
-> attribution lines (see [Report format](#report-format)).
+> - An entry can now carry an attribution line where it carried none, naming the
+>   configuration the dependency was declared against. A tool that parses the plain
+>   text report line by line has to skip it, as it already does for the other
+>   attribution lines (see [Report format](#report-format)).
+> - An entry for a dependency constraint declared with `because` now carries that
+>   reason, where only a dependency's reason appeared before. It prints on the same
+>   line as a dependency's reason does, so a tool that already handles one handles
+>   both.
 
 ### v0.58.0
 
