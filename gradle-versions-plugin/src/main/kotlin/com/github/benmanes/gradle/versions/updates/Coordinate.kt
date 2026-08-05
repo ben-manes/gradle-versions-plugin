@@ -41,6 +41,14 @@ class Coordinate(
   var versionConstraint: VersionConstraint? = null
     private set
 
+  /**
+   * The constraints the platforms this module's consumer depends on state for it, empty when no
+   * declaration named this module without a version or no consumed platform bounds it. A release
+   * that moves the copying class leaves this empty rather than failing the whole report.
+   */
+  var platformVersionConstraints: List<VersionConstraint> = emptyList()
+    private set
+
   val key: Key
     get() = Key(groupId, artifactId)
 
@@ -56,6 +64,22 @@ class Coordinate(
         versionConstraint?.let { DefaultImmutableVersionConstraint.of(it) }
       } catch (e: LinkageError) {
         null
+      }
+  }
+
+  internal constructor(
+    groupId: String?,
+    artifactId: String?,
+    version: String?,
+    userReason: String?,
+    versionConstraint: VersionConstraint?,
+    platformVersionConstraints: List<VersionConstraint>,
+  ) : this(groupId, artifactId, version, userReason, versionConstraint) {
+    this.platformVersionConstraints =
+      try {
+        platformVersionConstraints.map { DefaultImmutableVersionConstraint.of(it) }
+      } catch (e: LinkageError) {
+        emptyList()
       }
   }
 
@@ -157,6 +181,24 @@ class Coordinate(
         identifier.version,
         declaration?.userReason,
         declaration?.versionConstraint,
+      )
+    }
+
+    /** As above, additionally attaching the constraints a consumed platform states for it. */
+    internal fun from(
+      identifier: ModuleVersionIdentifier,
+      declared: Map<Key, Coordinate?>,
+      platformConstraints: Map<Key, List<VersionConstraint>>,
+    ): Coordinate {
+      val key = Key(identifier.group, identifier.name)
+      val declaration = declared[key]
+      return Coordinate(
+        identifier.group,
+        identifier.name,
+        identifier.version,
+        declaration?.userReason,
+        declaration?.versionConstraint,
+        platformConstraints[key].orEmpty(),
       )
     }
 
