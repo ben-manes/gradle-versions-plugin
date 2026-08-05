@@ -318,9 +318,16 @@ def isNonStable = { String version ->
 You can then configure [Component Selection
 Rules](https://docs.gradle.org/current/userguide/dynamic_versions.html#sec:component_selection_rules).
 The current version of a component can be retrieved with the `currentVersion`
-property. You can either use the simplified syntax `rejectVersionIf { ... }` or
-configure a complete resolution strategy. Multiple registrations compose, so a
-candidate is rejected if any registered filter rejects it.
+property, and the constraint its declaration stated with `versionConstraint`,
+Gradle's own
+[`VersionConstraint`](https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/VersionConstraint.html).
+The query that finds candidates is deliberately unbounded, so a rule that wants
+the report to respect what the build declared reads it from `versionConstraint`
+rather than restating it. It is null for a module no declaration was matched to,
+such as one a substitution rule resolved to, so guard for that. You can either
+use the simplified syntax `rejectVersionIf { ... }` or configure a complete 
+resolution strategy. Multiple registrations compose, so a candidate is rejected 
+if any registered filter rejects it.
 
 <details open>
 <summary>Kotlin</summary>
@@ -391,6 +398,18 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
 }
 ```
 
+Example 5: keep the report inside the bound the build already declares
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  rejectVersionIf {
+    !satisfiesDeclaredBound
+  }
+}
+```
+
 </details>
 
 <details>
@@ -452,19 +471,66 @@ tasks.named("dependencyUpdates").configure {
 }
 ```
 
+Example 5: keep the report inside the bound the build already declares
+
+```groovy
+tasks.named("dependencyUpdates").configure {
+  rejectVersionIf {
+    !satisfiesDeclaredBound
+  }
+}
+```
+
 </details>
+
+`satisfiesDeclaredBound` reads a declared range the way dependency resolution
+reads it, so `strictly "[5.3, 6["` admits 5.3.26 and excludes 6.0.1, and
+`reject "[3.0,)"` excludes everything from 3.0 up. Only `strictly` and `reject`
+bound a candidate: a `require` version is a floor resolution may rise above, and
+a `prefer` version only breaks a tie, so a plain `implementation("group:name:1.2.3")`
+is not held back by this rule.
+
+Three things to know before writing a rule against a declared bound. Rejecting
+every candidate for a module, including the version it currently resolves to,
+does not fail the build: the module moves to the unresolved section and its
+upgrade line goes with it. A bound naming a version that was never published
+does that, so a `strictly "1.2.3"` pointing at nothing reports as a resolution
+failure rather than as up to date.
+
+Narrowing the candidate set can also surface metadata that the unbounded query
+stepped over, with the same result. And a module whose only declaration is a
+constraint reports that constraint as its current version, so `currentVersion`
+may read `[2.0, 3.1[` rather than a resolved version.
+
+The declared `strictVersion`, `requiredVersion`, `preferredVersion` and
+`rejectedVersions` remain available on `versionConstraint` for rules that need
+something other than the bound.
 
 #### Constraints
 
-If you use constraints, for example to define a BOM using the
-[`java-platform`](https://docs.gradle.org/current/userguide/java_platform_plugin.html)
-plugin or to
+If you
 [manage](https://docs.gradle.org/current/userguide/dependency_constraints.html)
-transitive dependency versions, you can enable checking of constraints by
-specifying the `checkConstraints` attribute of the `dependencyUpdates` task. If
-you want to check external constraints (defined in init scripts or by Gradle
-itself) you can do so by specifying the `checkBuildEnvironmentConstraints`
-attribute of the `dependencyUpdates` task.
+transitive dependency versions with a `constraints` block, you can enable
+checking of constraints by specifying the `checkConstraints` attribute of the
+`dependencyUpdates` task. If you want to check external constraints (defined in
+init scripts or by Gradle itself) you can do so by specifying the
+`checkBuildEnvironmentConstraints` attribute of the `dependencyUpdates` task.
+
+The attribute covers the constraints a project declares, on its own
+configurations or on ones they extend. A project applying the
+[`java-platform`](https://docs.gradle.org/current/userguide/java_platform_plugin.html)
+plugin to define a BOM declares its constraints that way, so running the task on
+the platform project reports them.
+
+A project that *consumes* a platform does not declare that platform's
+constraints, under any of `platform("group:artifact:version")`,
+`enforcedPlatform`, or `platform(project(":platform"))`. Gradle hands those
+versions to the consumer as resolution metadata, which `checkConstraints` does
+not read, so they are not enumerated in the consumer's report. This does not
+affect the modules the consumer declares itself: a versionless declaration whose
+version the platform supplies is reported and offered updates as usual. Only a
+module the consumer never declares is absent, and the platform project's own
+report covers those.
 
 <details open>
 <summary>Kotlin</summary>
@@ -1604,13 +1670,18 @@ and *Note*s are things worth knowing that need no action.
 
 v0.60.0 names the configuration a dependency was declared directly against, so a
 plugin that fills a classpath of its own when it is applied no longer reads as
-the build declaring the dependency:
+the build declaring the dependency, and states the reason a dependency
+constraint was declared with:
 
 > [!IMPORTANT]
-> An entry can now carry an attribution line where it carried none, naming the
-> configuration the dependency was declared against. A tool that parses the plain
-> text report line by line has to skip it, as it already does for the other
-> attribution lines (see [Report format](#report-format)).
+> - An entry can now carry an attribution line where it carried none, naming the
+>   configuration the dependency was declared against. A tool that parses the plain
+>   text report line by line has to skip it, as it already does for the other
+>   attribution lines (see [Report format](#report-format)).
+> - An entry for a dependency constraint declared with `because` now carries that
+>   reason, where only a dependency's reason appeared before. It prints on the same
+>   line as a dependency's reason does, so a tool that already handles one handles
+>   both.
 
 ### v0.58.0
 

@@ -21,6 +21,7 @@ repositories {
 
 configurations {
   bom
+  bounded
   upToDate
   exceedLatest
   platform
@@ -69,15 +70,25 @@ tasks.named("dependencyUpdates").configure {
   rejectVersionIf {
     maturityLevel(candidate.version) < maturityLevel(currentVersion)
   }
+
+  // Example 5: keep the report inside the bound the build already declares
+  rejectVersionIf {
+    !satisfiesDeclaredBound
+  }
 }
 
 dependencies {
   bom 'org.springframework.boot:spring-boot-dependencies:1.5.8.RELEASE',
       'com.google.code.gson:gson',
       'dom4j:dom4j'
+  bounded('com.google.code.gson:gson') {
+    version {
+      strictly '[2.8, 2.11['
+    }
+  }
   upToDate 'backport-util-concurrent:backport-util-concurrent:3.1',
            'backport-util-concurrent:backport-util-concurrent-java12:3.1',
-	    'org.openjdk.jmh:jmh-parent:1.25.2'
+           'org.openjdk.jmh:jmh-parent:1.25.2'
   exceedLatest 'com.google.guava:guava:99.0-SNAPSHOT',
                'com.google.guava:guava-tests:99.0-SNAPSHOT'
   upgradesFound 'com.google.guava:guava:15.0',

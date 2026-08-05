@@ -1,11 +1,20 @@
 package com.github.benmanes.gradle.versions.updates
 
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.DependencyConstraint
+import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ModuleVersionSelector
+import org.gradle.api.artifacts.VersionConstraint
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.artifacts.dependencies.DefaultImmutableVersionConstraint
+
+// The parameter list is the one 0.59.0 released. A default argument compiles callers against a
+// synthetic constructor carrying the argument mask, so adding a parameter here, even a defaulted one,
+// leaves a caller of `Coordinate(group, name, version)` linking against a signature that no longer
+// exists. The constraint arrives through a secondary constructor instead.
 
 /**
  * The dependency's coordinate.
@@ -19,8 +28,36 @@ class Coordinate(
   val groupId: String = groupId ?: "none"
   val artifactId: String = artifactId ?: "none"
   val version: String = version ?: "none"
+
+  /**
+   * The constraint the declaration stated, which the resolved version alone does not carry. Held as
+   * an immutable copy, since a selection rule is handed this and the declaration's own constraint
+   * is mutable. Null for a coordinate no declaration was matched to, such as the module a
+   * substitution rule resolved to, or one rebuilt from a partial result.
+   *
+   * Copying it needs a class Gradle does not publish, and every coordinate passes through here, so a
+   * release that moves the class leaves the constraint unknown rather than failing the whole report.
+   */
+  var versionConstraint: VersionConstraint? = null
+    private set
+
   val key: Key
     get() = Key(groupId, artifactId)
+
+  constructor(
+    groupId: String?,
+    artifactId: String?,
+    version: String?,
+    userReason: String?,
+    versionConstraint: VersionConstraint?,
+  ) : this(groupId, artifactId, version, userReason) {
+    this.versionConstraint =
+      try {
+        versionConstraint?.let { DefaultImmutableVersionConstraint.of(it) }
+      } catch (e: LinkageError) {
+        null
+      }
+  }
 
   override fun toString(): String {
     return "$groupId:$artifactId:$version"
@@ -69,11 +106,26 @@ class Coordinate(
 
   companion object {
     fun from(dependency: ExternalModuleDependency): Coordinate {
-      return Coordinate(dependency.group, dependency.name, dependency.version, dependency.reason)
+      return Coordinate(
+        dependency.group,
+        dependency.name,
+        dependency.version,
+        dependency.reason,
+        dependency.versionConstraint,
+      )
     }
 
+    // A dependency constraint reaches this overload as well, and unlike a bare selector it declares
+    // a version constraint and a reason of its own.
     fun from(selector: ModuleVersionSelector): Coordinate {
-      return Coordinate(selector.group, selector.name, selector.version)
+      val constraint = selector as? DependencyConstraint
+      return Coordinate(
+        selector.group,
+        selector.name,
+        selector.version,
+        constraint?.reason,
+        constraint?.versionConstraint,
+      )
     }
 
     fun from(identifier: ModuleVersionIdentifier): Coordinate {
@@ -81,7 +133,13 @@ class Coordinate(
     }
 
     fun from(dependency: Dependency): Coordinate {
-      return Coordinate(dependency.group, dependency.name, dependency.version, dependency.reason)
+      return Coordinate(
+        dependency.group,
+        dependency.name,
+        dependency.version,
+        dependency.reason,
+        (dependency as? ExternalDependency)?.versionConstraint,
+      )
     }
 
     fun keyFrom(selector: ModuleVersionSelector): Key {
@@ -92,11 +150,13 @@ class Coordinate(
       identifier: ModuleVersionIdentifier,
       declared: Map<Key, Coordinate?>,
     ): Coordinate {
+      val declaration = declared[Key(identifier.group, identifier.name)]
       return Coordinate(
         identifier.group,
         identifier.name,
         identifier.version,
-        declared.getOrDefault(Key(identifier.group, identifier.name), null)?.userReason,
+        declaration?.userReason,
+        declaration?.versionConstraint,
       )
     }
 
