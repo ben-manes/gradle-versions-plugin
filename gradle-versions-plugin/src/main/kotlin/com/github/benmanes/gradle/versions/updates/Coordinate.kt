@@ -11,6 +11,11 @@ import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.component.ModuleComponentSelector
 import org.gradle.api.internal.artifacts.dependencies.DefaultImmutableVersionConstraint
 
+// The parameter list is the one 0.59.0 released. A default argument compiles callers against a
+// synthetic constructor carrying the argument mask, so adding a parameter here, even a defaulted one,
+// leaves a caller of `Coordinate(group, name, version)` linking against a signature that no longer
+// exists. The constraint arrives through a secondary constructor instead.
+
 /**
  * The dependency's coordinate.
  */
@@ -19,7 +24,6 @@ class Coordinate(
   artifactId: String?,
   version: String?,
   val userReason: String? = null,
-  versionConstraint: VersionConstraint? = null,
 ) : Comparable<Coordinate> {
   val groupId: String = groupId ?: "none"
   val artifactId: String = artifactId ?: "none"
@@ -34,23 +38,26 @@ class Coordinate(
    * Copying it needs a class Gradle does not publish, and every coordinate passes through here, so a
    * release that moves the class leaves the constraint unknown rather than failing the whole report.
    */
-  val versionConstraint: VersionConstraint? =
-    try {
-      versionConstraint?.let { DefaultImmutableVersionConstraint.of(it) }
-    } catch (e: LinkageError) {
-      null
-    }
+  var versionConstraint: VersionConstraint? = null
+    private set
 
   val key: Key
     get() = Key(groupId, artifactId)
 
-  /** Retains the arity that callers outside Kotlin construct this with. */
   constructor(
     groupId: String?,
     artifactId: String?,
     version: String?,
     userReason: String?,
-  ) : this(groupId, artifactId, version, userReason, null)
+    versionConstraint: VersionConstraint?,
+  ) : this(groupId, artifactId, version, userReason) {
+    this.versionConstraint =
+      try {
+        versionConstraint?.let { DefaultImmutableVersionConstraint.of(it) }
+      } catch (e: LinkageError) {
+        null
+      }
+  }
 
   override fun toString(): String {
     return "$groupId:$artifactId:$version"
