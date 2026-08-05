@@ -10,6 +10,7 @@
   </parent>
 
   <artifactId>guice</artifactId>
+  <version>2.2</version>
 
   <name>Google Guice - Core Library</name>
 
