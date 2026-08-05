@@ -404,6 +404,7 @@ final class ConstraintsSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/755')
   def "Report the reason a constraint was declared with"() {
     given: 'a dependency states its reason in the report, and a constraint should read the same'
     buildFile = testProjectDir.newFile('build.gradle')
@@ -446,8 +447,20 @@ final class ConstraintsSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
   def "Report a module the consumer declares for a version the platform supplies"() {
     given: 'log4j is a published BOM whose dependencyManagement names log4j-core'
+    testProjectDir.newFile('settings.gradle') << "include 'platform'\n"
+    testProjectDir.newFolder('platform')
+    testProjectDir.newFile('platform/build.gradle') <<
+      """
+        plugins { id 'java-platform' }
+        dependencies {
+          constraints {
+            api 'org.apache.logging.log4j:log4j-core:2.16.0'
+          }
+        }
+      """.stripIndent()
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
       """
@@ -467,7 +480,7 @@ final class ConstraintsSpec extends Specification {
         }
 
         dependencies {
-          api $platform('org.apache.logging.log4j:log4j:2.16.0')
+          api $platform
           api 'org.apache.logging.log4j:log4j-core'
         }
       """.stripIndent()
@@ -484,9 +497,14 @@ final class ConstraintsSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
-    platform << ['platform', 'enforcedPlatform']
+    platform << [
+      "platform('org.apache.logging.log4j:log4j:2.16.0')",
+      "enforcedPlatform('org.apache.logging.log4j:log4j:2.16.0')",
+      "platform(project(':platform'))",
+    ]
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
   def "Do not enumerate a consumed platform's own constraints"() {
     given: 'the platform constrains log4j-core, and the consumer never declares it'
     buildFile = testProjectDir.newFile('build.gradle')
