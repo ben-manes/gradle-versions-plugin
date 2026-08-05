@@ -12,7 +12,7 @@ class ComponentSelectionWithCurrent(
   /** The constraint the build declared for this module, null when no declaration named it. */
   val versionConstraint: VersionConstraint?,
 ) : ComponentSelection by delegate {
-  /** Retains the arity that callers outside Kotlin construct this with. */
+  /** Retained so the arity released before the constraint was added still links. */
   constructor(
     delegate: ComponentSelection,
     currentVersion: String,

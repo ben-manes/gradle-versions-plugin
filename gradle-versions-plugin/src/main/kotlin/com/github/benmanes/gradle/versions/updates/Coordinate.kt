@@ -30,9 +30,16 @@ class Coordinate(
    * an immutable copy, since a selection rule is handed this and the declaration's own constraint
    * is mutable. Null for a coordinate no declaration was matched to, such as the module a
    * substitution rule resolved to, or one rebuilt from a partial result.
+   *
+   * Copying it needs a class Gradle does not publish, and every coordinate passes through here, so a
+   * release that moves the class leaves the constraint unknown rather than failing the whole report.
    */
   val versionConstraint: VersionConstraint? =
-    versionConstraint?.let { DefaultImmutableVersionConstraint.of(it) }
+    try {
+      versionConstraint?.let { DefaultImmutableVersionConstraint.of(it) }
+    } catch (e: LinkageError) {
+      null
+    }
 
   val key: Key
     get() = Key(groupId, artifactId)
