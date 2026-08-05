@@ -337,6 +337,31 @@ final class DeclaredVersionConstraintSpec extends Specification {
     gradleVersion << ['8.4', '9.6.1']
   }
 
+  def 'a bound naming an unpublished version loses the report line to the unresolved section'() {
+    given: 'guice 2.1 is listed in the repository metadata but was never published'
+    writeBuildFile(
+      """
+        api('com.google.inject:guice') {
+          version {
+            strictly '2.1'
+          }
+        }
+      """,
+      """
+        rejectVersionIf {
+          !satisfiesDeclaredBound
+        }
+      """)
+
+    when:
+    run()
+
+    then: 'every candidate is rejected, which does not fail the build but does move the entry'
+    report().outdated.dependencies.isEmpty()
+    report().current.dependencies.isEmpty()
+    report().unresolved.dependencies*.name == ['guice']
+  }
+
   def 'a rule cannot rewrite the constraint the build declared'() {
     given: 'the rule is handed a copy, so mutating it must not change what the report resolves'
     writeBuildFile(
