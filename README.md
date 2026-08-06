@@ -111,7 +111,7 @@ The following dependencies have later milestone versions:
      https://spring.io/projects/spring-boot
 
 Gradle release-candidate updates:
- - Gradle: [8.4 -> 9.6.1 -> 9.7.0-rc-2]
+ - Gradle: [8.4 -> 9.7.0]
 ```
 
 ### Configuring the task
@@ -860,7 +860,7 @@ Failed to determine the latest version for the following dependencies (use --inf
  - dom4j:dom4j
 
 Gradle release-candidate updates:
- - Gradle: [8.4 -> 9.6.1 -> 9.7.0-rc-2]
+ - Gradle: [8.4 -> 9.7.0]
 ```
 
 </details>
@@ -1050,13 +1050,13 @@ Alternatively, the report may be output to a structured file.
    "isFailure": false,
    "isUpdateAvailable": true,
    "reason": "",
-   "version": "9.6.1"
+   "version": "9.7.0"
   },
   "releaseCandidate": {
    "isFailure": false,
-   "isUpdateAvailable": true,
-   "reason": "",
-   "version": "9.7.0-rc-2"
+   "isUpdateAvailable": false,
+   "reason": "update check succeeded: no release available",
+   "version": ""
   },
   "nightly": {
    "isFailure": false,
@@ -1222,16 +1222,16 @@ Searched in the following locations:
             <reason/>
         </running>
         <current>
-            <version>9.6.1</version>
+            <version>9.7.0</version>
             <isUpdateAvailable>true</isUpdateAvailable>
             <isFailure>false</isFailure>
             <reason/>
         </current>
         <releaseCandidate>
-            <version>9.7.0-rc-2</version>
-            <isUpdateAvailable>true</isUpdateAvailable>
+            <version/>
+            <isUpdateAvailable>false</isUpdateAvailable>
             <isFailure>false</isFailure>
-            <reason/>
+            <reason>update check succeeded: no release available</reason>
         </releaseCandidate>
         <nightly>
             <version/>
