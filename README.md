@@ -364,9 +364,10 @@ tasks.named("dependencyUpdates").configure {
 </details>
 
 Because each entry names the configuration it was declared against (see [The
-`dependencyUpdates` task](#the-dependencyupdates-task)), a build can leave out
-a configuration a plugin fills for its own tooling. The Kotlin Gradle Plugin's
-ABI validation classpath is one, holding a version the build never set:
+`dependencyUpdates` task](#the-dependencyupdates-task)), a build can leave
+out the configurations a plugin fills for its own tooling, the ones holding a
+version the build never chose. The Kotlin Gradle Plugin adds six; at KGP
+2.4.10 they are:
 
 <details open>
 <summary>Kotlin</summary>
@@ -374,9 +375,75 @@ ABI validation classpath is one, holding a version the build never set:
 ```kotlin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
+val kgpInternal = setOf(
+  "kotlinCompilerClasspath",
+  "kotlinBuildToolsApiClasspath",
+  "kotlinAbiValidationCompatClasspath",
+  "kotlinKlibCommonizerClasspath",
+  "kotlinCompilerPluginClasspathMain",
+  "kotlinCompilerPluginClasspathTest",
+)
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  filterConfigurations = Spec<Configuration> { it.name !in kgpInternal }
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
+def kgpInternal = [
+  "kotlinCompilerClasspath",
+  "kotlinBuildToolsApiClasspath",
+  "kotlinAbiValidationCompatClasspath",
+  "kotlinKlibCommonizerClasspath",
+  "kotlinCompilerPluginClasspathMain",
+  "kotlinCompilerPluginClasspathTest",
+]
+
+tasks.named("dependencyUpdates").configure {
+  filterConfigurations {
+    !kgpInternal.contains(it.name)
+  }
+}
+```
+
+</details>
+
+The unsuffixed `kotlinCompilerPluginClasspath` is left in on purpose: it
+holds the compiler plugins the build itself declares, and only the `Main`-
+and `Test`-suffixed siblings belong to the plugin. That is why the filter
+names configurations exactly instead of dropping everything that starts with
+`kotlin`.
+
+The Android Gradle Plugin fills a set of its own. At AGP 9.3.1, which builds
+in its Kotlin support rather than applying a separate Kotlin plugin, that is
+`androidLintTool`, two of the Kotlin classpaths above, and a
+`unified-test-platform-*` family thirteen configurations wide. The family is
+the one place a prefix fits: its membership shifts between AGP releases and
+no configuration a build fills itself uses the prefix. (The per-variant
+`kotlinCompilerPluginClasspathDebug` and friends never appear in the report
+by name, since a dependency is attributed to the configuration it was
+declared against, so they need no entry.)
+
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+val agpInternal = setOf(
+  "androidLintTool",
+  "kotlinBuildToolsApiClasspath",
+  "kotlinCompilerClasspath",
+)
+
 tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
   filterConfigurations = Spec<Configuration> {
-    it.name != "kotlinAbiValidationCompatClasspath"
+    it.name !in agpInternal && !it.name.startsWith("unified-test-platform-")
   }
 }
 ```
@@ -387,21 +454,26 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
 <summary>Groovy</summary>
 
 ```groovy
+def agpInternal = [
+  "androidLintTool",
+  "kotlinBuildToolsApiClasspath",
+  "kotlinCompilerClasspath",
+]
+
 tasks.named("dependencyUpdates").configure {
   filterConfigurations {
-    it.name != "kotlinAbiValidationCompatClasspath"
+    !agpInternal.contains(it.name) &&
+      !it.name.startsWith("unified-test-platform-")
   }
 }
 ```
 
 </details>
 
-Take the names from your own report rather than matching on a prefix. They belong
-to the plugins rather than to Gradle and they differ between plugin versions, and
-a broad match leaves out more than intended: the Kotlin Gradle Plugin's compiler
-plugin classpaths hold the compiler plugins a build adds itself. The Android
-Gradle Plugin declares into families of its own, such as `androidLintTool` and
-`unified-test-platform-*`.
+These names belong to the plugins at the versions above, not to Gradle, and
+they change between plugin releases. Take the set from your own report
+rather than from this page, and keep the matches exact wherever a plugin's
+configurations share a prefix with ones the build fills itself.
 
 ##### Constraints
 
