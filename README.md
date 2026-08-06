@@ -17,14 +17,18 @@ Plugin](https://www.mojohaus.org/versions-maven-plugin).
   - [Cache invalidation](#cache-invalidation)
   - [Task properties](#task-properties)
     - [A recommended configuration](#a-recommended-configuration)
-    - [Revisions](#revisions)
-    - [RejectVersionsIf and componentSelection](#rejectversionsif-and-componentselection)
-    - [Constraints](#constraints)
-    - [Configuration filter](#configuration-filter)
-    - [Optional parameters](#optional-parameters)
-    - [Gradle release channel](#gradle-release-channel)
-    - [Gradle versions API base URL](#gradle-versions-api-base-url)
-    - [Report format](#report-format)
+    - [What the report checks](#what-the-report-checks)
+      - [Configuration filter](#configuration-filter)
+      - [Constraints](#constraints)
+    - [Which versions it offers](#which-versions-it-offers)
+      - [Revisions](#revisions)
+      - [Filtering unstable versions](#filtering-unstable-versions)
+      - [Respecting declared bounds](#respecting-declared-bounds)
+      - [Gradle release channel](#gradle-release-channel)
+      - [Gradle versions API base URL](#gradle-versions-api-base-url)
+    - [Report output](#report-output)
+      - [Optional parameters](#optional-parameters)
+      - [Report format](#report-format)
   - [Multi-project builds](#multi-project-builds)
     - [Shared task settings](#shared-task-settings)
     - [Composite builds](#composite-builds)
@@ -314,17 +318,146 @@ tasks.named("dependencyUpdates").configure {
 - `checkConstraints` adds the versions a `constraints` block manages to the
   report (see [Constraints](#constraints)).
 - The stability clause rejects a pre-release candidate unless the current
-  version is itself a pre-release (see [RejectVersionsIf and
-  componentSelection](#rejectversionsif-and-componentselection)).
+  version is itself a pre-release (see [Filtering unstable
+  versions](#filtering-unstable-versions)).
 - `!satisfiesDeclaredBound` rejects a candidate outside a `strictly` or
   `reject` bound the build declares, or outside the version a consumed
-  platform requires (see [RejectVersionsIf and
-  componentSelection](#rejectversionsif-and-componentselection)).
+  platform requires (see [Respecting declared
+  bounds](#respecting-declared-bounds)).
 
 Each piece stands alone: drop any line whose behavior the build does not
 want, and the rest keep working.
 
-#### Revisions
+#### What the report checks
+
+##### Configuration filter
+
+You can change which dependency configurations the plugin checks for updates
+like this:
+
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  filterConfigurations = Spec<Configuration> {
+    it.name == "runtimeClasspath" || it.name == "compileClasspath"
+  }
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
+tasks.named("dependencyUpdates").configure {
+  filterConfigurations {
+    it.name == "runtimeClasspath" || it.name == "compileClasspath"
+  }
+}
+```
+
+</details>
+
+Because each entry names the configuration it was declared against (see [The
+`dependencyUpdates` task](#the-dependencyupdates-task)), a build can leave out
+a configuration a plugin fills for its own tooling. The Kotlin Gradle Plugin's
+ABI validation classpath is one, holding a version the build never set:
+
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  filterConfigurations = Spec<Configuration> {
+    it.name != "kotlinAbiValidationCompatClasspath"
+  }
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
+tasks.named("dependencyUpdates").configure {
+  filterConfigurations {
+    it.name != "kotlinAbiValidationCompatClasspath"
+  }
+}
+```
+
+</details>
+
+Take the names from your own report rather than matching on a prefix. They belong
+to the plugins rather than to Gradle and they differ between plugin versions, and
+a broad match leaves out more than intended: the Kotlin Gradle Plugin's compiler
+plugin classpaths hold the compiler plugins a build adds itself. The Android
+Gradle Plugin declares into families of its own, such as `androidLintTool` and
+`unified-test-platform-*`.
+
+##### Constraints
+
+If you
+[manage](https://docs.gradle.org/current/userguide/dependency_constraints.html)
+transitive dependency versions with a `constraints` block, you can enable
+checking of constraints by specifying the `checkConstraints` attribute of the
+`dependencyUpdates` task. If you want to check external constraints (defined in
+init scripts or by Gradle itself) you can do so by specifying the
+`checkBuildEnvironmentConstraints` attribute of the `dependencyUpdates` task.
+
+The attribute covers the constraints a project declares, on its own
+configurations or on ones they extend. A project applying the
+[`java-platform`](https://docs.gradle.org/current/userguide/java_platform_plugin.html)
+plugin to define a BOM declares its constraints that way, so running the task on
+the platform project reports them.
+
+A project that *consumes* a platform does not declare that platform's
+constraints, under any of `platform("group:artifact:version")`,
+`enforcedPlatform`, or `platform(project(":platform"))`. Gradle hands those
+versions to the consumer as resolution metadata, which `checkConstraints` does
+not read, so they are not enumerated in the consumer's report. This does not
+affect the modules the consumer declares itself: a versionless declaration whose
+version the platform supplies is reported and offered updates as usual. Only a
+module the consumer never declares is absent, and the platform project's own
+report covers those.
+
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  checkConstraints = true
+  checkBuildEnvironmentConstraints = true
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
+tasks.named("dependencyUpdates").configure {
+  checkConstraints = true
+  checkBuildEnvironmentConstraints = true
+}
+```
+
+</details>
+
+#### Which versions it offers
+
+##### Revisions
 
 The `revision` task property controls the [Ivy resolution
 strategy](https://ant.apache.org/ivy/history/2.4.0/settings/version-matchers.html#Latest%20%28Status%29%20Matcher)
@@ -345,10 +478,10 @@ hoc usage:
 
 Because Maven repositories do not mark pre-release versions, an alpha or release
 candidate can still appear as the latest version under any revision. To only be
-offered stable updates, reject pre-release candidates (see
-[RejectVersionsIf and componentSelection](#rejectversionsif-and-componentselection)).
+offered stable updates, reject pre-release candidates (see [Filtering unstable
+versions](#filtering-unstable-versions)).
 
-#### RejectVersionsIf and componentSelection
+##### Filtering unstable versions
 
 To further control which versions are accepted, define what counts as an
 unstable version. There is no agreed standard, but this is a good starting
@@ -384,20 +517,9 @@ def isNonStable = { String version ->
 You can then configure [Component Selection
 Rules](https://docs.gradle.org/current/userguide/dynamic_versions.html#sec:component_selection_rules).
 The current version of a component can be retrieved with the `currentVersion`
-property, and the constraint its declaration stated with `versionConstraint`,
-Gradle's own
-[`VersionConstraint`](https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/VersionConstraint.html).
-A module the build declares with no version of its own carries the constraints
-the platforms it consumes state for that module in `platformVersionConstraints`,
-a list rather than a single value because more than one consumed platform can
-bound the same module. The query that finds candidates is deliberately unbounded,
-so a rule that wants the report to respect what the build declared reads it from
-`versionConstraint` rather than restating it. It is null for a module no
-declaration was matched to, such as one a substitution rule resolved to, so
-guard for that. You can either
-use the simplified syntax `rejectVersionIf { ... }` or configure a complete 
-resolution strategy. Multiple registrations compose, so a candidate is rejected 
-if any registered filter rejects it.
+property. You can either use the simplified syntax `rejectVersionIf { ... }` or
+configure a complete resolution strategy. Multiple registrations compose, so a
+candidate is rejected if any registered filter rejects it.
 
 <details open>
 <summary>Kotlin</summary>
@@ -468,18 +590,6 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
 }
 ```
 
-Example 5: keep the report inside the bound the build already declares
-
-```kotlin
-import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
-
-tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
-  rejectVersionIf {
-    !satisfiesDeclaredBound
-  }
-}
-```
-
 </details>
 
 <details>
@@ -541,7 +651,44 @@ tasks.named("dependencyUpdates").configure {
 }
 ```
 
-Example 5: keep the report inside the bound the build already declares
+</details>
+
+##### Respecting declared bounds
+
+A rule can also hold the report to what the build itself declared. The
+constraint a declaration stated is available as `versionConstraint`, Gradle's
+own
+[`VersionConstraint`](https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/VersionConstraint.html).
+A module the build declares with no version of its own carries the constraints
+the platforms it consumes state for that module in `platformVersionConstraints`,
+a list rather than a single value because more than one consumed platform can
+bound the same module. The query that finds candidates is deliberately unbounded,
+so a rule that wants the report to respect what the build declared reads it from
+`versionConstraint` rather than restating it. It is null for a module no
+declaration was matched to, such as one a substitution rule resolved to, so
+guard for that.
+
+<details open>
+<summary>Kotlin</summary>
+
+Keep the report inside the bound the build already declares:
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  rejectVersionIf {
+    !satisfiesDeclaredBound
+  }
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+Keep the report inside the bound the build already declares:
 
 ```groovy
 tasks.named("dependencyUpdates").configure {
@@ -638,31 +785,16 @@ The declared `strictVersion`, `requiredVersion`, `preferredVersion` and
 `rejectedVersions` remain available on `versionConstraint` for rules that need
 something other than the bound.
 
-#### Constraints
+##### Gradle release channel
 
-If you
-[manage](https://docs.gradle.org/current/userguide/dependency_constraints.html)
-transitive dependency versions with a `constraints` block, you can enable
-checking of constraints by specifying the `checkConstraints` attribute of the
-`dependencyUpdates` task. If you want to check external constraints (defined in
-init scripts or by Gradle itself) you can do so by specifying the
-`checkBuildEnvironmentConstraints` attribute of the `dependencyUpdates` task.
+The `gradleReleaseChannel` task property controls which release channel of the
+Gradle project is used to check for available Gradle updates. Options are:
 
-The attribute covers the constraints a project declares, on its own
-configurations or on ones they extend. A project applying the
-[`java-platform`](https://docs.gradle.org/current/userguide/java_platform_plugin.html)
-plugin to define a BOM declares its constraints that way, so running the task on
-the platform project reports them.
+* `current`
+* `release-candidate`
+* `nightly`
 
-A project that *consumes* a platform does not declare that platform's
-constraints, under any of `platform("group:artifact:version")`,
-`enforcedPlatform`, or `platform(project(":platform"))`. Gradle hands those
-versions to the consumer as resolution metadata, which `checkConstraints` does
-not read, so they are not enumerated in the consumer's report. This does not
-affect the modules the consumer declares itself: a versionless declaration whose
-version the platform supplies is reported and offered updates as usual. Only a
-module the consumer never declares is absent, and the platform project's own
-report covers those.
+The default is `release-candidate`. The value can be changed as shown below:
 
 <details open>
 <summary>Kotlin</summary>
@@ -671,8 +803,7 @@ report covers those.
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
 tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
-  checkConstraints = true
-  checkBuildEnvironmentConstraints = true
+  gradleReleaseChannel = "current"
 }
 ```
 
@@ -683,87 +814,23 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
 
 ```groovy
 tasks.named("dependencyUpdates").configure {
-  checkConstraints = true
-  checkBuildEnvironmentConstraints = true
+  gradleReleaseChannel = "current"
 }
 ```
 
 </details>
 
-#### Configuration filter
+##### Gradle versions API base URL
 
-You can change which dependency configurations the plugin checks for updates
-like this:
+The `gradleVersionsApiBaseUrl` task property provides an option for
+customization of the Gradle versions service URL. If not specified, the default
+value https://services.gradle.org/versions/ is used. The customization can be
+useful in restricted environments without direct internet access and proxy
+availability.
 
-<details open>
-<summary>Kotlin</summary>
+#### Report output
 
-```kotlin
-import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
-
-tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
-  filterConfigurations = Spec<Configuration> {
-    it.name == "runtimeClasspath" || it.name == "compileClasspath"
-  }
-}
-```
-
-</details>
-
-<details>
-<summary>Groovy</summary>
-
-```groovy
-tasks.named("dependencyUpdates").configure {
-  filterConfigurations {
-    it.name == "runtimeClasspath" || it.name == "compileClasspath"
-  }
-}
-```
-
-</details>
-
-Because each entry names the configuration it was declared against (see [The
-`dependencyUpdates` task](#the-dependencyupdates-task)), a build can leave out
-a configuration a plugin fills for its own tooling. The Kotlin Gradle Plugin's
-ABI validation classpath is one, holding a version the build never set:
-
-<details open>
-<summary>Kotlin</summary>
-
-```kotlin
-import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
-
-tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
-  filterConfigurations = Spec<Configuration> {
-    it.name != "kotlinAbiValidationCompatClasspath"
-  }
-}
-```
-
-</details>
-
-<details>
-<summary>Groovy</summary>
-
-```groovy
-tasks.named("dependencyUpdates").configure {
-  filterConfigurations {
-    it.name != "kotlinAbiValidationCompatClasspath"
-  }
-}
-```
-
-</details>
-
-Take the names from your own report rather than matching on a prefix. They belong
-to the plugins rather than to Gradle and they differ between plugin versions, and
-a broad match leaves out more than intended: the Kotlin Gradle Plugin's compiler
-plugin classpaths hold the compiler plugins a build adds itself. The Android
-Gradle Plugin declares into families of its own, such as `androidLintTool` and
-`unified-test-platform-*`.
-
-#### Optional parameters
+##### Optional parameters
 
 The `dependencyUpdates` task takes several optional parameters to adjust its
 behavior. The `revision`, `gradleReleaseChannel`, `outputFormatter`,
@@ -801,50 +868,7 @@ tasks.named("dependencyUpdates").configure {
 
 </details>
 
-#### Gradle release channel
-
-The `gradleReleaseChannel` task property controls which release channel of the
-Gradle project is used to check for available Gradle updates. Options are:
-
-* `current`
-* `release-candidate`
-* `nightly`
-
-The default is `release-candidate`. The value can be changed as shown below:
-
-<details open>
-<summary>Kotlin</summary>
-
-```kotlin
-import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
-
-tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
-  gradleReleaseChannel = "current"
-}
-```
-
-</details>
-
-<details>
-<summary>Groovy</summary>
-
-```groovy
-tasks.named("dependencyUpdates").configure {
-  gradleReleaseChannel = "current"
-}
-```
-
-</details>
-
-#### Gradle versions API base URL
-
-The `gradleVersionsApiBaseUrl` task property provides an option for
-customization of the Gradle versions service URL. If not specified, the default
-value https://services.gradle.org/versions/ is used. The customization can be
-useful in restricted environments without direct internet access and proxy
-availability.
-
-#### Report format
+##### Report format
 
 The task property `outputFormatter` controls the report output format. The
 following values are supported:
