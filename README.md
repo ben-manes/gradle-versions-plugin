@@ -16,6 +16,7 @@ Plugin](https://www.mojohaus.org/versions-maven-plugin).
 - [The `dependencyUpdates` task](#the-dependencyupdates-task)
   - [Cache invalidation](#cache-invalidation)
   - [Task properties](#task-properties)
+    - [A recommended configuration](#a-recommended-configuration)
     - [Revisions](#revisions)
     - [RejectVersionsIf and componentSelection](#rejectversionsif-and-componentselection)
     - [Constraints](#constraints)
@@ -183,10 +184,11 @@ gradle.rootProject {
 
 </details>
 
-Every task property is covered in [Task properties](#task-properties). Most
-builds want a stability filter next, so that a pre-release version is not
-offered as an update (see [RejectVersionsIf and
-componentSelection](#rejectversionsif-and-componentselection)).
+Every task property is covered in [Task properties](#task-properties), which
+opens with [a recommended configuration](#a-recommended-configuration) most
+builds want: a stability filter so that a pre-release version is not offered
+as an update, and a bound so that an upgrade the build has ruled out is not
+offered either.
 
 ## The `dependencyUpdates` task
 
@@ -257,6 +259,70 @@ query the repositories again:
 > expecting does not appear, not routinely.
 
 ### Task properties
+
+#### A recommended configuration
+
+The properties below each solve a different problem, and most builds end up
+wanting the same few. This is a complete starting point, assembled from the
+sections that follow:
+
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+fun String.isNonStable(): Boolean {
+  val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { uppercase().contains(it) }
+  val regex = "^[0-9,.v-]+(-r)?$".toRegex()
+  val isStable = stableKeyword || regex.matches(this)
+  return isStable.not()
+}
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  checkConstraints = true
+  rejectVersionIf {
+    (candidate.version.isNonStable() && !currentVersion.isNonStable()) ||
+      !satisfiesDeclaredBound
+  }
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
+def isNonStable = { String version ->
+  def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { it -> version.toUpperCase().contains(it) }
+  def regex = /^[0-9,.v-]+(-r)?$/
+  return !stableKeyword && !(version ==~ regex)
+}
+
+tasks.named("dependencyUpdates").configure {
+  checkConstraints = true
+  rejectVersionIf {
+    (isNonStable(candidate.version) && !isNonStable(currentVersion)) ||
+      !satisfiesDeclaredBound
+  }
+}
+```
+
+</details>
+
+- `checkConstraints` adds the versions a `constraints` block manages to the
+  report (see [Constraints](#constraints)).
+- The stability clause rejects a pre-release candidate unless the current
+  version is itself a pre-release (see [RejectVersionsIf and
+  componentSelection](#rejectversionsif-and-componentselection)).
+- `!satisfiesDeclaredBound` rejects a candidate outside a `strictly` or
+  `reject` bound the build declares, or outside the version a consumed
+  platform requires (see [RejectVersionsIf and
+  componentSelection](#rejectversionsif-and-componentselection)).
+
+Each piece stands alone: drop any line whose behavior the build does not
+want, and the rest keep working.
 
 #### Revisions
 
