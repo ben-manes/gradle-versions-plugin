@@ -328,6 +328,11 @@ tasks.named("dependencyUpdates").configure {
 Each piece stands alone: drop any line whose behavior the build does not
 want, and the rest keep working.
 
+In Kotlin the `isNonStable` extension replaces a helper of that name the build
+already has. A top-level `fun isNonStable(version: String)` compiles to the same
+JVM signature, so keeping both fails the build with a platform declaration
+clash.
+
 #### What the report checks
 
 ##### Configuration filter
@@ -821,7 +826,13 @@ The following dependencies have later milestone versions:
 ```
 
 The platform keeps its own report line, so the upgrade that is actually
-available, bumping the BOM, still shows. The bound is deliberately narrow:
+available, bumping the BOM, still shows. That line is there only when the
+report covers the project declaring the platform. A build that centralizes its
+platforms in an included build holds the modules with nothing naming the BOM to
+bump, since an included build is reported separately (see [Composite
+builds](#composite-builds)).
+
+The bound is deliberately narrow:
 
 - A module the build states a version for anywhere in the configuration
   hierarchy keeps the floor semantics above; a platform never tightens a
