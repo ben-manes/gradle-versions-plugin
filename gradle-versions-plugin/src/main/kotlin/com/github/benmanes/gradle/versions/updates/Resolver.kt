@@ -16,6 +16,7 @@ import org.gradle.api.artifacts.DependencyConstraint
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.api.artifacts.VersionConstraint
 import org.gradle.api.artifacts.component.ModuleComponentSelector
 import org.gradle.api.artifacts.repositories.ArtifactRepository
@@ -49,6 +50,22 @@ class Resolver(
   private val checkConstraints: Boolean,
 ) {
   private var projectUrls = ConcurrentHashMap<ModuleVersionIdentifier, ProjectUrl>()
+
+  // Gradle flattens a version-catalog plugin alias to a bare required range on the marker
+  // dependency it synthesizes for the buildscript classpath, dropping strictly/prefer/reject.
+  // https://github.com/ben-manes/gradle-versions-plugin/issues/755
+  private val pluginCatalogConstraints: Map<Coordinate.Key, List<VersionConstraint>> by lazy {
+    val catalogs = project.extensions.findByType(VersionCatalogsExtension::class.java)
+    val constraints = hashMapOf<Coordinate.Key, MutableList<VersionConstraint>>()
+    catalogs?.forEach { catalog ->
+      for (alias in catalog.pluginAliases) {
+        val plugin = catalog.findPlugin(alias).orElse(null)?.orNull ?: continue
+        val key = Coordinate.Key(plugin.pluginId, "${plugin.pluginId}.gradle.plugin")
+        constraints.getOrPut(key) { mutableListOf() }.add(plugin.version)
+      }
+    }
+    constraints
+  }
 
   init {
     logRepositories()
@@ -352,6 +369,7 @@ class Resolver(
     val declared =
       getResolvableDependencies(configuration)
         .associateBy { it.key }
+        .mapValues { (_, coordinate) -> recoverPluginCatalogConstraint(coordinate) }
     // An empty configuration is still resolved below, so that a listener contributing to it has
     // run by the time the declared set is read again. That resolution costs nothing. One holding
     // only project or file dependencies is skipped, as resolving it would not.
@@ -446,6 +464,38 @@ class Resolver(
       configurationsOf(configuration, contributedKeys + declaringKeys),
     )
   }
+
+  /**
+   * Returns the coordinate rebuilt with the catalog's constraint, when a plugin-catalog alias
+   * flattened to the coordinate's bare required version explains it unambiguously.
+   */
+  private fun recoverPluginCatalogConstraint(coordinate: Coordinate): Coordinate {
+    val declaredConstraint = coordinate.versionConstraint ?: return coordinate
+    // A versionless declaration states an empty required version, which an alias that only rejects
+    // would match, attaching a bound to a declaration that named no version to bound.
+    if (isRich(declaredConstraint) || declaredConstraint.requiredVersion.isEmpty()) {
+      return coordinate
+    }
+    val candidates =
+      pluginCatalogConstraints[coordinate.key].orEmpty()
+        .filter { isRich(it) && (it.requiredVersion == declaredConstraint.requiredVersion) }
+        .distinctBy { listOf(it.requiredVersion, it.strictVersion, it.preferredVersion, it.rejectedVersions) }
+    if (candidates.size > 1) {
+      project.logger.info(
+        "Multiple version catalog aliases for ${coordinate.key} state differing version constraints; " +
+          "keeping the declared constraint",
+      )
+      return coordinate
+    }
+    val recovered = candidates.singleOrNull() ?: return coordinate
+    return Coordinate(coordinate.groupId, coordinate.artifactId, coordinate.version, coordinate.userReason, recovered)
+  }
+
+  /** Whether the constraint carries more than a bare required version. */
+  private fun isRich(constraint: VersionConstraint): Boolean =
+    constraint.strictVersion.isNotEmpty() ||
+      constraint.preferredVersion.isNotEmpty() ||
+      constraint.rejectedVersions.isNotEmpty()
 
   /**
    * Returns the version constraints the consumed platforms state for each module that is declared
