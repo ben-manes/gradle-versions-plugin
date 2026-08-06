@@ -1917,18 +1917,32 @@ and *Note*s are things worth knowing that need no action.
 
 v0.60.0 names the configuration a dependency was declared directly against, so a
 plugin that fills a classpath of its own when it is applied no longer reads as
-the build declaring the dependency, and states the reason a dependency
-constraint was declared with:
+the build declaring the dependency, states the reason a dependency constraint
+was declared with, and lets a component selection rule hold the report to the
+bound the build declared:
 
 > [!IMPORTANT]
 > - An entry can now carry an attribution line where it carried none, naming the
 >   configuration the dependency was declared against. A tool that parses the plain
 >   text report line by line has to skip it, as it already does for the other
->   attribution lines (see [Report format](#report-format)).
+>   attribution lines (see [Report format](#report-format)). The JSON and XML
+>   reports carry the same names in `configurations`, which until now held only
+>   what a plugin contributed, so a tool reading that field has to read
+>   `contributed` alongside it to tell the two apart.
 > - An entry for a dependency constraint declared with `because` now carries that
 >   reason, where only a dependency's reason appeared before. It prints on the same
 >   line as a dependency's reason does, so a tool that already handles one handles
 >   both.
+
+> [!TIP]
+> - A component selection rule can hold the report to what the build declared,
+>   with `rejectVersionIf { !satisfiesDeclaredBound }`. A module bounded by a
+>   `strictly` or by a platform the build consumes is then held to that bound,
+>   so the report offers only versions the build can actually take (see
+>   [Respecting declared bounds](#respecting-declared-bounds)).
+> - A Kotlin DSL build script that worked around the Gradle 9 overload ambiguity
+>   by naming `Action<ComponentSelectionWithCurrent>` can go back to the untyped
+>   `all { }` and `withModule(id) { }` forms.
 
 ### v0.58.0
 
