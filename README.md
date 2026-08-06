@@ -321,10 +321,14 @@ The current version of a component can be retrieved with the `currentVersion`
 property, and the constraint its declaration stated with `versionConstraint`,
 Gradle's own
 [`VersionConstraint`](https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/VersionConstraint.html).
-The query that finds candidates is deliberately unbounded, so a rule that wants
-the report to respect what the build declared reads it from `versionConstraint`
-rather than restating it. It is null for a module no declaration was matched to,
-such as one a substitution rule resolved to, so guard for that. You can either
+A module the build declares with no version of its own carries the constraints
+the platforms it consumes state for that module in `platformVersionConstraints`,
+a list rather than a single value because more than one consumed platform can
+bound the same module. The query that finds candidates is deliberately unbounded,
+so a rule that wants the report to respect what the build declared reads it from
+`versionConstraint` rather than restating it. It is null for a module no
+declaration was matched to, such as one a substitution rule resolved to, so
+guard for that. You can either
 use the simplified syntax `rejectVersionIf { ... }` or configure a complete 
 resolution strategy. Multiple registrations compose, so a candidate is rejected 
 if any registered filter rejects it.
@@ -489,6 +493,68 @@ reads it, so `strictly "[5.3, 6["` admits 5.3.26 and excludes 6.0.1, and
 bound a candidate: a `require` version is a floor resolution may rise above, and
 a `prefer` version only breaks a tie, so a plain `implementation("group:name:1.2.3")`
 is not held back by this rule.
+
+A module declared with no version of its own is additionally bound by the
+version a consumed platform requires for it, since the build cannot take that
+upgrade without also bumping the platform. Given a platform BOM that pins
+`log4j-core` to `2.16.0`:
+
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+dependencies {
+  api(platform("org.apache.logging.log4j:log4j-bom:2.16.0"))
+  api("org.apache.logging.log4j:log4j-core")
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
+dependencies {
+  api platform('org.apache.logging.log4j:log4j-bom:2.16.0')
+  api 'org.apache.logging.log4j:log4j-core'
+}
+```
+
+</details>
+
+`satisfiesDeclaredBound` holds `log4j-core` to `2.16.0` even though
+`versionConstraint` is empty for it, because the bound comes from the platform
+instead:
+
+```text
+The following dependencies are using the latest milestone version:
+ - org.apache.logging.log4j:log4j-core:2.16.0
+
+The following dependencies have later milestone versions:
+ - org.apache.logging.log4j:log4j-bom [2.16.0 -> 2.17.0]
+```
+
+The platform keeps its own report line, so the upgrade that is actually
+available, bumping the BOM, still shows. The bound is deliberately narrow:
+
+- A module the build states a version for anywhere in the configuration
+  hierarchy keeps the floor semantics above; a platform never tightens a
+  version declared directly.
+- A platform that states a range admits in-range upgrades, the same as a
+  declared range.
+- A platform that states only a `prefer` version does not bound, the same as
+  a declared `prefer`.
+- When more than one consumed platform bounds the same module, a candidate
+  must satisfy every one of them. That is stricter than the version resolution
+  itself would settle on, so the report offers an upgrade only when no
+  consumed platform stands against it; the version currently resolved is
+  always accepted, whichever platform supplied it.
+- Only a platform bounds. A constraint an ordinary library publishes in its
+  module metadata supplies a version without bounding the report.
+- An `enforcedPlatform` states its own version with `strictly`, so the rule
+  holds the platform itself to that version and a newer BOM stops being
+  offered; a plain `platform` keeps its own upgrade line.
 
 Three things to know before writing a rule against a declared bound. Rejecting
 every candidate for a module, including the version it currently resolves to,

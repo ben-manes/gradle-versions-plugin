@@ -109,6 +109,11 @@ class ComponentSelectionRulesWithCurrent(
   private fun wrapComponentSelection(inner: ComponentSelection): ComponentSelectionWithCurrent? {
     val candidateCoordinate = Coordinate.from(inner.candidate)
     val current = currentCoordinates[candidateCoordinate.key] ?: return null
-    return ComponentSelectionWithCurrent(inner, current.version, current.versionConstraint)
+    return ComponentSelectionWithCurrent(
+      inner,
+      current.version,
+      current.versionConstraint,
+      current.platformVersionConstraints,
+    )
   }
 }

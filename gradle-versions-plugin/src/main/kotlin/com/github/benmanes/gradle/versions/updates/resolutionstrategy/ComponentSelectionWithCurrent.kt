@@ -11,12 +11,27 @@ class ComponentSelectionWithCurrent(
   val currentVersion: String,
   /** The constraint the build declared for this module, null when no declaration named it. */
   val versionConstraint: VersionConstraint?,
+  /**
+   * The constraints the platforms this module's consumer depends on state for it, empty when this
+   * module's declaration states its own version or no consumed platform bounds it.
+   */
+  val platformVersionConstraints: List<VersionConstraint>,
 ) : ComponentSelection by delegate {
   /** Retained so the arity released before the constraint was added still links. */
   constructor(
     delegate: ComponentSelection,
     currentVersion: String,
-  ) : this(delegate, currentVersion, null)
+  ) : this(delegate, currentVersion, null, emptyList())
+
+  /**
+   * Retains the arity the declared [VersionConstraint] arrived with, in case a release ships it
+   * before this change.
+   */
+  constructor(
+    delegate: ComponentSelection,
+    currentVersion: String,
+    versionConstraint: VersionConstraint?,
+  ) : this(delegate, currentVersion, versionConstraint, emptyList())
 
   /**
    * Whether the candidate lies within the bound the declaration stated, read the way dependency
@@ -25,9 +40,15 @@ class ComponentSelectionWithCurrent(
    * Only `strictly` and `reject` bound a candidate. A `require` version is a floor that resolution
    * may rise above, and a `prefer` version is consulted only to break a tie, so neither excludes an
    * upgrade the build already permits. True for a module that declared no bound at all.
+   *
+   * A module whose declaration states no version is additionally bounded by the constraints the
+   * platforms the consumer depends on state for it, and the version currently selected is always
+   * within bound.
    */
   val satisfiesDeclaredBound: Boolean
-    get() = DeclaredBound.accepts(versionConstraint, candidate.version)
+    get() =
+      DeclaredBound.accepts(versionConstraint, candidate.version) &&
+        DeclaredBound.acceptsPlatformSupplied(platformVersionConstraints, currentVersion, candidate.version)
 
   override fun toString(): String {
     return """\
@@ -37,6 +58,7 @@ ComponentSelectionWithCurrent{
     version="${candidate.version}",
     currentVersion="$currentVersion",
     versionConstraint="$versionConstraint",
+    platformVersionConstraints="$platformVersionConstraints",
 }"""
   }
 }
@@ -70,6 +92,34 @@ private object DeclaredBound {
         false
       } else {
         constraint.rejectedVersions.none { parser.parseSelector(it).accept(candidate) }
+      }
+    } catch (e: LinkageError) {
+      true
+    }
+  }
+
+  /**
+   * Whether the candidate lies within every one of the versions the consumed platforms require for
+   * this module, read the same way [accepts] reads a declared bound. Requiring each edge to admit
+   * the candidate is stricter than the version resolution itself settles on, which is deliberate:
+   * the report offers an upgrade only when no consumed platform stands against it. The version
+   * currently selected is always accepted, since a transitive requirement can push the merged
+   * selection above what a platform alone would choose.
+   */
+  fun acceptsPlatformSupplied(
+    constraints: List<VersionConstraint>,
+    currentVersion: String,
+    candidate: String,
+  ): Boolean {
+    val parser = scheme
+    if (parser == null || constraints.isEmpty() || candidate == currentVersion) {
+      return true
+    }
+    return try {
+      constraints.all { constraint ->
+        val required = constraint.requiredVersion
+        (required.isEmpty() || parser.parseSelector(required).accept(candidate)) &&
+          constraint.rejectedVersions.none { parser.parseSelector(it).accept(candidate) }
       }
     } catch (e: LinkageError) {
       true

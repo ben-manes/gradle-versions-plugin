@@ -16,16 +16,20 @@ import org.gradle.api.artifacts.DependencyConstraint
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.VersionConstraint
 import org.gradle.api.artifacts.component.ModuleComponentSelector
 import org.gradle.api.artifacts.repositories.ArtifactRepository
 import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
 import org.gradle.api.artifacts.repositories.IvyArtifactRepository
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.artifacts.result.ResolutionResult
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.artifacts.result.ResolvedComponentResult
 import org.gradle.api.artifacts.result.ResolvedDependencyResult
+import org.gradle.api.artifacts.result.ResolvedVariantResult
 import org.gradle.api.artifacts.result.UnresolvedDependencyResult
 import org.gradle.api.attributes.Attribute
+import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.HasConfigurableAttributes
 import org.gradle.api.attributes.java.TargetJvmVersion
 import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier
@@ -366,6 +370,7 @@ class Resolver(
 
     disableAutoTargetJvm(copy)
     val root = copy.incoming.resolutionResult.root
+    val platformConstraints = getPlatformConstraints(copy.incoming.resolutionResult, versionedKeys(configuration))
 
     for (dependency in root.dependencies) {
       // Constraints are accumulated separately below via allDependencyConstraints.
@@ -375,7 +380,7 @@ class Resolver(
       when (dependency) {
         is ResolvedDependencyResult -> {
           val moduleVersion = dependency.selected.moduleVersion ?: continue
-          val coordinate = Coordinate.from(moduleVersion, declared)
+          val coordinate = Coordinate.from(moduleVersion, declared, platformConstraints)
           coordinates[coordinate.key] = coordinate
         }
         is UnresolvedDependencyResult -> {
@@ -441,6 +446,59 @@ class Resolver(
       configurationsOf(configuration, contributedKeys + declaringKeys),
     )
   }
+
+  /**
+   * Returns the version constraints the consumed platforms state for each module that is declared
+   * with no version of its own, keyed by that module.
+   *
+   * Only a constraint edge whose source resolved as a platform qualifies. One from the resolution
+   * root is the consumer's own `constraints {}` block, which is editable and thus governed by
+   * [Coordinate.versionConstraint] instead, and one an ordinary library ships in its module
+   * metadata is a resolution input rather than a platform's version choice. A module the build
+   * itself versions is also excluded, since the build controls that number and a plain declaration
+   * keeps its floor semantics.
+   * https://github.com/ben-manes/gradle-versions-plugin/issues/402
+   */
+  private fun getPlatformConstraints(
+    result: ResolutionResult,
+    versionedKeys: Set<Coordinate.Key>,
+  ): Map<Coordinate.Key, List<VersionConstraint>> {
+    val constraints = hashMapOf<Coordinate.Key, MutableList<VersionConstraint>>()
+    for (dependency in result.allDependencies) {
+      if (dependency !is ResolvedDependencyResult || !dependency.isConstraint) {
+        continue
+      }
+      if (dependency.from.id == result.root.id) {
+        continue
+      }
+      if (dependency.from.variants.none { isPlatform(it) }) {
+        continue
+      }
+      val requested = dependency.requested as? ModuleComponentSelector ?: continue
+      val versionConstraint = requested.versionConstraint
+      if (versionConstraint.requiredVersion.isEmpty() && versionConstraint.rejectedVersions.isEmpty()) {
+        continue
+      }
+      val key = Coordinate.Key(requested.group, requested.module)
+      if (key in versionedKeys) {
+        continue
+      }
+      constraints.getOrPut(key) { mutableListOf() }.add(versionConstraint)
+    }
+    return constraints
+  }
+
+  /**
+   * Returns the modules that any declaration in the configuration's hierarchy states a version for.
+   *
+   * The declared coordinates keep only the last declaration of a module, so a versionless one in a
+   * configuration can mask a versioned one in another it extends. Reading every declaration keeps a
+   * platform from bounding a version the build states somewhere it can edit.
+   */
+  private fun versionedKeys(configuration: Configuration): Set<Coordinate.Key> =
+    getResolvableDependencies(configuration)
+      .filterNot { it.version == "none" }
+      .mapTo(hashSetOf()) { it.key }
 
   /** Returns the modules that a resolution rule substituted for a declared one, by declared key. */
   private fun getSubstitutions(
@@ -605,6 +663,18 @@ class Resolver(
   companion object {
     private val PROJECT_PROPERTY = Regex("""\$\{project\.(groupId|artifactId|version)}""")
     private val ABSOLUTE_URL = Regex("""^[a-zA-Z][a-zA-Z0-9+.-]*://""")
+    private val DESUGARED_CATEGORY = Attribute.of(Category.CATEGORY_ATTRIBUTE.name, String::class.java)
+
+    /**
+     * Whether the variant is a platform's. A local project's variant carries the typed [Category]
+     * attribute while a published module's is desugared to a string, so both forms are read.
+     */
+    private fun isPlatform(variant: ResolvedVariantResult): Boolean {
+      val category =
+        variant.attributes.getAttribute(Category.CATEGORY_ATTRIBUTE)?.name
+          ?: variant.attributes.getAttribute(DESUGARED_CATEGORY)
+      return (category == Category.REGULAR_PLATFORM) || (category == Category.ENFORCED_PLATFORM)
+    }
 
     private fun getUrlFromPom(file: File): String? {
       val pom = XmlSlurper(false, false).parse(file)
