@@ -95,7 +95,7 @@ final class InitScriptAggregationSpec extends Specification {
 
   private def run(String... arguments) {
     return GradleRunner.create()
-      .withGradleVersion('9.7.0-rc-2')
+      .withGradleVersion('9.7.0')
       .withProjectDir(testProjectDir.root)
       .withArguments(arguments)
       .withPluginClasspath()
