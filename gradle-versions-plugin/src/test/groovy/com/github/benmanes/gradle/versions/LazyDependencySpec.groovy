@@ -66,7 +66,7 @@ final class LazyDependencySpec extends Specification {
 
         def isNonStable = { String version ->
           def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { it -> version.toUpperCase().contains(it) }
-          def regex = /^[0-9,.v-]+(-r)?\$/
+          def regex = /^[0-9,.v-]+(-r|-jre|-android)?\$/
           return !stableKeyword && !(version ==~ regex)
         }
 
