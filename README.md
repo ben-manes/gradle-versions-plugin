@@ -322,7 +322,7 @@ tasks.named("dependencyUpdates").configure {
   versions](#filtering-unstable-versions)).
 - `!satisfiesDeclaredBound` rejects a candidate outside a `strictly` or
   `reject` bound the build declares, or outside the version a consumed
-  platform requires (see [Respecting declared
+  platform states (see [Respecting declared
   bounds](#respecting-declared-bounds)).
 
 Each piece stands alone: drop any line whose behavior the build does not
@@ -790,7 +790,7 @@ range included, and a `prefer` version only breaks a tie, so a plain
 `implementation("group:name:1.2.3")` is not held back by this rule.
 
 A module declared with no version of its own is additionally bound by the
-version a consumed platform requires for it, since the build cannot take that
+version a consumed platform states for it, since the build cannot take that
 upgrade without also bumping the platform. Given a platform BOM that pins
 `log4j-core` to `2.16.0`:
 
@@ -846,7 +846,7 @@ The bound is deliberately narrow:
   hierarchy keeps the floor semantics above; a platform never tightens a
   version declared directly.
 - A platform that states a range admits in-range upgrades, the same as a
-  declared range.
+  declared `strictly` range.
 - A platform that states only a `prefer` version does not bound, the same as
   a declared `prefer`.
 - When more than one consumed platform bounds the same module, a candidate
