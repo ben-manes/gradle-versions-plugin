@@ -266,6 +266,41 @@ final class ContributedDependencySpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1055')
+  def 'Reports the declared configuration in the file reports without the contributed mark'() {
+    given:
+    writeBuild(
+      """
+        apply plugin: 'java'
+
+        configurations.create('pluginClasspath') {
+          canBeResolved = true
+          canBeConsumed = false
+        }
+
+        dependencies {
+          pluginClasspath 'com.google.guava:guava:15.0'
+        }
+      """.stripIndent())
+
+    when:
+    def result = run(['dependencyUpdates', '-DoutputFormatter=json,xml,html'])
+    def jsonReport = new JsonSlurper()
+      .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
+    def xmlReport = new XmlParser()
+      .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.xml'))
+    def htmlReport = new File(testProjectDir.root, 'build/dependencyUpdates/report.html').text
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    jsonReport.outdated.dependencies[0].configurations == ['pluginClasspath']
+    !jsonReport.outdated.dependencies[0].containsKey('contributed')
+    xmlReport.outdated.dependencies.outdatedDependency[0].configurations.configuration
+      *.text() == ['pluginClasspath']
+    !xmlReport.outdated.dependencies.outdatedDependency[0].children()*.name().contains('contributed')
+    htmlReport.contains("declared in the 'pluginClasspath' configuration")
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1055')
   def 'Names the configuration when another resolvable one also reaches the dependency'() {
     given:
     writeBuild(
