@@ -32,7 +32,7 @@ configurations {
 
 fun String.isNonStable(): Boolean {
   val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { uppercase().contains(it) }
-  val regex = "^[0-9,.v-]+(-r)?$".toRegex()
+  val regex = "^[0-9,.v-]+(-r|-jre|-android)?$".toRegex()
   val isStable = stableKeyword || regex.matches(this)
   return isStable.not()
 }
