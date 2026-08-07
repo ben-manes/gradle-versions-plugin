@@ -278,7 +278,7 @@ import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
 fun String.isNonStable(): Boolean {
   val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { uppercase().contains(it) }
-  val regex = "^[0-9,.v-]+(-r)?$".toRegex()
+  val regex = "^[0-9,.v-]+(-r|-jre|-android)?$".toRegex()
   val isStable = stableKeyword || regex.matches(this)
   return isStable.not()
 }
@@ -300,7 +300,7 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
 ```groovy
 def isNonStable = { String version ->
   def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { it -> version.toUpperCase().contains(it) }
-  def regex = /^[0-9,.v-]+(-r)?$/
+  def regex = /^[0-9,.v-]+(-r|-jre|-android)?$/
   return !stableKeyword && !(version ==~ regex)
 }
 
@@ -570,7 +570,7 @@ point:
 ```kotlin
 fun String.isNonStable(): Boolean {
   val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { uppercase().contains(it) }
-  val regex = "^[0-9,.v-]+(-r)?$".toRegex()
+  val regex = "^[0-9,.v-]+(-r|-jre|-android)?$".toRegex()
   val isStable = stableKeyword || regex.matches(this)
   return isStable.not()
 }
@@ -584,12 +584,17 @@ fun String.isNonStable(): Boolean {
 ```groovy
 def isNonStable = { String version ->
   def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { it -> version.toUpperCase().contains(it) }
-  def regex = /^[0-9,.v-]+(-r)?$/
+  def regex = /^[0-9,.v-]+(-r|-jre|-android)?$/
   return !stableKeyword && !(version ==~ regex)
 }
 ```
 
 </details>
+
+The trailing `-jre` and `-android` keep Guava's ordinary releases out of the
+unstable set. A library that states its qualifier some other way, such as
+`13.4.0.jre11`, still reads as unstable and needs the pattern extended, so check
+this against the versions your own build sees before relying on it.
 
 You can then configure [Component Selection
 Rules](https://docs.gradle.org/current/userguide/dynamic_versions.html#sec:component_selection_rules).
@@ -830,7 +835,10 @@ available, bumping the BOM, still shows. That line is there only when the
 report covers the project declaring the platform. A build that centralizes its
 platforms in an included build holds the modules with nothing naming the BOM to
 bump, since an included build is reported separately (see [Composite
-builds](#composite-builds)).
+builds](#composite-builds)). A bound the build states on the platform itself
+holds that line too: a BOM whose own version says `strictly "[2.0, 3.0["`,
+inline or through a version catalog, reports the newest version inside that
+range and never the major beyond it.
 
 The bound is deliberately narrow:
 
