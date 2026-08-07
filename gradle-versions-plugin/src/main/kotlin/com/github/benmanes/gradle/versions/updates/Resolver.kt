@@ -468,6 +468,13 @@ class Resolver(
   /**
    * Returns the coordinate rebuilt with the catalog's constraint, when a plugin-catalog alias
    * flattened to the coordinate's bare required version explains it unambiguously.
+   *
+   * An alias stating no more than that required version explains the declaration just as well as a
+   * rich one, so it counts toward the ambiguity rather than being passed over for stating too
+   * little. What survives is the assumption the recovery rests on: any declaration of the marker
+   * coordinate at a version one alias explains is credited to that alias. A version stated inline
+   * in the plugins block cannot be told apart from one the catalog supplied once Gradle has
+   * flattened it, and neither can an ordinary dependency the build declares on that coordinate.
    */
   private fun recoverPluginCatalogConstraint(coordinate: Coordinate): Coordinate {
     val declaredConstraint = coordinate.versionConstraint ?: return coordinate
@@ -478,7 +485,7 @@ class Resolver(
     }
     val candidates =
       pluginCatalogConstraints[coordinate.key].orEmpty()
-        .filter { isRich(it) && (it.requiredVersion == declaredConstraint.requiredVersion) }
+        .filter { it.requiredVersion == declaredConstraint.requiredVersion }
         .distinctBy { listOf(it.requiredVersion, it.strictVersion, it.preferredVersion, it.rejectedVersions) }
     if (candidates.size > 1) {
       project.logger.info(
@@ -487,7 +494,7 @@ class Resolver(
       )
       return coordinate
     }
-    val recovered = candidates.singleOrNull() ?: return coordinate
+    val recovered = candidates.singleOrNull()?.takeIf { isRich(it) } ?: return coordinate
     return Coordinate(coordinate.groupId, coordinate.artifactId, coordinate.version, coordinate.userReason, recovered)
   }
 

@@ -214,6 +214,40 @@ final class PluginMarkerCatalogSpec extends Specification {
         'state differing version constraints; keeping the declared constraint')
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/755')
+  def 'a plain alias for one id blocks recovery from a rich one'() {
+    given:
+    pluginManagementSettings()
+    catalog(
+      """
+        [plugins]
+        demoPlain = { id = "com.example.settings-demo", version = "1.0" }
+        demoBounded = { id = "com.example.settings-demo", version = { require = "1.0", reject = ["2.0"] } }
+      """)
+    buildFile(
+      'alias(libs.plugins.demoPlain) apply false',
+      """
+        rejectVersionIf {
+          if (candidate.module == 'com.example.settings-demo.gradle.plugin') {
+            println "PROBE rejects=\${versionConstraint?.rejectedVersions}"
+          }
+          !satisfiesDeclaredBound
+        }
+      """)
+
+    when:
+    def result = runOn('current', ['--info'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('PROBE rejects=[]')
+    result.output.contains(
+      'com.example.settings-demo:com.example.settings-demo.gradle.plugin [1.0 -> 2.0]')
+    result.output.contains(
+      'Multiple version catalog aliases for com.example.settings-demo:com.example.settings-demo.gradle.plugin ' +
+        'state differing version constraints; keeping the declared constraint')
+  }
+
   def 'two aliases for one id with identical constraints still recover'() {
     given:
     pluginManagementSettings()
