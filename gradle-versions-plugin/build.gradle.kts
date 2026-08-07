@@ -41,6 +41,7 @@ dependencies {
 
   testImplementation(localGroovy())
   testImplementation(gradleTestKit())
+  testImplementation(libs.kotlin.reflect)
   testImplementation(libs.spock) { exclude(module = "groovy-all") }
 }
 

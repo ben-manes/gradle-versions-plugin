@@ -52,7 +52,7 @@ class Coordinate(
   val key: Key
     get() = Key(groupId, artifactId)
 
-  constructor(
+  internal constructor(
     groupId: String?,
     artifactId: String?,
     version: String?,

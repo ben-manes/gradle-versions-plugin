@@ -7,7 +7,7 @@ import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultV
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionRangeSelector
 
-class ComponentSelectionWithCurrent(
+class ComponentSelectionWithCurrent internal constructor(
   private val delegate: ComponentSelection,
   val currentVersion: String,
   /** The constraint the build declared for this module, null when no declaration named it. */
@@ -23,16 +23,6 @@ class ComponentSelectionWithCurrent(
     delegate: ComponentSelection,
     currentVersion: String,
   ) : this(delegate, currentVersion, null, emptyList())
-
-  /**
-   * Retains the arity the declared [VersionConstraint] arrived with, in case a release ships it
-   * before this change.
-   */
-  constructor(
-    delegate: ComponentSelection,
-    currentVersion: String,
-    versionConstraint: VersionConstraint?,
-  ) : this(delegate, currentVersion, versionConstraint, emptyList())
 
   /**
    * Whether the candidate lies within the bound the declaration stated, read the way dependency
