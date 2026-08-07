@@ -33,6 +33,9 @@ private const val VERIFICATION_TYPE = "dependency-updates"
 /** The filter applied when a task leaves the configurations unrestricted. */
 internal val ALL_CONFIGURATIONS = Spec<Configuration> { true }
 
+/** The filter applied when a task leaves the declared configurations unrestricted. */
+internal val ALL_DECLARED_CONFIGURATIONS = Spec<String> { true }
+
 /** Returns whether isolated projects is enabled, which forbids configuring the other projects. */
 internal fun isIsolatedProjectsEnabled(project: Project): Boolean =
   runCatching {
@@ -45,6 +48,9 @@ internal class DependencyUpdatesParameters {
 
   @Transient
   var filterConfigurations: Spec<Configuration>? = null
+
+  @Transient
+  var filterDeclaredConfigurations: Spec<String>? = null
 
   @Transient
   var resolutionStrategy: Action<in ResolutionStrategyWithCurrent>? = null
@@ -113,6 +119,8 @@ internal abstract class DependencyUpdatesParametersService :
           ?: chain.firstNotNullOfOrNull { it.revision } ?: "milestone",
       filterConfigurations =
         chain.firstNotNullOfOrNull { it.filterConfigurations } ?: ALL_CONFIGURATIONS,
+      filterDeclaredConfigurations =
+        chain.firstNotNullOfOrNull { it.filterDeclaredConfigurations } ?: ALL_DECLARED_CONFIGURATIONS,
       resolutionStrategy = chain.firstOrNull { it.resolutionStrategySet }?.resolutionStrategy,
       checkConstraints = chain.firstNotNullOfOrNull { it.checkConstraints } ?: false,
       checkBuildEnvironmentConstraints =
@@ -125,6 +133,7 @@ internal abstract class DependencyUpdatesParametersService :
 internal class ResolvedParameters(
   val revision: String,
   val filterConfigurations: Spec<Configuration>,
+  val filterDeclaredConfigurations: Spec<String>,
   val resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?,
   val checkConstraints: Boolean,
   val checkBuildEnvironmentConstraints: Boolean,
@@ -494,6 +503,11 @@ private fun statusesOf(
       // configurations whose every dependency a plugin contributed.
       resolver.resolve(configuration, parameters.revision, nameDeclaringConfiguration, scriptClasspaths) {
         declaredKeys.getValue(configuration) - keysOf(configuration, filledByPlugin)
+      }.filter { status ->
+        // A status that names no configuration, as an ordinary declaration's does, is kept
+        // whatever the filter rejects.
+        status.configurations.isEmpty() ||
+          status.configurations.any { parameters.filterDeclaredConfigurations.isSatisfiedBy(it) }
       }.map { it.toPartialStatus() }
     } catch (e: Exception) {
       project.logger.info("Skipping configuration ${project.path}:${configuration.name}", e)

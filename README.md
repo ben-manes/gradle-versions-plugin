@@ -19,6 +19,11 @@ Plugin](https://www.mojohaus.org/versions-maven-plugin).
     - [A recommended configuration](#a-recommended-configuration)
     - [What the report checks](#what-the-report-checks)
       - [Configuration filter](#configuration-filter)
+        - [`filterConfigurations`](#filterconfigurations)
+        - [`filterDeclaredConfigurations`](#filterdeclaredconfigurations)
+        - [Choosing between them](#choosing-between-them)
+        - [Kotlin Gradle Plugin](#kotlin-gradle-plugin)
+        - [Android Gradle Plugin](#android-gradle-plugin)
       - [Constraints](#constraints)
     - [Which versions it offers](#which-versions-it-offers)
       - [Revisions](#revisions)
@@ -232,9 +237,9 @@ instead:
 ```
 
 A configuration the build declares against directly, such as a tool
-configuration of its own, is named the same way. Use
-[`filterConfigurations`](#configuration-filter) to leave a configuration out of
-the report entirely.
+configuration of its own, is named the same way. Reject the name an entry
+shows with [`filterDeclaredConfigurations`](#filterdeclaredconfigurations) to
+leave it out of the report.
 
 Gradle updates are checked for on the `current`, `release-candidate` and
 `nightly` release channels. The plain-text report displays Gradle updates as a
@@ -328,6 +333,10 @@ tasks.named("dependencyUpdates").configure {
 Each piece stands alone: drop any line whose behavior the build does not
 want, and the rest keep working.
 
+The [configuration filters](#configuration-filter) are absent only because
+their arguments are build-specific: the names to reject come off your own
+report.
+
 In Kotlin the `isNonStable` extension replaces a helper of that name the build
 already has. A top-level `fun isNonStable(version: String)` compiles to the same
 JVM signature, so keeping both fails the build with a platform declaration
@@ -337,8 +346,17 @@ clash.
 
 ##### Configuration filter
 
-You can change which dependency configurations the plugin checks for updates
-like this:
+Two properties leave things out of the report. `filterConfigurations`
+decides which configurations the task checks: a rejected configuration is
+never resolved, and nothing reachable only through it is reported.
+`filterDeclaredConfigurations` decides which entries the report keeps once
+the checks have run: it matches the configuration name printed on the entry
+itself.
+
+###### `filterConfigurations`
+
+The task checks every resolvable configuration of every project. A build
+that only acts on its main classpaths can restrict the check to them:
 
 <details open>
 <summary>Kotlin</summary>
@@ -368,11 +386,25 @@ tasks.named("dependencyUpdates").configure {
 
 </details>
 
-Because each entry names the configuration it was declared against (see [The
-`dependencyUpdates` task](#the-dependencyupdates-task)), a build can leave
-out the configurations a plugin fills for its own tooling, the ones holding a
-version the build never chose. The Kotlin Gradle Plugin adds six; at KGP
-2.4.10 they are:
+A dependency leaves the report once every configuration that reaches it is
+rejected, and everything reachable only through a rejected configuration
+leaves with it—rejecting `compileClasspath` removes the build's own
+dependencies too. Reach for this filter when a whole configuration is noise:
+a skipped configuration also costs no version lookups, which suits the
+classpaths a plugin fills for its own tooling, holding versions the build
+never chose. The [Kotlin Gradle Plugin](#kotlin-gradle-plugin) and
+[Android Gradle Plugin](#android-gradle-plugin) sections below give ready
+sets.
+
+###### `filterDeclaredConfigurations`
+
+Start from the report line. Rejecting the name an entry shows removes the
+entry:
+
+```text
+ - org.jacoco:org.jacoco.ant [0.8.11 -> 0.8.13]
+     contributed by a plugin into the 'jacocoAnt' configuration
+```
 
 <details open>
 <summary>Kotlin</summary>
@@ -380,17 +412,8 @@ version the build never chose. The Kotlin Gradle Plugin adds six; at KGP
 ```kotlin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
-val kgpInternal = setOf(
-  "kotlinCompilerClasspath",
-  "kotlinBuildToolsApiClasspath",
-  "kotlinAbiValidationCompatClasspath",
-  "kotlinKlibCommonizerClasspath",
-  "kotlinCompilerPluginClasspathMain",
-  "kotlinCompilerPluginClasspathTest",
-)
-
 tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
-  filterConfigurations = Spec<Configuration> { it.name !in kgpInternal }
+  filterDeclaredConfigurations = Spec<String> { it != "jacocoAnt" }
 }
 ```
 
@@ -400,39 +423,109 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
 <summary>Groovy</summary>
 
 ```groovy
-def kgpInternal = [
-  "kotlinCompilerClasspath",
-  "kotlinBuildToolsApiClasspath",
-  "kotlinAbiValidationCompatClasspath",
-  "kotlinKlibCommonizerClasspath",
-  "kotlinCompilerPluginClasspathMain",
-  "kotlinCompilerPluginClasspathTest",
-]
-
 tasks.named("dependencyUpdates").configure {
-  filterConfigurations {
-    !kgpInternal.contains(it.name)
-  }
+  filterDeclaredConfigurations { it != "jacocoAnt" }
 }
 ```
 
 </details>
 
-The unsuffixed `kotlinCompilerPluginClasspath` is left in on purpose: it
-holds the compiler plugins the build itself declares, and only the `Main`-
-and `Test`-suffixed siblings belong to the plugin. That is why the filter
-names configurations exactly instead of dropping everything that starts with
-`kotlin`.
+It matches exactly the name the entry prints, from a "contributed by a
+plugin into" line or a "declared in" one—a tool configuration the build
+declares against directly is rejectable the same way. An entry leaves the
+report when every name it shows is rejected, and an entry that names no
+configuration is never affected: dependencies declared through
+`implementation` and its siblings carry no name, so no rejection reaches
+them, and where such a declaration also backs a named entry, rejection
+removes the attribution line, never the dependency.
+
+###### Choosing between them
+
+Both filters silence a tooling configuration like the KGP and AGP sets
+below; prefer `filterConfigurations` there, since it also skips the lookups.
+They part ways when the name an entry shows is not one the task checks (see
+[The `dependencyUpdates` task](#the-dependencyupdates-task)): a declarable
+configuration read through a resolvable classpath that extends it, and
+`implementation` holding a plugin's contribution, both show names
+`filterConfigurations` is never offered. `filterDeclaredConfigurations`
+matches the name shown, with no side effect on what is checked. Buildscript
+and settings classpath entries ordinarily name no configuration, so neither
+property affects them; one a plugin contributes is named `classpath` and can
+be rejected like any other entry.
+
+###### Kotlin Gradle Plugin
+
+The Kotlin Gradle Plugin fills four fixed classpaths for its own tooling,
+plus one `kotlinCompilerPluginClasspath<SourceSet>` per source set—a [JVM
+test suite](https://docs.gradle.org/current/userguide/jvm_test_suite_plugin.html)
+adds one too—so a list of names goes stale as the build grows. Match the
+family by prefix; at KGP 2.4.10:
+
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+fun isKgpInternal(configurationName: String): Boolean {
+  val kgpInternalConfigurations = setOf(
+    "kotlinCompilerClasspath",
+    "kotlinBuildToolsApiClasspath",
+    "kotlinAbiValidationCompatClasspath",
+    "kotlinKlibCommonizerClasspath",
+  )
+  return configurationName in kgpInternalConfigurations ||
+    (configurationName.startsWith("kotlinCompilerPluginClasspath") &&
+      configurationName != "kotlinCompilerPluginClasspath")
+}
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  filterConfigurations = Spec<Configuration> { !isKgpInternal(it.name) }
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
+def isKgpInternal = { String configurationName ->
+  def kgpInternalConfigurations = [
+    "kotlinCompilerClasspath",
+    "kotlinBuildToolsApiClasspath",
+    "kotlinAbiValidationCompatClasspath",
+    "kotlinKlibCommonizerClasspath",
+  ]
+  return kgpInternalConfigurations.contains(configurationName) ||
+    (configurationName.startsWith("kotlinCompilerPluginClasspath") &&
+      configurationName != "kotlinCompilerPluginClasspath")
+}
+
+tasks.named("dependencyUpdates").configure {
+  filterConfigurations { !isKgpInternal(it.name) }
+}
+```
+
+</details>
+
+The prefix stops short of the unsuffixed `kotlinCompilerPluginClasspath`,
+which keeps reporting, and stays narrower than dropping everything that
+starts with `kotlin`. A compiler plugin the build itself declares resolves
+through these same suffixed classpaths and is filtered with them. Its Gradle
+plugin's marker still reports, so a version shared between the two stays
+visible, but a compiler plugin versioned apart from its Gradle plugin leaves
+the report with no replacement—keep the classpath that carries it if you
+declare one.
+
+###### Android Gradle Plugin
 
 The Android Gradle Plugin fills a set of its own. At AGP 9.3.1, which builds
 in its Kotlin support rather than applying a separate Kotlin plugin, that is
 `androidLintTool`, two of the Kotlin classpaths above, and a
-`unified-test-platform-*` family thirteen configurations wide. The family is
-the one place a prefix fits: its membership shifts between AGP releases and
-no configuration a build fills itself uses the prefix. (The per-variant
-`kotlinCompilerPluginClasspathDebug` and friends never appear in the report
-by name, since a dependency is attributed to the configuration it was
-declared against, so they need no entry.)
+`unified-test-platform-*` family thirteen configurations wide. The family
+takes a prefix too: its membership shifts between AGP releases and no
+configuration a build fills itself uses it.
 
 <details open>
 <summary>Kotlin</summary>
@@ -1587,7 +1680,8 @@ task by that name now fails with a duplicate-task error—rename yours.
 
 Each project takes the settings that control resolution (`revision`,
 `rejectVersionIf` or a full `resolutionStrategy`, `filterConfigurations`,
-`checkConstraints`, and `checkBuildEnvironmentConstraints`) from the nearest
+`filterDeclaredConfigurations`, `checkConstraints`, and
+`checkBuildEnvironmentConstraints`) from the nearest
 project up the hierarchy whose task set them. Configuring the root project's
 task therefore covers every project, unless a subproject configures its own (see
 [Task properties](#task-properties)).

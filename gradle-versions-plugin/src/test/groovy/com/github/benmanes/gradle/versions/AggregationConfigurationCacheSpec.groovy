@@ -124,7 +124,7 @@ final class AggregationConfigurationCacheSpec extends Specification {
 
     where:
     hook << ['rejectVersionIf', 'resolutionStrategy', 'filterConfigurations', 'checkConstraints',
-             'revision']
+             'revision', 'filterDeclaredConfigurations']
     settings << [
       '''
         rejectVersionIf {
@@ -149,6 +149,16 @@ final class AggregationConfigurationCacheSpec extends Specification {
       ''',
       'checkConstraints = true',
       "revision = 'release'",
+      '''
+        project.configurations.create('pluginClasspath') {
+          canBeResolved = true
+          canBeConsumed = false
+        }
+        project.dependencies.add('pluginClasspath', 'org.apache.logging.log4j:log4j-core:2.16.0')
+        filterDeclaredConfigurations {
+          it != 'pluginClasspath'
+        }
+      ''',
     ]
     present << [
       ['com.google.inject:guice [2.0 -> 3.0]'],
@@ -159,6 +169,7 @@ final class AggregationConfigurationCacheSpec extends Specification {
       // task's own settings would announce the default level and offer no version at all.
       ['The following dependencies have later release versions:',
        'com.google.inject:guice [2.0 -> 3.1]'],
+      ['com.google.inject:guice [2.0 -> 3.1]'],
     ]
     absent << [
       ['com.google.inject:guice [2.0 -> 3.1]'],
@@ -166,6 +177,7 @@ final class AggregationConfigurationCacheSpec extends Specification {
       ['com.google.guava:guava'],
       [],
       ['The following dependencies have later milestone versions:'],
+      ['org.apache.logging.log4j:log4j-core'],
     ]
   }
 
