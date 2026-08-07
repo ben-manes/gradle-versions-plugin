@@ -19,6 +19,9 @@ Plugin](https://www.mojohaus.org/versions-maven-plugin).
     - [A recommended configuration](#a-recommended-configuration)
     - [What the report checks](#what-the-report-checks)
       - [Configuration filter](#configuration-filter)
+        - [`filterConfigurations`](#filterconfigurations)
+        - [`filterDeclaredConfigurations`](#filterdeclaredconfigurations)
+        - [Choosing between them](#choosing-between-them)
       - [Constraints](#constraints)
     - [Which versions it offers](#which-versions-it-offers)
       - [Revisions](#revisions)
@@ -232,9 +235,9 @@ instead:
 ```
 
 A configuration the build declares against directly, such as a tool
-configuration of its own, is named the same way. The [configuration
-filter](#configuration-filter) leaves a configuration out of the report, though
-the name an entry shows is not always one to reject.
+configuration of its own, is named the same way. Reject the name an entry
+shows with [`filterDeclaredConfigurations`](#filterdeclaredconfigurations) to
+leave it out of the report.
 
 Gradle updates are checked for on the `current`, `release-candidate` and
 `nightly` release channels. The plain-text report displays Gradle updates as a
@@ -328,6 +331,10 @@ tasks.named("dependencyUpdates").configure {
 Each piece stands alone: drop any line whose behavior the build does not
 want, and the rest keep working.
 
+The [configuration filters](#configuration-filter) are absent only because
+their arguments are build-specific: the names to reject come off your own
+report.
+
 In Kotlin the `isNonStable` extension replaces a helper of that name the build
 already has. A top-level `fun isNonStable(version: String)` compiles to the same
 JVM signature, so keeping both fails the build with a platform declaration
@@ -337,8 +344,17 @@ clash.
 
 ##### Configuration filter
 
-You can change which dependency configurations the plugin checks for updates
-like this:
+Two properties leave things out of the report. `filterConfigurations`
+decides which configurations the task checks: a rejected configuration is
+never resolved, and nothing reachable only through it is reported.
+`filterDeclaredConfigurations` decides which entries the report keeps once
+the checks have run: it matches the configuration name printed on the entry
+itself.
+
+###### `filterConfigurations`
+
+The task checks every resolvable configuration of every project. A build
+that only acts on its main classpaths can restrict the check to them:
 
 <details open>
 <summary>Kotlin</summary>
@@ -368,11 +384,13 @@ tasks.named("dependencyUpdates").configure {
 
 </details>
 
-The filter is offered a project's resolvable configurations, and a dependency
-leaves the report once every one of them that reaches it is rejected. That is
-how a build leaves out the configurations a plugin fills for its own tooling,
-the ones holding a version the build never chose. The Kotlin Gradle Plugin adds
-six; at KGP 2.4.10 they are:
+A dependency leaves the report once every configuration that reaches it is
+rejected, and everything reachable only through a rejected configuration
+leaves with it—rejecting `compileClasspath` removes the build's own
+dependencies too. Reach for this filter when a whole configuration is noise:
+a skipped configuration also costs no version lookups, which suits the
+classpaths a plugin fills for its own tooling, holding versions the build
+never chose. The Kotlin Gradle Plugin adds six; at KGP 2.4.10 they are:
 
 <details open>
 <summary>Kotlin</summary>
@@ -480,18 +498,62 @@ they change between plugin releases. Take the set from your own report
 rather than from this page, and keep the matches exact wherever a plugin's
 configurations share a prefix with ones the build fills itself.
 
-The name an entry shows is the configuration its dependency was declared
-against (see [The `dependencyUpdates` task](#the-dependencyupdates-task)),
-which is not always one to reject. A plugin that declares into a configuration
-it cannot resolve is reported under a name the filter is never offered, and
-rejecting a configuration that another one extends leaves the dependency
-reachable through that other one. Reject the resolvable configurations that
-reach it instead. `gradle resolvableConfigurations` reports what each of them
-extends, though only directly, so a chain takes more than one step to follow. A
-dependency contributed into a shared configuration such as `implementation` is
-reachable only through classpaths that carry the build's own dependencies, so
-rejecting those costs the rest of the report. Neither the buildscript nor the
-settings classpath is offered to the filter.
+###### `filterDeclaredConfigurations`
+
+Start from the report line. Rejecting the name an entry shows removes the
+entry:
+
+```text
+ - org.jacoco:org.jacoco.ant [0.8.11 -> 0.8.13]
+     contributed by a plugin into the 'jacocoAnt' configuration
+```
+
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  filterDeclaredConfigurations = Spec<String> { it != "jacocoAnt" }
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
+tasks.named("dependencyUpdates").configure {
+  filterDeclaredConfigurations { it != "jacocoAnt" }
+}
+```
+
+</details>
+
+It matches exactly the name the entry prints, from a "contributed by a
+plugin into" line or a "declared in" one—a tool configuration the build
+declares against directly is rejectable the same way. An entry leaves the
+report when every name it shows is rejected, and an entry that names no
+configuration is never affected: dependencies declared through
+`implementation` and its siblings carry no name, so no rejection reaches
+them, and where such a declaration also backs a named entry, rejection
+removes the attribution line, never the dependency.
+
+###### Choosing between them
+
+Both filters silence a tooling configuration like the KGP and AGP sets
+above; prefer `filterConfigurations` there, since it also skips the lookups.
+They part ways when the name an entry shows is not one the task checks (see
+[The `dependencyUpdates` task](#the-dependencyupdates-task)): a declarable
+configuration read through a resolvable classpath that extends it, and
+`implementation` holding a plugin's contribution, both show names
+`filterConfigurations` is never offered. `filterDeclaredConfigurations`
+matches the name shown, with no side effect on what is checked. Buildscript
+and settings classpath entries ordinarily name no configuration, so neither
+property affects them; one a plugin contributes is named `classpath` and can
+be rejected like any other entry.
 
 ##### Constraints
 
@@ -1600,7 +1662,8 @@ task by that name now fails with a duplicate-task error—rename yours.
 
 Each project takes the settings that control resolution (`revision`,
 `rejectVersionIf` or a full `resolutionStrategy`, `filterConfigurations`,
-`checkConstraints`, and `checkBuildEnvironmentConstraints`) from the nearest
+`filterDeclaredConfigurations`, `checkConstraints`, and
+`checkBuildEnvironmentConstraints`) from the nearest
 project up the hierarchy whose task set them. Configuring the root project's
 task therefore covers every project, unless a subproject configures its own (see
 [Task properties](#task-properties)).

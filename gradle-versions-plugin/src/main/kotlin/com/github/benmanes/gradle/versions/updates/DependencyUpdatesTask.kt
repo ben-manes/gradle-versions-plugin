@@ -131,6 +131,13 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
       parameters.filterConfigurations = value
     }
 
+  @get:Internal
+  var filterDeclaredConfigurations: Spec<String>
+    get() = parameters.filterDeclaredConfigurations ?: ALL_DECLARED_CONFIGURATIONS
+    set(value) {
+      parameters.filterDeclaredConfigurations = value
+    }
+
   @get:Input
   var checkBuildEnvironmentConstraints: Boolean
     get() = parameters.checkBuildEnvironmentConstraints ?: false
