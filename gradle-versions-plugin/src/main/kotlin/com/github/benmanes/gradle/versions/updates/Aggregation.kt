@@ -393,6 +393,7 @@ private fun registerProducer(
               parameters.checkConstraints,
               filledByPlugin,
               nameDeclaringConfiguration = true,
+              scriptClasspaths = false,
             ),
             statusesOf(
               project,
@@ -405,6 +406,9 @@ private fun registerProducer(
               // Every buildscript dependency is declared directly on the resolvable classpath
               // configuration, so naming it would describe a script rather than a plugin.
               nameDeclaringConfiguration = false,
+              // The plugins block deposits its flattened markers only on these classpaths, so
+              // only they recover a catalog plugin constraint.
+              scriptClasspaths = true,
             ),
           ).toJson()
         },
@@ -473,6 +477,7 @@ private fun statusesOf(
   checkConstraints: Boolean,
   filledByPlugin: Set<String>,
   nameDeclaringConfiguration: Boolean,
+  scriptClasspaths: Boolean,
 ): List<PartialStatus> {
   if (configurations.isEmpty()) {
     return emptyList()
@@ -487,7 +492,7 @@ private fun statusesOf(
     try {
       // Discounted after resolving, which is what runs the default actions that name the
       // configurations whose every dependency a plugin contributed.
-      resolver.resolve(configuration, parameters.revision, nameDeclaringConfiguration) {
+      resolver.resolve(configuration, parameters.revision, nameDeclaringConfiguration, scriptClasspaths) {
         declaredKeys.getValue(configuration) - keysOf(configuration, filledByPlugin)
       }.map { it.toPartialStatus() }
     } catch (e: Exception) {

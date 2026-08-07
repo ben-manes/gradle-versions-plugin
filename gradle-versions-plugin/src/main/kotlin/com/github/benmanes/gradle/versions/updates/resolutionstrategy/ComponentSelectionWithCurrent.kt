@@ -5,6 +5,7 @@ import org.gradle.api.artifacts.VersionConstraint
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionComparator
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionSelectorScheme
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionRangeSelector
 
 class ComponentSelectionWithCurrent(
   private val delegate: ComponentSelection,
@@ -38,8 +39,9 @@ class ComponentSelectionWithCurrent(
    * resolution reads it, so that a range is honored rather than compared as a string.
    *
    * Only `strictly` and `reject` bound a candidate. A `require` version is a floor that resolution
-   * may rise above, and a `prefer` version is consulted only to break a tie, so neither excludes an
-   * upgrade the build already permits. True for a module that declared no bound at all.
+   * may rise above, a range included, and a `prefer` version is consulted only to break a tie, so
+   * neither excludes an upgrade the build already permits. True for a module that declared no
+   * bound at all.
    *
    * A module whose declaration states no version is additionally bounded by the constraints the
    * platforms the consumer depends on state for it, and the version currently selected is always
@@ -98,6 +100,19 @@ private object DeclaredBound {
     }
   }
 
+  /** Whether the version parses as a range selector, the form a rich constraint flattens to. */
+  fun statesRange(version: String): Boolean {
+    val parser = scheme
+    if (parser == null || version.isEmpty()) {
+      return false
+    }
+    return try {
+      parser.parseSelector(version) is VersionRangeSelector
+    } catch (e: Exception) {
+      false
+    }
+  }
+
   /**
    * Whether the candidate lies within every one of the versions the consumed platforms require for
    * this module, read the same way [accepts] reads a declared bound. Requiring each edge to admit
@@ -126,3 +141,6 @@ private object DeclaredBound {
     }
   }
 }
+
+/** Whether the version parses as a range selector, the form a rich constraint flattens to. */
+internal fun statesVersionRange(version: String): Boolean = DeclaredBound.statesRange(version)

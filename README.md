@@ -780,9 +780,9 @@ tasks.named("dependencyUpdates").configure {
 `satisfiesDeclaredBound` reads a declared range the way dependency resolution
 reads it, so `strictly "[5.3, 6["` admits 5.3.26 and excludes 6.0.1, and
 `reject "[3.0,)"` excludes everything from 3.0 up. Only `strictly` and `reject`
-bound a candidate: a `require` version is a floor resolution may rise above, and
-a `prefer` version only breaks a tie, so a plain `implementation("group:name:1.2.3")`
-is not held back by this rule.
+bound a candidate: a `require` version is a floor resolution may rise above, a
+range included, and a `prefer` version only breaks a tie, so a plain
+`implementation("group:name:1.2.3")` is not held back by this rule.
 
 A module declared with no version of its own is additionally bound by the
 version a consumed platform requires for it, since the build cannot take that

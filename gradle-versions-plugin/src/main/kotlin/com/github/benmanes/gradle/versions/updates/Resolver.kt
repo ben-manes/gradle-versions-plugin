@@ -1,6 +1,7 @@
 package com.github.benmanes.gradle.versions.updates
 
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.statesVersionRange
 import groovy.xml.XmlSlurper
 import groovy.xml.slurpersupport.GPathResult
 import groovy.xml.slurpersupport.NodeChildren
@@ -91,16 +92,19 @@ class Resolver(
     configuration: Configuration,
     revision: String,
     declaredKeys: () -> Set<Coordinate.Key>,
-  ): Set<DependencyStatus> = resolve(configuration, revision, false, declaredKeys)
+  ): Set<DependencyStatus> = resolve(configuration, revision, nameDeclaringConfiguration = false, scriptClasspath = false, declaredKeys)
 
   /**
    * Returns the version status as above, naming the configuration of a dependency declared directly
-   * against it when asked, which the buildscript's configurations are resolved without.
+   * against it when asked, which the buildscript's configurations are resolved without, and
+   * recovering catalog plugin constraints only on a script classpath, the sole route by which a
+   * plugin marker enters a build.
    */
   internal fun resolve(
     configuration: Configuration,
     revision: String,
     nameDeclaringConfiguration: Boolean,
+    scriptClasspath: Boolean,
     declaredKeys: () -> Set<Coordinate.Key>,
   ): Set<DependencyStatus> {
     // Runs the actions that contribute dependencies lazily, so that the declared set below is read
@@ -109,7 +113,7 @@ class Resolver(
     // https://github.com/ben-manes/gradle-versions-plugin/issues/987
     configuration.incoming.dependencies
 
-    val current = getCurrentCoordinates(configuration, declaredKeys(), nameDeclaringConfiguration)
+    val current = getCurrentCoordinates(configuration, declaredKeys(), nameDeclaringConfiguration, scriptClasspath)
     val latestConfiguration = createLatestConfiguration(configuration, revision, current)
     val root = latestConfiguration.incoming.resolutionResult.root
     return getStatus(current, root)
@@ -365,11 +369,14 @@ class Resolver(
     configuration: Configuration,
     declaredBeforeActions: Set<Coordinate.Key>,
     nameDeclaringConfiguration: Boolean,
+    scriptClasspath: Boolean,
   ): CurrentCoordinates {
     val declared =
       getResolvableDependencies(configuration)
         .associateBy { it.key }
-        .mapValues { (_, coordinate) -> recoverPluginCatalogConstraint(coordinate) }
+        .mapValues { (_, coordinate) ->
+          if (scriptClasspath) recoverPluginCatalogConstraint(coordinate) else coordinate
+        }
     // An empty configuration is still resolved below, so that a listener contributing to it has
     // run by the time the declared set is read again. That resolution costs nothing. One holding
     // only project or file dependencies is skipped, as resolving it would not.
@@ -471,10 +478,11 @@ class Resolver(
    *
    * An alias stating no more than that required version explains the declaration just as well as a
    * rich one, so it counts toward the ambiguity rather than being passed over for stating too
-   * little. What survives is the assumption the recovery rests on: any declaration of the marker
-   * coordinate at a version one alias explains is credited to that alias. A version stated inline
-   * in the plugins block cannot be told apart from one the catalog supplied once Gradle has
-   * flattened it, and neither can an ordinary dependency the build declares on that coordinate.
+   * little. An exact required version recovers nothing even when one alias explains it: a version
+   * stated inline in the plugins block cannot be told apart from one the catalog supplied once
+   * Gradle has flattened it, and crediting the alias's bound to an inline declaration would hide
+   * upgrades it never rejected. A required range keeps its own interval as the declared bound
+   * either way, so recovering it can add no more than the alias's preference and in-range rejects.
    */
   private fun recoverPluginCatalogConstraint(coordinate: Coordinate): Coordinate {
     val declaredConstraint = coordinate.versionConstraint ?: return coordinate
@@ -492,6 +500,9 @@ class Resolver(
         "Multiple version catalog aliases for ${coordinate.key} state differing version constraints; " +
           "keeping the declared constraint",
       )
+      return coordinate
+    }
+    if (!statesVersionRange(declaredConstraint.requiredVersion)) {
       return coordinate
     }
     val recovered = candidates.singleOrNull()?.takeIf { isRich(it) } ?: return coordinate
