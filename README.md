@@ -232,9 +232,9 @@ instead:
 ```
 
 A configuration the build declares against directly, such as a tool
-configuration of its own, is named the same way. Use
-[`filterConfigurations`](#configuration-filter) to leave a configuration out of
-the report entirely.
+configuration of its own, is named the same way. The [configuration
+filter](#configuration-filter) leaves a configuration out of the report, though
+the name an entry shows is not always one to reject.
 
 Gradle updates are checked for on the `current`, `release-candidate` and
 `nightly` release channels. The plain-text report displays Gradle updates as a
@@ -368,11 +368,11 @@ tasks.named("dependencyUpdates").configure {
 
 </details>
 
-Because each entry names the configuration it was declared against (see [The
-`dependencyUpdates` task](#the-dependencyupdates-task)), a build can leave
-out the configurations a plugin fills for its own tooling, the ones holding a
-version the build never chose. The Kotlin Gradle Plugin adds six; at KGP
-2.4.10 they are:
+The filter is offered a project's resolvable configurations, and a dependency
+leaves the report once every one of them that reaches it is rejected. That is
+how a build leaves out the configurations a plugin fills for its own tooling,
+the ones holding a version the build never chose. The Kotlin Gradle Plugin adds
+six; at KGP 2.4.10 they are:
 
 <details open>
 <summary>Kotlin</summary>
@@ -479,6 +479,19 @@ These names belong to the plugins at the versions above, not to Gradle, and
 they change between plugin releases. Take the set from your own report
 rather than from this page, and keep the matches exact wherever a plugin's
 configurations share a prefix with ones the build fills itself.
+
+The name an entry shows is the configuration its dependency was declared
+against (see [The `dependencyUpdates` task](#the-dependencyupdates-task)),
+which is not always one to reject. A plugin that declares into a configuration
+it cannot resolve is reported under a name the filter is never offered, and
+rejecting a configuration that another one extends leaves the dependency
+reachable through that other one. Reject the resolvable configurations that
+reach it instead. `gradle resolvableConfigurations` reports what each of them
+extends, though only directly, so a chain takes more than one step to follow. A
+dependency contributed into a shared configuration such as `implementation` is
+reachable only through classpaths that carry the build's own dependencies, so
+rejecting those costs the rest of the report. Neither the buildscript nor the
+settings classpath is offered to the filter.
 
 ##### Constraints
 
