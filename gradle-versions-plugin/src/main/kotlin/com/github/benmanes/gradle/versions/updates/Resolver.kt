@@ -544,7 +544,12 @@ class Resolver(
       }
       val requested = dependency.requested as? ModuleComponentSelector ?: continue
       val versionConstraint = requested.versionConstraint
-      if (versionConstraint.requiredVersion.isEmpty() && versionConstraint.rejectedVersions.isEmpty()) {
+      // A strictly-only constraint arrives with an empty required version; Gradle's own publisher
+      // writes requires beside strictly, but other tooling's module metadata need not.
+      if (versionConstraint.requiredVersion.isEmpty() &&
+        versionConstraint.strictVersion.isEmpty() &&
+        versionConstraint.rejectedVersions.isEmpty()
+      ) {
         continue
       }
       val key = Coordinate.Key(requested.group, requested.module)

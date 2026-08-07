@@ -114,7 +114,7 @@ private object DeclaredBound {
   }
 
   /**
-   * Whether the candidate lies within every one of the versions the consumed platforms require for
+   * Whether the candidate lies within every one of the versions the consumed platforms state for
    * this module, read the same way [accepts] reads a declared bound. Requiring each edge to admit
    * the candidate is stricter than the version resolution itself settles on, which is deliberate:
    * the report offers an upgrade only when no consumed platform stands against it. The version
@@ -132,8 +132,10 @@ private object DeclaredBound {
     }
     return try {
       constraints.all { constraint ->
+        val strict = constraint.strictVersion
         val required = constraint.requiredVersion
-        (required.isEmpty() || parser.parseSelector(required).accept(candidate)) &&
+        (strict.isEmpty() || parser.parseSelector(strict).accept(candidate)) &&
+          (required.isEmpty() || parser.parseSelector(required).accept(candidate)) &&
           constraint.rejectedVersions.none { parser.parseSelector(it).accept(candidate) }
       }
     } catch (e: LinkageError) {

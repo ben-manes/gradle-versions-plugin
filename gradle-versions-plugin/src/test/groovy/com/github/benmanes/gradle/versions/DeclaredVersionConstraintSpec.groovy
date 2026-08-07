@@ -799,6 +799,53 @@ final class DeclaredVersionConstraintSpec extends Specification {
     !report().outdated.dependencies.any { it.name == 'guice' && it.version == '3.0' }
   }
 
+  // Gradle's own publisher writes `requires` beside `strictly`, so the strictly-only form only
+  // arrives from a platform published by other tooling; the fixture hand-authors the metadata.
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
+  def 'a platform constraint stating only a strict version reaches the rule'() {
+    given: 'a published platform whose module metadata states strictly with no requires'
+    writeBuildFile(
+      """
+        api platform('com.example:strict-platform:1.0')
+        api 'com.google.inject:guice'
+      """,
+      """
+        rejectVersionIf {
+          println "PROBE \${candidate.module} platformConstraints=" +
+            "\${platformVersionConstraints.collect { it.strictVersion }}"
+          return false
+        }
+      """)
+
+    when:
+    def result = run()
+
+    then: 'the strictly-only edge is harvested rather than dropped as stating nothing'
+    result.output.contains('PROBE guice platformConstraints=[2.0]')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
+  def 'a platform constraint stating only a strict version still bounds the module'() {
+    given: 'the platform pins guice purely with strictly, which resolution itself enforces'
+    writeBuildFile(
+      """
+        api platform('com.example:strict-platform:1.0')
+        api 'com.google.inject:guice'
+      """,
+      """
+        rejectVersionIf {
+          !satisfiesDeclaredBound
+        }
+      """)
+
+    when:
+    run()
+
+    then: 'the pinned module reports as current instead of being offered what Gradle refuses'
+    report().current.dependencies.any { it.name == 'guice' && it.version == '2.0' }
+    !report().outdated.dependencies*.name.contains('guice')
+  }
+
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
   def 'a direct version beside a platform keeps its floor'() {
     given: 'the build states its own version for guice, so the platform does not bound it'
