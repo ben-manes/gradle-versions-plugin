@@ -204,9 +204,43 @@ final class PluginMarkerCatalogSpec extends Specification {
     when:
     def result = runOn('current', ['--info'])
 
-    then:
+    then: 'no alias is credited, so nothing bounds the report and 2.0 is offered'
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains("PROBE strict=''")
+    result.output.contains(
+      'com.example.settings-demo:com.example.settings-demo.gradle.plugin [1.0 -> 2.0]')
+    result.output.contains(
+      'Multiple version catalog aliases for com.example.settings-demo:com.example.settings-demo.gradle.plugin ' +
+        'state differing version constraints; keeping the declared constraint')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/755')
+  def 'a plain alias for one id blocks recovery from a rich one'() {
+    given:
+    pluginManagementSettings()
+    catalog(
+      """
+        [plugins]
+        demoPlain = { id = "com.example.settings-demo", version = "1.0" }
+        demoBounded = { id = "com.example.settings-demo", version = { require = "1.0", reject = ["2.0"] } }
+      """)
+    buildFile(
+      'alias(libs.plugins.demoPlain) apply false',
+      """
+        rejectVersionIf {
+          if (candidate.module == 'com.example.settings-demo.gradle.plugin') {
+            println "PROBE rejects=\${versionConstraint?.rejectedVersions}"
+          }
+          !satisfiesDeclaredBound
+        }
+      """)
+
+    when:
+    def result = runOn('current', ['--info'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('PROBE rejects=[]')
     result.output.contains(
       'com.example.settings-demo:com.example.settings-demo.gradle.plugin [1.0 -> 2.0]')
     result.output.contains(
@@ -245,7 +279,7 @@ final class PluginMarkerCatalogSpec extends Specification {
       ' - com.example.settings-demo:com.example.settings-demo.gradle.plugin:1.0')
   }
 
-  def 'a project dependency on the marker coordinate keeps its declared range as the bound'() {
+  def 'a project dependency on the marker coordinate recovers nothing from the catalog'() {
     given:
     catalog(
       """
@@ -283,12 +317,104 @@ final class PluginMarkerCatalogSpec extends Specification {
     when:
     def result = runOn('current')
 
+    then: 'the alias states a strictly the declaration never did, so 2.0 stays on offer'
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains(
+      'com.example.settings-demo:com.example.settings-demo.gradle.plugin [1.0 -> 2.0]')
+  }
+
+  def 'a project dependency at a plain version recovers nothing'() {
+    given:
+    catalog(
+      """
+        [plugins]
+        demo = { id = "com.example.settings-demo", version = { require = "1.0", reject = ["2.0"] } }
+      """)
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        repositories {
+          maven {
+            url = '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation 'com.example.settings-demo:com.example.settings-demo.gradle.plugin:1.0'
+        }
+
+        tasks.named('dependencyUpdates').configure {
+          checkForGradleUpdate = false
+          rejectVersionIf {
+            if (candidate.module == 'com.example.settings-demo.gradle.plugin') {
+              println "PROBE rejects=\${versionConstraint?.rejectedVersions}"
+            }
+            !satisfiesDeclaredBound
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = runOn('current')
+
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    !result.output.contains(
-      'com.example.settings-demo:com.example.settings-demo.gradle.plugin [1.0 -> 2.0]')
+    result.output.contains('PROBE rejects=[]')
     result.output.contains(
-      ' - com.example.settings-demo:com.example.settings-demo.gradle.plugin:1.0')
+      'com.example.settings-demo:com.example.settings-demo.gradle.plugin [1.0 -> 2.0]')
+  }
+
+  def 'a project dependency stating the alias range recovers nothing'() {
+    given:
+    catalog(
+      """
+        [versions]
+        demo = { strictly = "[1.0, 2[", prefer = "1.0" }
+
+        [plugins]
+        demo = { id = "com.example.settings-demo", version.ref = "demo" }
+      """)
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        repositories {
+          maven {
+            url = '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation 'com.example.settings-demo:com.example.settings-demo.gradle.plugin:[1.0, 2['
+        }
+
+        tasks.named('dependencyUpdates').configure {
+          checkForGradleUpdate = false
+          rejectVersionIf {
+            if (candidate.module == 'com.example.settings-demo.gradle.plugin') {
+              println "PROBE strict='\${versionConstraint?.strictVersion}'" +
+                " prefer='\${versionConstraint?.preferredVersion}'"
+            }
+            !satisfiesDeclaredBound
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = runOn('current')
+
+    then: 'nothing is credited from the alias, so the strictly it states never applies'
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains("PROBE strict='' prefer=''")
+    result.output.contains(
+      'com.example.settings-demo:com.example.settings-demo.gradle.plugin [1.0 -> 2.0]')
   }
 
   def 'a versionless declaration recovers nothing from a reject-only alias'() {
@@ -385,6 +511,42 @@ final class PluginMarkerCatalogSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('PROBE rejects=[]')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/755')
+  @Unroll
+  def 'an exact version from #declaration recovers nothing'() {
+    given:
+    pluginManagementSettings()
+    catalog(
+      """
+        [plugins]
+        demo = { id = "com.example.settings-demo", version = { require = "1.0", reject = ["2.0"] } }
+      """)
+    buildFile(
+      pluginsLine,
+      """
+        rejectVersionIf {
+          if (candidate.module == 'com.example.settings-demo.gradle.plugin') {
+            println "PROBE rejects=\${versionConstraint?.rejectedVersions}"
+          }
+          !satisfiesDeclaredBound
+        }
+      """)
+
+    when:
+    def result = runOn('current')
+
+    then: 'the flattened exact version could as well be stated inline, so no bound is credited'
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('PROBE rejects=[]')
+    result.output.contains(
+      'com.example.settings-demo:com.example.settings-demo.gradle.plugin [1.0 -> 2.0]')
+
+    where:
+    declaration         | pluginsLine
+    'the plugins block' | "id 'com.example.settings-demo' version '1.0' apply false"
+    'the catalog alias' | 'alias(libs.plugins.demo) apply false'
   }
 
   def 'a plain string plugin version recovers nothing'() {

@@ -234,6 +234,28 @@ final class DeclaredVersionConstraintSpec extends Specification {
     report().unresolved.dependencies.isEmpty()
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/755')
+  def 'a required range does not hold back a module a conflict pushed past it'() {
+    given: 'guice is declared as a range, and a transitive requires a version above that range'
+    writeBuildFile(
+      """
+        api 'com.google.inject:guice:[2.0, 3.0['
+        api 'com.example:guice-consumer:1.0'
+      """,
+      """
+        rejectVersionIf {
+          !satisfiesDeclaredBound
+        }
+      """)
+
+    when:
+    run()
+
+    then: 'a required version is a floor resolution may rise above, a range included'
+    report().outdated.dependencies*.name == ['guice']
+    report().outdated.dependencies[0].available.milestone == '3.1'
+  }
+
   def 'a module with no declared bound is not held back'() {
     given: 'a plain declaration is a floor resolution may rise above, not a bound'
     writeBuildFile(
@@ -797,6 +819,53 @@ final class DeclaredVersionConstraintSpec extends Specification {
 
     then: 'resolution stops at 3.0 because p1 rejects 3.1, and the rule must not offer it either'
     !report().outdated.dependencies.any { it.name == 'guice' && it.version == '3.0' }
+  }
+
+  // Gradle's own publisher writes `requires` beside `strictly`, so the strictly-only form only
+  // arrives from a platform published by other tooling; the fixture hand-authors the metadata.
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
+  def 'a platform constraint stating only a strict version reaches the rule'() {
+    given: 'a published platform whose module metadata states strictly with no requires'
+    writeBuildFile(
+      """
+        api platform('com.example:strict-platform:1.0')
+        api 'com.google.inject:guice'
+      """,
+      """
+        rejectVersionIf {
+          println "PROBE \${candidate.module} platformConstraints=" +
+            "\${platformVersionConstraints.collect { it.strictVersion }}"
+          return false
+        }
+      """)
+
+    when:
+    def result = run()
+
+    then: 'the strictly-only edge is harvested rather than dropped as stating nothing'
+    result.output.contains('PROBE guice platformConstraints=[2.0]')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
+  def 'a platform constraint stating only a strict version still bounds the module'() {
+    given: 'the platform pins guice purely with strictly, which resolution itself enforces'
+    writeBuildFile(
+      """
+        api platform('com.example:strict-platform:1.0')
+        api 'com.google.inject:guice'
+      """,
+      """
+        rejectVersionIf {
+          !satisfiesDeclaredBound
+        }
+      """)
+
+    when:
+    run()
+
+    then: 'the pinned module reports as current instead of being offered what Gradle refuses'
+    report().current.dependencies.any { it.name == 'guice' && it.version == '2.0' }
+    !report().outdated.dependencies*.name.contains('guice')
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')

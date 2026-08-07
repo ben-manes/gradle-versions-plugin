@@ -5,8 +5,9 @@ import org.gradle.api.artifacts.VersionConstraint
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionComparator
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionSelectorScheme
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionRangeSelector
 
-class ComponentSelectionWithCurrent(
+class ComponentSelectionWithCurrent internal constructor(
   private val delegate: ComponentSelection,
   val currentVersion: String,
   /** The constraint the build declared for this module, null when no declaration named it. */
@@ -24,22 +25,13 @@ class ComponentSelectionWithCurrent(
   ) : this(delegate, currentVersion, null, emptyList())
 
   /**
-   * Retains the arity the declared [VersionConstraint] arrived with, in case a release ships it
-   * before this change.
-   */
-  constructor(
-    delegate: ComponentSelection,
-    currentVersion: String,
-    versionConstraint: VersionConstraint?,
-  ) : this(delegate, currentVersion, versionConstraint, emptyList())
-
-  /**
    * Whether the candidate lies within the bound the declaration stated, read the way dependency
    * resolution reads it, so that a range is honored rather than compared as a string.
    *
    * Only `strictly` and `reject` bound a candidate. A `require` version is a floor that resolution
-   * may rise above, and a `prefer` version is consulted only to break a tie, so neither excludes an
-   * upgrade the build already permits. True for a module that declared no bound at all.
+   * may rise above, a range included, and a `prefer` version is consulted only to break a tie, so
+   * neither excludes an upgrade the build already permits. True for a module that declared no
+   * bound at all.
    *
    * A module whose declaration states no version is additionally bounded by the constraints the
    * platforms the consumer depends on state for it, and the version currently selected is always
@@ -98,8 +90,21 @@ private object DeclaredBound {
     }
   }
 
+  /** Whether the version parses as a range selector, the form a rich constraint flattens to. */
+  fun statesRange(version: String): Boolean {
+    val parser = scheme
+    if (parser == null || version.isEmpty()) {
+      return false
+    }
+    return try {
+      parser.parseSelector(version) is VersionRangeSelector
+    } catch (e: Exception) {
+      false
+    }
+  }
+
   /**
-   * Whether the candidate lies within every one of the versions the consumed platforms require for
+   * Whether the candidate lies within every one of the versions the consumed platforms state for
    * this module, read the same way [accepts] reads a declared bound. Requiring each edge to admit
    * the candidate is stricter than the version resolution itself settles on, which is deliberate:
    * the report offers an upgrade only when no consumed platform stands against it. The version
@@ -117,8 +122,10 @@ private object DeclaredBound {
     }
     return try {
       constraints.all { constraint ->
+        val strict = constraint.strictVersion
         val required = constraint.requiredVersion
-        (required.isEmpty() || parser.parseSelector(required).accept(candidate)) &&
+        (strict.isEmpty() || parser.parseSelector(strict).accept(candidate)) &&
+          (required.isEmpty() || parser.parseSelector(required).accept(candidate)) &&
           constraint.rejectedVersions.none { parser.parseSelector(it).accept(candidate) }
       }
     } catch (e: LinkageError) {
@@ -126,3 +133,6 @@ private object DeclaredBound {
     }
   }
 }
+
+/** Whether the version parses as a range selector, the form a rich constraint flattens to. */
+internal fun statesVersionRange(version: String): Boolean = DeclaredBound.statesRange(version)
