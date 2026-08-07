@@ -76,9 +76,11 @@ How a pull request lands:
 
 For maintainers. Releases are published to the [Gradle Plugin
 Portal](https://plugins.gradle.org/plugin/io.github.ben-manes.versions) by the
-[deploy workflow](.github/workflows/deploy.yml), which builds the release tag
-and then runs `publishPlugins` against it. It runs when a release is created,
-and on manual dispatch.
+[deploy workflow](.github/workflows/deploy.yml). Dispatching it at a tag is the
+whole release: it builds that tag, runs `publishPlugins` against it, waits for
+the portal to serve the new version, and only then publishes the drafted
+release. Each step gates the one after it, so a failure stops short of
+notifying watchers.
 
 Prerequisites:
 
@@ -94,10 +96,10 @@ not.
 
 Always create the GitHub release as a draft:
 
-- Creating it published runs the workflow and notifies watchers in the same
-  moment, before anything has confirmed the portal accepted the artifacts.
-- A release cannot be un-notified.
-- A draft neither runs the workflow nor notifies, so the portal goes first.
+- A release cannot be un-notified, so nothing may notify watchers until the
+  portal has accepted the artifacts.
+- A draft does not notify, and the workflow publishes it once the portal
+  serves the version.
 
 1. Set `VERSION_NAME` in `gradle.properties` to the release version and merge
    it to `master` as `Prepare the vX.Y.Z release`.
@@ -153,41 +155,28 @@ Always create the GitHub release as a draft:
    > The `dependencyUpdates` task now reticulates splines. See [Migrating from prior versions](https://github.com/ben-manes/gradle-versions-plugin#vXYZ).
    ```
 
-4. Publish to the portal by dispatching the workflow at the tag:
+4. Release by dispatching the workflow at the tag, then watch the run:
 
    ```bash
    gh workflow run deploy.yml --ref vX.Y.Z
+   gh run watch --exit-status
    ```
 
    - `--ref` has to name the tag: a manual run checks out the dispatched ref.
+   - `gh run watch` picks from the runs in progress, so give the dispatch a few
+     seconds to register. It exits non-zero when the run fails.
    - The workflow refuses a ref whose `VERSION_NAME` does not match the tag,
      so a dispatch that forgets `--ref` fails instead of publishing `master`.
-   - It builds the tag before publishing, which is where the release gets its
-     test run. The bump lands by rebase, so the pull request's checks ran on a
-     commit the tag does not carry, and a docs-only commit merged after them
-     triggers no build workflow at all. A failure here leaves the portal
-     untouched: fix `master`, move the tag, and dispatch again.
-
-5. Confirm the portal serves the new version:
-
-   ```bash
-   curl -sf https://plugins.gradle.org/m2/io/github/ben-manes/gradle-versions-plugin/maven-metadata.xml \
-     | grep -qF '<version>X.Y.Z</version>' && echo "published" || echo "not published"
-   ```
-
-   - The portal takes a few minutes after the workflow succeeds. "not
-     published" covers an unreachable portal too; either way, wait and run it
-     again.
-
-6. Publish the release:
-
-   ```bash
-   gh release edit vX.Y.Z --draft=false --latest
-   ```
-
-   - This notifies watchers, which is why it comes last.
-   - Publishing the draft does not run the workflow again; its trigger is
-     `created`, which the flip from draft to published does not fire.
+   - It builds the tag, which is where the release gets its test run. The bump
+     lands by rebase, so the pull request's checks ran on a commit the tag does
+     not carry, and a commit touching only `README.md` or `CONTRIBUTING.md`
+     merged after them triggers no build workflow at all. A failure here leaves
+     the portal untouched: fix `master`, move the tag, and dispatch again.
+   - It waits up to ten minutes for the portal to serve the version, since the
+     portal takes a few minutes to index what `publishPlugins` uploaded.
+   - It publishes the release last, which is what notifies watchers. A run that
+     fails before then leaves the release a draft, so dispatch again once the
+     cause is fixed.
 
 ### Releasing a new plugin id
 
