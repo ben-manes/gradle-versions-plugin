@@ -76,9 +76,9 @@ How a pull request lands:
 
 For maintainers. Releases are published to the [Gradle Plugin
 Portal](https://plugins.gradle.org/plugin/io.github.ben-manes.versions) by the
-[deploy workflow](.github/workflows/deploy.yml), which runs `publishPlugins`
-against the release tag. It runs when a release is created, and on manual
-dispatch.
+[deploy workflow](.github/workflows/deploy.yml), which builds the release tag
+and then runs `publishPlugins` against it. It runs when a release is created,
+and on manual dispatch.
 
 Prerequisites:
 
@@ -162,6 +162,11 @@ Always create the GitHub release as a draft:
    - `--ref` has to name the tag: a manual run checks out the dispatched ref.
    - The workflow refuses a ref whose `VERSION_NAME` does not match the tag,
      so a dispatch that forgets `--ref` fails instead of publishing `master`.
+   - It builds the tag before publishing, which is where the release gets its
+     test run. The bump lands by rebase, so the pull request's checks ran on a
+     commit the tag does not carry, and a docs-only commit merged after them
+     triggers no build workflow at all. A failure here leaves the portal
+     untouched: fix `master`, move the tag, and dispatch again.
 
 5. Confirm the portal serves the new version:
 
