@@ -234,6 +234,28 @@ final class DeclaredVersionConstraintSpec extends Specification {
     report().unresolved.dependencies.isEmpty()
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/755')
+  def 'a required range does not hold back a module a conflict pushed past it'() {
+    given: 'guice is declared as a range, and a transitive requires a version above that range'
+    writeBuildFile(
+      """
+        api 'com.google.inject:guice:[2.0, 3.0['
+        api 'com.example:guice-consumer:1.0'
+      """,
+      """
+        rejectVersionIf {
+          !satisfiesDeclaredBound
+        }
+      """)
+
+    when:
+    run()
+
+    then: 'a required version is a floor resolution may rise above, a range included'
+    report().outdated.dependencies*.name == ['guice']
+    report().outdated.dependencies[0].available.milestone == '3.1'
+  }
+
   def 'a module with no declared bound is not held back'() {
     given: 'a plain declaration is a floor resolution may rise above, not a bound'
     writeBuildFile(
