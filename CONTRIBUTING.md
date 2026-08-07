@@ -177,6 +177,13 @@ Always create the GitHub release as a draft:
    - It publishes the release last, which is what notifies watchers. A run that
      fails before then leaves the release a draft, so dispatch again once the
      cause is fixed.
+   - Dispatch again only while the portal is still not serving the version. The
+     portal refuses a version it already has, so a run that failed after the
+     upload succeeded cannot be repeated. Publish the release by hand instead:
+
+     ```bash
+     gh release edit vX.Y.Z --draft=false --latest
+     ```
 
 ### Releasing a new plugin id
 
