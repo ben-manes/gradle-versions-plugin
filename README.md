@@ -599,6 +599,19 @@ version the platform supplies is reported and offered updates as usual. Only a
 module the consumer never declares is absent, and the platform project's own
 report covers those.
 
+The platform a platform project imports is reported here, though. A build whose
+platform project declares `api(platform("group:artifact:version"))` reaches that
+BOM's constraints without naming the BOM anywhere the report covers, and an
+included build's platform hides it further, since that build is reported
+separately (see [Composite builds](#composite-builds)). With `checkConstraints`
+the BOM gets an entry of its own beside the versionless declarations it
+supplies, so the coordinate to bump is one the report names. A build that states
+a version for every module it declares reaches no further than the platform
+project itself. The walk stops at the first published platform: a
+BOM that BOM imports states the BOM's version choice rather than the build's, and
+a BOM a library brings along as resolution metadata is not one the build
+imported, so neither is reported.
+
 <details open>
 <summary>Kotlin</summary>
 
@@ -924,11 +937,11 @@ The following dependencies have later milestone versions:
 ```
 
 The platform keeps its own report line, so the upgrade that is actually
-available, bumping the BOM, still shows. That line is there only when the
-report covers the project declaring the platform. A build that centralizes its
-platforms in an included build holds the modules with nothing naming the BOM to
-bump, since an included build is reported separately (see [Composite
-builds](#composite-builds)). A bound the build states on the platform itself
+available, bumping the BOM, still shows. A build that centralizes its platforms
+in a platform project of its own, an included build's included, states the BOM
+where this report does not cover it; `checkConstraints` reports that BOM here
+anyway, so the coordinate to bump is named either way (see
+[Constraints](#constraints)). A bound the build states on the platform itself
 holds that line too: a BOM whose own version says `strictly "[2.0, 3.0["`,
 inline or through a version catalog, reports the newest version inside that
 range and never the major beyond it.

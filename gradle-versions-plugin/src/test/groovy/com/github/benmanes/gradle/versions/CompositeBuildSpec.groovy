@@ -419,6 +419,199 @@ final class CompositeBuildSpec extends Specification {
     result.output.contains('com.example:jvm-library [1.0 -> 2.0]')
   }
 
+  def 'Reports the platform that an included build platform imports'() {
+    given:
+    testProjectDir.newFile('settings.gradle') << "includeBuild 'platforms'"
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation platform('com.example:platforms:1.0')
+          implementation 'com.google.inject:guice'
+          implementation 'com.example:bom-consumer:1.0'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+      """.stripIndent()
+    includedBuild(
+      'platforms',
+      """
+        plugins {
+          id 'java-platform'
+        }
+
+        group = 'com.example'
+        version = '1.0'
+
+        javaPlatform {
+          allowDependencies()
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          api platform('com.example:external-bom:1.0')
+        }
+      """.stripIndent(),
+    )
+
+    when:
+    def result = run('dependencyUpdates')
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.example:external-bom [1.0 -> 2.0]')
+    // A platform that only a library's metadata drags in is not one the build imported.
+    !result.output.contains('com.example:dragged-bom')
+  }
+
+  def 'Holds the reported platform to the bound the platform project states'() {
+    given:
+    testProjectDir.newFile('settings.gradle') << "includeBuild 'platforms'"
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation platform('com.example:platforms:1.0')
+          implementation 'com.google.inject:guice'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+          rejectVersionIf {
+            !satisfiesDeclaredBound
+          }
+        }
+      """.stripIndent()
+    includedBuild(
+      'platforms',
+      """
+        plugins {
+          id 'java-platform'
+        }
+
+        group = 'com.example'
+        version = '1.0'
+
+        javaPlatform {
+          allowDependencies()
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          api(platform('com.example:external-bom')) {
+            version {
+              strictly '[1.0, 2.0['
+            }
+          }
+        }
+      """.stripIndent(),
+    )
+
+    when:
+    def result = run('dependencyUpdates')
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.example:external-bom:1.0')
+    // 2.0 exists, but the platform project's declaration excludes it and the bound rides along.
+    !result.output.contains('com.example:external-bom [1.0 -> 2.0]')
+  }
+
+  def 'Reaches no imported platform when every declared module is versioned'() {
+    given:
+    testProjectDir.newFile('settings.gradle') << "includeBuild 'platforms'"
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation platform('com.example:platforms:1.0')
+          implementation 'com.google.inject:guice:2.0'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+      """.stripIndent()
+    includedBuild(
+      'platforms',
+      """
+        plugins {
+          id 'java-platform'
+        }
+
+        group = 'com.example'
+        version = '1.0'
+
+        javaPlatform {
+          allowDependencies()
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          api platform('com.example:external-bom:1.0')
+        }
+      """.stripIndent(),
+    )
+
+    when:
+    def result = run('dependencyUpdates')
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    // A build whose declarations all carry versions resolves the current copy non-transitively
+    // (issue #231), so the platform project's edges are absent and its import is out of the walk's
+    // reach. Widening that boundary trades the declared current version for the resolved one.
+    !result.output.contains('com.example:external-bom')
+  }
+
   def 'Reuses the configuration cache across runs of a composite build'() {
     given:
     testProjectDir.newFile('settings.gradle') << "includeBuild 'child'"
