@@ -22,6 +22,8 @@ Plugin](https://www.mojohaus.org/versions-maven-plugin).
         - [`filterConfigurations`](#filterconfigurations)
         - [`filterDeclaredConfigurations`](#filterdeclaredconfigurations)
         - [Choosing between them](#choosing-between-them)
+        - [Kotlin Gradle Plugin](#kotlin-gradle-plugin)
+        - [Android Gradle Plugin](#android-gradle-plugin)
       - [Constraints](#constraints)
     - [Which versions it offers](#which-versions-it-offers)
       - [Revisions](#revisions)
@@ -390,113 +392,9 @@ leaves with it—rejecting `compileClasspath` removes the build's own
 dependencies too. Reach for this filter when a whole configuration is noise:
 a skipped configuration also costs no version lookups, which suits the
 classpaths a plugin fills for its own tooling, holding versions the build
-never chose. The Kotlin Gradle Plugin adds six; at KGP 2.4.10 they are:
-
-<details open>
-<summary>Kotlin</summary>
-
-```kotlin
-import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
-
-val kgpInternal = setOf(
-  "kotlinCompilerClasspath",
-  "kotlinBuildToolsApiClasspath",
-  "kotlinAbiValidationCompatClasspath",
-  "kotlinKlibCommonizerClasspath",
-  "kotlinCompilerPluginClasspathMain",
-  "kotlinCompilerPluginClasspathTest",
-)
-
-tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
-  filterConfigurations = Spec<Configuration> { it.name !in kgpInternal }
-}
-```
-
-</details>
-
-<details>
-<summary>Groovy</summary>
-
-```groovy
-def kgpInternal = [
-  "kotlinCompilerClasspath",
-  "kotlinBuildToolsApiClasspath",
-  "kotlinAbiValidationCompatClasspath",
-  "kotlinKlibCommonizerClasspath",
-  "kotlinCompilerPluginClasspathMain",
-  "kotlinCompilerPluginClasspathTest",
-]
-
-tasks.named("dependencyUpdates").configure {
-  filterConfigurations {
-    !kgpInternal.contains(it.name)
-  }
-}
-```
-
-</details>
-
-The unsuffixed `kotlinCompilerPluginClasspath` is left in on purpose: it
-holds the compiler plugins the build itself declares, and only the `Main`-
-and `Test`-suffixed siblings belong to the plugin. That is why the filter
-names configurations exactly instead of dropping everything that starts with
-`kotlin`.
-
-The Android Gradle Plugin fills a set of its own. At AGP 9.3.1, which builds
-in its Kotlin support rather than applying a separate Kotlin plugin, that is
-`androidLintTool`, two of the Kotlin classpaths above, and a
-`unified-test-platform-*` family thirteen configurations wide. The family is
-the one place a prefix fits: its membership shifts between AGP releases and
-no configuration a build fills itself uses the prefix. (The per-variant
-`kotlinCompilerPluginClasspathDebug` and friends never appear in the report
-by name, since a dependency is attributed to the configuration it was
-declared against, so they need no entry.)
-
-<details open>
-<summary>Kotlin</summary>
-
-```kotlin
-import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
-
-val agpInternal = setOf(
-  "androidLintTool",
-  "kotlinBuildToolsApiClasspath",
-  "kotlinCompilerClasspath",
-)
-
-tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
-  filterConfigurations = Spec<Configuration> {
-    it.name !in agpInternal && !it.name.startsWith("unified-test-platform-")
-  }
-}
-```
-
-</details>
-
-<details>
-<summary>Groovy</summary>
-
-```groovy
-def agpInternal = [
-  "androidLintTool",
-  "kotlinBuildToolsApiClasspath",
-  "kotlinCompilerClasspath",
-]
-
-tasks.named("dependencyUpdates").configure {
-  filterConfigurations {
-    !agpInternal.contains(it.name) &&
-      !it.name.startsWith("unified-test-platform-")
-  }
-}
-```
-
-</details>
-
-These names belong to the plugins at the versions above, not to Gradle, and
-they change between plugin releases. Take the set from your own report
-rather than from this page, and keep the matches exact wherever a plugin's
-configurations share a prefix with ones the build fills itself.
+never chose. The [Kotlin Gradle Plugin](#kotlin-gradle-plugin) and
+[Android Gradle Plugin](#android-gradle-plugin) sections below give ready
+sets.
 
 ###### `filterDeclaredConfigurations`
 
@@ -544,7 +442,7 @@ removes the attribution line, never the dependency.
 ###### Choosing between them
 
 Both filters silence a tooling configuration like the KGP and AGP sets
-above; prefer `filterConfigurations` there, since it also skips the lookups.
+below; prefer `filterConfigurations` there, since it also skips the lookups.
 They part ways when the name an entry shows is not one the task checks (see
 [The `dependencyUpdates` task](#the-dependencyupdates-task)): a declarable
 configuration read through a resolvable classpath that extends it, and
@@ -554,6 +452,126 @@ matches the name shown, with no side effect on what is checked. Buildscript
 and settings classpath entries ordinarily name no configuration, so neither
 property affects them; one a plugin contributes is named `classpath` and can
 be rejected like any other entry.
+
+###### Kotlin Gradle Plugin
+
+The Kotlin Gradle Plugin fills four fixed classpaths for its own tooling,
+plus one `kotlinCompilerPluginClasspath<SourceSet>` per source set—a [JVM
+test suite](https://docs.gradle.org/current/userguide/jvm_test_suite_plugin.html)
+adds one too—so a list of names goes stale as the build grows. Match the
+family by prefix; at KGP 2.4.10:
+
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+fun isKgpInternal(configurationName: String): Boolean {
+  val kgpInternalConfigurations = setOf(
+    "kotlinCompilerClasspath",
+    "kotlinBuildToolsApiClasspath",
+    "kotlinAbiValidationCompatClasspath",
+    "kotlinKlibCommonizerClasspath",
+  )
+  return configurationName in kgpInternalConfigurations ||
+    (configurationName.startsWith("kotlinCompilerPluginClasspath") &&
+      configurationName != "kotlinCompilerPluginClasspath")
+}
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  filterConfigurations = Spec<Configuration> { !isKgpInternal(it.name) }
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
+def isKgpInternal = { String configurationName ->
+  def kgpInternalConfigurations = [
+    "kotlinCompilerClasspath",
+    "kotlinBuildToolsApiClasspath",
+    "kotlinAbiValidationCompatClasspath",
+    "kotlinKlibCommonizerClasspath",
+  ]
+  return kgpInternalConfigurations.contains(configurationName) ||
+    (configurationName.startsWith("kotlinCompilerPluginClasspath") &&
+      configurationName != "kotlinCompilerPluginClasspath")
+}
+
+tasks.named("dependencyUpdates").configure {
+  filterConfigurations { !isKgpInternal(it.name) }
+}
+```
+
+</details>
+
+The prefix stops short of the unsuffixed `kotlinCompilerPluginClasspath`,
+which keeps reporting, and stays narrower than dropping everything that
+starts with `kotlin`. A compiler plugin the build itself declares resolves
+through these same suffixed classpaths and is filtered with them. Its Gradle
+plugin's marker still reports, so a version shared between the two stays
+visible, but a compiler plugin versioned apart from its Gradle plugin leaves
+the report with no replacement—keep the classpath that carries it if you
+declare one.
+
+###### Android Gradle Plugin
+
+The Android Gradle Plugin fills a set of its own. At AGP 9.3.1, which builds
+in its Kotlin support rather than applying a separate Kotlin plugin, that is
+`androidLintTool`, two of the Kotlin classpaths above, and a
+`unified-test-platform-*` family thirteen configurations wide. The family
+takes a prefix too: its membership shifts between AGP releases and no
+configuration a build fills itself uses it.
+
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+val agpInternal = setOf(
+  "androidLintTool",
+  "kotlinBuildToolsApiClasspath",
+  "kotlinCompilerClasspath",
+)
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  filterConfigurations = Spec<Configuration> {
+    it.name !in agpInternal && !it.name.startsWith("unified-test-platform-")
+  }
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
+def agpInternal = [
+  "androidLintTool",
+  "kotlinBuildToolsApiClasspath",
+  "kotlinCompilerClasspath",
+]
+
+tasks.named("dependencyUpdates").configure {
+  filterConfigurations {
+    !agpInternal.contains(it.name) &&
+      !it.name.startsWith("unified-test-platform-")
+  }
+}
+```
+
+</details>
+
+These names belong to the plugins at the versions above, not to Gradle, and
+they change between plugin releases. Take the set from your own report
+rather than from this page, and keep the matches exact wherever a plugin's
+configurations share a prefix with ones the build fills itself.
 
 ##### Constraints
 
