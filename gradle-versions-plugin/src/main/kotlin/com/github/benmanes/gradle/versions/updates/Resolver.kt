@@ -20,6 +20,7 @@ import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.api.artifacts.VersionConstraint
 import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.artifacts.repositories.ArtifactRepository
 import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
 import org.gradle.api.artifacts.repositories.IvyArtifactRepository
@@ -181,6 +182,10 @@ class Resolver(
       }
     }
 
+    for (source in current.platformSources) {
+      latest.add(createPlatformQueryDependency(source))
+    }
+
     val copy = configuration.copyRecursive().setTransitive(false)
 
     // https://github.com/ben-manes/gradle-versions-plugin/issues/592
@@ -280,6 +285,20 @@ class Resolver(
       addAttributes(latest, dependency)
     }
     return latest
+  }
+
+  /** Returns a platform dependency used for querying the latest version of a consumed platform. */
+  private fun createPlatformQueryDependency(coordinate: Coordinate): Dependency {
+    val dependency =
+      project.dependencies.create("${coordinate.groupId}:${coordinate.artifactId}:+") as ModuleDependency
+    dependency.isTransitive = false
+    dependency.attributes { attributes ->
+      attributes.attribute(
+        Category.CATEGORY_ATTRIBUTE,
+        project.objects.named(Category::class.java, Category.REGULAR_PLATFORM),
+      )
+    }
+    return dependency
   }
 
   /** Returns a variant of the provided dependency used for querying the latest version.  */
@@ -448,10 +467,19 @@ class Resolver(
     // Ignore undeclared (hidden) dependencies that appear when resolving a configuration
     coordinates.keys.retainAll(declared.keys + contributed.map { it.key } + substitutions.values)
 
+    val platformSources = if (checkConstraints) getPlatformSources(root, declared.keys) else emptyList()
+    val harvestedKeys = hashSetOf<Coordinate.Key>()
+    for (source in platformSources) {
+      if (coordinates.putIfAbsent(source.key, source) == null) {
+        harvestedKeys.add(source.key)
+      }
+    }
+
     // A key only reached via a lazy action (withDependencies/defaultDependencies, or a resolution
     // listener) is missing from the snapshot taken before any configuration was first resolved, and
     // is not a substitution target, which traces to a real declaration.
-    val contributedKeys = coordinates.keys - declaredBeforeActions - substitutions.values.toSet()
+    val contributedKeys =
+      coordinates.keys - declaredBeforeActions - substitutions.values.toSet() - harvestedKeys
 
     // A plugin that adds its private classpath eagerly, at apply time, is indistinguishable from a
     // declaration by the time the snapshot above is taken, so what it leaves behind is named instead:
@@ -469,7 +497,59 @@ class Resolver(
       substitutions,
       contributedKeys,
       configurationsOf(configuration, contributedKeys + declaringKeys),
+      platformSources,
     )
+  }
+
+  /**
+   * Returns the external platforms the build consumes through its own platform projects, such as a
+   * BOM that an included build's platform imports and this build reaches by project substitution.
+   *
+   * Such a platform's constraints bound this build's versionless modules while the substituted
+   * project hides the coordinate to edit, so each one is reported as an entry of its own. Only a
+   * chain of platform variants that stays in project components until the harvested module
+   * qualifies: a platform that an external platform imports is that platform's version choice
+   * rather than the build's, and one a library drags in is a resolution input, so the walk stops at
+   * the first external component either way. A platform the build declares itself already has a
+   * report entry and is skipped. The constraint the platform project's declaration states rides
+   * along, so a stated bound holds the harvested row like any declared one.
+   */
+  private fun getPlatformSources(
+    root: ResolvedComponentResult,
+    declaredKeys: Set<Coordinate.Key>,
+  ): List<Coordinate> {
+    val sources = mutableListOf<Coordinate>()
+    val seen = hashSetOf(root.id)
+    val pending = ArrayDeque(listOf(root))
+    while (pending.isNotEmpty()) {
+      for (dependency in pending.removeFirst().dependencies) {
+        if (dependency !is ResolvedDependencyResult || dependency.isConstraint) {
+          continue
+        }
+        val selected = dependency.selected
+        if (!seen.add(selected.id) || selected.variants.none { isPlatform(it) }) {
+          continue
+        }
+        if (selected.id is ProjectComponentIdentifier) {
+          pending.add(selected)
+        } else {
+          val moduleVersion = selected.moduleVersion ?: continue
+          val requested = dependency.requested as? ModuleComponentSelector
+          val coordinate =
+            Coordinate(
+              moduleVersion.group,
+              moduleVersion.name,
+              moduleVersion.version,
+              userReason = null,
+              versionConstraint = requested?.versionConstraint,
+            )
+          if (coordinate.key !in declaredKeys) {
+            sources.add(coordinate)
+          }
+        }
+      }
+    }
+    return sources
   }
 
   /**
@@ -731,6 +811,7 @@ class Resolver(
     val substitutions: Map<Coordinate.Key, Coordinate.Key>,
     val contributedKeys: Set<Coordinate.Key> = emptySet(),
     val contributedConfigurations: Map<Coordinate.Key, List<String>> = emptyMap(),
+    val platformSources: List<Coordinate> = emptyList(),
   )
 
   companion object {
