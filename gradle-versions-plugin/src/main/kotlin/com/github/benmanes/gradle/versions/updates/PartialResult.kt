@@ -18,7 +18,7 @@ data class PartialStatus
     val contributed: Boolean = false,
     /** The configurations a contributed dependency was declared against, empty when declared. */
     val configurations: List<String> = emptyList(),
-    /** The observing project, stamped by the accumulator rather than serialized. */
+    /** The observing project's build tree path, stamped by the accumulator rather than serialized. */
     @Transient val projectPath: String? = null,
   ) {
     val coordinate: Coordinate

@@ -203,11 +203,11 @@ internal fun registerAggregation(
   // project with no build script cannot apply the plugin there, so naming it in the completeness
   // warning would report what the user has no way to act on.
   val aggregatedPaths =
-    project.allprojects.filter { it.buildFile.exists() }.map { it.path }.toSet()
+    project.allprojects.filter { it.buildFile.exists() }.map { it.buildTreePath }.toSet()
 
   val partialsDirectory = project.layout.buildDirectory.dir("dependencyUpdates/partials")
   accumulator.configure { task ->
-    task.projectPath = project.path
+    task.projectPath = project.buildTreePath
     task.aggregatedProjectPaths = aggregatedPaths
     task.projectDirectory.set(project.layout.projectDirectory)
     task.partialResults.from(
@@ -431,7 +431,7 @@ private fun registerProducer(
           warnSkipped(project, skipped)
           PartialResult(
             PartialResult.FORMAT_VERSION,
-            project.path,
+            project.buildTreePath,
             statuses,
             buildscriptStatuses,
             skipped,
@@ -551,7 +551,8 @@ private fun warnSkipped(
     val noun = if (group.size == 1) "configuration" else "configurations"
     val names = group.joinToString(", ") { "'${it.name}'" }
     project.logger.warn(
-      "Skipping $noun $names in ${projectsLabel(listOf(project.path))}: " + reason.lineSequence().first(),
+      "Skipping $noun $names in ${projectsLabel(listOf(project.buildTreePath))}: " +
+        reason.lineSequence().first(),
     )
   }
 }

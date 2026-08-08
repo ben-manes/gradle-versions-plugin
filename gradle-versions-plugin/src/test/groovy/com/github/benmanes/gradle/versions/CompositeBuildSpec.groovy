@@ -765,14 +765,157 @@ final class CompositeBuildSpec extends Specification {
     result.task(':child:dependencyUpdates').outcome == SUCCESS
     result.output.contains('Failed to inspect the dependencies of the following configurations')
 
-    // Each build reports on its own projects. Both name their root ':', so the counts are what
-    // distinguish an owned entry from one collected out of the other build's report.
+    // Each build reports on its own projects, named by the path they hold in the build tree so
+    // that the included build's root is told apart from the including build's.
     [including, included].every { it.skipped.count > 0 }
     [including, included].every { it.skipped.configurations*.name.contains('compileClasspath') }
     [including, included].every { it.skipped.configurations*.name.unique().size() == it.skipped.count }
     including.skipped.count + included.skipped.count == 13
     including.skipped.configurations.every { it.project == ':' }
-    included.skipped.configurations.every { it.project == ':' }
+    included.skipped.configurations.every { it.project == ':child' }
+
+    // The warning accompanying the section names the same project the section does, rather than
+    // reporting both builds' roots under the one name each answers for itself.
+    result.output.contains('in :child:')
+    result.output.count('in root project:') == 1
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1075')
+  def 'Names an included build that aggregates its own projects by its build tree path'() {
+    given:
+    testProjectDir.newFile('settings.gradle') << "includeBuild 'child'"
+    testProjectDir.newFile('build.gradle') << ''
+    testProjectDir.newFolder('child')
+    testProjectDir.newFile('child/settings.gradle') <<
+      """
+        rootProject.name = 'child'
+        include 'alpha', 'beta'
+      """.stripIndent()
+    testProjectDir.newFile('child/build.gradle') <<
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'io.github.ben-manes.versions'
+
+        allprojects {
+          apply plugin: 'java'
+
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('child', 'alpha')
+    testProjectDir.newFile('child/alpha/build.gradle') <<
+      """
+        dependencies {
+          implementation 'com.google.inject:guice:2.0'
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('child', 'beta')
+    testProjectDir.newFile('child/beta/build.gradle') <<
+      """
+        dependencies {
+          implementation 'com.google.guava:guava:15.0'
+        }
+      """.stripIndent()
+
+    when:
+    def result = run(':child:dependencyUpdates')
+
+    then:
+    result.task(':child:dependencyUpdates').outcome == SUCCESS
+    result.output.contains(':child Project Dependency Updates')
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+
+    // The projects the completeness check expects are named the way the partial results stamp
+    // them, so an included build that aggregates does not report its own projects as absent.
+    !result.output.contains('The dependency updates report is missing')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1075')
+  def 'Names the projects that declare a divergent version by their build tree paths'() {
+    given:
+    testProjectDir.newFile('settings.gradle') << "includeBuild 'child'"
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'io.github.ben-manes.versions'
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        configurations.create('tool') {
+          canBeResolved = true
+          canBeConsumed = false
+        }
+
+        dependencies {
+          dependencyUpdatesAggregation 'com.example:child:1.0'
+          tool 'com.example:jvm-library:2.0'
+        }
+      """.stripIndent()
+    includedBuild(
+      'child',
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'io.github.ben-manes.versions'
+
+        group = 'com.example'
+        version = '1.0'
+
+        configurations.maybeCreate('default')
+        afterEvaluate {
+          artifacts.add('default', file('child.jar'))
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        configurations.create('tool') {
+          canBeResolved = true
+          canBeConsumed = false
+        }
+
+        dependencies {
+          tool 'com.example:jvm-library:1.0'
+        }
+      """.stripIndent(),
+    )
+    testProjectDir.newFile('child/child.jar')
+
+    when:
+    def result = run('dependencyUpdates', '-DoutputFormatter=plain,json')
+    def json = report('')
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+
+    // Both roots answer ':' for their own build, which read as one project and withheld the
+    // divergence altogether rather than naming the two that disagree.
+    json.outdated.dependencies.find { it.name == 'jvm-library' }.projects == [':child']
+    json.current.dependencies.find { it.name == 'jvm-library' }.projects == [':']
+    result.output.contains("declared in the 'tool' configuration in root project")
+    result.output.contains("declared in the 'tool' configuration in :child")
   }
 
   private def report(String path) {

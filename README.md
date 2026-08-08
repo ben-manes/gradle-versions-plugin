@@ -1703,6 +1703,11 @@ The plain text and HTML reports name the first five projects and count the rest
 (`declared in :app, :lib, ... and 60 others`). The JSON and XML reports always
 carry the complete list, so use one of them when a tool needs every project.
 
+A project is named by the path it holds in the build tree, so a project of an
+included build reads as `:child:app` and that build's root as `:child`. Every
+build names its own root `:`, which would otherwise report the projects of two
+builds under one name.
+
 With the settings plugin applied (see [Applying the
 plugin](#applying-the-plugin)), the root project receives the
 `dependencyUpdates` task and every other project contributes to it. No project
@@ -2045,6 +2050,29 @@ build is on and work upward. Each section migrates to the version covered by
 the section above it, and the topmost migrates to the current release.
 *Important*s are must-dos, *Tip*s are actions you should or may want to take,
 and *Note*s are things worth knowing that need no action.
+
+### v0.60.0
+
+v0.61.0 names a project by its path in the build tree wherever the report shows
+one, so the projects of an included build no longer share the `:` that every
+build answers for its own root:
+
+> [!IMPORTANT]
+> - A project of an included build is named by its build tree path, so an entry
+>   reads `declared in :child` where it read `declared in root project` (see
+>   [Multi-project builds](#multi-project-builds)). The JSON and XML reports
+>   carry the same paths in `projects`.
+> - A `buildSrc` build is named the same way when its task is run from the
+>   outer build, as `:buildSrc:dependencyUpdates`. Its report is headed
+>   `:buildSrc` rather than `:`, and its projects are named beneath that path.
+>   Running the task from inside `buildSrc` makes it the root of its own build
+>   tree, which still reads `:`.
+
+> [!NOTE]
+> A dependency that two builds of a composite declare at different versions is
+> now reported as divergent. The attribution naming the projects behind each
+> version was withheld while every entry carried the same project path, which
+> in a composite was always `:`.
 
 ### v0.59.0
 
