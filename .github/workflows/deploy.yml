@@ -1,19 +1,18 @@
 name: deploy
 
 on:
-  release:
-    types: [ created ]
   workflow_dispatch:
 
 jobs:
   publish:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout Project
         uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.release.tag_name }}
 
       - name: Verify Release Version
         run: |
@@ -34,8 +33,34 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
 
+      # A rebase merge produces a commit no pull request check ran on, so the tag can
+      # carry a tree the build workflow has never seen. Build it here, where a failure
+      # still stops the publication.
+      - name: Run build with caching enabled
+        run: ./gradlew clean build -s
+
       - name: Publish
         env:
           GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
           GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
         run: ./gradlew publishPlugins -s
+
+      - name: Verify Portal Publication
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          for _ in $(seq 30); do
+            if curl -sf https://plugins.gradle.org/m2/io/github/ben-manes/gradle-versions-plugin/maven-metadata.xml \
+                 | grep -qF "<version>${VERSION}</version>"; then
+              echo "The portal serves ${VERSION}"
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "::error::The portal is not serving ${VERSION}. The release is left as a draft."
+          exit 1
+
+      # Last, because it notifies watchers and a release cannot be un-notified.
+      - name: Publish Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "${GITHUB_REF_NAME}" --draft=false --latest
