@@ -1703,6 +1703,11 @@ The plain text and HTML reports name the first five projects and count the rest
 (`declared in :app, :lib, ... and 60 others`). The JSON and XML reports always
 carry the complete list, so use one of them when a tool needs every project.
 
+A project is named by the path it holds in the build tree, so a project of an
+included build reads as `:child:app` and that build's root as `:child`. Every
+build names its own root `:`, which would otherwise report the projects of two
+builds under one name.
+
 With the settings plugin applied (see [Applying the
 plugin](#applying-the-plugin)), the root project receives the
 `dependencyUpdates` task and every other project contributes to it. No project
