@@ -398,9 +398,18 @@ class Resolver(
         }
     // An empty configuration is still resolved below, so that a listener contributing to it has
     // run by the time the declared set is read again. That resolution costs nothing. One holding
-    // only project or file dependencies is skipped, as resolving it would not.
+    // only project or file dependencies is skipped, as resolving it would not, unless it imports
+    // a platform: scan first, and keep the cheap exit when the scan has nothing to say.
     if (declared.isEmpty() && configuration.allDependencies.isNotEmpty()) {
-      return CurrentCoordinates(emptyMap(), emptyMap(), emptySet())
+      val platformSources = if (checkConstraints) getPlatformSources(configuration, emptySet()) else emptyList()
+      if (platformSources.isEmpty()) {
+        return CurrentCoordinates(emptyMap(), emptyMap(), emptySet())
+      }
+      return CurrentCoordinates(
+        platformSources.associateBy { it.key },
+        emptyMap(),
+        platformSources = platformSources,
+      )
     }
 
     // https://github.com/ben-manes/gradle-versions-plugin/issues/231
