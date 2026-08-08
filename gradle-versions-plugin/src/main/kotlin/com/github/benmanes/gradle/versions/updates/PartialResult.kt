@@ -41,39 +41,48 @@ data class UnresolvedInfo
     val userReason: String? = null,
   )
 
+/** A configuration skipped when its inspection failed, as a value that survives the project boundary. */
+data class SkippedInfo(
+  val name: String,
+  val reason: String,
+)
+
 /** The statuses one project observed, as written by its producer task. */
-data class PartialResult(
-  val formatVersion: Int,
-  val projectPath: String,
-  val statuses: List<PartialStatus>,
-  val buildscriptStatuses: List<PartialStatus>,
-) {
-  fun toJson(): String = adapter.toJson(this)
+data class PartialResult
+  @JvmOverloads
+  constructor(
+    val formatVersion: Int,
+    val projectPath: String,
+    val statuses: List<PartialStatus>,
+    val buildscriptStatuses: List<PartialStatus>,
+    val skipped: List<SkippedInfo> = emptyList(),
+  ) {
+    fun toJson(): String = adapter.toJson(this)
 
-  companion object {
-    /**
-     * Bumped when the shape changes incompatibly; a field with a compatible default reads from an
-     * older partial as that default.
-     */
-    const val FORMAT_VERSION: Int = 1
+    companion object {
+      /**
+       * Bumped when the shape changes incompatibly; a field with a compatible default reads from an
+       * older partial as that default.
+       */
+      const val FORMAT_VERSION: Int = 1
 
-    private val adapter =
-      Moshi.Builder()
-        .addLast(KotlinJsonAdapterFactory())
-        .build()
-        .adapter(PartialResult::class.java)
-        .serializeNulls()
+      private val adapter =
+        Moshi.Builder()
+          .addLast(KotlinJsonAdapterFactory())
+          .build()
+          .adapter(PartialResult::class.java)
+          .serializeNulls()
 
-    @JvmStatic
-    fun fromJson(json: String): PartialResult {
-      val result = requireNotNull(adapter.fromJson(json)) { "Empty partial result" }
-      require(result.formatVersion == FORMAT_VERSION) {
-        "Unsupported partial result format ${result.formatVersion}, expected $FORMAT_VERSION; re-run the build"
+      @JvmStatic
+      fun fromJson(json: String): PartialResult {
+        val result = requireNotNull(adapter.fromJson(json)) { "Empty partial result" }
+        require(result.formatVersion == FORMAT_VERSION) {
+          "Unsupported partial result format ${result.formatVersion}, expected $FORMAT_VERSION; re-run the build"
+        }
+        return result
       }
-      return result
     }
   }
-}
 
 /**
  * Merges statuses observed across projects, keeping one entry per coordinate key unless a

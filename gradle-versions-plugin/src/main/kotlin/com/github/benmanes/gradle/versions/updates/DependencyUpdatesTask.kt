@@ -2,6 +2,7 @@ package com.github.benmanes.gradle.versions.updates
 
 import com.github.benmanes.gradle.versions.reporter.Reporter
 import com.github.benmanes.gradle.versions.reporter.result.Result
+import com.github.benmanes.gradle.versions.reporter.result.SkippedConfiguration
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentFilter
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
@@ -265,10 +266,13 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
             partial.buildscriptStatuses.map { it.copy(projectPath = partial.projectPath) }
           },
         )
+    val skipped =
+      partials
+        .flatMap { partial -> partial.skipped.map { SkippedConfiguration(partial.projectPath, it.name, it.reason) } }
 
     reporterFor(
       statuses, projectPath, logger, revision, outputFormatter(), outputDirectory(), reportfileName,
-      checkForGradleUpdate, gradleVersionsApiBaseUrl, gradleReleaseChannel,
+      checkForGradleUpdate, gradleVersionsApiBaseUrl, gradleReleaseChannel, skipped,
     ).write()
   }
 

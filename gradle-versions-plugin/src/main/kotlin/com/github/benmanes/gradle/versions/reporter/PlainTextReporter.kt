@@ -50,6 +50,7 @@ class PlainTextReporter
         writeUnresolved(printStream, result)
       }
 
+      writeSkipped(printStream, result)
       writeGradleUpdates(printStream, result)
     }
 
@@ -170,6 +171,26 @@ class PlainTextReporter
           }
           dependency.projectUrl?.let {
             printStream.println("     $it")
+          }
+        }
+      }
+    }
+
+    private fun writeSkipped(
+      printStream: OutputStream,
+      result: Result,
+    ) {
+      val skipped = result.skipped.configurations
+      if (skipped.isNotEmpty()) {
+        val hint = if (isInfoEnabled) "" else " (use --info for details)"
+        printStream.println()
+        printStream.println(
+          "Failed to inspect the dependencies of the following configurations$hint:",
+        )
+        for ((reason, group) in skipped.groupBy { it.reason }) {
+          printStream.println(" - " + reason.lineSequence().first())
+          for (configuration in group) {
+            printStream.println("     '${configuration.name}' in ${projectsLabel(listOf(configuration.project))}")
           }
         }
       }
