@@ -842,7 +842,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
     when:
     def result = run()
 
-    then: 'the strictly-only edge is harvested rather than dropped as stating nothing'
+    then: 'the strictly-only edge is kept rather than dropped as stating nothing'
     result.output.contains('PROBE guice platformConstraints=[2.0]')
   }
 
