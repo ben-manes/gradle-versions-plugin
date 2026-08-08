@@ -671,6 +671,67 @@ final class ConstraintsSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
+  def 'Names every importer of an external platform they bound differently'() {
+    given: 'two platform projects importing the same bom, one of them stating a preference'
+    testProjectDir.newFile('settings.gradle') << "include 'platform-a', 'platform-b'\n"
+    ['platform-a': "api platform('com.example:external-bom:1.0')",
+     'platform-b': "api(platform('com.example:external-bom')) { version { prefer '1.0' } }"].each { name, declaration ->
+      testProjectDir.newFolder(name)
+      testProjectDir.newFile("$name/build.gradle") <<
+        """
+          plugins { id 'java-platform' }
+          javaPlatform {
+            allowDependencies()
+          }
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+          dependencies {
+            $declaration
+          }
+        """.stripIndent()
+    }
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation platform(project(':platform-a'))
+          implementation platform(project(':platform-b'))
+          implementation 'com.google.inject:guice'
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then: 'the differing bound costs neither project its place in the attribution'
+    result.output.contains('com.example:external-bom [1.0 -> 2.0]')
+    result.output.contains('imported by the platforms :platform-a, :platform-b\n')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
   def 'Leaves out a platform project that consumes the module as a library'() {
     given: 'one platform project importing a pom module as a platform and another as a library'
     testProjectDir.newFile('settings.gradle') << "include 'platform-a', 'platform-b', 'platform-c'\n"

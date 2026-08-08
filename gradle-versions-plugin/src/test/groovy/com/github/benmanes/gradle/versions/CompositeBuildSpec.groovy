@@ -479,7 +479,7 @@ final class CompositeBuildSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.example:external-bom [1.0 -> 2.0]')
-    result.output.contains('imported by the platform :platforms')
+    result.output.contains('imported by the platform :platforms\n')
     // A platform that only a library's metadata drags in is not one the build imported.
     !result.output.contains('com.example:dragged-bom')
   }
