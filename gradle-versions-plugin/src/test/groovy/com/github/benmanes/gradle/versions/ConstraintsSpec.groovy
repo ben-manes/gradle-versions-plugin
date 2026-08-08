@@ -732,7 +732,7 @@ final class ConstraintsSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
-  def 'Leaves out a platform project that consumes the module as a library'() {
+  def 'Withholds the mark of a module a platform project declares as a library'() {
     given: 'one platform project importing a pom module as a platform and another as a library'
     testProjectDir.newFile('settings.gradle') << "include 'platform-a', 'platform-b', 'platform-c'\n"
     ['platform-a': "api 'com.google.guava:guava:15.0'",
@@ -788,8 +788,8 @@ final class ConstraintsSpec extends Specification {
       .withPluginClasspath()
       .build()
 
-    then: 'only the project whose own edge resolved the platform variant is named'
-    result.output.contains('imported by the platform :platform-b\n')
+    then: 'platform-a declares guava as a library, outranking the mark platform-b would otherwise carry'
+    !result.output.contains('imported by the platform :platform-b')
     !result.output.contains('imported by the platform :platform-a')
     !result.output.contains('imported by the platforms')
     result.output.contains('imported by the platform :platform-c\n')

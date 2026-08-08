@@ -425,7 +425,7 @@ fun reporterFor(
   val projectsByCoordinate = divergentProjects(statuses)
   val contributedCoordinates = contributedCoordinates(statuses, logger)
   val configurationsByCoordinate = namedConfigurations(statuses, contributedCoordinates)
-  val platformProjectsByCoordinate = platformProjectsByCoordinate(statuses)
+  val platformProjectsByCoordinate = platformProjectsByCoordinate(statuses, logger)
   val unresolved = statuses.mapNotNullTo(mutableSetOf()) { it.unresolved }
   val projectUrls =
     statuses
@@ -500,12 +500,33 @@ private fun namedConfigurations(
     }.mapValues { (_, group) -> group.flatMap { it.configurations }.distinct().sorted() }
     .filterValues { it.isNotEmpty() }
 
-/** Returns the platform projects each coordinate was imported through, unioned across projects. */
-private fun platformProjectsByCoordinate(statuses: List<PartialStatus>): Map<Coordinate, List<String>> =
+/**
+ * Returns the platform projects each coordinate was imported through, unioned across projects.
+ * Withheld when a project outside that importer set declares the coordinate, since a declaration
+ * anywhere else is the row to edit and the mark would point somewhere else. A declaring project
+ * that is itself one of the named importers is not a disagreement: the mark already points at it.
+ */
+private fun platformProjectsByCoordinate(
+  statuses: List<PartialStatus>,
+  logger: Logger,
+): Map<Coordinate, List<String>> =
   statuses
-    .filter { it.platformProjects.isNotEmpty() }
     .groupBy { it.coordinate }
-    .mapValues { (_, group) -> group.flatMap { it.platformProjects }.distinct().sorted() }
+    .filterValues { group -> group.any { it.platformProjects.isNotEmpty() } }
+    .filter { (coordinate, group) ->
+      val importers = group.flatMap { it.platformProjects }.toSet()
+      val declared =
+        group.any {
+          it.platformProjects.isEmpty() && !it.contributed && it.projectPath !in importers
+        }
+      if (declared) {
+        logger.info(
+          "A project outside ${coordinate.groupId}:${coordinate.artifactId}'s platform importers " +
+            "declares it, so the platform mark is withheld",
+        )
+      }
+      !declared
+    }.mapValues { (_, group) -> group.flatMap { it.platformProjects }.distinct().sorted() }
 
 /** Returns the projects behind each version of a key whose declared versions diverge. */
 private fun divergentProjects(statuses: List<PartialStatus>): Map<Coordinate, List<String>> {

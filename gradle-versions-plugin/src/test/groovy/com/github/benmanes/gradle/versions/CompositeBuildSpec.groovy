@@ -872,6 +872,137 @@ final class CompositeBuildSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
+  def 'Withholds the platform mark when another project declares the imported platform'() {
+    given:
+    testProjectDir.newFile('settings.gradle') <<
+      """
+        include 'app', 'lib', 'platform-b'
+      """.stripIndent()
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'io.github.ben-manes.versions'
+        }
+
+        allprojects {
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('platform-b')
+    testProjectDir.newFile('platform-b/build.gradle') <<
+      """
+        plugins { id 'java-platform' }
+        javaPlatform {
+          allowDependencies()
+        }
+        dependencies {
+          api platform('com.example:external-bom:1.0')
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('app')
+    testProjectDir.newFile('app/build.gradle') <<
+      """
+        apply plugin: 'java-library'
+        dependencies {
+          implementation platform('com.example:external-bom:1.0')
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('lib')
+    testProjectDir.newFile('lib/build.gradle') <<
+      """
+        apply plugin: 'java-library'
+        dependencies {
+          implementation platform(project(':platform-b'))
+        }
+      """.stripIndent()
+
+    when:
+    def result = run('dependencyUpdates', '-DoutputFormatter=json', '--info', '--no-parallel')
+    def jsonReport = new JsonSlurper()
+      .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    def boms = jsonReport.outdated.dependencies.findAll { it.name == 'external-bom' }
+    boms.size() == 1
+    !boms[0].containsKey('platformProjects')
+    !result.output.contains('imported by the platform')
+    result.output.contains(
+      "A project outside com.example:external-bom's platform importers declares it, " +
+        'so the platform mark is withheld')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
+  def 'Names the platform importer by its build-tree path when the report runs in an included build'() {
+    given: 'the composite runs the aggregating task from inside the included build, not the root'
+    testProjectDir.newFile('settings.gradle') << "includeBuild 'child'"
+    testProjectDir.newFile('build.gradle') << ''
+    testProjectDir.newFolder('child')
+    testProjectDir.newFile('child/settings.gradle') <<
+      """
+        rootProject.name = 'child'
+        include 'app', 'platform-a'
+      """.stripIndent()
+    testProjectDir.newFile('child/build.gradle') <<
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'io.github.ben-manes.versions'
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        allprojects {
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('child/platform-a')
+    testProjectDir.newFile('child/platform-a/build.gradle') <<
+      """
+        plugins { id 'java-platform' }
+        javaPlatform {
+          allowDependencies()
+        }
+        dependencies {
+          api platform('com.example:external-bom:1.0')
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('child/app')
+    testProjectDir.newFile('child/app/build.gradle') <<
+      """
+        apply plugin: 'java-library'
+        dependencies {
+          implementation platform(project(':platform-a'))
+        }
+      """.stripIndent()
+
+    when:
+    def result = run(':child:dependencyUpdates')
+
+    then: 'the importer is named by its path in the build tree, not platform-a\'s path within child'
+    result.task(':child:dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.example:external-bom [1.0 -> 2.0]')
+    result.output.contains('imported by the platform :child:platform-a\n')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
   def 'Merges an imported platform with the version a library elsewhere drags in'() {
     given: 'a library drags a newer version of the same bom the platform states'
     testProjectDir.newFile('settings.gradle') << "include 'platform-a'"
