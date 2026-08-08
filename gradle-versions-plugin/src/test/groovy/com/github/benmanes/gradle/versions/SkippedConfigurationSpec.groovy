@@ -254,4 +254,80 @@ final class SkippedConfigurationSpec extends Specification {
     !result.output.contains('::classpath')
     result.output.contains('root project')
   }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/801')
+  def 'A project inside a composite build whose configurations are skipped is annotated beside the surviving entries'() {
+    given:
+    testProjectDir.newFile('settings.gradle') <<
+      """
+        includeBuild('child') {
+          dependencySubstitution {
+            substitute module('com.example:swapped') using project(':')
+          }
+        }
+        include 'app', 'lib'
+      """.stripIndent()
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'io.github.ben-manes.versions'
+        }
+
+        dependencyUpdates {
+          checkForGradleUpdate = false
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('app')
+    testProjectDir.newFile('app/build.gradle') <<
+      """
+        apply plugin: 'java-library'
+        apply plugin: 'io.github.ben-manes.versions'
+
+        repositories {
+          maven { url '${mavenRepoUrl}' }
+        }
+
+        dependencies {
+          api 'com.example:swapped:1.0'
+          api 'com.google.inject:guice:2.0'
+        }
+
+        ${throwingStrategy()}
+      """.stripIndent()
+    testProjectDir.newFolder('lib')
+    testProjectDir.newFile('lib/build.gradle') <<
+      """
+        apply plugin: 'java-library'
+
+        repositories {
+          maven { url '${mavenRepoUrl}' }
+        }
+
+        dependencies {
+          api 'com.google.inject:guice:2.0'
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('child')
+    testProjectDir.newFile('child/settings.gradle') << "rootProject.name = 'child'"
+    testProjectDir.newFile('child/build.gradle') <<
+      """
+        plugins {
+          id 'java-library'
+        }
+
+        group = 'com.example'
+        version = '1.0'
+      """.stripIndent()
+
+    when:
+    def result = run([':dependencyUpdates', '-DoutputFormatter=plain,json', '--no-parallel'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+
+    def json = new JsonSlurper().parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
+    json.skipped.count == 6
+    json.skipped.configurations.every { it.project == ':app' }
+  }
 }
