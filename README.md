@@ -2051,6 +2051,29 @@ the section above it, and the topmost migrates to the current release.
 *Important*s are must-dos, *Tip*s are actions you should or may want to take,
 and *Note*s are things worth knowing that need no action.
 
+### v0.60.0
+
+v0.61.0 names a report entry by the project's path in the build tree, so the
+projects of an included build no longer share the `:` that every build answers
+for its own root:
+
+> [!IMPORTANT]
+> - A project of an included build is named by its build tree path, so an entry
+>   reads `declared in :child` where it read `declared in root project` (see
+>   [Multi-project builds](#multi-project-builds)). The JSON and XML reports
+>   carry the same paths in `projects`.
+> - A `buildSrc` build is named the same way when its task is run from the
+>   outer build, as `:buildSrc:dependencyUpdates`. Its report is headed
+>   `:buildSrc` rather than `:`, and its projects are named beneath that path.
+>   Running the task from inside `buildSrc` makes it the root of its own build
+>   tree, which still reads `:`.
+
+> [!NOTE]
+> A dependency that two builds of a composite declare at different versions is
+> now reported as divergent. The attribution naming the projects behind each
+> version was withheld while every entry carried the same project path, which
+> in a composite was always `:`.
+
 ### v0.59.0
 
 v0.60.0 names the configuration a dependency was declared directly against, so a
