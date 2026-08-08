@@ -62,6 +62,12 @@ private fun configurationsLabel(names: List<String>): String {
 /** Returns the line describing where the dependency's version came from, or null for a declared one. */
 internal fun sourceLabel(dependency: Dependency): String? {
   val projects = dependency.projects
+  val platforms = dependency.platformProjects?.takeIf { it.isNotEmpty() }
+  if (platforms != null) {
+    val noun = if (platforms.size == 1) "platform" else "platforms"
+    val imported = "imported by the $noun ${projectsLabel(platforms)}"
+    return if (projects == null) imported else "$imported in ${projectsLabel(projects)}"
+  }
   val names = dependency.configurations?.takeIf { it.isNotEmpty() }
   if (dependency.contributed != true) {
     // A configuration is named only when the dependency was declared directly against a resolvable

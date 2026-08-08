@@ -26,6 +26,8 @@ open class Dependency
      * contributed it into when [contributed] is true.
      */
     @AbsentWhenNull open val configurations: List<String>? = null,
+    /** The platform projects the build imports this dependency through, by build tree path. */
+    @AbsentWhenNull open val platformProjects: List<String>? = null,
   ) : Comparable<Dependency> {
     override fun compareTo(other: Dependency): Int {
       return compareValuesBy(
