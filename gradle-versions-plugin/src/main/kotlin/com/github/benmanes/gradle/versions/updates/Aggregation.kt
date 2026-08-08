@@ -551,7 +551,8 @@ private fun warnSkipped(
     val noun = if (group.size == 1) "configuration" else "configurations"
     val names = group.joinToString(", ") { "'${it.name}'" }
     project.logger.warn(
-      "Skipping $noun $names in ${projectsLabel(listOf(project.path))}: " + reason.lineSequence().first(),
+      "Skipping $noun $names in ${projectsLabel(listOf(project.buildTreePath))}: " +
+        reason.lineSequence().first(),
     )
   }
 }

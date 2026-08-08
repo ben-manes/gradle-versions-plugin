@@ -773,6 +773,70 @@ final class CompositeBuildSpec extends Specification {
     including.skipped.count + included.skipped.count == 13
     including.skipped.configurations.every { it.project == ':' }
     included.skipped.configurations.every { it.project == ':child' }
+
+    // The warning accompanying the section names the same project the section does, rather than
+    // reporting both builds' roots under the one name each answers for itself.
+    result.output.contains('in :child:')
+    result.output.count('in root project:') == 1
+  }
+
+  def 'Names an included build that aggregates its own projects by its build tree path'() {
+    given:
+    testProjectDir.newFile('settings.gradle') << "includeBuild 'child'"
+    testProjectDir.newFile('build.gradle') << ''
+    testProjectDir.newFolder('child')
+    testProjectDir.newFile('child/settings.gradle') <<
+      """
+        rootProject.name = 'child'
+        include 'alpha', 'beta'
+      """.stripIndent()
+    testProjectDir.newFile('child/build.gradle') <<
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'io.github.ben-manes.versions'
+
+        allprojects {
+          apply plugin: 'java'
+
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('child', 'alpha')
+    testProjectDir.newFile('child/alpha/build.gradle') <<
+      """
+        dependencies {
+          implementation 'com.google.inject:guice:2.0'
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('child', 'beta')
+    testProjectDir.newFile('child/beta/build.gradle') <<
+      """
+        dependencies {
+          implementation 'com.google.guava:guava:15.0'
+        }
+      """.stripIndent()
+
+    when:
+    def result = run(':child:dependencyUpdates')
+
+    then:
+    result.task(':child:dependencyUpdates').outcome == SUCCESS
+    result.output.contains(':child Project Dependency Updates')
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+
+    // The projects the completeness check expects are named the way the partial results stamp
+    // them, so an included build that aggregates does not report its own projects as absent.
+    !result.output.contains('The dependency updates report is missing')
   }
 
   def 'Names the projects that declare a divergent version by their build tree paths'() {
