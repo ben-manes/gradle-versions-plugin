@@ -514,7 +514,8 @@ class Resolver(
    * report entry and is skipped. The constraint the platform project's declaration states rides
    * along, so a stated bound holds an imported row like any declared one. Each qualifying edge's
    * dequeued source project, when it is one, is recorded as the coordinate's importer, by build
-   * tree path.
+   * tree path. Every importer of a coordinate is recorded, while the bound is the one the first
+   * qualifying edge stated, so a row that names several projects states the bound of one of them.
    */
   private fun getPlatformSources(
     root: ResolvedComponentResult,
@@ -532,14 +533,15 @@ class Resolver(
           continue
         }
         val selected = dependency.selected
-        val firstVisit = seen.add(selected.id)
         // The edge's own variant, rather than the component's set, since a module published with
         // only a pom offers both a library and a platform variant and a build can consume each.
+        // Marking a component seen only once past this gate keeps an edge that resolved a library
+        // variant from barring the platform edge that reaches the same project later.
         if (!isPlatform(dependency.resolvedVariant)) {
           continue
         }
         if (selected.id is ProjectComponentIdentifier) {
-          if (firstVisit) {
+          if (seen.add(selected.id)) {
             pending.add(selected)
           }
         } else {
