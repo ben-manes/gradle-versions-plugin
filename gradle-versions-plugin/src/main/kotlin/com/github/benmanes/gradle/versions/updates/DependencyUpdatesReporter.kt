@@ -26,7 +26,7 @@ import java.util.TreeSet
 /**
  * Sorts and writes the resolved dependency reports.
  *
- * @property projectPath The path of the project evaluated against.
+ * @property projectPath The build tree path of the project evaluated against.
  * @property logger The logger to report generated report files with.
  * @property revision The revision strategy evaluated with.
  * @property outputFormatterArgument The output formatter strategy evaluated with.

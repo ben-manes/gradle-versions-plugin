@@ -765,14 +765,91 @@ final class CompositeBuildSpec extends Specification {
     result.task(':child:dependencyUpdates').outcome == SUCCESS
     result.output.contains('Failed to inspect the dependencies of the following configurations')
 
-    // Each build reports on its own projects. Both name their root ':', so the counts are what
-    // distinguish an owned entry from one collected out of the other build's report.
+    // Each build reports on its own projects, named by the path they hold in the build tree so
+    // that the included build's root is told apart from the including build's.
     [including, included].every { it.skipped.count > 0 }
     [including, included].every { it.skipped.configurations*.name.contains('compileClasspath') }
     [including, included].every { it.skipped.configurations*.name.unique().size() == it.skipped.count }
     including.skipped.count + included.skipped.count == 13
     including.skipped.configurations.every { it.project == ':' }
-    included.skipped.configurations.every { it.project == ':' }
+    included.skipped.configurations.every { it.project == ':child' }
+  }
+
+  def 'Names the projects that declare a divergent version by their build tree paths'() {
+    given:
+    testProjectDir.newFile('settings.gradle') << "includeBuild 'child'"
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'io.github.ben-manes.versions'
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        configurations.create('tool') {
+          canBeResolved = true
+          canBeConsumed = false
+        }
+
+        dependencies {
+          dependencyUpdatesAggregation 'com.example:child:1.0'
+          tool 'com.example:jvm-library:2.0'
+        }
+      """.stripIndent()
+    includedBuild(
+      'child',
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'io.github.ben-manes.versions'
+
+        group = 'com.example'
+        version = '1.0'
+
+        configurations.maybeCreate('default')
+        afterEvaluate {
+          artifacts.add('default', file('child.jar'))
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        configurations.create('tool') {
+          canBeResolved = true
+          canBeConsumed = false
+        }
+
+        dependencies {
+          tool 'com.example:jvm-library:1.0'
+        }
+      """.stripIndent(),
+    )
+    testProjectDir.newFile('child/child.jar')
+
+    when:
+    def result = run('dependencyUpdates', '-DoutputFormatter=plain,json')
+    def json = report('')
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+
+    // Both roots answer ':' for their own build, which read as one project and withheld the
+    // divergence altogether rather than naming the two that disagree.
+    json.outdated.dependencies.find { it.name == 'jvm-library' }.projects == [':child']
+    json.current.dependencies.find { it.name == 'jvm-library' }.projects == [':']
+    result.output.contains("declared in the 'tool' configuration in root project")
+    result.output.contains("declared in the 'tool' configuration in :child")
   }
 
   private def report(String path) {

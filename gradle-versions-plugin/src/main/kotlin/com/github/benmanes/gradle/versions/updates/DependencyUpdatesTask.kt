@@ -172,11 +172,11 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   @get:PathSensitive(PathSensitivity.NONE)
   val partialResults: ConfigurableFileCollection = project.files()
 
-  /** Captured at configuration time; replaces `project.path` at execution. */
+  /** Captured at configuration time; replaces `project.buildTreePath` at execution. */
   @Internal
-  var projectPath: String = project.path
+  var projectPath: String = project.buildTreePath
 
-  /** The project paths expected to contribute partial results, wired by the plugin. */
+  /** The build tree paths expected to contribute partial results, wired by the plugin. */
   @Internal
   var aggregatedProjectPaths: Set<String> = emptySet()
 

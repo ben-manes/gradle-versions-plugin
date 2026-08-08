@@ -7,7 +7,7 @@ import java.io.PrintStream
 /**
  * A base result object reporter for the dependency updates results.
  *
- * @property projectPath The path of the project evaluated against.
+ * @property projectPath The build tree path of the project evaluated against.
  * @property revision The revision strategy evaluated with.
  * @property gradleReleaseChannel The gradle release channel to use for reporting.
  */
