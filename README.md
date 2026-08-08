@@ -2053,9 +2053,9 @@ and *Note*s are things worth knowing that need no action.
 
 ### v0.60.0
 
-v0.61.0 names a report entry by the project's path in the build tree, so the
-projects of an included build no longer share the `:` that every build answers
-for its own root:
+v0.61.0 names a project by its path in the build tree wherever the report shows
+one, so the projects of an included build no longer share the `:` that every
+build answers for its own root:
 
 > [!IMPORTANT]
 > - A project of an included build is named by its build tree path, so an entry
