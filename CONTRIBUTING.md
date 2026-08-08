@@ -104,9 +104,12 @@ Always create the GitHub release as a draft:
 1. Set `VERSION_NAME` in `gradle.properties` to the release version and merge
    it to `master` as `Prepare the vX.Y.Z release`.
 
-   - Keep the bump alone in its own pull request, so it can be rebased rather
-     than squashed and the version lands in the commit subject rather than in
-     a pull request number.
+   - Keep the bump alone in its own pull request, and to a single commit, so
+     rebasing is the obvious way to merge it. A rebase lands the subject
+     verbatim; the squash button appends the pull request number to it.
+   - Squash locally and force-push if the branch gained commits along the way.
+     Nothing reads the subject, so a squashed bump still releases, but the
+     version reads better without a pull request number beside it.
    - Anything else the release needs, migration notes above all, belongs to
      the pull request whose change called for it.
 
