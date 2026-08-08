@@ -81,10 +81,16 @@ final class SkippedConfigurationSpec extends Specification {
     entry != null
     entry.project == ':'
     entry.reason.contains('Could not add a component selection rule')
+    entry.reason.contains('Cannot convert the provided notation')
+
+    def report = new File(testProjectDir.root, 'build/dependencyUpdates/report.txt').text
+    report.contains("'compileClasspath' in root project")
 
     def xml = new File(testProjectDir.root, 'build/dependencyUpdates/report.xml').text
     xml.contains('<skipped>')
     xml.contains('<skippedConfiguration>')
+    xml.contains('<project>:</project>')
+    xml.contains('<name>compileClasspath</name>')
 
     def html = new File(testProjectDir.root, 'build/dependencyUpdates/report.html').text
     html.contains('Skipped configurations')
@@ -329,5 +335,102 @@ final class SkippedConfigurationSpec extends Specification {
     def json = new JsonSlurper().parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
     json.skipped.count == 6
     json.skipped.configurations.every { it.project == ':app' }
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/801')
+  def 'Configurations skipped for distinct reasons get a heading and a warning each'() {
+    given:
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'java'
+          id 'io.github.ben-manes.versions'
+        }
+
+        repositories {
+          maven { url '${mavenRepoUrl}' }
+        }
+
+        dependencies {
+          implementation 'com.google.inject:guice:2.0'
+        }
+
+        dependencyUpdates {
+          checkForGradleUpdate = false
+        }
+
+        def attempts = new java.util.concurrent.atomic.AtomicInteger()
+        dependencyUpdates.resolutionStrategy {
+          throw new IllegalStateException('boom ' + attempts.incrementAndGet() + '\\nswallowed detail')
+        }
+      """.stripIndent()
+
+    when:
+    def result = run(['dependencyUpdates', '-DoutputFormatter=plain,json', '--no-parallel'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+
+    def json = new JsonSlurper().parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
+    json.skipped.count > 1
+    json.skipped.configurations*.reason.unique().size() == json.skipped.count
+    json.skipped.configurations*.name == json.skipped.configurations*.name.toSorted()
+
+    def report = new File(testProjectDir.root, 'build/dependencyUpdates/report.txt').text
+    def section = report.substring(report.indexOf('Failed to inspect the dependencies'))
+    section.readLines().count { it.startsWith(' - ') } == json.skipped.count
+    !report.contains('swallowed detail')
+
+    result.output.readLines().count { it.contains('Skipping configuration') } == json.skipped.count
+    !result.output.contains('swallowed detail')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/801')
+  def 'The HTML report keeps a project beside the configuration it skipped'() {
+    given:
+    testProjectDir.newFile('settings.gradle') << "include 'app', 'lib'"
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'io.github.ben-manes.versions'
+        }
+
+        dependencyUpdates {
+          checkForGradleUpdate = false
+        }
+
+        subprojects {
+          apply plugin: 'java'
+          apply plugin: 'io.github.ben-manes.versions'
+
+          repositories {
+            maven { url '${mavenRepoUrl}' }
+          }
+
+          dependencies {
+            implementation 'com.google.inject:guice:2.0'
+          }
+
+          dependencyUpdates.resolutionStrategy {
+            throw new IllegalStateException('boom')
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = run([':dependencyUpdates', '-DoutputFormatter=html', '--no-parallel'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+
+    def html = new File(testProjectDir.root, 'build/dependencyUpdates/report.html').text
+    def rows = (html.substring(html.indexOf('<h2>Skipped configurations</h2>')) =~
+      /<tr><td>(.*?)<\/td><td>(.*?)<\/td><td>(.*?)<\/td><\/tr>/)
+      .collect { [it[1], it[2]] }
+      .findAll { !it[0].startsWith('<b>') }
+
+    rows.every { it[0].split('<br>').length == it[1].split('<br>').length }
+    rows.any { it[0].split('<br>').length > 2 }
+    rows.any { it[0].contains(':app') && it[0].contains(':lib') }
   }
 }
