@@ -49,6 +49,7 @@ import java.util.TreeSet
  * @property configurationsByCoordinate The configurations a plugin contributed each marked coordinate into.
  * @property skipped The configurations whose dependencies could not be inspected because applying the
  * resolutionStrategy to them failed.
+ * @property platformProjectsByCoordinate The platform projects the build imports each coordinate through.
  *
  */
 class DependencyUpdatesReporter(
@@ -73,6 +74,7 @@ class DependencyUpdatesReporter(
   val contributedCoordinates: Set<Coordinate> = emptySet(),
   val configurationsByCoordinate: Map<Coordinate, List<String>> = emptyMap(),
   val skipped: List<SkippedConfiguration> = emptyList(),
+  val platformProjectsByCoordinate: Map<Coordinate, List<String>> = emptyMap(),
 ) {
   @Deprecated("Use the constructor that includes the skipped configurations.")
   constructor(
@@ -272,6 +274,7 @@ class DependencyUpdatesReporter(
       projects = projectsByCoordinate[coordinate],
       contributed = contributedFlag(coordinate),
       configurations = configurationsByCoordinate[coordinate],
+      platformProjects = platformProjectsByCoordinate[coordinate],
     )
   }
 
@@ -289,6 +292,7 @@ class DependencyUpdatesReporter(
       projects = projectsByCoordinate[coordinate],
       contributed = contributedFlag(coordinate),
       configurations = configurationsByCoordinate[coordinate],
+      platformProjects = platformProjectsByCoordinate[coordinate],
     )
   }
 
@@ -314,6 +318,7 @@ class DependencyUpdatesReporter(
       reason = info.failureText,
       contributed = contributedFlag(declared),
       configurations = configurationsByCoordinate[declared],
+      platformProjects = platformProjectsByCoordinate[declared],
     )
   }
 
@@ -338,6 +343,7 @@ class DependencyUpdatesReporter(
       projects = projectsByCoordinate[coordinate],
       contributed = contributedFlag(coordinate),
       configurations = configurationsByCoordinate[coordinate],
+      platformProjects = platformProjectsByCoordinate[coordinate],
     )
   }
 
@@ -419,6 +425,7 @@ fun reporterFor(
   val projectsByCoordinate = divergentProjects(statuses)
   val contributedCoordinates = contributedCoordinates(statuses, logger)
   val configurationsByCoordinate = namedConfigurations(statuses, contributedCoordinates)
+  val platformProjectsByCoordinate = platformProjectsByCoordinate(statuses)
   val unresolved = statuses.mapNotNullTo(mutableSetOf()) { it.unresolved }
   val projectUrls =
     statuses
@@ -444,7 +451,7 @@ fun reporterFor(
     reportfileName, currentVersions, latestVersions, upToDateVersions, downgradeVersions,
     upgradeVersions, versions.undeclared, unresolved, projectUrls, gradleUpdateChecker,
     gradleReleaseChannel, versions.latestByCurrent, projectsByCoordinate, contributedCoordinates,
-    configurationsByCoordinate, skipped,
+    configurationsByCoordinate, skipped, platformProjectsByCoordinate,
   )
 }
 
@@ -492,6 +499,13 @@ private fun namedConfigurations(
         }
     }.mapValues { (_, group) -> group.flatMap { it.configurations }.distinct().sorted() }
     .filterValues { it.isNotEmpty() }
+
+/** Returns the platform projects each coordinate was imported through, unioned across projects. */
+private fun platformProjectsByCoordinate(statuses: List<PartialStatus>): Map<Coordinate, List<String>> =
+  statuses
+    .filter { it.platformProjects.isNotEmpty() }
+    .groupBy { it.coordinate }
+    .mapValues { (_, group) -> group.flatMap { it.platformProjects }.distinct().sorted() }
 
 /** Returns the projects behind each version of a key whose declared versions diverge. */
 private fun divergentProjects(statuses: List<PartialStatus>): Map<Coordinate, List<String>> {

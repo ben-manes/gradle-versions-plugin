@@ -20,6 +20,12 @@ data class PartialStatus
     val configurations: List<String> = emptyList(),
     /** The observing project's build tree path, stamped by the accumulator rather than serialized. */
     @Transient val projectPath: String? = null,
+    /**
+     * The build tree paths of the platform projects the build imports this module through. Trails
+     * the transient projectPath rather than preceding it, since inserting a parameter before it
+     * would replace the shipped arities that end there.
+     */
+    val platformProjects: List<String> = emptyList(),
   ) {
     val coordinate: Coordinate
       get() = Coordinate(group, name, declaredVersion, userReason)
