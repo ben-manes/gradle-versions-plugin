@@ -552,7 +552,8 @@ final class CompositeBuildSpec extends Specification {
     !result.output.contains('com.example:external-bom [1.0 -> 2.0]')
   }
 
-  def 'Reaches no imported platform when every declared module is versioned'() {
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
+  def 'Reports the imported platform when every declared module is versioned'() {
     given:
     testProjectDir.newFile('settings.gradle') << "includeBuild 'platforms'"
     testProjectDir.newFile('build.gradle') <<
@@ -608,11 +609,9 @@ final class CompositeBuildSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.example:external-bom [1.0 -> 2.0]')
+    result.output.contains('imported by the platform :platforms\n')
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
-    // A build whose declarations all carry versions resolves the current copy non-transitively
-    // (issue #231), so the platform project's edges are absent and its import is out of the walk's
-    // reach. Widening that boundary trades the declared current version for the resolved one.
-    !result.output.contains('com.example:external-bom')
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
@@ -753,6 +752,120 @@ final class CompositeBuildSpec extends Specification {
     def boms = jsonReport.outdated.dependencies.findAll { it.name == 'external-bom' }
     boms.size() == 1
     boms[0].platformProjects == [':platform-a', ':platform-b']
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
+  def 'Skips the platform scan when the imported platform cannot be resolved'() {
+    given:
+    testProjectDir.newFile('settings.gradle') << "includeBuild 'platforms'"
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation platform('com.example:platforms:1.0')
+          implementation 'com.google.inject:guice'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+      """.stripIndent()
+    includedBuild(
+      'platforms',
+      """
+        plugins {
+          id 'java-platform'
+        }
+
+        group = 'com.example'
+        version = '1.0'
+
+        javaPlatform {
+          allowDependencies()
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          api platform('com.example:missing-bom:9.9')
+        }
+      """.stripIndent(),
+    )
+
+    when:
+    def result = run('dependencyUpdates')
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    !result.output.contains('missing-bom')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
+  def 'Merges an imported platform with the version a library elsewhere drags in'() {
+    given: 'a library drags a newer version of the same bom the platform states'
+    testProjectDir.newFile('settings.gradle') << "include 'platform-a'"
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation platform(project(':platform-a'))
+          implementation 'com.example:external-bom-consumer:1.0'
+          implementation 'com.google.inject:guice'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('platform-a')
+    testProjectDir.newFile('platform-a/build.gradle') <<
+      """
+        plugins { id 'java-platform' }
+        javaPlatform {
+          allowDependencies()
+        }
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+        dependencies {
+          api platform('com.example:external-bom:1.0')
+        }
+      """.stripIndent()
+
+    when:
+    def result = run('dependencyUpdates')
+
+    then: 'one merged row names the platform-stated version and the update the drag cannot hide'
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.example:external-bom [1.0 -> 2.0]')
+    result.output.contains('imported by the platform :platform-a\n')
+    !result.output.contains('com.example:external-bom:2.0')
   }
 
   def 'Reuses the configuration cache across runs of a composite build'() {

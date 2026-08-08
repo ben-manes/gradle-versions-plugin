@@ -467,7 +467,7 @@ class Resolver(
     // Ignore undeclared (hidden) dependencies that appear when resolving a configuration
     coordinates.keys.retainAll(declared.keys + contributed.map { it.key } + substitutions.values)
 
-    val platformSources = if (checkConstraints) getPlatformSources(root, declared.keys) else emptyList()
+    val platformSources = if (checkConstraints) getPlatformSources(configuration, declared.keys) else emptyList()
     val platformSourceKeys = hashSetOf<Coordinate.Key>()
     for (source in platformSources) {
       if (coordinates.putIfAbsent(source.key, source) == null) {
@@ -504,6 +504,33 @@ class Resolver(
   /**
    * Returns the external platforms the build consumes through its own platform projects, such as a
    * BOM that an included build's platform imports and this build reaches by project substitution.
+   *
+   * Resolved from a dedicated copy holding only the configuration's platform-category
+   * declarations, always transitive, so a platform reached only through a project dependency (which
+   * carries no version for the main copy's own #231 flag to key off) is still found, without
+   * perturbing the main copy's resolution.
+   */
+  private fun getPlatformSources(
+    configuration: Configuration,
+    declaredKeys: Set<Coordinate.Key>,
+  ): List<Coordinate> {
+    val platformDependencies =
+      configuration.allDependencies.filterIsInstance<ModuleDependency>().filter { isPlatform(it) }
+    if (platformDependencies.isEmpty()) {
+      return emptyList()
+    }
+    val copy = configuration.copyRecursive().setTransitive(true)
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/781
+    copy.resolutionStrategy.deactivateDependencyLocking()
+    disableAutoTargetJvm(copy)
+    copy.dependencies.clear()
+    copy.dependencies.addAll(platformDependencies)
+    return getPlatformSources(copy.incoming.resolutionResult.root, declaredKeys)
+  }
+
+  /**
+   * Returns the external platforms found by walking the given root, such as a BOM that an included
+   * build's platform imports and this build reaches by project substitution.
    *
    * Such a platform's constraints bound this build's versionless modules while the substituted
    * project hides the coordinate to edit, so each one is reported as an entry of its own. Only a
@@ -855,6 +882,17 @@ class Resolver(
       val category =
         variant.attributes.getAttribute(Category.CATEGORY_ATTRIBUTE)?.name
           ?: variant.attributes.getAttribute(DESUGARED_CATEGORY)
+      return (category == Category.REGULAR_PLATFORM) || (category == Category.ENFORCED_PLATFORM)
+    }
+
+    /**
+     * Whether the dependency declares a platform. A local project dependency carries the typed
+     * [Category] attribute while one desugared by other tooling is a string, so both forms are read.
+     */
+    private fun isPlatform(dependency: ModuleDependency): Boolean {
+      val category =
+        dependency.attributes.getAttribute(Category.CATEGORY_ATTRIBUTE)?.name
+          ?: dependency.attributes.getAttribute(DESUGARED_CATEGORY)
       return (category == Category.REGULAR_PLATFORM) || (category == Category.ENFORCED_PLATFORM)
     }
 
