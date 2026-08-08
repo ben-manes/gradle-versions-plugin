@@ -2,6 +2,7 @@ package com.github.benmanes.gradle.versions
 
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
+import groovy.json.JsonSlurper
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
@@ -432,6 +433,36 @@ final class SettingsPluginAggregationSpec extends Specification {
     // Served in the artifact's place before this was left out of variant selection, rather than
     // failing, so the consumer took the statuses onto its classpath and carried on.
     !new File(testProjectDir.root, 'app/build/late/partial.json').exists()
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/801')
+  def 'Surfaces every projects skipped configurations when applied from settings'() {
+    given:
+    createBuild([])
+    settingsApplying(true)
+    // The measured #801 trigger: a withModule id missing its ':name' half. Declared on the root
+    // task, which is the only one the settings application registers, so it reaches the producer of
+    // every project rather than only the one it was written in.
+    new File(testProjectDir.root, 'build.gradle') <<
+      '''
+        dependencyUpdates.resolutionStrategy {
+          componentSelection { rules ->
+            rules.withModule('com.google.guava') { }
+          }
+        }
+      '''.stripIndent()
+
+    when:
+    def result = run(ISOLATED + ['-DoutputFormatter=plain,json'])
+    def json = new JsonSlurper()
+      .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('Isolated Projects is an incubating feature.')
+    result.output.contains('Failed to inspect the dependencies of the following configurations')
+    json.skipped.configurations*.project.toUnique().toSorted() == [':', ':app', ':lib']
+    json.skipped.configurations*.name.contains('compileClasspath')
   }
 
   def 'Applies once when a project also applies the plugin itself'() {

@@ -2,6 +2,7 @@ package com.github.benmanes.gradle.versions
 
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
+import groovy.json.JsonSlurper
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
@@ -204,6 +205,38 @@ final class IsolatedProjectsAggregationSpec extends Specification {
     // the plugin is applied.
     !result.output.contains('com.google.guava:guava')
     result.output.contains('The dependency updates report is missing :lib')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/801')
+  def 'Names the project of a skipped configuration with isolated projects'() {
+    given:
+    // The measured #801 trigger: a withModule id missing its ':name' half.
+    new File(testProjectDir.root, 'app/build.gradle') <<
+      '''
+        dependencyUpdates.resolutionStrategy {
+          componentSelection { rules ->
+            rules.withModule('com.google.guava') { }
+          }
+        }
+      '''.stripIndent()
+
+    when:
+    def result = run(['-DoutputFormatter=plain,json'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('Isolated Projects is an incubating feature.')
+    // Only the project whose strategy throws loses its dependencies, so the other still reports.
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    !result.output.contains('com.google.inject:guice [')
+
+    // Each project resolves in isolation and the aggregate names it from the partial result it
+    // published, rather than from the project it was read into.
+    def json = new JsonSlurper()
+      .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
+    json.skipped.count > 0
+    json.skipped.configurations.every { it.project == ':app' }
+    json.skipped.configurations*.name.contains('compileClasspath')
   }
 
   def 'Omits a project that has no build script from the warning'() {
