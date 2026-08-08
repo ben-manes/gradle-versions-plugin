@@ -85,6 +85,7 @@ class DependencyStatus {
       info,
       contributed,
       configurations,
+      platformProjects = coordinate.platformProjects,
     )
   }
 

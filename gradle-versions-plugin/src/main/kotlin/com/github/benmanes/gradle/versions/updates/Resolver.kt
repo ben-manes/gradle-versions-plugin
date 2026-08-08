@@ -53,6 +53,12 @@ class Resolver(
 ) {
   private var projectUrls = ConcurrentHashMap<ModuleVersionIdentifier, ProjectUrl>()
 
+  // The platform declarations whose scan threw, so a configuration inheriting the same ones does
+  // not repeat a resolution already known to fail. Only a failure is shared: what a scan finds
+  // depends on the resolving configuration's own attributes, constraints and resolution strategy,
+  // while skipping one costs an attribution at most.
+  private val failedPlatformScans = hashSetOf<Set<ModuleDependency>>()
+
   // Gradle flattens a version-catalog plugin alias to a bare required range on the marker
   // dependency it synthesizes for the buildscript classpath, dropping strictly/prefer/reject.
   // https://github.com/ben-manes/gradle-versions-plugin/issues/755
@@ -398,9 +404,19 @@ class Resolver(
         }
     // An empty configuration is still resolved below, so that a listener contributing to it has
     // run by the time the declared set is read again. That resolution costs nothing. One holding
-    // only project or file dependencies is skipped, as resolving it would not.
+    // only project or file dependencies is skipped, as resolving it would not, unless it imports
+    // a platform: scan first, and keep the cheap exit when the scan has nothing to say. This path
+    // resolved nothing at all before, so the scan is its first resolution rather than a second one.
     if (declared.isEmpty() && configuration.allDependencies.isNotEmpty()) {
-      return CurrentCoordinates(emptyMap(), emptyMap(), emptySet())
+      val platformSources = if (checkConstraints) getPlatformSources(configuration, declared.keys) else emptyList()
+      if (platformSources.isEmpty()) {
+        return CurrentCoordinates(emptyMap(), emptyMap(), emptySet())
+      }
+      return CurrentCoordinates(
+        platformSources.associateBy { it.key },
+        emptyMap(),
+        platformSources = platformSources,
+      )
     }
 
     // https://github.com/ben-manes/gradle-versions-plugin/issues/231
@@ -467,11 +483,11 @@ class Resolver(
     // Ignore undeclared (hidden) dependencies that appear when resolving a configuration
     coordinates.keys.retainAll(declared.keys + contributed.map { it.key } + substitutions.values)
 
-    val platformSources = if (checkConstraints) getPlatformSources(root, declared.keys) else emptyList()
-    val harvestedKeys = hashSetOf<Coordinate.Key>()
+    val platformSources = if (checkConstraints) getPlatformSources(configuration, declared.keys) else emptyList()
+    val platformSourceKeys = hashSetOf<Coordinate.Key>()
     for (source in platformSources) {
       if (coordinates.putIfAbsent(source.key, source) == null) {
-        harvestedKeys.add(source.key)
+        platformSourceKeys.add(source.key)
       }
     }
 
@@ -479,7 +495,7 @@ class Resolver(
     // listener) is missing from the snapshot taken before any configuration was first resolved, and
     // is not a substitution target, which traces to a real declaration.
     val contributedKeys =
-      coordinates.keys - declaredBeforeActions - substitutions.values.toSet() - harvestedKeys
+      coordinates.keys - declaredBeforeActions - substitutions.values.toSet() - platformSourceKeys
 
     // A plugin that adds its private classpath eagerly, at apply time, is indistinguishable from a
     // declaration by the time the snapshot above is taken, so what it leaves behind is named instead:
@@ -505,51 +521,130 @@ class Resolver(
    * Returns the external platforms the build consumes through its own platform projects, such as a
    * BOM that an included build's platform imports and this build reaches by project substitution.
    *
+   * Resolved from a dedicated copy holding only the configuration's platform-category
+   * declarations, always transitive, so a platform reached only through a project dependency (which
+   * carries no version for the main copy's own #231 flag to key off) is still found, without
+   * perturbing the main copy's resolution. That copy is a second resolution of every configuration
+   * declaring a platform, so a build's own beforeResolve hook runs once more than it did.
+   */
+  private fun getPlatformSources(
+    configuration: Configuration,
+    declaredKeys: Set<Coordinate.Key>,
+  ): List<Coordinate> {
+    val platformDependencies =
+      configuration.allDependencies.filterIsInstance<ModuleDependency>().filter { isPlatform(it) }
+    if (platformDependencies.isEmpty() || platformDependencies.toSet() in failedPlatformScans) {
+      return emptyList()
+    }
+    return try {
+      getPlatformSources(resolvePlatformRoot(configuration, platformDependencies), declaredKeys)
+    } catch (e: Exception) {
+      // The scan is an extra resolution the report can do without: it is always transitive and
+      // carries the build's own resolution strategy, so a build with failOnVersionConflict() can
+      // throw here even though the main, non-transitive copy resolved fine. Losing one
+      // attribution beats losing every row of the configuration.
+      failedPlatformScans.add(platformDependencies.toSet())
+      project.logger.info("Failed to resolve the platforms declared by ${configuration.name}", e)
+      emptyList()
+    }
+  }
+
+  /** Returns the root of resolving the configuration's platform declarations, always transitive. */
+  private fun resolvePlatformRoot(
+    configuration: Configuration,
+    platformDependencies: List<ModuleDependency>,
+  ): ResolvedComponentResult {
+    val copy = configuration.copyRecursive().setTransitive(true)
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/781
+    copy.resolutionStrategy.deactivateDependencyLocking()
+    disableAutoTargetJvm(copy)
+    copy.dependencies.clear()
+    // Copied rather than shared, as copyRecursive does for the set cleared above: a withDependencies
+    // action carried onto this copy would otherwise mutate the build's own declarations.
+    copy.dependencies.addAll(platformDependencies.map { it.copy() })
+    return copy.incoming.resolutionResult.root
+  }
+
+  /**
+   * Returns the external platforms found by walking the given root, such as a BOM that an included
+   * build's platform imports and this build reaches by project substitution.
+   *
    * Such a platform's constraints bound this build's versionless modules while the substituted
    * project hides the coordinate to edit, so each one is reported as an entry of its own. Only a
-   * chain of platform variants that stays in project components until the harvested module
+   * chain of platform variants that stays in project components until the imported module
    * qualifies: a platform that an external platform imports is that platform's version choice
    * rather than the build's, and one a library drags in is a resolution input, so the walk stops at
    * the first external component either way. A platform the build declares itself already has a
    * report entry and is skipped. The constraint the platform project's declaration states rides
-   * along, so a stated bound holds the harvested row like any declared one.
+   * along, so a stated bound holds an imported row like any declared one. Each qualifying edge's
+   * dequeued source project, when it is one, is recorded as the coordinate's importer, by build
+   * tree path. Every importer of a coordinate is recorded, while the bound is the one the first
+   * qualifying edge stated, so a row that names several projects states the bound of one of them.
    */
   private fun getPlatformSources(
     root: ResolvedComponentResult,
     declaredKeys: Set<Coordinate.Key>,
   ): List<Coordinate> {
-    val sources = mutableListOf<Coordinate>()
+    val sources = linkedMapOf<Coordinate.Key, Coordinate>()
+    val importers = hashMapOf<Coordinate.Key, MutableSet<String>>()
     val seen = hashSetOf(root.id)
     val pending = ArrayDeque(listOf(root))
     while (pending.isNotEmpty()) {
-      for (dependency in pending.removeFirst().dependencies) {
+      val node = pending.removeFirst()
+      val importer = (node.id.takeIf { it != root.id } as? ProjectComponentIdentifier)?.buildTreePath
+      for (dependency in node.dependencies) {
         if (dependency !is ResolvedDependencyResult || dependency.isConstraint) {
           continue
         }
         val selected = dependency.selected
-        if (!seen.add(selected.id) || selected.variants.none { isPlatform(it) }) {
+        // The edge's own variant, rather than the component's set, since a module published with
+        // only a pom offers both a library and a platform variant and a build can consume each.
+        // Marking a component seen only once past this gate keeps an edge that resolved a library
+        // variant from barring the platform edge that reaches the same project later.
+        if (!isPlatform(dependency.resolvedVariant)) {
           continue
         }
         if (selected.id is ProjectComponentIdentifier) {
-          pending.add(selected)
+          if (seen.add(selected.id)) {
+            pending.add(selected)
+          }
         } else {
           val moduleVersion = selected.moduleVersion ?: continue
           val requested = dependency.requested as? ModuleComponentSelector
-          val coordinate =
+          val key = Coordinate.Key(moduleVersion.group, moduleVersion.name)
+          if (key in declaredKeys) {
+            continue
+          }
+          sources.putIfAbsent(
+            key,
             Coordinate(
               moduleVersion.group,
               moduleVersion.name,
               moduleVersion.version,
               userReason = null,
               versionConstraint = requested?.versionConstraint,
-            )
-          if (coordinate.key !in declaredKeys) {
-            sources.add(coordinate)
+            ),
+          )
+          if (importer != null) {
+            importers.getOrPut(key) { sortedSetOf() }.add(importer)
           }
         }
       }
     }
-    return sources
+    // Rebuilt only where an importer was recorded, since the constraint a rebuild carries over is
+    // copied again on the way through and an unattributed coordinate is already what it needs to be.
+    return sources.map { (key, coordinate) ->
+      val importedBy = importers[key] ?: return@map coordinate
+      Coordinate(
+        coordinate.groupId,
+        coordinate.artifactId,
+        coordinate.version,
+        coordinate.userReason,
+        coordinate.versionConstraint,
+        coordinate.platformVersionConstraints,
+        importedBy.toList(),
+      )
+    }
   }
 
   /**
@@ -819,6 +914,10 @@ class Resolver(
     private val ABSOLUTE_URL = Regex("""^[a-zA-Z][a-zA-Z0-9+.-]*://""")
     private val DESUGARED_CATEGORY = Attribute.of(Category.CATEGORY_ATTRIBUTE.name, String::class.java)
 
+    /** Whether the category names a regular or enforced platform. */
+    private fun isPlatformCategory(category: String?): Boolean =
+      (category == Category.REGULAR_PLATFORM) || (category == Category.ENFORCED_PLATFORM)
+
     /**
      * Whether the variant is a platform's. A local project's variant carries the typed [Category]
      * attribute while a published module's is desugared to a string, so both forms are read.
@@ -827,8 +926,17 @@ class Resolver(
       val category =
         variant.attributes.getAttribute(Category.CATEGORY_ATTRIBUTE)?.name
           ?: variant.attributes.getAttribute(DESUGARED_CATEGORY)
-      return (category == Category.REGULAR_PLATFORM) || (category == Category.ENFORCED_PLATFORM)
+      return isPlatformCategory(category)
     }
+
+    /**
+     * Whether the dependency declares a platform. A declaration created by `platform(...)` or
+     * `enforcedPlatform(...)` always carries the typed [Category] attribute; the desugared string
+     * form appears only on published module metadata, which the resolved-variant overload above
+     * reads instead.
+     */
+    private fun isPlatform(dependency: ModuleDependency): Boolean =
+      isPlatformCategory(dependency.attributes.getAttribute(Category.CATEGORY_ATTRIBUTE)?.name)
 
     private fun getUrlFromPom(file: File): String? {
       val pom = XmlSlurper(false, false).parse(file)

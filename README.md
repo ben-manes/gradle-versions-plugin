@@ -610,7 +610,8 @@ a version for every module it declares reaches no further than the platform
 project itself. The walk stops at the first published platform: a
 BOM that BOM imports states the BOM's version choice rather than the build's, and
 a BOM a library brings along as resolution metadata is not one the build
-imported, so neither is reported.
+imported, so neither is reported. The BOM's entry names every platform project
+that imports it, by build tree path.
 
 <details open>
 <summary>Kotlin</summary>

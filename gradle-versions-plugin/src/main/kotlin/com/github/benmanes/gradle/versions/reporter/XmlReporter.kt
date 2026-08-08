@@ -237,6 +237,13 @@ class XmlReporter(
         appendTextChild(document, element, "configuration", configuration)
       }
     }
+    dependency.platformProjects?.let { platformProjects ->
+      val element = document.createElement("platformProjects")
+      dependencyElement.appendChild(element)
+      for (platformProject in platformProjects) {
+        appendTextChild(document, element, "platformProject", platformProject)
+      }
+    }
     return dependencyElement
   }
 

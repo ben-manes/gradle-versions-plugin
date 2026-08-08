@@ -97,6 +97,37 @@ final class PartialResultSpec extends Specification {
     decoded.statuses[0].unresolved.userReason == null
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
+  def 'The platform projects survive the round trip'() {
+    given:
+    def status = new PartialStatus('com.example', 'external-bom', '1.0', null, '1.0', null, null,
+      false, [], ':app', [':platforms'])
+    def result = new PartialResult(PartialResult.FORMAT_VERSION, ':', [status], [])
+
+    when:
+    def json = result.toJson()
+    def decoded = PartialResult.fromJson(json)
+
+    then:
+    json.contains('"platformProjects":[":platforms"]')
+    decoded.statuses[0].platformProjects == [':platforms']
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
+  def 'A partial without the platform projects key reads as none'() {
+    given:
+    def json = '''
+      {"formatVersion":1,"projectPath":":","statuses":[{"group":"com.google.guava",
+      "name":"guava","declaredVersion":"1.0","latestVersion":"1.0"}],"buildscriptStatuses":[]}
+      '''.stripIndent()
+
+    when:
+    def decoded = PartialResult.fromJson(json)
+
+    then:
+    decoded.statuses[0].platformProjects == []
+  }
+
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/801')
   def 'A partial without the skipped key reads as none skipped'() {
     given:

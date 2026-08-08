@@ -20,12 +20,39 @@ data class PartialStatus
     val configurations: List<String> = emptyList(),
     /** The observing project's build tree path, stamped by the accumulator rather than serialized. */
     @Transient val projectPath: String? = null,
+    /**
+     * The build tree paths of the platform projects the build imports this module through. Trails
+     * the transient projectPath rather than preceding it, since inserting a parameter before it
+     * would replace the shipped arities that end there.
+     */
+    val platformProjects: List<String> = emptyList(),
   ) {
     val coordinate: Coordinate
       get() = Coordinate(group, name, declaredVersion, userReason)
 
     val latestCoordinate: Coordinate
       get() = Coordinate(group, name, latestVersion, userReason)
+
+    /**
+     * Keeps the `copy` a release shipped callable, which the generated one no longer is now that
+     * the imported platform projects moved it past ten parameters.
+     */
+    fun copy(
+      group: String = this.group,
+      name: String = this.name,
+      declaredVersion: String = this.declaredVersion,
+      userReason: String? = this.userReason,
+      latestVersion: String = this.latestVersion,
+      projectUrl: String? = this.projectUrl,
+      unresolved: UnresolvedInfo? = this.unresolved,
+      contributed: Boolean = this.contributed,
+      configurations: List<String> = this.configurations,
+      projectPath: String? = this.projectPath,
+    ): PartialStatus =
+      copy(
+        group, name, declaredVersion, userReason, latestVersion, projectUrl, unresolved, contributed,
+        configurations, projectPath, platformProjects,
+      )
   }
 
 /** A resolution failure, as a value that survives the project boundary. */

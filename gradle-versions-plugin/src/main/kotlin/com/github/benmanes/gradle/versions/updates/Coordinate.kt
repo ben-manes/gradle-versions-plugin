@@ -49,6 +49,13 @@ class Coordinate(
   var platformVersionConstraints: List<VersionConstraint> = emptyList()
     private set
 
+  /**
+   * The build tree paths of the platform projects the build imports this module through, empty
+   * otherwise.
+   */
+  var platformProjects: List<String> = emptyList()
+    private set
+
   val key: Key
     get() = Key(groupId, artifactId)
 
@@ -81,6 +88,18 @@ class Coordinate(
       } catch (e: LinkageError) {
         emptyList()
       }
+  }
+
+  internal constructor(
+    groupId: String?,
+    artifactId: String?,
+    version: String?,
+    userReason: String?,
+    versionConstraint: VersionConstraint?,
+    platformVersionConstraints: List<VersionConstraint>,
+    platformProjects: List<String>,
+  ) : this(groupId, artifactId, version, userReason, versionConstraint, platformVersionConstraints) {
+    this.platformProjects = platformProjects
   }
 
   override fun toString(): String {

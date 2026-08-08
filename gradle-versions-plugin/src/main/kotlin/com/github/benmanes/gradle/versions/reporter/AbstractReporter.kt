@@ -59,9 +59,22 @@ private fun configurationsLabel(names: List<String>): String {
   return "the $listed $noun"
 }
 
-/** Returns the line describing where the dependency's version came from, or null for a declared one. */
+/**
+ * Returns the line describing where the dependency's version came from, or null for a declared one.
+ *
+ * A row is handed at most one attribution, ranked by how directly the build can edit the version
+ * reported: a declaration outranks the platform mark, which outranks the plugin's. Which of the
+ * first two a row carries is decided where the statuses are assembled, so the branch order below
+ * settles only what the mark displaces, which is the configurations a declaration named.
+ */
 internal fun sourceLabel(dependency: Dependency): String? {
   val projects = dependency.projects
+  val platforms = dependency.platformProjects?.takeIf { it.isNotEmpty() }
+  if (platforms != null) {
+    val noun = if (platforms.size == 1) "platform" else "platforms"
+    val imported = "imported by the $noun ${projectsLabel(platforms)}"
+    return if (projects == null) imported else "$imported in ${projectsLabel(projects)}"
+  }
   val names = dependency.configurations?.takeIf { it.isNotEmpty() }
   if (dependency.contributed != true) {
     // A configuration is named only when the dependency was declared directly against a resolvable

@@ -542,4 +542,322 @@ final class ConstraintsSpec extends Specification {
     !result.output.contains('log4j-core')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
+  def 'Names the platform project that imports an external platform'() {
+    given: 'a chain of same-build platform projects, only the last of which imports the BOM'
+    testProjectDir.newFile('settings.gradle') << "include 'app-platform', 'test-platform'\n"
+    testProjectDir.newFolder('app-platform')
+    testProjectDir.newFile('app-platform/build.gradle') <<
+      """
+        plugins { id 'java-platform' }
+        javaPlatform {
+          allowDependencies()
+        }
+        dependencies {
+          api platform(project(':test-platform'))
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('test-platform')
+    testProjectDir.newFile('test-platform/build.gradle') <<
+      """
+        plugins { id 'java-platform' }
+        javaPlatform {
+          allowDependencies()
+        }
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+        dependencies {
+          api platform('com.example:external-bom:1.0')
+        }
+      """.stripIndent()
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation platform(project(':app-platform'))
+          implementation 'com.google.inject:guice'
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then: 'the direct importer is named, not the first hop of the chain'
+    result.output.contains('imported by the platform :test-platform\n')
+    !result.output.contains('the platform :app-platform')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
+  def 'Names every platform project that imports the same external platform'() {
+    given: 'two platform projects, each importing the same external bom'
+    testProjectDir.newFile('settings.gradle') << "include 'platform-a', 'platform-b'\n"
+    ['platform-a', 'platform-b'].each { name ->
+      testProjectDir.newFolder(name)
+      testProjectDir.newFile("$name/build.gradle") <<
+        """
+          plugins { id 'java-platform' }
+          javaPlatform {
+            allowDependencies()
+          }
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+          dependencies {
+            api platform('com.example:external-bom:1.0')
+          }
+        """.stripIndent()
+    }
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation platform(project(':platform-a'))
+          implementation platform(project(':platform-b'))
+          implementation 'com.google.inject:guice'
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then:
+    result.output.contains('imported by the platforms :platform-a, :platform-b\n')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
+  def 'Names every importer of an external platform they bound differently'() {
+    given: 'two platform projects importing the same bom, one of them stating a preference'
+    testProjectDir.newFile('settings.gradle') << "include 'platform-a', 'platform-b'\n"
+    ['platform-a': "api platform('com.example:external-bom:1.0')",
+     'platform-b': "api(platform('com.example:external-bom')) { version { prefer '1.0' } }"].each { name, declaration ->
+      testProjectDir.newFolder(name)
+      testProjectDir.newFile("$name/build.gradle") <<
+        """
+          plugins { id 'java-platform' }
+          javaPlatform {
+            allowDependencies()
+          }
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+          dependencies {
+            $declaration
+          }
+        """.stripIndent()
+    }
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation platform(project(':platform-a'))
+          implementation platform(project(':platform-b'))
+          implementation 'com.google.inject:guice'
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then: 'the differing bound costs neither project its place in the attribution'
+    result.output.contains('com.example:external-bom [1.0 -> 2.0]')
+    result.output.contains('imported by the platforms :platform-a, :platform-b\n')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
+  def 'Withholds the mark of a module a platform project declares as a library'() {
+    given: 'one platform project importing a pom module as a platform and another as a library'
+    testProjectDir.newFile('settings.gradle') << "include 'platform-a', 'platform-b', 'platform-c'\n"
+    ['platform-a': "api 'com.google.guava:guava:15.0'",
+     'platform-b': "api platform('com.google.guava:guava:15.0')",
+     'platform-c': "api platform('com.example:external-bom:1.0')"].each { name, declaration ->
+      testProjectDir.newFolder(name)
+      testProjectDir.newFile("$name/build.gradle") <<
+        """
+          plugins { id 'java-platform' }
+          javaPlatform {
+            allowDependencies()
+          }
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+          dependencies {
+            $declaration
+          }
+        """.stripIndent()
+    }
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation platform(project(':platform-a'))
+          implementation platform(project(':platform-b'))
+          implementation platform(project(':platform-c'))
+          implementation 'com.google.inject:guice'
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then: 'platform-a declares guava as a library, outranking the mark platform-b would otherwise carry'
+    !result.output.contains('imported by the platform :platform-b')
+    !result.output.contains('imported by the platform :platform-a')
+    !result.output.contains('imported by the platforms')
+    result.output.contains('imported by the platform :platform-c\n')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
+  def 'Does not skip the configuration when the platform scan throws under failOnVersionConflict'() {
+    given: 'two platform projects import the same bom at different versions, conflicting transitively'
+    testProjectDir.newFile('settings.gradle') << "include 'platform-a', 'platform-b'\n"
+    ['platform-a': '1.0', 'platform-b': '2.0'].each { name, version ->
+      testProjectDir.newFolder(name)
+      testProjectDir.newFile("$name/build.gradle") <<
+        """
+          plugins { id 'java-platform' }
+          javaPlatform {
+            allowDependencies()
+          }
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+          dependencies {
+            api platform('com.example:external-bom:$version')
+          }
+        """.stripIndent()
+    }
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        configurations.all {
+          resolutionStrategy.failOnVersionConflict()
+        }
+
+        dependencies {
+          implementation platform(project(':platform-a'))
+          implementation platform(project(':platform-b'))
+          implementation 'com.google.inject:guice:2.0'
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates', '--info')
+      .withPluginClasspath()
+      .build()
+
+    then: 'the platform scan throwing does not sink the whole configuration'
+    result.output.contains('Failed to resolve the platforms declared by')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    !result.output.contains('Skipping configuration')
+  }
 }
