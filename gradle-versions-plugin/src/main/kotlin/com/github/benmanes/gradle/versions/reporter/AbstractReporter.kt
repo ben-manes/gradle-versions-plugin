@@ -62,9 +62,10 @@ private fun configurationsLabel(names: List<String>): String {
 /**
  * Returns the line describing where the dependency's version came from, or null for a declared one.
  *
- * A row is handed at most one attribution, decided where the statuses are assembled rather than by
- * the order of the branches below: a declaration outranks the platform mark, which outranks the
- * plugin's, ranking them by how directly the build can edit the version reported.
+ * A row is handed at most one attribution, ranked by how directly the build can edit the version
+ * reported: a declaration outranks the platform mark, which outranks the plugin's. Which of the
+ * first two a row carries is decided where the statuses are assembled, so the branch order below
+ * settles only what the mark displaces, which is the configurations a declaration named.
  */
 internal fun sourceLabel(dependency: Dependency): String? {
   val projects = dependency.projects

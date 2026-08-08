@@ -812,6 +812,63 @@ final class CompositeBuildSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
+  def 'Reports the platform an enforcedPlatform declaration imports'() {
+    given:
+    testProjectDir.newFile('settings.gradle') <<
+      """
+        include 'app', 'platform-a'
+      """.stripIndent()
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'io.github.ben-manes.versions'
+        }
+
+        allprojects {
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('platform-a')
+    testProjectDir.newFile('platform-a/build.gradle') <<
+      """
+        plugins { id 'java-platform' }
+        javaPlatform {
+          allowDependencies()
+        }
+        dependencies {
+          api platform('com.example:external-bom:1.0')
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('app')
+    testProjectDir.newFile('app/build.gradle') <<
+      """
+        apply plugin: 'java-library'
+        dependencies {
+          implementation enforcedPlatform(project(':platform-a'))
+        }
+      """.stripIndent()
+
+    when:
+    def result = run('dependencyUpdates', '-DoutputFormatter=json', '--no-parallel')
+    def jsonReport = new JsonSlurper()
+      .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    def boms = jsonReport.outdated.dependencies.findAll { it.name == 'external-bom' }
+    boms.size() == 1
+    boms[0].platformProjects == [':platform-a']
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
   def 'Skips the platform scan when the imported platform cannot be resolved'() {
     given:
     testProjectDir.newFile('settings.gradle') << "includeBuild 'platforms'"
@@ -869,6 +926,9 @@ final class CompositeBuildSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     !result.output.contains('missing-bom')
+    // Disabling the platform scan entirely would also satisfy the absence above, so pin that the
+    // configuration's other dependency still made it into the report.
+    result.output.contains('com.google.inject:guice')
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')

@@ -795,4 +795,69 @@ final class ConstraintsSpec extends Specification {
     result.output.contains('imported by the platform :platform-c\n')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
+  def 'Does not skip the configuration when the platform scan throws under failOnVersionConflict'() {
+    given: 'two platform projects import the same bom at different versions, conflicting transitively'
+    testProjectDir.newFile('settings.gradle') << "include 'platform-a', 'platform-b'\n"
+    ['platform-a': '1.0', 'platform-b': '2.0'].each { name, version ->
+      testProjectDir.newFolder(name)
+      testProjectDir.newFile("$name/build.gradle") <<
+        """
+          plugins { id 'java-platform' }
+          javaPlatform {
+            allowDependencies()
+          }
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+          dependencies {
+            api platform('com.example:external-bom:$version')
+          }
+        """.stripIndent()
+    }
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        configurations.all {
+          resolutionStrategy.failOnVersionConflict()
+        }
+
+        dependencies {
+          implementation platform(project(':platform-a'))
+          implementation platform(project(':platform-b'))
+          implementation 'com.google.inject:guice:2.0'
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates', '--info')
+      .withPluginClasspath()
+      .build()
+
+    then: 'the platform scan throwing does not sink the whole configuration'
+    result.output.contains('Failed to resolve the platforms declared by')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    !result.output.contains('Skipping configuration')
+  }
 }

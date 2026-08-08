@@ -32,6 +32,27 @@ data class PartialStatus
 
     val latestCoordinate: Coordinate
       get() = Coordinate(group, name, latestVersion, userReason)
+
+    /**
+     * Keeps the `copy` a release shipped callable, which the generated one no longer is now that
+     * the imported platform projects moved it past ten parameters.
+     */
+    fun copy(
+      group: String = this.group,
+      name: String = this.name,
+      declaredVersion: String = this.declaredVersion,
+      userReason: String? = this.userReason,
+      latestVersion: String = this.latestVersion,
+      projectUrl: String? = this.projectUrl,
+      unresolved: UnresolvedInfo? = this.unresolved,
+      contributed: Boolean = this.contributed,
+      configurations: List<String> = this.configurations,
+      projectPath: String? = this.projectPath,
+    ): PartialStatus =
+      copy(
+        group, name, declaredVersion, userReason, latestVersion, projectUrl, unresolved, contributed,
+        configurations, projectPath, platformProjects,
+      )
   }
 
 /** A resolution failure, as a value that survives the project boundary. */

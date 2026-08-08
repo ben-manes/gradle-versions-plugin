@@ -512,21 +512,25 @@ private fun platformProjectsByCoordinate(
 ): Map<Coordinate, List<String>> =
   statuses
     .groupBy { it.coordinate }
-    .filterValues { group -> group.any { it.platformProjects.isNotEmpty() } }
-    .filter { (coordinate, group) ->
+    .mapNotNull { (coordinate, group) ->
       val importers = group.flatMap { it.platformProjects }.toSet()
-      val declared =
-        group.any {
+      if (importers.isEmpty()) {
+        return@mapNotNull null
+      }
+      val declaringStatuses =
+        group.filter {
           it.platformProjects.isEmpty() && !it.contributed && it.projectPath !in importers
         }
-      if (declared) {
+      if (declaringStatuses.isNotEmpty()) {
+        val declaringPaths = declaringStatuses.mapNotNull { it.projectPath }.distinct().sorted()
         logger.info(
           "A project outside ${coordinate.groupId}:${coordinate.artifactId}'s platform importers " +
-            "declares it, so the platform mark is withheld",
+            "declares it, so the platform mark is withheld: ${declaringPaths.joinToString(", ")}",
         )
+        return@mapNotNull null
       }
-      !declared
-    }.mapValues { (_, group) -> group.flatMap { it.platformProjects }.distinct().sorted() }
+      coordinate to importers.toList().sorted()
+    }.toMap()
 
 /** Returns the projects behind each version of a key whose declared versions diverge. */
 private fun divergentProjects(statuses: List<PartialStatus>): Map<Coordinate, List<String>> {
