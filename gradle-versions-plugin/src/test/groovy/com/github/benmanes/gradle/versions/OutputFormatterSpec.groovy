@@ -331,6 +331,12 @@ final class OutputFormatterSpec extends Specification {
             ],
             "count": 1
         },
+        "skipped": {
+            "configurations": [
+
+            ],
+            "count": 0
+        },
         "count": 2
     }
       """.stripIndent())
@@ -420,6 +426,10 @@ final class OutputFormatterSpec extends Specification {
         <count>0</count>
         <dependencies/>
       </unresolved>
+      <skipped>
+        <count>0</count>
+        <configurations/>
+      </skipped>
       <gradle>
         <enabled>false</enabled>
         <running>

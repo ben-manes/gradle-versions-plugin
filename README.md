@@ -973,6 +973,12 @@ upgrade line goes with it. A bound naming a version that was never published
 does that, so a `strictly "1.2.3"` pointing at nothing reports as a resolution
 failure rather than as up to date.
 
+A `resolutionStrategy` that throws while the plugin applies it to a
+configuration, rather than while Gradle resolves the graph, skips that
+configuration instead: its dependencies are absent from every section, the
+skipped configuration is listed in the report's `skipped` section along with
+the failure, and the console is warned about it. The build still succeeds.
+
 Narrowing the candidate set can also surface metadata that the unbounded query
 stepped over, with the same result. And a module whose only declaration is a
 constraint reports that constraint as its current version, so `currentVersion`
@@ -1351,6 +1357,16 @@ Alternatively, the report may be output to a structured file.
    "reason": "update check disabled",
    "version": ""
   }
+ },
+ "skipped": {
+  "count": 1,
+  "configurations": [
+   {
+    "project": ":",
+    "name": "compileClasspath",
+    "reason": "org.gradle.api.InvalidUserCodeException: Could not add a component selection rule for module 'com.google.guava'."
+   }
+  ]
  }
 }
 ```
@@ -1500,6 +1516,16 @@ Searched in the following locations:
             </unresolvedDependency>
         </dependencies>
     </unresolved>
+    <skipped>
+        <count>1</count>
+        <configurations>
+            <skippedConfiguration>
+                <project>:</project>
+                <name>compileClasspath</name>
+                <reason>org.gradle.api.InvalidUserCodeException: Could not add a component selection rule for module 'com.google.guava'.</reason>
+            </skippedConfiguration>
+        </configurations>
+    </skipped>
     <gradle>
         <enabled>true</enabled>
         <running>

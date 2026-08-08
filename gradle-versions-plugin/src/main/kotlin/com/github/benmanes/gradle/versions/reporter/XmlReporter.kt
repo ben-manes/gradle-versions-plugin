@@ -49,6 +49,7 @@ class XmlReporter(
     writeExceededSection(result, document, response)
     writeUndeclaredSection(result, document, response)
     writeUnresolvedSection(result, document, response)
+    writeSkippedSection(result, document, response)
     writeGradle(result, document, response)
 
     val transformerFactory = TransformerFactory.newInstance()
@@ -154,6 +155,26 @@ class XmlReporter(
     for (dependency in result.unresolved.dependencies) {
       val element = writeDependency(document, dependencies, "unresolvedDependency", dependency)
       appendTextChild(document, element, "reason", dependency.reason)
+    }
+  }
+
+  private fun writeSkippedSection(
+    result: Result,
+    document: Document,
+    response: Element,
+  ) {
+    val skipped = document.createElement("skipped")
+    response.appendChild(skipped)
+    appendTextChild(document, skipped, "count", result.skipped.count)
+
+    val configurations = document.createElement("configurations")
+    skipped.appendChild(configurations)
+    for (configuration in result.skipped.configurations) {
+      val element = document.createElement("skippedConfiguration")
+      configurations.appendChild(element)
+      appendTextChild(document, element, "project", configuration.project)
+      appendTextChild(document, element, "name", configuration.name)
+      appendTextChild(document, element, "reason", configuration.reason)
     }
   }
 

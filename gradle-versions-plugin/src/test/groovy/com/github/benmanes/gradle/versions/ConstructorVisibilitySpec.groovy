@@ -1,9 +1,13 @@
 package com.github.benmanes.gradle.versions
 
+import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.updates.Coordinate
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesReporter
+import com.github.benmanes.gradle.versions.updates.PartialResult
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
 import kotlin.jvm.JvmClassMappingKt
 import kotlin.reflect.KVisibility
+import spock.lang.Issue
 import spock.lang.Specification
 
 /**
@@ -35,5 +39,13 @@ final class ConstructorVisibilitySpec extends Specification {
     expect:
     constraintCarrying.size() == 2
     constraintCarrying.every { it.visibility == KVisibility.INTERNAL }
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/801')
+  def 'The arities gaining the skipped configurations widened are still callable'() {
+    expect:
+    Result.declaredConstructors.any { it.parameterCount == 7 }
+    DependencyUpdatesReporter.declaredConstructors.any { it.parameterCount == 20 }
+    PartialResult.declaredMethods.any { it.name == 'copy' && it.parameterCount == 4 }
   }
 }

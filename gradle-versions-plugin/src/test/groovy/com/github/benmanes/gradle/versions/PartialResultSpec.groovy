@@ -3,6 +3,7 @@ package com.github.benmanes.gradle.versions
 import com.github.benmanes.gradle.versions.updates.PartialResult
 import com.github.benmanes.gradle.versions.updates.PartialResultKt
 import com.github.benmanes.gradle.versions.updates.PartialStatus
+import com.github.benmanes.gradle.versions.updates.SkippedInfo
 import com.github.benmanes.gradle.versions.updates.UnresolvedInfo
 import spock.lang.Issue
 import spock.lang.Specification
@@ -94,6 +95,35 @@ final class PartialResultSpec extends Specification {
     then:
     decoded.statuses[0].unresolved.declaredVersion == 'none'
     decoded.statuses[0].unresolved.userReason == null
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/801')
+  def 'A partial without the skipped key reads as none skipped'() {
+    given:
+    def json = '''
+      {"formatVersion":1,"projectPath":":","statuses":[],"buildscriptStatuses":[]}
+      '''.stripIndent()
+
+    when:
+    def decoded = PartialResult.fromJson(json)
+
+    then:
+    decoded.skipped == []
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/801')
+  def 'Skipped configurations survive the round trip'() {
+    given:
+    def skipped = new SkippedInfo('compileClasspath', 'org.gradle.api.InvalidUserCodeException: boom')
+    def result = new PartialResult(PartialResult.FORMAT_VERSION, ':', [], [], [skipped])
+
+    when:
+    def json = result.toJson()
+    def decoded = PartialResult.fromJson(json)
+
+    then:
+    decoded == result
+    json.contains('org.gradle.api.InvalidUserCodeException: boom')
   }
 
   def 'Rejects an unknown format version'() {

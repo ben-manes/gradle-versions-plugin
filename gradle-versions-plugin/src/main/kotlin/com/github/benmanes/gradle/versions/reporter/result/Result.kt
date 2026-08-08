@@ -14,13 +14,17 @@ import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
  * @property undeclared The dependencies whose versions were not declared.
  * @property unresolved The unresolvable dependencies.
  * @property gradle Gradle release channels and respective update availability.
+ * @property skipped The configurations whose dependencies could not be inspected, which [count] does not include.
  */
-class Result(
-  val count: Int,
-  val current: DependenciesGroup<Dependency>,
-  val outdated: DependenciesGroup<DependencyOutdated>,
-  val exceeded: DependenciesGroup<DependencyLatest>,
-  val undeclared: DependenciesGroup<Dependency>,
-  val unresolved: DependenciesGroup<DependencyUnresolved>,
-  val gradle: GradleUpdateResults,
-)
+class Result
+  @JvmOverloads
+  constructor(
+    val count: Int,
+    val current: DependenciesGroup<Dependency>,
+    val outdated: DependenciesGroup<DependencyOutdated>,
+    val exceeded: DependenciesGroup<DependencyLatest>,
+    val undeclared: DependenciesGroup<Dependency>,
+    val unresolved: DependenciesGroup<DependencyUnresolved>,
+    val gradle: GradleUpdateResults,
+    val skipped: SkippedConfigurationsGroup = SkippedConfigurationsGroup(0),
+  )

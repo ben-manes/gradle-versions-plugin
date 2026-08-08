@@ -2,6 +2,7 @@ package com.github.benmanes.gradle.versions
 
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
+import groovy.json.JsonSlurper
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
@@ -102,6 +103,11 @@ final class AggregationConfigurationCacheSpec extends Specification {
 
   private def run(List<String> arguments) {
     return runner(arguments).build()
+  }
+
+  private def report() {
+    return new JsonSlurper()
+      .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
   }
 
   @Unroll
@@ -288,6 +294,41 @@ final class AggregationConfigurationCacheSpec extends Specification {
     store.output.contains('https://code.google.com/p/google-guice/')
     hit.output.contains('Reusing configuration cache')
     hit.output.contains('https://code.google.com/p/google-guice/')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/801')
+  def 'Reports the skipped configurations on the store and on the cache hit'() {
+    given:
+    // The measured #801 trigger: a withModule id missing its ':name' half.
+    configure(
+      '''
+        resolutionStrategy {
+          componentSelection { rules ->
+            rules.withModule('com.google.guava') { }
+          }
+        }
+      ''')
+
+    when:
+    def store = run(ARGUMENTS + ['-DoutputFormatter=plain,json'])
+    def stored = report()
+
+    then:
+    store.task(':dependencyUpdates').outcome == SUCCESS
+    store.output.contains('Skipping configuration')
+    store.output.contains('Failed to inspect the dependencies of the following configurations')
+    stored.skipped.count > 0
+    stored.skipped.configurations*.name.contains('compileClasspath')
+
+    when:
+    def hit = run(ARGUMENTS + ['-DoutputFormatter=plain,json'])
+
+    then:
+    hit.output.contains('Reusing configuration cache')
+    // A hit does not re-evaluate the producers, so the warning they log while resolving does not
+    // re-emit, while the report the task writes from the replayed results is unchanged.
+    hit.output.contains('Failed to inspect the dependencies of the following configurations')
+    report() == stored
   }
 
   def 'Invalidates the cache when a dependency publishes a new version'() {

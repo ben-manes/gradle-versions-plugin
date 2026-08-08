@@ -2,6 +2,7 @@ package com.github.benmanes.gradle.versions
 
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
+import groovy.json.JsonSlurper
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
@@ -684,5 +685,98 @@ final class CompositeBuildSpec extends Specification {
 
     where:
     gradleVersion << ['9.0.0', '9.6.1']
+  }
+
+  // The measured #801 trigger: a withModule id missing its ':name' half.
+  private static String throwingStrategy() {
+    return '''
+      dependencyUpdates.resolutionStrategy {
+        componentSelection { rules ->
+          rules.withModule('com.google.guava') { }
+        }
+      }
+      '''.stripIndent()
+  }
+
+  // Gradle 9 requires JVM 17.
+  @Requires({ jvm.java17Compatible })
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/801')
+  def 'Surfaces the skipped configurations of both builds on Gradle 9'() {
+    given:
+    testProjectDir.newFile('settings.gradle') << "includeBuild 'child'"
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          api 'com.google.inject:guice:2.0'
+        }
+
+        ${throwingStrategy()}
+      """.stripIndent()
+    includedBuild(
+      'child',
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'java-library'
+        apply plugin: 'io.github.ben-manes.versions'
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          api 'com.google.guava:guava:15.0'
+        }
+
+        ${throwingStrategy()}
+      """.stripIndent(),
+    )
+
+    when:
+    def result = GradleRunner.create()
+      .withGradleVersion('9.6.1')
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates', ':child:dependencyUpdates',
+        '-DoutputFormatter=plain,json')
+      .withPluginClasspath()
+      .build()
+    def including = report('')
+    def included = report('child/')
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.task(':child:dependencyUpdates').outcome == SUCCESS
+    result.output.contains('Failed to inspect the dependencies of the following configurations')
+
+    // Each build reports on its own projects. Both name their root ':', so the counts are what
+    // distinguish an owned entry from one collected out of the other build's report.
+    [including, included].every { it.skipped.count > 0 }
+    [including, included].every { it.skipped.configurations*.name.contains('compileClasspath') }
+    [including, included].every { it.skipped.configurations*.name.unique().size() == it.skipped.count }
+    including.skipped.count + included.skipped.count == 13
+    including.skipped.configurations.every { it.project == ':' }
+    included.skipped.configurations.every { it.project == ':' }
+  }
+
+  private def report(String path) {
+    return new JsonSlurper()
+      .parse(new File(testProjectDir.root, "${path}build/dependencyUpdates/report.json"))
   }
 }

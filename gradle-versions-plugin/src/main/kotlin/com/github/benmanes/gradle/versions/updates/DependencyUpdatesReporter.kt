@@ -11,6 +11,8 @@ import com.github.benmanes.gradle.versions.reporter.result.DependencyLatest
 import com.github.benmanes.gradle.versions.reporter.result.DependencyOutdated
 import com.github.benmanes.gradle.versions.reporter.result.DependencyUnresolved
 import com.github.benmanes.gradle.versions.reporter.result.Result
+import com.github.benmanes.gradle.versions.reporter.result.SkippedConfiguration
+import com.github.benmanes.gradle.versions.reporter.result.SkippedConfigurationsGroup
 import com.github.benmanes.gradle.versions.reporter.result.VersionAvailable
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
@@ -45,6 +47,8 @@ import java.util.TreeSet
  * @property projectsByCoordinate The projects behind each version of a coordinate whose versions diverge.
  * @property contributedCoordinates The coordinates that only lazy actions contributed, no project declaring them.
  * @property configurationsByCoordinate The configurations a plugin contributed each marked coordinate into.
+ * @property skipped The configurations whose dependencies could not be inspected because applying the
+ * resolutionStrategy to them failed.
  *
  */
 class DependencyUpdatesReporter(
@@ -68,7 +72,38 @@ class DependencyUpdatesReporter(
   val projectsByCoordinate: Map<Coordinate, List<String>> = emptyMap(),
   val contributedCoordinates: Set<Coordinate> = emptySet(),
   val configurationsByCoordinate: Map<Coordinate, List<String>> = emptyMap(),
+  val skipped: List<SkippedConfiguration> = emptyList(),
 ) {
+  @Deprecated("Use the constructor that includes the skipped configurations.")
+  constructor(
+    projectPath: String,
+    logger: Logger,
+    revision: String,
+    outputFormatterArgument: OutputFormatterArgument,
+    outputDirectory: File,
+    reportfileName: String?,
+    currentVersions: Map<Map<String, String>, Coordinate>,
+    latestVersions: Map<Map<String, String>, Coordinate>,
+    upToDateVersions: Map<Map<String, String>, Coordinate>,
+    downgradeVersions: Map<Map<String, String>, Coordinate>,
+    upgradeVersions: Map<Map<String, String>, Coordinate>,
+    undeclared: Set<Coordinate>,
+    unresolved: Set<UnresolvedInfo>,
+    projectUrls: Map<Map<String, String>, String>,
+    gradleUpdateChecker: GradleUpdateChecker,
+    gradleReleaseChannel: String,
+    latestByCurrent: Map<Coordinate, Coordinate> = emptyMap(),
+    projectsByCoordinate: Map<Coordinate, List<String>> = emptyMap(),
+    contributedCoordinates: Set<Coordinate> = emptySet(),
+    configurationsByCoordinate: Map<Coordinate, List<String>> = emptyMap(),
+  ) : this(
+    projectPath, logger, revision, outputFormatterArgument, outputDirectory, reportfileName,
+    currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions,
+    undeclared, unresolved, projectUrls, gradleUpdateChecker, gradleReleaseChannel,
+    latestByCurrent, projectsByCoordinate, contributedCoordinates, configurationsByCoordinate,
+    emptyList(),
+  )
+
   @Synchronized
   fun write() {
     if (outputFormatterArgument !is OutputFormatterArgument.CustomAction && logger.isLifecycleEnabled) {
@@ -131,6 +166,7 @@ class DependencyUpdatesReporter(
     val sortedExceeded = buildExceededGroup()
     val sortedUndeclared = buildUndeclaredGroup()
     val sortedUnresolved = buildUnresolvedGroup()
+    val sortedSkipped = skipped.sorted()
 
     val count =
       sortedCurrent.size +
@@ -147,6 +183,7 @@ class DependencyUpdatesReporter(
       undeclaredGroup = buildDependenciesGroup(sortedUndeclared),
       unresolvedGroup = buildDependenciesGroup(sortedUnresolved),
       gradleUpdateResults = buildGradleUpdateResults(),
+      skippedGroup = SkippedConfigurationsGroup(sortedSkipped.size, sortedSkipped),
     )
   }
 
@@ -320,6 +357,7 @@ class DependencyUpdatesReporter(
       undeclaredGroup: DependenciesGroup<Dependency>,
       unresolvedGroup: DependenciesGroup<DependencyUnresolved>,
       gradleUpdateResults: GradleUpdateResults,
+      skippedGroup: SkippedConfigurationsGroup,
     ): Result {
       return Result(
         count = count,
@@ -329,6 +367,7 @@ class DependencyUpdatesReporter(
         undeclared = undeclaredGroup,
         unresolved = unresolvedGroup,
         gradle = gradleUpdateResults,
+        skipped = skippedGroup,
       )
     }
 
@@ -362,6 +401,7 @@ class DependencyUpdatesReporter(
 
 /** Returns a reporter for the merged statuses of one or more projects. */
 @Suppress("LongParameterList")
+@JvmOverloads
 fun reporterFor(
   statuses: List<PartialStatus>,
   projectPath: String,
@@ -373,6 +413,7 @@ fun reporterFor(
   checkForGradleUpdate: Boolean,
   gradleVersionsApiBaseUrl: String,
   gradleReleaseChannel: String,
+  skipped: List<SkippedConfiguration> = emptyList(),
 ): DependencyUpdatesReporter {
   val versions = VersionMapping(logger, statuses)
   val projectsByCoordinate = divergentProjects(statuses)
@@ -403,7 +444,7 @@ fun reporterFor(
     reportfileName, currentVersions, latestVersions, upToDateVersions, downgradeVersions,
     upgradeVersions, versions.undeclared, unresolved, projectUrls, gradleUpdateChecker,
     gradleReleaseChannel, versions.latestByCurrent, projectsByCoordinate, contributedCoordinates,
-    configurationsByCoordinate,
+    configurationsByCoordinate, skipped,
   )
 }
 

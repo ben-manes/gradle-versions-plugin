@@ -1,6 +1,7 @@
 package com.github.benmanes.gradle.versions.updates
 
 import com.github.benmanes.gradle.versions.claims
+import com.github.benmanes.gradle.versions.reporter.projectsLabel
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import org.gradle.api.Action
 import org.gradle.api.GradleException
@@ -29,6 +30,9 @@ private const val ELEMENTS_CONFIGURATION = "dependencyUpdatesElements"
 private const val AGGREGATION_CONFIGURATION = "dependencyUpdatesAggregation"
 private const val PARAMETERS_SERVICE = "dependencyUpdatesParameters"
 private const val VERIFICATION_TYPE = "dependency-updates"
+
+/** The number of causes joined into a skipped configuration's reason, matching DependencyStatus. */
+private const val MAX_FAILURE_CAUSES = 20
 
 /** The filter applied when a task leaves the configurations unrestricted. */
 internal val ALL_CONFIGURATIONS = Spec<Configuration> { true }
@@ -392,9 +396,8 @@ private fun registerProducer(
             (ownConfigurations + settingsConfigurations)
               .filter { it.isCanBeResolved }
 
-          PartialResult(
-            PartialResult.FORMAT_VERSION,
-            project.path,
+          val skipped = mutableListOf<SkippedInfo>()
+          val statuses =
             statusesOf(
               project,
               configurations,
@@ -403,7 +406,9 @@ private fun registerProducer(
               filledByPlugin,
               nameDeclaringConfiguration = true,
               scriptClasspaths = false,
-            ),
+              skipped,
+            )
+          val buildscriptStatuses =
             statusesOf(
               project,
               buildscriptConfigurations,
@@ -418,7 +423,18 @@ private fun registerProducer(
               // The plugins block deposits its flattened markers only on these classpaths, so
               // only they recover a catalog plugin constraint.
               scriptClasspaths = true,
-            ),
+              skipped,
+            )
+          // Warned once the whole project's configurations and script classpaths are known, as the
+          // two calls above share this list and a configuration skipped by each would otherwise be
+          // warned about twice.
+          warnSkipped(project, skipped)
+          PartialResult(
+            PartialResult.FORMAT_VERSION,
+            project.path,
+            statuses,
+            buildscriptStatuses,
+            skipped,
           ).toJson()
         },
       )
@@ -487,6 +503,7 @@ private fun statusesOf(
   filledByPlugin: Set<String>,
   nameDeclaringConfiguration: Boolean,
   scriptClasspaths: Boolean,
+  skipped: MutableList<SkippedInfo>,
 ): List<PartialStatus> {
   if (configurations.isEmpty()) {
     return emptyList()
@@ -510,8 +527,31 @@ private fun statusesOf(
           status.configurations.any { parameters.filterDeclaredConfigurations.isSatisfiedBy(it) }
       }.map { it.toPartialStatus() }
     } catch (e: Exception) {
+      val reason =
+        generateSequence(e as Throwable) { it.cause }.take(MAX_FAILURE_CAUSES).joinToString("; ") { it.toString() }
+      // The default-visible warning is grouped and emitted once the project's whole set of skipped
+      // configurations is known, so only the stack trace is logged here.
       project.logger.info("Skipping configuration ${project.path}:${configuration.name}", e)
+      skipped.add(SkippedInfo(configuration.name, reason))
       emptyList()
     }
+  }
+}
+
+/**
+ * Warns once per distinct reason among the project's skipped configurations, naming the
+ * configurations it dropped, rather than once per configuration: a build with many configurations
+ * sharing one failing resolutionStrategy would otherwise flood the log with one line each.
+ */
+private fun warnSkipped(
+  project: Project,
+  skipped: List<SkippedInfo>,
+) {
+  for ((reason, group) in skipped.groupBy { it.reason }) {
+    val noun = if (group.size == 1) "configuration" else "configurations"
+    val names = group.joinToString(", ") { "'${it.name}'" }
+    project.logger.warn(
+      "Skipping $noun $names in ${projectsLabel(listOf(project.path))}: " + reason.lineSequence().first(),
+    )
   }
 }

@@ -56,6 +56,7 @@ class HtmlReporter(
       writeUndeclared(printStream, result)
       writeUnresolved(printStream, result)
     }
+    writeSkipped(printStream, result)
     writeGradleUpdates(printStream, result)
     printStream.println("</body>")
   }
@@ -146,6 +147,25 @@ class HtmlReporter(
         .println("<p>Failed to determine the latest version for the following dependencies:<p>")
       printStream.println("<table class=\"warningInfo\">")
       for (it in getUnresolvedRows(result)) {
+        printStream.println(it)
+      }
+      printStream.println("</table>")
+      printStream.println("<br>")
+    }
+  }
+
+  private fun writeSkipped(
+    printStream: OutputStream,
+    result: Result,
+  ) {
+    val skipped = result.skipped.configurations
+    if (skipped.isNotEmpty()) {
+      printStream.println("<h2>Skipped configurations</h2>")
+      printStream.println(
+        "<p>Failed to inspect the dependencies of the following configurations:<p>",
+      )
+      printStream.println("<table class=\"warningInfo\">")
+      for (it in getSkippedRows(result)) {
         printStream.println(it)
       }
       printStream.println("</table>")
@@ -443,6 +463,32 @@ class HtmlReporter(
       }
       return rows
     }
+
+    private fun getSkippedRows(result: Result): List<String> {
+      val rows = mutableListOf<String>()
+      rows.add(
+        "<tr class=\"header\"><th colspan=\"3\"><b>Skipped configurations<span>(Click to collapse)</span></b></th></tr>",
+      )
+      rows.add(
+        "<tr><td><b>Project</b></td><td><b>Configuration</b></td><td><b>Reason</b></td></tr>",
+      )
+      for ((reason, group) in result.skipped.configurations.groupBy { it.reason }) {
+        val projects = group.joinToString("<br>") { escapeHtml(it.project) }
+        val names = group.joinToString("<br>") { escapeHtml(it.name) }
+        val rowString =
+          String.format(
+            "<tr><td>%s</td><td>%s</td><td>%s</td></tr>",
+            projects,
+            names,
+            escapeHtml(reason),
+          )
+        rows.add(rowString)
+      }
+      return rows
+    }
+
+    /** Escapes text placed into an HTML element, which a resolution exception's message is not. */
+    private fun escapeHtml(text: String): String = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
     private fun getGradleUrl(): String {
       return "<p>For information about Gradle releases click <a target=\"_blank\" href=\"https://gradle.org/releases/\">here</a>.</p>"
