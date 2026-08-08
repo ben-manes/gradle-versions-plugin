@@ -46,7 +46,7 @@ jobs:
           java-version: ${{ matrix.java-version }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Run build with caching enabled
         run: ./gradlew clean build -s
@@ -73,7 +73,7 @@ jobs:
       # https://github.com/ben-manes/gradle-versions-plugin/issues/941
       - name: Provision Gradle 9
         if: matrix.java-version == 17
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '9.6.1'
 
