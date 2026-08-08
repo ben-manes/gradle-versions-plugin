@@ -47,6 +47,7 @@ Plugin](https://www.mojohaus.org/versions-maven-plugin).
 - [Samples](#samples)
 - [Compatibility](#compatibility)
 - [Migrating from prior versions](#migrating-from-prior-versions)
+  - [v0.60.0](#v0600)
   - [v0.59.0](#v0590)
   - [v0.58.0](#v0580)
   - [v0.57.0](#v0570)
@@ -447,7 +448,7 @@ They part ways when the name an entry shows is not one the task checks (see
 [The `dependencyUpdates` task](#the-dependencyupdates-task)): a declarable
 configuration read through a resolvable classpath that extends it, and
 `implementation` holding a plugin's contribution, both show names
-`filterConfigurations` is never offered. `filterDeclaredConfigurations`
+`filterConfigurations` never sees. `filterDeclaredConfigurations`
 matches the name shown, with no side effect on what is checked. Buildscript
 and settings classpath entries ordinarily name no configuration, so neither
 property affects them; one a plugin contributes is named `classpath` and can
@@ -2056,7 +2057,9 @@ and *Note*s are things worth knowing that need no action.
 
 v0.61.0 names a project by its path in the build tree wherever the report shows
 one, so the projects of an included build no longer share the `:` that every
-build answers for its own root:
+build answers for its own root, reports the platforms a build imports through
+its own platform projects, and reports the configurations a `resolutionStrategy`
+that throws left uninspected:
 
 > [!IMPORTANT]
 > - A project of an included build is named by its build tree path, so an entry
@@ -2068,12 +2071,45 @@ build answers for its own root:
 >   `:buildSrc` rather than `:`, and its projects are named beneath that path.
 >   Running the task from inside `buildSrc` makes it the root of its own build
 >   tree, which still reads `:`.
+> - An entry can now carry an attribution line reading `imported by the platform
+>   :platforms`, naming the platform projects the build imports the dependency
+>   through. A tool that parses the plain text report line by line has to skip
+>   it, as it already does for the other attribution lines (see [Report
+>   format](#report-format)). The JSON and XML reports carry the same paths in
+>   `platformProjects`.
+> - The plain text report carries a section listing the configurations that
+>   could not be inspected, after the dependency ones, where they were logged at
+>   info level and left out silently before. The JSON and XML reports carry them
+>   under `skipped`, which
+>   `count` does not include, so a tool totalling the report has to leave it out
+>   too (see [Report output](#report-output)).
+> - A custom `outputFormatter` that calls `copy` on `DependencyOutdated`,
+>   `DependencyLatest` or `DependencyUnresolved` has to be recompiled against
+>   this release. Each gained a `platformProjects` property, and a data class
+>   has exactly one `copy`, so the one earlier releases shipped is gone. Their
+>   constructors are unchanged: a formatter that only reads the report, as the
+>   documented ones do, needs nothing.
+
+> [!TIP]
+> An entry can show a configuration name that `filterConfigurations` never
+> sees, such as a declarable configuration read through a resolvable classpath
+> that extends it. Rejecting the classpath instead removes the build's own
+> dependencies with it.
+> [`filterDeclaredConfigurations`](#filterdeclaredconfigurations) rejects the
+> entry by the name it shows, and leaves what the task checks alone.
 
 > [!NOTE]
-> A dependency that two builds of a composite declare at different versions is
-> now reported as divergent. The attribution naming the projects behind each
-> version was withheld while every entry carried the same project path, which
-> in a composite was always `:`.
+> - A dependency that two builds of a composite declare at different versions is
+>   now reported as divergent. The attribution naming the projects behind each
+>   version was withheld while every entry carried the same project path, which
+>   in a composite was always `:`.
+> - A build using `checkConstraints` gains an entry for each platform its own
+>   platform projects import, where the modules those constraints hold were
+>   reported as up to date with nothing naming the coordinate to bump (see
+>   [Constraints](#constraints)).
+> - A configuration that declares a platform is resolved a second time, to find
+>   those imports, so a `beforeResolve` hook on it runs once more than it did. A
+>   configuration declaring no platform resolves nothing extra.
 
 ### v0.59.0
 
