@@ -59,6 +59,17 @@ data class PartialResult
   ) {
     fun toJson(): String = adapter.toJson(this)
 
+    /**
+     * Keeps the `copy` a release shipped callable, which the generated one no longer is now that
+     * the skipped configurations moved it to five parameters.
+     */
+    fun copy(
+      formatVersion: Int = this.formatVersion,
+      projectPath: String = this.projectPath,
+      statuses: List<PartialStatus> = this.statuses,
+      buildscriptStatuses: List<PartialStatus> = this.buildscriptStatuses,
+    ): PartialResult = copy(formatVersion, projectPath, statuses, buildscriptStatuses, skipped)
+
     companion object {
       /**
        * Bumped when the shape changes incompatibly; a field with a compatible default reads from an
