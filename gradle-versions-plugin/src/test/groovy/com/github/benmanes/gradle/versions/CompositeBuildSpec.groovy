@@ -780,6 +780,7 @@ final class CompositeBuildSpec extends Specification {
     result.output.count('in root project:') == 1
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1075')
   def 'Names an included build that aggregates its own projects by its build tree path'() {
     given:
     testProjectDir.newFile('settings.gradle') << "includeBuild 'child'"
@@ -839,6 +840,7 @@ final class CompositeBuildSpec extends Specification {
     !result.output.contains('The dependency updates report is missing')
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1075')
   def 'Names the projects that declare a divergent version by their build tree paths'() {
     given:
     testProjectDir.newFile('settings.gradle') << "includeBuild 'child'"

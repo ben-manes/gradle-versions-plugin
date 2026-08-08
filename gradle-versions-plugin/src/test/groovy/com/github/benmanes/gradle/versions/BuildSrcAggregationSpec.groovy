@@ -5,6 +5,7 @@ import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
+import spock.lang.Issue
 import spock.lang.Specification
 
 final class BuildSrcAggregationSpec extends Specification {
@@ -79,6 +80,7 @@ final class BuildSrcAggregationSpec extends Specification {
       .build()
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1075')
   def 'Names a buildSrc build by its build tree path rather than the root project path'() {
     when:
     def result = run(':buildSrc:dependencyUpdates')
@@ -91,6 +93,7 @@ final class BuildSrcAggregationSpec extends Specification {
     result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1075')
   def 'Names the projects of a buildSrc build with subprojects by their build tree paths'() {
     given:
     testProjectDir.newFile('buildSrc/settings.gradle') << "include 'logic'"
