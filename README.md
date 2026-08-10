@@ -1738,11 +1738,12 @@ An included build is a separate build with its own settings script, so its
 projects are not part of this build's report. Apply the settings plugin in the
 included build's settings script as well, and run its `dependencyUpdates` task
 separately. `buildSrc` is a separate build too, and is likewise excluded. This
-is not specific to the settings plugin—an included build has never been covered.
+is not specific to the settings plugin—an included build has never been covered
+by default.
 
 To report on every build in one invocation, register a lifecycle task that
-depends on each included build's task. Each build still writes its own report;
-there is no merged report across builds:
+depends on each included build's task. Each build writes its own report, which
+suits builds that are developed independently, as each keeps its own settings:
 
 <details open>
 <summary>Kotlin</summary>
@@ -1771,6 +1772,38 @@ tasks.register("allDependencyUpdates") {
 Every included build needs the plugin applied for its `dependencyUpdates` task
 to exist. A build that must stay unmodified can have the plugin injected by an
 [init script](#initialization-script) instead.
+
+An included build's project can instead be merged into this build's report, by
+naming it in the `dependencyUpdatesAggregation` configuration of the project
+that aggregates. It is named by the coordinates that the include substitutes,
+and the included build must apply the plugin for the project to have a result to
+merge. Each declaration merges the one project it resolves to. The same
+configuration names a project of this build that the aggregating project's own
+tree does not cover, such as a sibling:
+
+<details open>
+<summary>Kotlin</summary>
+
+"build.gradle.kts":
+```kotlin
+dependencies {
+  dependencyUpdatesAggregation("com.example:child:1.0")
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+"build.gradle":
+```groovy
+dependencies {
+  dependencyUpdatesAggregation 'com.example:child:1.0'
+}
+```
+
+</details>
 
 #### Per-project reports
 
