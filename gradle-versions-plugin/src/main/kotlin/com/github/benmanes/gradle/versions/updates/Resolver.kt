@@ -51,6 +51,7 @@ class Resolver internal constructor(
   private val resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?,
   private val checkConstraints: Boolean,
   private val rejectOutOfBoundVersions: Boolean,
+  private val rejectPreReleaseVersions: Boolean,
   /** Called when a rule reads the deprecated bound, so the warning is printed once per project. */
   private val onDeprecatedBoundRead: () -> Unit,
 ) {
@@ -64,6 +65,7 @@ class Resolver internal constructor(
     resolutionStrategy,
     checkConstraints,
     rejectOutOfBoundVersions = true,
+    rejectPreReleaseVersions = true,
     onDeprecatedBoundRead = deprecatedBoundWarning(project),
   )
 
@@ -241,6 +243,7 @@ class Resolver internal constructor(
     addDeclaredBoundFilter(copy, current.coordinates)
     addRevisionFilter(copy, revision, current.coordinates)
     addAttributes(copy, configuration)
+    addPreReleaseFilter(copy, revision, current.coordinates)
     addCustomResolutionStrategy(copy, current.coordinates)
 
     disableAutoTargetJvm(copy)
@@ -405,6 +408,36 @@ class Resolver internal constructor(
             }
           },
         )
+      }
+    }
+  }
+
+  /**
+   * Rejects a pre-release candidate with a component selection rule of its own, registered on the
+   * configuration rather than through [DependencyUpdatesTask.rejectVersionIf]. That setter marks
+   * the task's parameters as having a resolution strategy, and a project marked that way supplies
+   * its own strategy to the inheritance chain instead of taking its nearest ancestor's, so routing
+   * this filter through it would stop every subproject inheriting the root's `rejectVersionIf`.
+   */
+  private fun addPreReleaseFilter(
+    configuration: Configuration,
+    revision: String,
+    currentCoordinates: Map<Coordinate.Key, Coordinate>,
+  ) {
+    // The integration revision is how a build asks to see snapshots, and every snapshot is a
+    // pre-release, so filtering there would leave that revision with nothing to report.
+    if (!rejectPreReleaseVersions || revision == "integration") return
+    configuration.resolutionStrategy { strategy ->
+      strategy.componentSelection { rules ->
+        rules.all { selection ->
+          val candidateCoordinate = Coordinate.from(selection.candidate)
+          val currentVersion = currentCoordinates[candidateCoordinate.key]?.version
+          if (currentVersion != null &&
+            VersionStability.isLessStable(candidateCoordinate.version, currentVersion)
+          ) {
+            selection.reject("Pre-release rejected by rejectPreReleaseVersions")
+          }
+        }
       }
     }
   }

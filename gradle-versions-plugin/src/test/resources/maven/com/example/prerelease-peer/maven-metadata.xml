@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>com.example</groupId>
+  <artifactId>prerelease-peer</artifactId>
+  <versioning>
+    <latest>1.0-beta</latest>
+    <release>1.0-beta</release>
+    <versions>
+      <version>1.0-alpha</version>
+      <version>1.0-beta</version>
+    </versions>
+    <lastUpdated>20260725000000</lastUpdated>
+  </versioning>
+</metadata>

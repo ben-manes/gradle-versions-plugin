@@ -117,13 +117,14 @@ final class VersionStabilitySpec extends Specification {
     version << ['0.10-ea8fbc9', '2.11.8-18269ea', '3.6-bb17ea2']
   }
 
-  def 'a build teaches the predicate a convention of its own'() {
-    expect: 'ActiveMQ Artemis spells an alpha milestone `.AM27`, which no general marker set has'
+  def 'a convention no general marker set has is passed through, not withheld'() {
+    expect: 'ActiveMQ Artemis spells an alpha milestone `.AM27`, and graphql-java stamps a date'
     !VersionStability.isPreRelease('2.0.0.AM27')
-    VersionStability.isPreRelease('2.0.0.AM27', ['am'])
+    !VersionStability.isPreRelease('230521-nf-execution')
 
-    and: 'a taught marker is matched the same way a built-in one is, so it stays a whole word'
-    !VersionStability.isPreRelease('1.0-amsterdam', ['am'])
+    and: 'so an upgrade to one is offered rather than hidden, which is the fail-open direction'
+    !VersionStability.isLessStable('2.0.0.AM27', '2.0.0')
+    !VersionStability.isLessStable('230521-nf-execution', '221101-nf-execution')
   }
 
   @Unroll
@@ -152,18 +153,6 @@ final class VersionStabilitySpec extends Specification {
     // A release variant is a release on both sides, so nothing is withheld either way.
     '10.2.0.jre8'    | '10.2.0.jre11'     || false
     '1.1.17.SP1'     | '1.1.17.SP2'       || false
-  }
-
-  def 'a taught marker applies to the current version too, not just the candidate'() {
-    expect: 'untaught, an Artemis alpha milestone reads as a release on both sides'
-    !VersionStability.isPreRelease('2.0.0.AM27')
-
-    and: 'taught, a build already on one still hears about the next, because both sides are judged'
-    VersionStability.isPreRelease('2.0.0.AM27', ['am'])
-    !VersionStability.isLessStable('2.0.0.AM28', '2.0.0.AM27', ['am'])
-
-    and: 'a build on a plain release does not get offered one'
-    VersionStability.isLessStable('2.0.1.AM1', '2.0.0', ['am'])
   }
 
   def 'a release is not a snapshot'() {

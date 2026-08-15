@@ -92,6 +92,7 @@ internal class DependencyUpdatesParameters {
   var checkConstraints: Boolean? = null
   var checkBuildEnvironmentConstraints: Boolean? = null
   var rejectOutOfBoundVersions: Boolean? = null
+  var rejectPreReleaseVersions: Boolean? = null
 
   /**
    * Set by the task's command line options. Read ahead of every configured value in the chain, so
@@ -100,6 +101,7 @@ internal class DependencyUpdatesParameters {
   var checkConstraintsFromCommandLine: Boolean? = null
   var checkBuildEnvironmentConstraintsFromCommandLine: Boolean? = null
   var rejectOutOfBoundVersionsFromCommandLine: Boolean? = null
+  var rejectPreReleaseVersionsFromCommandLine: Boolean? = null
 }
 
 /**
@@ -182,6 +184,11 @@ internal abstract class DependencyUpdatesParametersService :
           fromCommandLine = chain.firstNotNullOfOrNull { it.rejectOutOfBoundVersionsFromCommandLine },
           configured = chain.firstNotNullOfOrNull { it.rejectOutOfBoundVersions } ?: true,
         ),
+      rejectPreReleaseVersions =
+        settingOf(
+          fromCommandLine = chain.firstNotNullOfOrNull { it.rejectPreReleaseVersionsFromCommandLine },
+          configured = chain.firstNotNullOfOrNull { it.rejectPreReleaseVersions } ?: true,
+        ),
     )
   }
 }
@@ -195,6 +202,7 @@ internal class InheritedSettings(
   val checkConstraints: Boolean,
   val checkBuildEnvironmentConstraints: Boolean,
   val rejectOutOfBoundVersions: Boolean,
+  val rejectPreReleaseVersions: Boolean,
 )
 
 /** The settings that apply to a single project's producer. */
@@ -206,6 +214,7 @@ internal class ResolvedParameters(
   val checkConstraints: Boolean,
   val checkBuildEnvironmentConstraints: Boolean,
   val rejectOutOfBoundVersions: Boolean,
+  val rejectPreReleaseVersions: Boolean,
 )
 
 /** Registers the per-project producers and wires their results into the accumulator task. */
@@ -219,7 +228,7 @@ internal fun registerAggregation(
   val path = project.path
   // Realized after every project is configured, as the producers' inputs are, so that the values
   // read back from the task are the ones the producers resolved with rather than only what is
-  // configured on this project. All four are taken from one resolution, so a read cannot mix a
+  // configured on this project. All five are taken from one resolution, so a read cannot mix a
   // stale value with a fresh one.
   val inherited =
     project.provider {
@@ -229,6 +238,7 @@ internal fun registerAggregation(
         checkConstraints = resolved.checkConstraints,
         checkBuildEnvironmentConstraints = resolved.checkBuildEnvironmentConstraints,
         rejectOutOfBoundVersions = resolved.rejectOutOfBoundVersions,
+        rejectPreReleaseVersions = resolved.rejectPreReleaseVersions,
       )
     }
   accumulator.configure { task ->
@@ -610,6 +620,7 @@ private fun statusesOf(
       parameters.resolutionStrategy,
       checkConstraints,
       parameters.rejectOutOfBoundVersions,
+      parameters.rejectPreReleaseVersions,
       onDeprecatedBoundRead,
     )
   // Snapshotted for every configuration before the first resolution, as resolving one

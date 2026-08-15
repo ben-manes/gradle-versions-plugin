@@ -47,26 +47,15 @@ object VersionStability {
   private val EARLY_ACCESS = Regex("""(?:^|[-._+])ea(?=$|[-._+]|\d{1,3}$)""", RegexOption.IGNORE_CASE)
 
   /**
-   * Returns whether [version] names a pre-release, treating each of [alsoUnstable] as an additional
-   * marker so that a build can teach this the conventions its own dependencies use. A marker is
-   * matched the same way the built-in ones are: case-insensitively, and only where it stands on its
-   * own.
+   * Returns whether [version] names a pre-release, by a marker this recognizes. A build whose
+   * dependencies use a convention this does not carry names it in a `rejectVersionIf` filter, which
+   * composes with this one rather than replacing it.
    */
   @JvmStatic
-  @JvmOverloads
-  fun isPreRelease(
-    version: String,
-    alsoUnstable: Collection<String> = emptyList(),
-  ): Boolean {
+  fun isPreRelease(version: String): Boolean {
     if (isSnapshot(version)) return true
     if (MARKER.containsMatchIn(version) || ABBREVIATED_PRE.containsMatchIn(version)) return true
-    if (EARLY_ACCESS.containsMatchIn(version) && !TRAILING_HASH.containsMatchIn(version)) return true
-    return alsoUnstable.any { marker ->
-      Regex(
-        "(?:^|[-._+]|(?<=\\d))${Regex.escape(marker)}(?=[-._+]|\\d|$)",
-        RegexOption.IGNORE_CASE,
-      ).containsMatchIn(version)
-    }
+    return EARLY_ACCESS.containsMatchIn(version) && !TRAILING_HASH.containsMatchIn(version)
   }
 
   /**
@@ -76,14 +65,10 @@ object VersionStability {
    * when the version in hand is a release.
    */
   @JvmStatic
-  @JvmOverloads
   fun isLessStable(
     candidateVersion: String,
     currentVersion: String,
-    alsoUnstable: Collection<String> = emptyList(),
-  ): Boolean {
-    return isPreRelease(candidateVersion, alsoUnstable) && !isPreRelease(currentVersion, alsoUnstable)
-  }
+  ): Boolean = isPreRelease(candidateVersion) && !isPreRelease(currentVersion)
 
   /** Returns whether [version] names a snapshot, by either of Maven's two spellings. */
   @JvmStatic
