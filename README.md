@@ -288,18 +288,8 @@ sections that follow:
 ```kotlin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
-fun String.isNonStable(): Boolean {
-  val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { uppercase().contains(it) }
-  val regex = "^[0-9,.v-]+(-r|-jre|-android)?$".toRegex()
-  val isStable = stableKeyword || regex.matches(this)
-  return isStable.not()
-}
-
 tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
   checkConstraints = true
-  rejectVersionIf {
-    candidate.version.isNonStable() && !currentVersion.isNonStable()
-  }
 }
 ```
 
@@ -309,17 +299,8 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
 <summary>Groovy</summary>
 
 ```groovy
-def isNonStable = { String version ->
-  def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { it -> version.toUpperCase().contains(it) }
-  def regex = /^[0-9,.v-]+(-r|-jre|-android)?$/
-  return !stableKeyword && !(version ==~ regex)
-}
-
 tasks.named("dependencyUpdates").configure {
   checkConstraints = true
-  rejectVersionIf {
-    isNonStable(candidate.version) && !isNonStable(currentVersion)
-  }
 }
 ```
 
@@ -327,14 +308,14 @@ tasks.named("dependencyUpdates").configure {
 
 - `checkConstraints` adds the versions a `constraints` block manages to the
   report (see [Constraints](#constraints)).
-- The stability clause rejects a pre-release candidate unless the current
-  version is itself a pre-release (see [Filtering unstable
-  versions](#filtering-unstable-versions)).
-- A candidate outside a `strictly` or `reject` bound written in the build,
-  outside a dynamic version declared on the buildscript classpath, or outside
-  the version fixed by a consumed platform, is already left out by
-  `rejectOutOfBoundVersions`, which is on by default (see [Respecting declared
-  bounds](#respecting-declared-bounds)).
+
+Nothing else is needed. A pre-release candidate is withheld by
+`rejectPreReleaseVersions`, and a candidate outside a `strictly` or `reject`
+bound written in the build, outside a dynamic version declared on the
+buildscript classpath, or outside the version fixed by a consumed platform is
+left out by `rejectOutOfBoundVersions`. Both are on by default (see [Filtering
+unstable versions](#filtering-unstable-versions) and [Respecting declared
+bounds](#respecting-declared-bounds)).
 
 Each piece stands alone: drop any line whose behavior you do not want, and the
 rest keep working.
@@ -342,11 +323,6 @@ rest keep working.
 The [configuration filters](#configuration-filter) are absent only because
 their arguments are build-specific: the names to reject come from your own
 report.
-
-In Kotlin the `isNonStable` extension replaces a helper of that name already in
-the build. A top-level `fun isNonStable(version: String)` compiles to the same
-JVM signature, so keeping both fails the build with a platform declaration
-clash.
 
 #### Every property
 
@@ -730,15 +706,69 @@ hoc usage:
 ```
 
 Because Maven repositories do not mark pre-release versions, an alpha or release
-candidate can still appear as the latest version under any revision. To only be
-offered stable updates, reject pre-release candidates (see [Filtering unstable
-versions](#filtering-unstable-versions)).
+candidate reaches the query as the latest version under any revision. What keeps
+it out of the report is the version string rather than the revision (see
+[Filtering unstable versions](#filtering-unstable-versions)).
 
 ##### Filtering unstable versions
 
-To further control which versions are accepted, define what counts as an
-unstable version. There is no agreed standard, but this is a good starting
-point:
+The task withholds a candidate whose version names a pre-release unless the
+version the build declares is itself a pre-release, so an upgrade never trades a
+release for a release candidate without being asked. A build already on a
+release candidate keeps being offered newer ones. The markers it recognizes are `alpha`, `beta`,
+`canary`, `candidate`, `cr`, `dev`, `draft`, `ea`, `eap`, `experimental`,
+`incubating`, `m`, `milestone`, `nightly`, `pre`, `preview`, `rc`, `snap`,
+`snapshot` and `unstable`, each matched case-insensitively and only where it
+stands on its own, along with Maven's two snapshot spellings.
+
+The question it asks is "is this a recognized pre-release?" rather than "is this
+stable?", and the direction is the point. Being wrong can only leave a
+pre-release on offer, never withhold a release: a version whose qualifier it
+does not recognize, such as `10.2.0.jre11`, `1.1.17.SP2` or `0.4-groovy-1.6`, is
+passed through rather than hidden.
+
+The `integration` revision is exempt. It is how a build asks to see snapshots,
+and every snapshot is a pre-release, so filtering there would leave that revision
+with nothing to report.
+
+A convention the markers above do not cover is named in a `rejectVersionIf`
+filter, which composes with this one rather than replacing it. A candidate is
+withheld if either rejects it, so the filter only has to name what the built-in
+check misses, such as graphql-java's `-nf-` builds:
+
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  rejectVersionIf {
+    candidate.version.contains("-nf-") && !currentVersion.contains("-nf-")
+  }
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
+tasks.named("dependencyUpdates").configure {
+  rejectVersionIf {
+    candidate.version.contains('-nf-') && !currentVersion.contains('-nf-')
+  }
+}
+```
+
+</details>
+
+Neither check can restore what the other withheld. To see every candidate the
+repositories offer, including the pre-releases, turn the built-in filter off with
+`rejectPreReleaseVersions = false`. Do that too when you want a policy of your
+own, and write the whole of it as a component selection rule instead. There is no
+agreed standard for what counts as unstable, but this is a common starting point:
 
 <details open>
 <summary>Kotlin</summary>
@@ -768,9 +798,12 @@ def isNonStable = { String version ->
 </details>
 
 The trailing `-jre` and `-android` keep Guava's ordinary releases out of the
-unstable set. A version that spells its qualifier some other way, such as
-`13.4.0.jre11`, still matches as unstable and needs the pattern extended, so
-check this against the versions in your own build before relying on it.
+unstable set. Note the direction this runs in: it names the shapes a release may
+take and hides everything else, so a release whose qualifier the pattern did not
+anticipate is withheld from the report rather than passed through. Spring's
+`.SECnn` security releases go that way, and so do `13.4.0.jre11`, `1.1.31.sec01`
+and `9.2-1002-jdbc4`. Check the pattern against the versions your own build sees
+before relying on it.
 
 You can then configure [Component Selection
 Rules](https://docs.gradle.org/current/userguide/dynamic_versions.html#sec:component_selection_rules).
@@ -1870,8 +1903,8 @@ task by that name now fails with a duplicate-task error—rename yours.
 
 The settings that control resolution (`revision`, `rejectVersionIf` or a full
 `resolutionStrategy`, `filterConfigurations`, `filterDeclaredConfigurations`,
-`checkConstraints`, `checkBuildEnvironmentConstraints`, and
-`rejectOutOfBoundVersions`) are inherited from
+`checkConstraints`, `checkBuildEnvironmentConstraints`,
+`rejectOutOfBoundVersions`, and `rejectPreReleaseVersions`) are inherited from
 the nearest project up the hierarchy whose task set them. Configuring the root
 project's task therefore covers every project, unless a subproject configures
 its own (see [Task properties](#task-properties)).
