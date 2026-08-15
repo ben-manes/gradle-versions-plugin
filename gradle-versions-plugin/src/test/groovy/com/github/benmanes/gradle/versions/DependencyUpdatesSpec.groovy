@@ -416,7 +416,7 @@ final class DependencyUpdatesSpec extends Specification {
       exceedLatest
     }
     project.dependencies {
-      upToDate 'com.google.guava:guava:16.0-rc1'
+      upToDate 'com.google.guava:guava:16.0'
       exceedLatest 'com.google.guava:guava:99.0-SNAPSHOT'
     }
 
@@ -429,7 +429,7 @@ final class DependencyUpdatesSpec extends Specification {
       unresolved.isEmpty()
       upgradeVersions.isEmpty()
       (upToDateVersions.get(['group': 'com.google.guava', 'name': 'guava']).getVersion() ==
-        '16.0-rc1')
+        '16.0')
       (downgradeVersions.get(['group': 'com.google.guava', 'name': 'guava']).getVersion() ==
         '99.0-SNAPSHOT')
       undeclared.isEmpty()
@@ -607,8 +607,8 @@ final class DependencyUpdatesSpec extends Specification {
         resolutionStrategy {
           componentSelection {
             all { ComponentSelection selection ->
-              if (selection.candidate.version.contains('rc')) {
-                selection.reject("Release candidate")
+              if (selection.candidate.version.startsWith('16.')) {
+                selection.reject("Newer than this build accepts")
               }
             }
           }

@@ -139,7 +139,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
     then: 'guice stops below the version it rejects, guava is unaffected'
     report().outdated.dependencies*.name == ['guava', 'guice']
     report().outdated.dependencies.find { it.name == 'guice' }.available.milestone == '3.0'
-    report().outdated.dependencies.find { it.name == 'guava' }.available.milestone == '16.0-rc1'
+    report().outdated.dependencies.find { it.name == 'guava' }.available.milestone == '16.0'
     report().unresolved.dependencies.isEmpty()
   }
 
@@ -554,7 +554,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
 
     then: 'every upgrade still shows; bounding on a bare require would empty the report'
     report().outdated.dependencies*.name == ['guava', 'guice']
-    report().outdated.dependencies.find { it.name == 'guava' }.available.milestone == '16.0-rc1'
+    report().outdated.dependencies.find { it.name == 'guava' }.available.milestone == '16.0'
     report().outdated.dependencies.find { it.name == 'guice' }.available.milestone == '3.1'
   }
 

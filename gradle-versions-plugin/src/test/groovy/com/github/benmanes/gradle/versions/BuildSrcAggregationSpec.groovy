@@ -90,7 +90,7 @@ final class BuildSrcAggregationSpec extends Specification {
     // proves the task ran; TestKit does not surface a buildSrc task's outcome through result.task().
     result.output.contains(':buildSrc Project Dependency Updates')
     !result.output.contains('\n: Project Dependency Updates')
-    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1075')

@@ -177,7 +177,7 @@ final class ApplyOrderSpec extends Specification {
     result.output.contains('Skipping the plugin mark for configuration ::tool')
 
     and: 'the attribution the mark carries is what giving it up costs'
-    result.output.contains(' - com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains(' - com.google.guava:guava [15.0 -> 16.0]')
     !result.output.contains('contributed by a plugin')
   }
 

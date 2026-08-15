@@ -87,7 +87,7 @@ final class ConfigurationFilterSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains(" - com.google.guava:guava [15.0 -> 16.0-rc1]${nl}" +
+    result.output.contains(" - com.google.guava:guava [15.0 -> 16.0]${nl}" +
       "     contributed by a plugin into the 'toolBucket' configuration")
   }
 
@@ -101,7 +101,7 @@ final class ConfigurationFilterSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains(" - com.google.guava:guava [15.0 -> 16.0-rc1]${nl}" +
+    result.output.contains(" - com.google.guava:guava [15.0 -> 16.0]${nl}" +
       "     contributed by a plugin into the 'toolBucket' configuration")
   }
 
@@ -153,7 +153,7 @@ final class ConfigurationFilterSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains(" - com.google.guava:guava [15.0 -> 16.0-rc1]${nl}" +
+    result.output.contains(" - com.google.guava:guava [15.0 -> 16.0]${nl}" +
       "     contributed by a plugin into the 'helper' configuration")
   }
 
@@ -361,7 +361,7 @@ final class ConfigurationFilterSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     // Rejecting every name the entry shows removes the attribution, never the declared dependency.
-    result.output.contains(' - com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains(' - com.google.guava:guava [15.0 -> 16.0]')
     !result.output.contains("declared in the 'tool' configuration")
   }
 

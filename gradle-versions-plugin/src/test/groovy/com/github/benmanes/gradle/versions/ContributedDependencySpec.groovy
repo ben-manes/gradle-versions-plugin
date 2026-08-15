@@ -76,7 +76,7 @@ final class ContributedDependencySpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains(" - com.google.guava:guava [15.0 -> 16.0-rc1]${nl}     contributed by a plugin into the 'tool' configuration")
+    result.output.contains(" - com.google.guava:guava [15.0 -> 16.0]${nl}     contributed by a plugin into the 'tool' configuration")
     result.output.count('contributed by a plugin') == 1
   }
 
@@ -135,7 +135,7 @@ final class ContributedDependencySpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains(' - com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains(' - com.google.guava:guava [15.0 -> 16.0]')
     !result.output.contains('contributed by a plugin')
     !report.outdated.dependencies[0].containsKey('contributed')
   }
@@ -162,7 +162,7 @@ final class ContributedDependencySpec extends Specification {
     testProjectDir.newFolder('app')
     testProjectDir.newFile('app/build.gradle') <<
       """
-        ${toolConfiguration('16.0-rc1')}
+        ${toolConfiguration('16.0')}
       """.stripIndent()
 
     when:
@@ -171,9 +171,9 @@ final class ContributedDependencySpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains(" - com.google.guava:guava:16.0-rc1${nl}     contributed by a plugin into the 'tool' configuration in :app")
+    result.output.contains(" - com.google.guava:guava:16.0${nl}     contributed by a plugin into the 'tool' configuration in :app")
     result.output.contains(
-      " - com.google.guava:guava [15.0 -> 16.0-rc1]${nl}     declared in root project")
+      " - com.google.guava:guava [15.0 -> 16.0]${nl}     declared in root project")
     result.output.count('contributed by a plugin') == 1
   }
 
@@ -201,7 +201,7 @@ final class ContributedDependencySpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains(' - com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains(' - com.google.guava:guava [15.0 -> 16.0]')
     !result.output.contains('contributed by a plugin')
   }
 
@@ -234,7 +234,7 @@ final class ContributedDependencySpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains(
-      " - com.google.guava:guava [15.0 -> 16.0-rc1]${nl}     contributed by a plugin into the 'implementation' configuration")
+      " - com.google.guava:guava [15.0 -> 16.0]${nl}     contributed by a plugin into the 'implementation' configuration")
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1055')
@@ -261,7 +261,7 @@ final class ContributedDependencySpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains(
-      " - com.google.guava:guava [15.0 -> 16.0-rc1]${nl}     declared in the 'pluginClasspath' configuration")
+      " - com.google.guava:guava [15.0 -> 16.0]${nl}     declared in the 'pluginClasspath' configuration")
     !result.output.contains('contributed by a plugin')
   }
 
@@ -325,7 +325,7 @@ final class ContributedDependencySpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains(
-      " - com.google.guava:guava [15.0 -> 16.0-rc1]${nl}     declared in the 'pluginClasspath' configuration")
+      " - com.google.guava:guava [15.0 -> 16.0]${nl}     declared in the 'pluginClasspath' configuration")
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1055')
@@ -347,7 +347,7 @@ final class ContributedDependencySpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains(
-      " - com.google.guava:guava [15.0 -> 16.0-rc1]${nl}     declared in the 'annotationProcessor' configuration")
+      " - com.google.guava:guava [15.0 -> 16.0]${nl}     declared in the 'annotationProcessor' configuration")
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1055')
@@ -367,7 +367,7 @@ final class ContributedDependencySpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains(' - com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains(' - com.google.guava:guava [15.0 -> 16.0]')
     !result.output.contains('declared in the')
   }
 
@@ -450,7 +450,7 @@ final class ContributedDependencySpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains(' - com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains(' - com.google.guava:guava [15.0 -> 16.0]')
     !result.output.contains('declared in the')
   }
 
@@ -488,7 +488,7 @@ final class ContributedDependencySpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains(
-      " - com.google.guava:guava [15.0 -> 16.0-rc1]${nl}     contributed by a plugin into the 'helper' and 'tool' configurations")
+      " - com.google.guava:guava [15.0 -> 16.0]${nl}     contributed by a plugin into the 'helper' and 'tool' configurations")
     result.output.count('contributed by a plugin') == 1
   }
 
@@ -531,7 +531,7 @@ final class ContributedDependencySpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
     partials.size() == 3
     partials.every { it.contains('"contributed":true') }
-    result.output.contains(" - com.google.guava:guava [15.0 -> 16.0-rc1]${nl}     contributed by a plugin into the 'tool' configuration")
+    result.output.contains(" - com.google.guava:guava [15.0 -> 16.0]${nl}     contributed by a plugin into the 'tool' configuration")
   }
 
   def 'Leaves a buildscript dependency unmarked despite a same named project configuration'() {
@@ -663,7 +663,7 @@ final class ContributedDependencySpec extends Specification {
 
   def 'Marks a contributed dependency that is already at the latest version'() {
     given:
-    writeBuild(toolConfiguration('16.0-rc1'))
+    writeBuild(toolConfiguration('16.0'))
 
     when:
     def result = run(['dependencyUpdates', '-DoutputFormatter=text,json'])
@@ -674,7 +674,7 @@ final class ContributedDependencySpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains(
-      " - com.google.guava:guava:16.0-rc1${nl}     contributed by a plugin into the 'tool' configuration")
+      " - com.google.guava:guava:16.0${nl}     contributed by a plugin into the 'tool' configuration")
     jsonReport.current.dependencies[0].contributed == true
     jsonReport.current.dependencies[0].configurations == ['tool']
   }
@@ -692,7 +692,7 @@ final class ContributedDependencySpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains(
-      " - com.google.guava:guava [99.0-SNAPSHOT <- 16.0-rc1]${nl}     contributed by a plugin into the 'tool' configuration")
+      " - com.google.guava:guava [99.0-SNAPSHOT <- 16.0]${nl}     contributed by a plugin into the 'tool' configuration")
     jsonReport.exceeded.dependencies[0].contributed == true
     jsonReport.exceeded.dependencies[0].configurations == ['tool']
   }

@@ -90,9 +90,11 @@ final class LazyDependencySpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     report.count == 1
-    report.current.dependencies*.name == ['guava']
-    report.current.dependencies[0].version == '15.0'
-    report.outdated.dependencies.isEmpty()
+    // Reported against the version the build declared, rather than discarded or reported
+    // against the one it resolved to.
+    report.outdated.dependencies*.name == ['guava']
+    report.outdated.dependencies[0].version == '15.0'
+    report.current.dependencies.isEmpty()
     report.undeclared.dependencies.isEmpty()
   }
 
@@ -143,7 +145,7 @@ final class LazyDependencySpec extends Specification {
     report.count == 1
     report.outdated.dependencies*.name == ['guava']
     report.outdated.dependencies[0].version == '15.0'
-    report.outdated.dependencies[0].available.milestone == '16.0-rc1'
+    report.outdated.dependencies[0].available.milestone == '16.0'
     report.current.dependencies.isEmpty()
     report.undeclared.dependencies.isEmpty()
   }

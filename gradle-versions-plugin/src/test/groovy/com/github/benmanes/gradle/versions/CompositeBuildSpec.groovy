@@ -120,7 +120,7 @@ final class CompositeBuildSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
-    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
   }
 
   def 'Reports the updates of a build that consumes the build it includes'() {
@@ -302,7 +302,7 @@ final class CompositeBuildSpec extends Specification {
 
     then:
     result.task(':child:dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
   }
 
   def 'Reports the updates of both builds when each applies the plugin'() {
@@ -356,7 +356,7 @@ final class CompositeBuildSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.task(':child:dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
-    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1048')
@@ -1336,7 +1336,7 @@ final class CompositeBuildSpec extends Specification {
     result.task(':child:dependencyUpdates').outcome == SUCCESS
     result.output.contains(':child Project Dependency Updates')
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
-    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
 
     // The projects the completeness check expects are named the way the partial results stamp
     // them, so an included build that aggregates does not report its own projects as absent.

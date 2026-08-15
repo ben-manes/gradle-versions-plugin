@@ -70,7 +70,7 @@ final class AggregationSettingsSpec extends Specification {
         afterEvaluate {
           tasks.named('dependencyUpdates').configure {
             rejectVersionIf {
-              it.candidate.version == '16.0-rc1'
+              it.candidate.version.startsWith('16.')
             }
           }
         }
@@ -84,7 +84,7 @@ final class AggregationSettingsSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
     // The report holds guava at 15.0: the root afterEvaluate's rejectVersionIf reached it.
     report.contains('"guava"')
-    !report.contains('16.0-rc1')
+    !report.contains('16.0')
   }
 
   def 'Honors an explicit subproject setting that equals the default over a non-default ancestor'() {

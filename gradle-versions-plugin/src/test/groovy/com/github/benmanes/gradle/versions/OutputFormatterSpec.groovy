@@ -559,7 +559,7 @@ The following dependencies are using the latest milestone version:
  - backport-util-concurrent:backport-util-concurrent-java12:3.1
 
 The following dependencies exceed the version found at the milestone revision level:
- - com.google.guava:guava [99.0-SNAPSHOT <- 16.0-rc1]
+ - com.google.guava:guava [99.0-SNAPSHOT <- 16.0]
      I know the future
  - com.google.guava:guava-tests [99.0-SNAPSHOT <- 16.0-rc1]
 
@@ -648,7 +648,7 @@ The following dependencies are using the latest milestone version:
  - backport-util-concurrent:backport-util-concurrent-java12:3.1
 
 The following dependencies exceed the version found at the milestone revision level:
- - com.google.guava:guava [99.0-SNAPSHOT <- 16.0-rc1]
+ - com.google.guava:guava [99.0-SNAPSHOT <- 16.0]
      I know the future
  - com.google.guava:guava-tests [99.0-SNAPSHOT <- 16.0-rc1]
 

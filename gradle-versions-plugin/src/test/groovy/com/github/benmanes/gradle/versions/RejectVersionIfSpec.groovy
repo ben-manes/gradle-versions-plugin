@@ -96,7 +96,7 @@ final class RejectVersionIfSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     report.outdated.dependencies*.name == ['guava']
-    report.outdated.dependencies[0].available.milestone == '16.0-rc1'
+    report.outdated.dependencies[0].available.milestone == '16.0'
     report.unresolved.dependencies.isEmpty()
   }
 
@@ -115,20 +115,20 @@ final class RejectVersionIfSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     report.outdated.dependencies*.name == ['guava']
-    report.outdated.dependencies[0].available.milestone == '16.0-rc1'
+    report.outdated.dependencies[0].available.milestone == '16.0'
     report.unresolved.dependencies.isEmpty()
   }
 
   def 'a build script property is not shadowed by a selection property of the same name'() {
     given:
     buildFile = writeScript('''
-      ext.currentVersion = '16.0-rc1'
+      ext.currentVersion = '16.0'
 
       tasks.named('dependencyUpdates').configure {
         outputFormatter = 'json'
         checkForGradleUpdate = false
         rejectVersionIf {
-          candidate.version == currentVersion
+          candidate.version.startsWith(currentVersion)
         }
       }
       ''')
@@ -141,7 +141,7 @@ final class RejectVersionIfSpec extends Specification {
       .build()
     def report = new JsonSlurper().parseText(new File(reportFolder, 'report.json').text)
 
-    then: 'the script property wins, so the only upgrade is rejected'
+    then: 'the script property wins, so the upgrade is rejected'
     result.task(':dependencyUpdates').outcome == SUCCESS
     report.outdated.dependencies.isEmpty()
     report.current.dependencies*.name == ['guava']
@@ -158,7 +158,7 @@ final class RejectVersionIfSpec extends Specification {
         outputFormatter = 'json'
         checkForGradleUpdate = false
         rejectVersionIf {
-          candidate.version == '16.0-rc1'
+          candidate.version.startsWith('16.')
         }
         rejectVersionIf {
           candidate.version == '3.1'
@@ -174,7 +174,7 @@ final class RejectVersionIfSpec extends Specification {
       .build()
     def report = new JsonSlurper().parseText(new File(reportFolder, 'report.json').text)
 
-    then: 'guava has no update (its only candidate was rejected) and guice stops at 3.0'
+    then: 'guava has no update (its candidates were rejected) and guice stops at 3.0'
     result.task(':dependencyUpdates').outcome == SUCCESS
     report.current.dependencies*.name == ['guava']
     report.outdated.dependencies*.name == ['guice']
@@ -192,7 +192,7 @@ final class RejectVersionIfSpec extends Specification {
         outputFormatter = 'json'
         checkForGradleUpdate = false
         rejectVersionIf {
-          candidate.version == '16.0-rc1'
+          candidate.version.startsWith('16.')
         }
         resolutionStrategy {
           componentSelection {
@@ -241,7 +241,7 @@ final class RejectVersionIfSpec extends Specification {
           }
         }
         rejectVersionIf {
-          candidate.version == '16.0-rc1'
+          candidate.version.startsWith('16.')
         }
       }
       ''')
@@ -299,7 +299,7 @@ final class RejectVersionIfSpec extends Specification {
         outputFormatter = 'json'
         checkForGradleUpdate = false
         rejectVersionIf {
-          candidate.version == '16.0-rc1'
+          candidate.version.startsWith('16.')
         }
         resolutionStrategy = {
           componentSelection {
@@ -324,7 +324,7 @@ final class RejectVersionIfSpec extends Specification {
     then: 'the assignment replaced the guava filter rather than composing with it, so guava is outdated again'
     result.task(':dependencyUpdates').outcome == SUCCESS
     report.outdated.dependencies*.name.sort() == ['guava', 'guice']
-    report.outdated.dependencies.find { it.name == 'guava' }.available.milestone == '16.0-rc1'
+    report.outdated.dependencies.find { it.name == 'guava' }.available.milestone == '16.0'
     report.outdated.dependencies.find { it.name == 'guice' }.available.milestone == '3.0'
   }
 
