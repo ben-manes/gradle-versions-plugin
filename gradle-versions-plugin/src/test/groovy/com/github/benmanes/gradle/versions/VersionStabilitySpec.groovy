@@ -107,14 +107,34 @@ final class VersionStabilitySpec extends Specification {
   }
 
   @Unroll
-  def 'a trailing git hash is a build identifier, not an early-access marker: #version'() {
+  def 'a version ending in a commit hash is something CI published: #version'() {
     expect:
+    VersionStability.isPreRelease(version)
+
+    where:
+    version << ['0.10-ea8fbc9', '2.11.8-18269ea', '3.6-bb17ea2', '0.1-d1b5231',
+                '1.1.0-4dd6c85cab1ef1a4415abb74704d60e57497b7b8',
+                '0.0.0-2022-12-12T06-32-18-ed7ddf78']
+  }
+
+  @Unroll
+  def 'a trailing run of digits is a build number rather than a hash, so it is left alone: #version'() {
+    expect:
+    // The hash rule requires at least one a-f. Without that it would fire on any long build
+    // number, and some of those are releases.
     !VersionStability.isPreRelease(version)
 
     where:
-    // `ea` is spelled entirely in hexadecimal, so an ordinary marker rule fires on any hash that
-    // happens to contain it.
-    version << ['0.10-ea8fbc9', '2.11.8-18269ea', '3.6-bb17ea2']
+    version << ['2.0.0-1234567', '1.0-20240315', '9.2-1002-jdbc4', '2.8.0.20240101']
+  }
+
+  @Unroll
+  def 'an early-access marker still reads as one: #version'() {
+    expect:
+    VersionStability.isPreRelease(version)
+
+    where:
+    version << ['1.1-ea', '2.1-EA1', '26-ea+11', '17.0.19-ea+2']
   }
 
   def 'a convention no general marker set has is passed through, not withheld'() {

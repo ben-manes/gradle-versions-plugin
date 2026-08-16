@@ -41,21 +41,24 @@ object VersionStability {
   // https://maven.apache.org/guides/getting-started/index.html#what-is-a-snapshot-version
   private val TIMESTAMPED_SNAPSHOT = Regex("""-\d{8}\.\d{6}-\d+$""")
 
-  // A trailing git hash is a build identifier, not a marker. It is also spelled in the same
-  // alphabet as `ea`, which is why `ea` is matched separately rather than as an ordinary marker.
-  private val TRAILING_HASH = Regex("""[-._+][0-9a-f]{7,}$""", RegexOption.IGNORE_CASE)
+  // A version ending in a commit hash is something a CI job published, not something a project
+  // released. At least one `a-f` is required so that a build number spelled in digits alone, such
+  // as `2.0.0-1234567`, is left alone: those are not hashes and some of them are releases.
+  private val COMMIT_HASH =
+    Regex("""[-._+](?=[0-9a-f]*[a-f])[0-9a-f]{7,}$""", RegexOption.IGNORE_CASE)
+
   private val EARLY_ACCESS = Regex("""(?:^|[-._+])ea(?=$|[-._+]|\d{1,3}$)""", RegexOption.IGNORE_CASE)
 
   /**
-   * Returns whether [version] names a pre-release, by a marker this recognizes. A build whose
-   * dependencies use a convention this does not carry names it in a `rejectVersionIf` filter, which
-   * composes with this one rather than replacing it.
+   * Returns whether [version] names a pre-release, by a marker this recognizes or by a trailing
+   * commit hash. A build whose dependencies use a convention this does not carry names it in a
+   * `rejectVersionIf` filter, which composes with this one rather than replacing it.
    */
   @JvmStatic
   fun isPreRelease(version: String): Boolean {
     if (isSnapshot(version)) return true
     if (MARKER.containsMatchIn(version) || ABBREVIATED_PRE.containsMatchIn(version)) return true
-    return EARLY_ACCESS.containsMatchIn(version) && !TRAILING_HASH.containsMatchIn(version)
+    return COMMIT_HASH.containsMatchIn(version) || EARLY_ACCESS.containsMatchIn(version)
   }
 
   /**

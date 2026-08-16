@@ -721,6 +721,10 @@ release candidate keeps being offered newer ones. The markers it recognizes are 
 `snapshot` and `unstable`, each matched case-insensitively and only where it
 stands on its own, along with Maven's two snapshot spellings.
 
+A version ending in a commit hash counts too, since a job that publishes on every
+commit stamps the hash into the version rather than releasing it. At least one
+`a-f` is required, so a trailing run of digits stays a build number.
+
 The question it asks is "is this a recognized pre-release?" rather than "is this
 stable?", and the direction is the point. Being wrong can only leave a
 pre-release on offer, never withhold a release: a version whose qualifier it
