@@ -16,15 +16,18 @@ package com.github.benmanes.gradle.versions.updates
  *
  * https://github.com/ben-manes/gradle-versions-plugin/issues/440
  */
-object VersionStability {
+internal object VersionStability {
   /**
    * The markers, each of which has to stand on its own rather than appear inside a longer word, so
    * that `3.0-GAMMA` is a milestone and `1.0-legacy` is not a `GA` release.
+   *
+   * `incubating` is deliberately absent. It reads like a marker, but the Apache Incubator requires
+   * it of a podling's *released* artifacts, so recognizing it would withhold a release.
    */
   private val MARKERS =
     listOf(
       "alpha", "beta", "canary", "candidate", "cr", "dev", "draft", "eap", "experimental",
-      "incubating", "m", "milestone", "nightly", "pre", "preview", "rc", "snap", "snapshot",
+      "m", "milestone", "nightly", "pre", "preview", "rc", "snap", "snapshot",
       "unstable",
     )
 
@@ -58,7 +61,11 @@ object VersionStability {
   fun isPreRelease(version: String): Boolean {
     if (isSnapshot(version)) return true
     if (MARKER.containsMatchIn(version) || ABBREVIATED_PRE.containsMatchIn(version)) return true
-    return COMMIT_HASH.containsMatchIn(version) || EARLY_ACCESS.containsMatchIn(version)
+    // Semantic versioning says build metadata carries no precedence, so a release may end in a
+    // hash that names the commit it was built from. Only what precedes the `+` decides.
+    // https://semver.org/#spec-item-10
+    return COMMIT_HASH.containsMatchIn(version.substringBefore('+')) ||
+      EARLY_ACCESS.containsMatchIn(version)
   }
 
   /**
@@ -73,7 +80,11 @@ object VersionStability {
     currentVersion: String,
   ): Boolean = isPreRelease(candidateVersion) && !isPreRelease(currentVersion)
 
-  /** Returns whether [version] names a snapshot, by either of Maven's two spellings. */
+  /**
+   * Returns whether [version] names a snapshot, by either of Maven's two spellings. The word is
+   * matched anywhere rather than on a boundary, unlike the markers above, because Maven's
+   * convention is the literal suffix rather than a qualifier a publisher chose.
+   */
   @JvmStatic
   fun isSnapshot(version: String): Boolean =
     version.contains("SNAPSHOT", ignoreCase = true) || TIMESTAMPED_SNAPSHOT.containsMatchIn(version)

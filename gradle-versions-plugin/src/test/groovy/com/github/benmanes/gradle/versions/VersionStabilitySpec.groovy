@@ -36,7 +36,6 @@ final class VersionStabilitySpec extends Specification {
       '2.10.0.pr1',
       '3.0.0-milestone-3',
       '1.0.0-preview',
-      '2.0.0-incubating',
       '3.7.0-NIGHTLY',
     ]
   }
@@ -115,6 +114,27 @@ final class VersionStabilitySpec extends Specification {
     version << ['0.10-ea8fbc9', '2.11.8-18269ea', '3.6-bb17ea2', '0.1-d1b5231',
                 '1.1.0-4dd6c85cab1ef1a4415abb74704d60e57497b7b8',
                 '0.0.0-2022-12-12T06-32-18-ed7ddf78']
+  }
+
+  @Unroll
+  def 'a release the Apache Incubator requires to say so is still a release: #version'() {
+    expect:
+    // A podling has to ship `-incubating`, so reading it as a marker would withhold the release
+    // itself. https://incubator.apache.org/guides/releasemanagement.html
+    !VersionStability.isPreRelease(version)
+
+    where:
+    version << ['1.1-incubating', '2.0.0-incubating', '2.0.0.incubating', '0.7.0-incubating']
+  }
+
+  @Unroll
+  def 'build metadata carries no precedence, so a hash behind a plus is not a pre-release: #version'() {
+    expect:
+    // https://semver.org/#spec-item-10
+    !VersionStability.isPreRelease(version)
+
+    where:
+    version << ['1.0.0+build.1a2b3c4', '1.0.0+1a2b3c4', '2.3.4+d6c85cab1ef1a44']
   }
 
   @Unroll
