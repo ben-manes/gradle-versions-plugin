@@ -717,7 +717,7 @@ it out of the report is the version string rather than the revision (see
 The task withholds a candidate whose version names a pre-release unless the
 version the build declares is itself a pre-release, so an upgrade never trades a
 release for a release candidate without being asked. A build already on a
-release candidate keeps being offered newer ones. The markers it recognizes are `alpha`, `beta`,
+release candidate keeps seeing newer ones. The markers it recognizes are `alpha`, `beta`,
 `canary`, `candidate`, `cr`, `dev`, `draft`, `ea`, `eap`, `experimental`,
 `incubating`, `m`, `milestone`, `nightly`, `pre`, `preview`, `rc`, `snap`,
 `snapshot` and `unstable`, each matched case-insensitively and only where it
@@ -729,7 +729,7 @@ commit stamps the hash into the version rather than releasing it. At least one
 
 The question it asks is "is this a recognized pre-release?" rather than "is this
 stable?", and the direction is the point. Being wrong can only leave a
-pre-release on offer, never withhold a release: a version whose qualifier it
+pre-release in the report, never withhold a release: a version whose qualifier it
 does not recognize, such as `10.2.0.jre11`, `1.1.17.SP2` or `0.4-groovy-1.6`, is
 passed through rather than hidden.
 
@@ -771,9 +771,10 @@ tasks.named("dependencyUpdates").configure {
 </details>
 
 Neither check can restore what the other withheld. To see every candidate the
-repositories offer, including the pre-releases, turn the built-in filter off with
-`rejectPreReleaseVersions = false`, or with `--no-reject-pre-release-versions`
-for a single run (see [Command line options](#command-line-options)). Turn it off
+repositories publish, including the pre-releases, turn the built-in filter off
+with `rejectPreReleaseVersions = false`, or with
+`--no-reject-pre-release-versions` for a single run (see [Command line
+options](#command-line-options)). Turn it off
 too when you want a policy of your own, and write the whole of it as a component
 selection rule instead. There is no agreed standard for what counts as unstable,
 but this is a common starting point:
@@ -2304,10 +2305,10 @@ into the newest of them before:
 >   it, along with the `rejectVersionIf` clause that called it. The built-in
 >   check asks whether a version names a pre-release rather than whether it
 >   names a release, so a qualifier it does not recognize, such as
->   `13.4.0.jre11`, is reported rather than withheld. A convention the markers
->   do not name, such as graphql-java's `-nf-` builds, still goes in a
->   `rejectVersionIf` filter, which composes with the built-in check rather than
->   replacing it.
+>   `13.4.0.jre11`, stays in the report rather than being withheld. A convention
+>   the markers do not name, such as graphql-java's `-nf-` builds, still goes in
+>   a `rejectVersionIf` filter, which composes with the built-in check rather
+>   than replacing it.
 > - Drop `!satisfiesDeclaredBound` from a `rejectVersionIf` rule, since the
 >   bound is now applied by `rejectOutOfBoundVersions`. The member is
 >   deprecated and will be removed in a later release; a warning is printed
@@ -2317,7 +2318,7 @@ into the newest of them before:
 >   `--no-reject-out-of-bound-versions` as without it.
 
 > [!NOTE]
-> - A build already on a pre-release is still shown newer ones.
+> - A build already on a pre-release keeps seeing newer ones in the report.
 > - The `integration` revision is exempt, since every snapshot is a pre-release
 >   and filtering there would leave that revision with nothing to report.
 > - A version ending in a commit hash counts as a pre-release, where at least

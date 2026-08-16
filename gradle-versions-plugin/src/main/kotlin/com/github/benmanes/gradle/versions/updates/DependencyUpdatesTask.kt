@@ -298,9 +298,9 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   /**
    * Whether a candidate that names a pre-release is withheld from the report when the version a
    * build declares does not itself name one, so that upgrading never trades a release for a
-   * pre-release without being asked. A build already on a pre-release keeps being offered newer
-   * ones. A convention this does not recognize is named in a [rejectVersionIf] filter, which
-   * composes with this one rather than replacing it. See [VersionStability.isLessStable].
+   * pre-release without being asked. A build already on a pre-release keeps seeing newer ones. A
+   * convention this does not recognize is named in a [rejectVersionIf] filter, which composes with
+   * this one rather than replacing it. See [VersionStability.isLessStable].
    */
   @get:Input
   var rejectPreReleaseVersions: Boolean

@@ -11,7 +11,7 @@ import spock.lang.Specification
 /**
  * {@code rejectPreReleaseVersions} withholds a pre-release candidate from the report by default,
  * unless the build already declares a pre-release, in which case a newer pre-release is still
- * offered. A convention the built-in markers do not cover is named in a {@code rejectVersionIf}
+ * reported. A convention the built-in markers do not cover is named in a {@code rejectVersionIf}
  * filter, which composes with this one rather than replacing it.
  */
 final class CheckPreReleaseVersionsSpec extends Specification {
@@ -126,7 +126,7 @@ final class CheckPreReleaseVersionsSpec extends Specification {
     report.outdated.dependencies.isEmpty()
   }
 
-  def 'a build already on a pre-release is still offered a newer pre-release'() {
+  def 'a build already on a pre-release still sees a newer pre-release'() {
     given:
     writeBuildFile('com.example:prerelease-peer:1.0-alpha')
 

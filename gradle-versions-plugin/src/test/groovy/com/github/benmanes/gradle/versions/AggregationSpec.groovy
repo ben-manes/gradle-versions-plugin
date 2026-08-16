@@ -169,7 +169,7 @@ final class AggregationSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     // Guava's whole 16.0 line is a milestone here, so the release revision holds guava at 15.0. A
-    // producer that resolved at the default revision instead would offer 16.0 as the later version.
+    // producer that resolved at the default revision instead would report 16.0 as the later version.
     report.contains('"guava"')
     !report.contains('16.0')
   }

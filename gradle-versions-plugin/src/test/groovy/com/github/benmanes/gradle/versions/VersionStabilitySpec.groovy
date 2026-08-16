@@ -142,7 +142,7 @@ final class VersionStabilitySpec extends Specification {
     !VersionStability.isPreRelease('2.0.0.AM27')
     !VersionStability.isPreRelease('230521-nf-execution')
 
-    and: 'so an upgrade to one is offered rather than hidden, which is the fail-open direction'
+    and: 'so an upgrade to one is reported rather than hidden, which is the fail-open direction'
     !VersionStability.isLessStable('2.0.0.AM27', '2.0.0')
     !VersionStability.isLessStable('230521-nf-execution', '221101-nf-execution')
   }

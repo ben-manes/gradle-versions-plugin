@@ -11,7 +11,7 @@ package com.github.benmanes.gradle.versions.updates
  * afford: an update it never learns about.
  *
  * A pre-release marker set is closed and small by comparison, so this recognizes those and leaves
- * everything else alone. Being wrong here can only leave a pre-release on offer, which is what a
+ * everything else alone. Being wrong here can only leave a pre-release in the report, which is what a
  * build sees today with no filter at all.
  *
  * https://github.com/ben-manes/gradle-versions-plugin/issues/440
