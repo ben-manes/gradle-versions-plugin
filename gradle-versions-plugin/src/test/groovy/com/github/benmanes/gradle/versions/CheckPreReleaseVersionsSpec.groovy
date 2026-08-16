@@ -126,6 +126,21 @@ final class CheckPreReleaseVersionsSpec extends Specification {
     report.outdated.dependencies.isEmpty()
   }
 
+  def 'a module with no release at all reports as unresolved rather than up to date'() {
+    given: 'peer publishes only 1.0-alpha and 1.0-beta, and the declared 0.9 was never published'
+    writeBuildFile('com.example:prerelease-peer:0.9')
+
+    when:
+    def report = runReport()
+
+    then: 'every candidate is rejected, so the dynamic query matches nothing'
+    // A known cost of filtering by rejection, shared with a rejectVersionIf that rejects
+    // everything. The build still succeeds, and the entry names the versions that were rejected.
+    report.unresolved.dependencies*.name == ['prerelease-peer']
+    report.unresolved.dependencies[0].reason.contains('1.0-beta')
+    report.outdated.dependencies.isEmpty()
+  }
+
   def 'a build already on a pre-release still sees a newer pre-release'() {
     given:
     writeBuildFile('com.example:prerelease-peer:1.0-alpha')
