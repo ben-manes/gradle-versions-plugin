@@ -279,9 +279,7 @@ the cache and query the repositories again:
 
 #### A recommended configuration
 
-The properties below each solve a different problem, and most builds end up
-wanting the same few. This is a complete starting point, assembled from the
-sections that follow:
+Most builds end up wanting the same starting point, and it is now one line:
 
 <details open>
 <summary>Kotlin</summary>
@@ -316,10 +314,8 @@ bound written in the build, outside a dynamic version declared on the
 buildscript classpath, or outside the version fixed by a consumed platform is
 left out by `rejectOutOfBoundVersions`. Both are on by default (see [Filtering
 unstable versions](#filtering-unstable-versions) and [Respecting declared
-bounds](#respecting-declared-bounds)).
-
-Each piece stands alone: drop any line whose behavior you do not want, and the
-rest keep working.
+bounds](#respecting-declared-bounds)); set either to `false` to see what it
+leaves out.
 
 The [configuration filters](#configuration-filter) are absent only because
 their arguments are build-specific: the names to reject come from your own
@@ -717,25 +713,39 @@ it out of the report is the version string rather than the revision (see
 The task withholds a candidate whose version names a pre-release unless the
 version the build declares is itself a pre-release, so an upgrade never trades a
 release for a release candidate without being asked. A build already on a
-release candidate keeps seeing newer ones. The markers it recognizes are `alpha`, `beta`,
-`canary`, `candidate`, `cr`, `dev`, `draft`, `ea`, `eap`, `experimental`,
-`incubating`, `m`, `milestone`, `nightly`, `pre`, `preview`, `rc`, `snap`,
+release candidate keeps seeing newer ones. The markers it recognizes are
+`alpha`, `beta`, `canary`, `candidate`, `cr`, `dev`, `draft`, `eap`,
+`experimental`, `m`, `milestone`, `nightly`, `pre`, `preview`, `rc`, `snap`,
 `snapshot` and `unstable`, each matched case-insensitively and only where it
-stands on its own, along with Maven's two snapshot spellings.
+stands on its own, along with Maven's two snapshot spellings. Two shorthands
+are matched by their own rule: `ea` for early access, which may carry up to
+three trailing digits, and `pr` where digits follow it, which is how Jackson
+spells `2.10.0.pr1`.
 
-A version ending in a commit hash counts too, since a job that publishes on every
-commit stamps the hash into the version rather than releasing it. At least one
-`a-f` is required, so a trailing run of digits stays a build number.
+`incubating` is not a marker. The Apache Incubator requires a podling to ship it
+in the version of a real release, so recognizing it would withhold one.
+
+A version ending in a commit hash counts too, since a job that publishes on
+every commit stamps the hash into the version rather than releasing it. At least
+one `a-f` is required, so a trailing run of digits stays a build number, and a
+hash behind a `+` is read as semantic versioning's build metadata rather than as
+a pre-release.
 
 The question it asks is "is this a recognized pre-release?" rather than "is this
 stable?", and the direction is the point. Being wrong can only leave a
-pre-release in the report, never withhold a release: a version whose qualifier it
-does not recognize, such as `10.2.0.jre11`, `1.1.17.SP2` or `0.4-groovy-1.6`, is
-passed through rather than hidden.
+pre-release in the report, never withhold a release: a version whose qualifier
+it does not recognize, such as `10.2.0.jre11`, `1.1.17.SP2` or `0.4-groovy-1.6`,
+is passed through rather than hidden.
 
 The `integration` revision is exempt. It is how a build asks to see snapshots,
-and every snapshot is a pre-release, so filtering there would leave that revision
-with nothing to report.
+and every snapshot is a pre-release, so filtering there would leave that
+revision with nothing to report.
+
+A candidate is withheld by being rejected, so a module whose repositories carry
+nothing but pre-releases, and no longer the version the build declares, has
+no candidate left to resolve. That entry reports as unresolved, naming the
+versions that were rejected, rather than as up to date. A `rejectVersionIf`
+filter that rejects everything behaves the same way.
 
 A convention the markers above do not cover is named in a `rejectVersionIf`
 filter, which composes with this one rather than replacing it. A candidate is
@@ -2323,7 +2333,10 @@ into the newest of them before:
 >   and filtering there would leave that revision with nothing to report.
 > - A version ending in a commit hash counts as a pre-release, where at least
 >   one character of the hash is `a-f`. A trailing run of digits stays a build
->   number.
+>   number, and a hash behind a `+` is build metadata.
+> - A module whose repositories carry nothing but pre-releases, and not the
+>   version the build declares, has every candidate rejected and reports as
+>   unresolved rather than as up to date.
 > - The presence of a version catalog no longer changes whether a plugin
 >   versioned inline as a range in the `plugins` block is offered an upgrade
 >   past that range. The upgrade was withheld when an unused alias for the same plugin was
