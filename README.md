@@ -52,6 +52,7 @@ Plugin](https://www.mojohaus.org/versions-maven-plugin).
 - [Samples](#samples)
 - [Compatibility](#compatibility)
 - [Migrating from prior versions](#migrating-from-prior-versions)
+  - [v0.61.0](#v0610)
   - [v0.60.0](#v0600)
   - [v0.59.0](#v0590)
   - [v0.58.0](#v0580)
@@ -2270,13 +2271,19 @@ and *Note*s are things worth knowing that need no action.
 
 ### v0.61.0
 
-In the next release, the report is held to the bounds written in the build
-without a rule written for it, and a coordinate with one declared version and
-different latest versions across the aggregated projects is shown on one entry
-per latest version, where the entries were merged into the newest of them
-before:
+In the next release, a candidate whose version names a pre-release is withheld
+unless the version the build declares names one too, the report is held to the
+bounds written in the build without a rule written for it, and a coordinate with
+one declared version and different latest versions across the aggregated
+projects is shown on one entry per latest version, where the entries were merged
+into the newest of them before:
 
 > [!IMPORTANT]
+> - A dependency whose only newer version is a pre-release now reports as up to
+>   date, where the report included that version before. Set
+>   `rejectPreReleaseVersions = false` to include pre-releases again, or pass
+>   `--no-reject-pre-release-versions` for a single run (see [Filtering unstable
+>   versions](#filtering-unstable-versions)).
 > - A candidate outside a `strictly` or `reject` bound written in the build,
 >   outside a dynamic version declared on the buildscript classpath, or outside
 >   the version fixed by a consumed platform, is left out of the report, where
@@ -2290,6 +2297,14 @@ before:
 >   alone has to key them by the projects as well.
 
 > [!TIP]
+> - A build carrying the `isNonStable` recipe this README recommended can drop
+>   it, along with the `rejectVersionIf` clause that called it. The built-in
+>   check asks whether a version names a pre-release rather than whether it
+>   names a release, so a qualifier it does not recognize, such as
+>   `13.4.0.jre11`, is reported rather than withheld. A convention the markers
+>   do not name, such as graphql-java's `-nf-` builds, still goes in a
+>   `rejectVersionIf` filter, which composes with the built-in check rather than
+>   replacing it.
 > - Drop `!satisfiesDeclaredBound` from a `rejectVersionIf` rule, since the
 >   bound is now applied by `rejectOutOfBoundVersions`. The member is
 >   deprecated and will be removed in a later release; a warning is printed
@@ -2299,6 +2314,12 @@ before:
 >   `--no-reject-out-of-bound-versions` as without it.
 
 > [!NOTE]
+> - A build already on a pre-release is still shown newer ones.
+> - The `integration` revision is exempt, since every snapshot is a pre-release
+>   and filtering there would leave that revision with nothing to report.
+> - A version ending in a commit hash counts as a pre-release, where at least
+>   one character of the hash is `a-f`. A trailing run of digits stays a build
+>   number.
 > - The presence of a version catalog no longer changes whether a plugin
 >   versioned inline as a range in the `plugins` block is offered an upgrade
 >   past that range. The upgrade was withheld when an unused alias for the same plugin was
