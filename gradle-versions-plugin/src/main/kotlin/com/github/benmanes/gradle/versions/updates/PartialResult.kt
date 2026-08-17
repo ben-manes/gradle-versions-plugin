@@ -26,6 +26,11 @@ data class PartialStatus
      * would replace the shipped arities that end there.
      */
     val platformProjects: List<String> = emptyList(),
+    /**
+     * The platforms that constrain this module's version, a project one by its build tree path and
+     * an external one by its module coordinate. Trails for the same reason as [platformProjects].
+     */
+    val constrainedBy: List<String> = emptyList(),
   ) {
     val coordinate: Coordinate
       get() = Coordinate(group, name, declaredVersion, userReason)
@@ -51,7 +56,29 @@ data class PartialStatus
     ): PartialStatus =
       copy(
         group, name, declaredVersion, userReason, latestVersion, projectUrl, unresolved, contributed,
-        configurations, projectPath, platformProjects,
+        configurations, projectPath, platformProjects, constrainedBy,
+      )
+
+    /**
+     * Keeps the `copy` a release shipped callable. The generated one no longer is, now that the
+     * constraining platforms moved it past eleven parameters.
+     */
+    fun copy(
+      group: String = this.group,
+      name: String = this.name,
+      declaredVersion: String = this.declaredVersion,
+      userReason: String? = this.userReason,
+      latestVersion: String = this.latestVersion,
+      projectUrl: String? = this.projectUrl,
+      unresolved: UnresolvedInfo? = this.unresolved,
+      contributed: Boolean = this.contributed,
+      configurations: List<String> = this.configurations,
+      projectPath: String? = this.projectPath,
+      platformProjects: List<String> = this.platformProjects,
+    ): PartialStatus =
+      copy(
+        group, name, declaredVersion, userReason, latestVersion, projectUrl, unresolved, contributed,
+        configurations, projectPath, platformProjects, constrainedBy,
       )
   }
 

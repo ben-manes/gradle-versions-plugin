@@ -614,6 +614,19 @@ a BOM a library brings along as resolution metadata is not one the build
 imported, so neither is reported. The BOM's entry names every platform project
 that imports it, by build tree path.
 
+The platform behind a constrained module's version is included in that module's
+own entry either way, as `constrained by the platform :platform` for a platform
+project included in the build and `constrained by the platform group:artifact`
+for a BOM, whose own version appears on its own entry. A platform is only
+included when its constraint is the same version the entry shows: if something
+else in the build required a higher version and won out, changing the platform
+would not change that version. The coordinate to bump appears on the entry where
+the version is held (see
+[Respecting declared bounds](#respecting-declared-bounds)). This line does not
+depend on `checkConstraints`. The same names are present in the JSON and XML
+reports as `constrainedBy`, beside the `platformProjects` importers of a
+platform's own entry.
+
 <details open>
 <summary>Kotlin</summary>
 
@@ -933,10 +946,19 @@ instead:
 ```text
 The following dependencies are using the latest milestone version:
  - org.apache.logging.log4j:log4j-core:2.16.0
+     constrained by the platform org.apache.logging.log4j:log4j-bom
 
 The following dependencies have later milestone versions:
  - org.apache.logging.log4j:log4j-bom [2.16.0 -> 2.17.0]
 ```
+
+The platform behind the bound appears on an attribution line under the bounded
+entry, so the reason for the version shows up next to it. A platform project
+appears as its build tree path, `constrained by the platform :platform`, and a
+BOM as its group and module; where several platforms bound the module, all of
+them follow `constrained by the platforms`. A constraint written as a range is
+left out, since a range alone is not enough to tell which version was
+selected.
 
 The platform keeps its own report line, so the upgrade that is actually
 available, bumping the BOM, still shows. A build that centralizes its platforms

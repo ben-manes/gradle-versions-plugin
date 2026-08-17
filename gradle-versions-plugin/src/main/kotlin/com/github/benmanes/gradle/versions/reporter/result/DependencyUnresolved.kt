@@ -13,4 +13,26 @@ data class DependencyUnresolved
     @AbsentWhenNull override val contributed: Boolean? = null,
     @AbsentWhenNull override val configurations: List<String>? = null,
     @AbsentWhenNull override val platformProjects: List<String>? = null,
-  ) : Dependency()
+    @AbsentWhenNull override val constrainedBy: List<String>? = null,
+  ) : Dependency() {
+    /**
+     * Keeps the `copy` a release shipped callable. The generated one no longer is, now that the
+     * constraining platforms moved it past ten parameters.
+     */
+    fun copy(
+      group: String? = this.group,
+      name: String? = this.name,
+      version: String? = this.version,
+      projectUrl: String? = this.projectUrl,
+      userReason: String? = this.userReason,
+      reason: String = this.reason,
+      projects: List<String>? = this.projects,
+      contributed: Boolean? = this.contributed,
+      configurations: List<String>? = this.configurations,
+      platformProjects: List<String>? = this.platformProjects,
+    ): DependencyUnresolved =
+      copy(
+        group, name, version, projectUrl, userReason, reason, projects, contributed,
+        configurations, platformProjects, constrainedBy,
+      )
+  }

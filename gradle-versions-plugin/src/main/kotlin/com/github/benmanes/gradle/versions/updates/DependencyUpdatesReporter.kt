@@ -50,6 +50,7 @@ import java.util.TreeSet
  * @property skipped The configurations whose dependencies could not be inspected because applying the
  * resolutionStrategy to them failed.
  * @property platformProjectsByCoordinate The platform projects the build imports each coordinate through.
+ * @property constrainedByCoordinate The platforms that constrain each coordinate's version.
  *
  */
 class DependencyUpdatesReporter(
@@ -75,6 +76,7 @@ class DependencyUpdatesReporter(
   val configurationsByCoordinate: Map<Coordinate, List<String>> = emptyMap(),
   val skipped: List<SkippedConfiguration> = emptyList(),
   val platformProjectsByCoordinate: Map<Coordinate, List<String>> = emptyMap(),
+  val constrainedByCoordinate: Map<Coordinate, List<String>> = emptyMap(),
 ) {
   @Deprecated("Use the constructor that includes the skipped configurations.")
   constructor(
@@ -275,6 +277,7 @@ class DependencyUpdatesReporter(
       contributed = contributedFlag(coordinate),
       configurations = configurationsByCoordinate[coordinate],
       platformProjects = platformProjectsByCoordinate[coordinate],
+      constrainedBy = constrainedByCoordinate[coordinate],
     )
   }
 
@@ -293,6 +296,7 @@ class DependencyUpdatesReporter(
       contributed = contributedFlag(coordinate),
       configurations = configurationsByCoordinate[coordinate],
       platformProjects = platformProjectsByCoordinate[coordinate],
+      constrainedBy = constrainedByCoordinate[coordinate],
     )
   }
 
@@ -319,6 +323,7 @@ class DependencyUpdatesReporter(
       contributed = contributedFlag(declared),
       configurations = configurationsByCoordinate[declared],
       platformProjects = platformProjectsByCoordinate[declared],
+      constrainedBy = constrainedByCoordinate[declared],
     )
   }
 
@@ -344,6 +349,7 @@ class DependencyUpdatesReporter(
       contributed = contributedFlag(coordinate),
       configurations = configurationsByCoordinate[coordinate],
       platformProjects = platformProjectsByCoordinate[coordinate],
+      constrainedBy = constrainedByCoordinate[coordinate],
     )
   }
 
@@ -426,6 +432,7 @@ fun reporterFor(
   val contributedCoordinates = contributedCoordinates(statuses, logger)
   val configurationsByCoordinate = namedConfigurations(statuses, contributedCoordinates)
   val platformProjectsByCoordinate = platformProjectsByCoordinate(statuses, logger)
+  val constrainedByCoordinate = constrainedByCoordinate(statuses, logger)
   val unresolved = statuses.mapNotNullTo(mutableSetOf()) { it.unresolved }
   val projectUrls =
     statuses
@@ -451,7 +458,7 @@ fun reporterFor(
     reportfileName, currentVersions, latestVersions, upToDateVersions, downgradeVersions,
     upgradeVersions, versions.undeclared, unresolved, projectUrls, gradleUpdateChecker,
     gradleReleaseChannel, versions.latestByCurrent, projectsByCoordinate, contributedCoordinates,
-    configurationsByCoordinate, skipped, platformProjectsByCoordinate,
+    configurationsByCoordinate, skipped, platformProjectsByCoordinate, constrainedByCoordinate,
   )
 }
 
@@ -519,7 +526,8 @@ private fun platformProjectsByCoordinate(
       }
       val declaringStatuses =
         group.filter {
-          it.platformProjects.isEmpty() && !it.contributed && it.projectPath !in importers
+          it.platformProjects.isEmpty() && it.constrainedBy.isEmpty() && !it.contributed &&
+            it.projectPath !in importers
         }
       if (declaringStatuses.isNotEmpty()) {
         val declaringPaths = declaringStatuses.mapNotNull { it.projectPath }.distinct().sorted()
@@ -530,6 +538,38 @@ private fun platformProjectsByCoordinate(
         return@mapNotNull null
       }
       coordinate to importers.toList().sorted()
+    }.toMap()
+
+/**
+ * Returns the platforms that constrain each coordinate's version, unioned across projects. Left out
+ * when another project declares the coordinate with no platform constraining it there, since that
+ * declaration is the row to edit and the mark would point somewhere else.
+ */
+private fun constrainedByCoordinate(
+  statuses: List<PartialStatus>,
+  logger: Logger,
+): Map<Coordinate, List<String>> =
+  statuses
+    .groupBy { it.coordinate }
+    .mapNotNull { (coordinate, group) ->
+      val sources = group.flatMap { it.constrainedBy }.toSet()
+      if (sources.isEmpty()) {
+        return@mapNotNull null
+      }
+      val declaringStatuses =
+        group.filter {
+          it.constrainedBy.isEmpty() && it.platformProjects.isEmpty() && !it.contributed &&
+            it.projectPath !in sources
+        }
+      if (declaringStatuses.isNotEmpty()) {
+        val declaringPaths = declaringStatuses.mapNotNull { it.projectPath }.distinct().sorted()
+        logger.info(
+          "A project outside ${coordinate.groupId}:${coordinate.artifactId}'s bounding platforms " +
+            "declares it, so the platform mark is withheld: ${declaringPaths.joinToString(", ")}",
+        )
+        return@mapNotNull null
+      }
+      coordinate to sources.toList().sorted()
     }.toMap()
 
 /** Returns the projects behind each version of a key whose declared versions diverge. */

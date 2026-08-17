@@ -62,10 +62,12 @@ private fun configurationsLabel(names: List<String>): String {
 /**
  * Returns the line describing where the dependency's version came from, or null for a declared one.
  *
- * A row is handed at most one attribution, ranked by how directly the build can edit the version
- * reported: a declaration outranks the platform mark, which outranks the plugin's. Which of the
- * first two a row carries is decided where the statuses are assembled, so the branch order below
- * settles only what the mark displaces, which is the configurations a declaration named.
+ * A row gets at most one attribution line, and the order below picks which, nearest cause first:
+ * the platform a row was imported through comes before the platform that constrains it, then a
+ * declaration, then the plugin that contributed it. Only a module declared without a version can be
+ * constrained by a platform, so a declaration displaced by that line would point at a spot in the
+ * build script with no version in it. Which line a row qualifies for is decided where the statuses
+ * are assembled; the order below settles only which one wins.
  */
 internal fun sourceLabel(dependency: Dependency): String? {
   val projects = dependency.projects
@@ -74,6 +76,12 @@ internal fun sourceLabel(dependency: Dependency): String? {
     val noun = if (platforms.size == 1) "platform" else "platforms"
     val imported = "imported by the $noun ${projectsLabel(platforms)}"
     return if (projects == null) imported else "$imported in ${projectsLabel(projects)}"
+  }
+  val bounding = dependency.constrainedBy?.takeIf { it.isNotEmpty() }
+  if (bounding != null) {
+    val noun = if (bounding.size == 1) "platform" else "platforms"
+    val constrained = "constrained by the $noun ${projectsLabel(bounding)}"
+    return if (projects == null) constrained else "$constrained in ${projectsLabel(projects)}"
   }
   val names = dependency.configurations?.takeIf { it.isNotEmpty() }
   if (dependency.contributed != true) {

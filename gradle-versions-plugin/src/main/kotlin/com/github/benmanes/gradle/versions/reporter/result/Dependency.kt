@@ -28,6 +28,11 @@ open class Dependency
     @AbsentWhenNull open val configurations: List<String>? = null,
     /** The platform projects the build imports this dependency through, by build tree path. */
     @AbsentWhenNull open val platformProjects: List<String>? = null,
+    /**
+     * The platforms that constrain this dependency's version, a project one by its build tree path
+     * and an external one by its module coordinate.
+     */
+    @AbsentWhenNull open val constrainedBy: List<String>? = null,
   ) : Comparable<Dependency> {
     override fun compareTo(other: Dependency): Int {
       return compareValuesBy(

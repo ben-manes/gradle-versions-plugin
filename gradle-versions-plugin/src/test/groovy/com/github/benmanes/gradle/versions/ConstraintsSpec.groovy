@@ -2,6 +2,8 @@ package com.github.benmanes.gradle.versions
 
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
+import groovy.json.JsonSlurper
+import groovy.xml.XmlParser
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
@@ -859,5 +861,515 @@ final class ConstraintsSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
     !result.output.contains('Skipping configuration')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
+  def 'Names the platform project that constrains a versionless module'() {
+    given: 'a platform project stating the bound in its own constraints block'
+    testProjectDir.newFile('settings.gradle') << "include 'platform'\n"
+    testProjectDir.newFolder('platform')
+    testProjectDir.newFile('platform/build.gradle') <<
+      """
+        plugins { id 'java-platform' }
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+        dependencies {
+          constraints {
+            api 'com.google.inject:guice:2.0'
+          }
+        }
+      """.stripIndent()
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation platform(project(':platform'))
+          implementation 'com.google.inject:guice'
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then: 'the constrained row names the platform project holding the version'
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('constrained by the platform :platform')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
+  def 'Names the external platform that constrains a versionless module'() {
+    given: 'an external bom imported directly, bounding a versionless declaration'
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation platform('com.example:external-bom:1.0')
+          implementation 'com.google.inject:guice'
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then: 'the bom is named by its module, the version left to its own row'
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('constrained by the platform com.example:external-bom\n')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
+  def 'Names every platform that states the same bound'() {
+    given: 'two platform projects constraining the same module to the same version'
+    testProjectDir.newFile('settings.gradle') << "include 'platform-a', 'platform-b'\n"
+    ['platform-a', 'platform-b'].each { name ->
+      testProjectDir.newFolder(name)
+      testProjectDir.newFile("$name/build.gradle") <<
+        """
+          plugins { id 'java-platform' }
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+          dependencies {
+            constraints {
+              api 'com.google.inject:guice:2.0'
+            }
+          }
+        """.stripIndent()
+    }
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation platform(project(':platform-a'))
+          implementation platform(project(':platform-b'))
+          implementation 'com.google.inject:guice'
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then: 'both platforms are named, pluralized'
+    result.output.contains('constrained by the platforms :platform-a, :platform-b')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
+  def 'Marks the imported platform and the module it constrains on separate rows'() {
+    given: 'a platform project importing the bom that bounds a versionless declaration'
+    testProjectDir.newFile('settings.gradle') << "include 'platform'\n"
+    testProjectDir.newFolder('platform')
+    testProjectDir.newFile('platform/build.gradle') <<
+      """
+        plugins { id 'java-platform' }
+        javaPlatform {
+          allowDependencies()
+        }
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+        dependencies {
+          api platform('com.example:external-bom:1.0')
+        }
+      """.stripIndent()
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation platform(project(':platform'))
+          implementation 'com.google.inject:guice'
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then: 'the bom row carries the importer and the constrained row carries the bom'
+    result.output.contains('imported by the platform :platform')
+    result.output.contains('constrained by the platform com.example:external-bom\n')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
+  def 'Withholds the bound when a project outside the platforms declares the module'() {
+    given: 'one project bounded by the platform and a sibling declaring the same version itself'
+    testProjectDir.newFile('settings.gradle') << "include 'app', 'other', 'platform'\n"
+    testProjectDir.newFolder('platform')
+    testProjectDir.newFile('platform/build.gradle') <<
+      """
+        plugins { id 'java-platform' }
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+        dependencies {
+          constraints {
+            api 'com.google.inject:guice:2.0'
+          }
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('app')
+    testProjectDir.newFile('app/build.gradle') <<
+      """
+        dependencies {
+          implementation platform(project(':platform'))
+          implementation 'com.google.inject:guice'
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('other')
+    testProjectDir.newFile('other/build.gradle') <<
+      """
+        dependencies {
+          implementation 'com.google.inject:guice:2.0'
+        }
+      """.stripIndent()
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'io.github.ben-manes.versions'
+        }
+
+        subprojects {
+          if (name != 'platform') {
+            apply plugin: 'java-library'
+          }
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates', '--info', '--no-parallel')
+      .withPluginClasspath()
+      .build()
+
+    then: 'the declaring project outranks the mark, which is reported rather than dropped silently'
+    !result.output.contains('constrained by the platform')
+    result.output.contains(
+      "A project outside com.google.inject:guice's bounding platforms declares it, " +
+        'so the platform mark is withheld: :other')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
+  def 'Names the constraining platform in the file reports'() {
+    given: 'an external bom bounding a versionless declaration'
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation platform('com.example:external-bom:1.0')
+          implementation 'com.google.inject:guice'
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates', '-DoutputFormatter=json,xml')
+      .withPluginClasspath()
+      .build()
+    def jsonReport = new JsonSlurper()
+      .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
+    def xmlReport = new XmlParser()
+      .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.xml'))
+
+    then: 'the machine readable reports carry the bound, and only where one was stated'
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    def guice = jsonReport.outdated.dependencies.find { it.name == 'guice' }
+    guice.constrainedBy == ['com.example:external-bom']
+    def bom = jsonReport.outdated.dependencies.find { it.name == 'external-bom' }
+    !bom.containsKey('constrainedBy')
+    def guiceElement = xmlReport.outdated.dependencies.outdatedDependency.find {
+      it.name.text() == 'guice'
+    }
+    guiceElement.constrainedBy.constraint*.text() == ['com.example:external-bom']
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
+  def 'Names only the platform whose stated bound is the version reported'() {
+    given: 'two platforms stating different bounds, of which the higher wins'
+    testProjectDir.newFile('settings.gradle') << "include 'platform-low', 'platform-high'\n"
+    ['platform-low': '2.0', 'platform-high': '3.0'].each { name, version ->
+      testProjectDir.newFolder(name)
+      testProjectDir.newFile("$name/build.gradle") <<
+        """
+          plugins { id 'java-platform' }
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+          dependencies {
+            constraints {
+              api 'com.google.inject:guice:${version}'
+            }
+          }
+        """.stripIndent()
+    }
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation platform(project(':platform-low'))
+          implementation platform(project(':platform-high'))
+          implementation 'com.google.inject:guice'
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then: 'the platform whose bound lost is not named'
+    result.output.contains('com.google.inject:guice [3.0 -> 3.1]')
+    result.output.contains('constrained by the platform :platform-high')
+    !result.output.contains('constrained by the platforms')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
+  def 'Withholds the platform mark when a drag pushes the version past the bound'() {
+    given: 'a platform bound a transitive requirement overrides'
+    testProjectDir.newFile('settings.gradle') << "include 'platform'\n"
+    testProjectDir.newFolder('platform')
+    testProjectDir.newFile('platform/build.gradle') <<
+      """
+        plugins { id 'java-platform' }
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+        dependencies {
+          constraints {
+            api 'com.google.inject:guice:2.0'
+          }
+        }
+      """.stripIndent()
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation platform(project(':platform'))
+          implementation 'com.example:guice-consumer:1.0'
+          implementation 'com.google.inject:guice'
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then: 'the row keeps the true declaration rather than a bound that did not decide it'
+    result.output.contains('com.google.inject:guice [3.0 -> 3.1]')
+    !result.output.contains('constrained by the platform')
+    result.output.contains('declared in root project')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
+  def 'Names an external platform by its module, not the version it resolved to'() {
+    given: 'an imported bom a library drags to a release the build never names'
+    testProjectDir.newFile('settings.gradle') << "include 'platform-a'\n"
+    testProjectDir.newFolder('platform-a')
+    testProjectDir.newFile('platform-a/build.gradle') <<
+      """
+        plugins { id 'java-platform' }
+        javaPlatform {
+          allowDependencies()
+        }
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+        dependencies {
+          api platform('com.example:external-bom:1.0')
+        }
+      """.stripIndent()
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation platform(project(':platform-a'))
+          implementation 'com.example:external-bom-consumer:1.0'
+          implementation 'com.google.inject:guice'
+        }
+      """.stripIndent()
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then: 'the mark names a coordinate the bom row already carries the version for'
+    result.output.contains('com.example:external-bom [1.0 -> 2.0]')
+    result.output.contains('constrained by the platform com.example:external-bom\n')
+    !result.output.contains('com.example:external-bom:2.0')
+    result.task(':dependencyUpdates').outcome == SUCCESS
   }
 }
