@@ -19,6 +19,7 @@ import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.component.ModuleComponentSelector
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.artifacts.repositories.ArtifactRepository
@@ -692,7 +693,7 @@ class Resolver(
 
   /**
    * Returns the version constraints the consumed platforms state for each module that is declared
-   * with no version of its own, keyed by that module.
+   * with no version of its own, keyed by that module and paired with the platform each came from.
    *
    * Only a constraint edge whose source resolved as a platform qualifies. One from the resolution
    * root is the consumer's own `constraints {}` block, which is editable and thus governed by
@@ -705,8 +706,8 @@ class Resolver(
   private fun getPlatformConstraints(
     result: ResolutionResult,
     versionedKeys: Set<Coordinate.Key>,
-  ): Map<Coordinate.Key, List<VersionConstraint>> {
-    val constraints = hashMapOf<Coordinate.Key, MutableList<VersionConstraint>>()
+  ): Map<Coordinate.Key, List<Coordinate.PlatformConstraint>> {
+    val constraints = hashMapOf<Coordinate.Key, MutableList<Coordinate.PlatformConstraint>>()
     for (dependency in result.allDependencies) {
       if (dependency !is ResolvedDependencyResult || !dependency.isConstraint) {
         continue
@@ -731,7 +732,17 @@ class Resolver(
       if (key in versionedKeys) {
         continue
       }
-      constraints.getOrPut(key) { mutableListOf() }.add(versionConstraint)
+      val source =
+        when (val from = dependency.from.id) {
+          is ProjectComponentIdentifier -> from.buildTreePath
+          // Printed without its version: the one here is the resolved version rather than any
+          // declared in the build, and the platform's own row in the same report already shows it.
+          is ModuleComponentIdentifier -> "${from.group}:${from.module}"
+          else -> continue
+        }
+      constraints
+        .getOrPut(key) { mutableListOf() }
+        .add(Coordinate.PlatformConstraint(source, versionConstraint))
     }
     return constraints
   }

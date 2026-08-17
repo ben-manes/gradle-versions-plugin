@@ -244,6 +244,13 @@ class XmlReporter(
         appendTextChild(document, element, "platformProject", platformProject)
       }
     }
+    dependency.constrainedBy?.let { constrainedBy ->
+      val element = document.createElement("constrainedBy")
+      dependencyElement.appendChild(element)
+      for (constraint in constrainedBy) {
+        appendTextChild(document, element, "constraint", constraint)
+      }
+    }
     return dependencyElement
   }
 

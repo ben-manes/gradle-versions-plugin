@@ -128,6 +128,37 @@ final class PartialResultSpec extends Specification {
     decoded.statuses[0].platformProjects == []
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
+  def 'The constraining platforms survive the round trip'() {
+    given:
+    def status = new PartialStatus('com.google.inject', 'guice', '2.0', null, '3.1', null, null,
+      false, [], ':app', [], [':platform', 'com.example:external-bom:1.0'])
+    def result = new PartialResult(PartialResult.FORMAT_VERSION, ':', [status], [])
+
+    when:
+    def json = result.toJson()
+    def decoded = PartialResult.fromJson(json)
+
+    then:
+    json.contains('"constrainedBy":[":platform","com.example:external-bom:1.0"]')
+    decoded.statuses[0].constrainedBy == [':platform', 'com.example:external-bom:1.0']
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
+  def 'A partial without the constraining platforms key reads as none'() {
+    given:
+    def json = '''
+      {"formatVersion":1,"projectPath":":","statuses":[{"group":"com.google.guava",
+      "name":"guava","declaredVersion":"1.0","latestVersion":"1.0"}],"buildscriptStatuses":[]}
+      '''.stripIndent()
+
+    when:
+    def decoded = PartialResult.fromJson(json)
+
+    then:
+    decoded.statuses[0].constrainedBy == []
+  }
+
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/801')
   def 'A partial without the skipped key reads as none skipped'() {
     given:

@@ -56,6 +56,13 @@ class Coordinate(
   var platformProjects: List<String> = emptyList()
     private set
 
+  /**
+   * The platforms whose constraint is the version reported, empty otherwise. A platform project
+   * appears as its build tree path and an external one as its group and module.
+   */
+  var constrainedBy: List<String> = emptyList()
+    private set
+
   val key: Key
     get() = Key(groupId, artifactId)
 
@@ -102,6 +109,27 @@ class Coordinate(
     this.platformProjects = platformProjects
   }
 
+  internal constructor(
+    groupId: String?,
+    artifactId: String?,
+    version: String?,
+    userReason: String?,
+    versionConstraint: VersionConstraint?,
+    platformVersionConstraints: List<VersionConstraint>,
+    platformProjects: List<String>,
+    constrainedBy: List<String>,
+  ) : this(
+    groupId,
+    artifactId,
+    version,
+    userReason,
+    versionConstraint,
+    platformVersionConstraints,
+    platformProjects,
+  ) {
+    this.constrainedBy = constrainedBy
+  }
+
   override fun toString(): String {
     return "$groupId:$artifactId:$version"
   }
@@ -130,6 +158,22 @@ class Coordinate(
     result = 31 * result + artifactId.hashCode()
     result = 31 * result + version.hashCode()
     return result
+  }
+
+  /** A version constraint from a consumed platform, paired with the platform it came from. */
+  internal data class PlatformConstraint(
+    val source: String,
+    val constraint: VersionConstraint,
+  ) {
+    /**
+     * Whether the constraint is exactly this version. A range never matches, even when the range is
+     * what picked the version, so a platform constraining by a range is left out rather than
+     * included on a guess.
+     */
+    fun matches(version: String): Boolean =
+      constraint.strictVersion == version ||
+        constraint.requiredVersion == version ||
+        constraint.preferredVersion == version
   }
 
   data class Key(val groupId: String, val artifactId: String) : Comparable<Key> {
@@ -203,21 +247,31 @@ class Coordinate(
       )
     }
 
-    /** As above, additionally attaching the constraints a consumed platform states for it. */
+    /**
+     * As above, additionally attaching the constraints the consumed platforms place on it.
+     *
+     * Only a platform whose constraint is the resolved version is included, since one that lost out
+     * to a higher requirement is not why the row shows that version. Every collected constraint is
+     * still kept for the selection rules, where the question is whether any consumed platform rules
+     * out a candidate, not which one produced the current version.
+     */
     internal fun from(
       identifier: ModuleVersionIdentifier,
       declared: Map<Key, Coordinate?>,
-      platformConstraints: Map<Key, List<VersionConstraint>>,
+      platformConstraints: Map<Key, List<PlatformConstraint>>,
     ): Coordinate {
       val key = Key(identifier.group, identifier.name)
       val declaration = declared[key]
+      val constraints = platformConstraints[key].orEmpty()
       return Coordinate(
         identifier.group,
         identifier.name,
         identifier.version,
         declaration?.userReason,
         declaration?.versionConstraint,
-        platformConstraints[key].orEmpty(),
+        constraints.map { it.constraint },
+        emptyList(),
+        constraints.filter { it.matches(identifier.version) }.map { it.source }.distinct().sorted(),
       )
     }
 

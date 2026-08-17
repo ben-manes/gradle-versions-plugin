@@ -37,7 +37,7 @@ final class ConstructorVisibilitySpec extends Specification {
       .findAll { it.parameters.size() > 4 }
 
     expect:
-    constraintCarrying.size() == 3
+    constraintCarrying.size() == 4
     constraintCarrying.every { it.visibility == KVisibility.INTERNAL }
   }
 
