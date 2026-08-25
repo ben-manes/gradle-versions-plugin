@@ -10,11 +10,11 @@ import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionR
 class ComponentSelectionWithCurrent internal constructor(
   private val delegate: ComponentSelection,
   val currentVersion: String,
-  /** The constraint the build declared for this module, null when no declaration named it. */
+  /** The constraint the build declared for this module, null when no declaration matched it. */
   val versionConstraint: VersionConstraint?,
   /**
-   * The constraints the platforms this module's consumer depends on state for it, empty when this
-   * module's declaration states its own version or no consumed platform bounds it.
+   * The constraints the platforms this module's consumer depends on set for it, empty when this
+   * module's declaration has its own version or no consumed platform bounds it.
    */
   val platformVersionConstraints: List<VersionConstraint>,
 ) : ComponentSelection by delegate {
@@ -25,7 +25,7 @@ class ComponentSelectionWithCurrent internal constructor(
   ) : this(delegate, currentVersion, null, emptyList())
 
   /**
-   * Whether the candidate lies within the bound the declaration stated, read the way dependency
+   * Whether the candidate lies within the bound written on the declaration, read the way dependency
    * resolution reads it, so that a range is honored rather than compared as a string.
    *
    * Only `strictly` and `reject` bound a candidate. A `require` version is a floor that resolution
@@ -33,9 +33,9 @@ class ComponentSelectionWithCurrent internal constructor(
    * neither excludes an upgrade the build already permits. True for a module that declared no
    * bound at all.
    *
-   * A module whose declaration states no version is additionally bounded by the constraints the
-   * platforms the consumer depends on state for it, and the version currently selected is always
-   * within bound.
+   * A module declared without a version is additionally bounded by the constraints the platforms
+   * the consumer depends on set for it, and the version currently selected is always within
+   * bound.
    */
   val satisfiesDeclaredBound: Boolean
     get() =
@@ -59,7 +59,7 @@ ComponentSelectionWithCurrent{
  * Reads a declared selector with the parser dependency resolution itself uses, as Gradle publishes
  * no API for it; https://github.com/gradle/gradle/issues/13748 asks for one and remains open, and
  * its own worked example is this. A release that moves the parser leaves the bound unknown rather
- * than failing the report, which is why the linkage failure is answered instead of thrown.
+ * than failing the report, which is why the linkage failure is caught instead of thrown.
  */
 private object DeclaredBound {
   private val scheme: DefaultVersionSelectorScheme? by lazy {
@@ -104,10 +104,10 @@ private object DeclaredBound {
   }
 
   /**
-   * Whether the candidate lies within every one of the versions the consumed platforms state for
+   * Whether the candidate lies within every one of the versions the consumed platforms set for
    * this module, read the same way [accepts] reads a declared bound. Requiring each edge to admit
    * the candidate is stricter than the version resolution itself settles on, which is deliberate:
-   * the report offers an upgrade only when no consumed platform stands against it. The version
+   * an upgrade is offered only when every consumed platform admits it. The version
    * currently selected is always accepted, since a transitive requirement can push the merged
    * selection above what a platform alone would choose.
    */

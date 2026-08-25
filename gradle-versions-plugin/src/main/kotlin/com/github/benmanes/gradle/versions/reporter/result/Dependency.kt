@@ -37,8 +37,8 @@ open class Dependency
     /**
      * The projects are compared last, so that two rows of one declared version with different
      * latest versions are ordered apart. The report groups are sorted sets, and rows that compare
-     * as equal are dropped from them rather than printed. The subclasses that carry a latest
-     * version compare that too, so that the ordering does not rest on the projects alone.
+     * as equal are dropped from them rather than printed. The subclasses with a latest version
+     * compare that too, so that the ordering does not rest on the projects alone.
      *
      * The separator is one a build tree path cannot contain, so that ["a", "b"] and ["a,b"] are not
      * compared as one list.

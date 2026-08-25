@@ -73,12 +73,12 @@ internal fun requireMinimumGradleVersion(pluginId: String) {
  * by another classloader already has.
  *
  * An init script injects the plugin from a classpath of its own, so a build that applies the plugin
- * as well holds two copies of every class. Gradle keys the tasks, configurations, and shared
+ * as well ends up with two copies of every class. Gradle keys the tasks, configurations, and shared
  * services that the plugin registers by name, and the second copy would fail to cast what the first
- * registered to its own type. The first copy configures the build and the rest defer to it, which
+ * registered to its own type. The first copy configures the build and the rest do nothing, which
  * keeps a build that applies the plugin working when an init script injects it too. The marker is
- * held under a plain string key and compared by reference, which every copy can do without loading
- * a type that belongs to another.
+ * stored under a plain string key and compared by reference, which every copy can do without
+ * loading a type that belongs to another.
  */
 internal fun claims(owner: ExtensionAware): Boolean {
   val identity = VersionsPlugin::class.java.classLoader

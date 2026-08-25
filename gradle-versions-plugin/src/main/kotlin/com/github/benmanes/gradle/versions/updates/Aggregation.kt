@@ -66,7 +66,7 @@ internal class DependencyUpdatesParameters {
 }
 
 /**
- * Holds the settings of the task of each project that applies the plugin.
+ * Stores the settings of the task of each project that applies the plugin.
  *
  * A producer reads its settings from here while its input is realized, which is the only channel
  * that isolated projects permits between the project that owns the task settings and the projects
@@ -161,7 +161,8 @@ internal fun registerAggregation(
   // https://github.com/ben-manes/gradle-versions-plugin/issues/781
   // https://github.com/ben-manes/gradle-versions-plugin/issues/1004
   // Detached, so that a build which locks all of its configurations does not lock this one, which
-  // holds only the project dependencies that the plugin declares and has no lock state of its own.
+  // contains only the project dependencies that the plugin declares, and has no lock state of
+  // its own.
   // A container configuration cannot opt out: deactivating the locking at creation is undone by the
   // build's own `configurations.all` hook, and deactivating it afterwards has no moment that is
   // late enough to win yet early enough for every build, as configure on demand and composite
@@ -184,11 +185,11 @@ internal fun registerAggregation(
     }
   // Mirrored rather than extended, which a detached configuration forbids, so that a project
   // declared in the build's own dependencies block is still aggregated. The producer's
-  // configuration is named on the way through, as it is for the projects below, so that a project
-  // declaring no variant of its own is read by name rather than fallen back to its `default`
-  // configuration, whose artifacts are the project's own and not a partial result. Every module
-  // dependency is named rather than the project ones alone, as an included build is declared by
-  // its coordinates and substituted onto its project only once the graph resolves.
+  // configuration is requested by name on the way through, as it is for the projects below, so that
+  // a project declaring no variant of its own is read by name rather than fallen back to its
+  // `default` configuration, whose artifacts are the project's own and not a partial result. Every
+  // module dependency is included rather than the project ones alone, as an included build is
+  // declared by its coordinates and substituted onto its project only once the graph resolves.
   aggregation.get().dependencies.all { dependency ->
     results.dependencies.add(
       if (dependency is ModuleDependency) {
@@ -221,9 +222,10 @@ internal fun registerAggregation(
 
   // Declared for every project so that computing the aggregate's dependencies configures each of
   // them, which configure on demand skips when the task is invoked by its path rather than by name.
-  // The producer's configuration is named rather than matched by its attributes, so that a project
-  // which publishes no variant is skipped instead of falling back to its `default` configuration,
-  // whose artifacts are the project's own and not a partial result to read the report from.
+  // The producer's configuration is requested by name rather than matched by its attributes, so
+  // that a project which publishes no variant is skipped instead of falling back to its `default`
+  // configuration, whose artifacts are the project's own and not a partial result to read the
+  // report from.
   for (aggregated in project.allprojects) {
     project.dependencies.add(
       AGGREGATION_CONFIGURATION,
@@ -258,21 +260,22 @@ internal fun registerAggregation(
     }
     registerProducer(project, service)
   } else {
-    // Swept only here, as the artifacts are all that name the projects under isolated projects and
-    // they omit the ones that conflict resolution merges away, whose results their own report still
-    // reads from where its producer wrote them. A result that no project of the build still owns is
-    // left behind there rather than risk removing one in use, and is never read, as the results are
-    // wired by path rather than discovered.
+    // Swept only here, as the artifacts are the only record of the projects under isolated
+    // projects and they omit the ones that conflict resolution merges away, whose own report is
+    // still written where its producer put it. A result left over from a project no longer in the
+    // build is left behind rather than risk removing one in use, and is never read, as the results
+    // are wired by path rather than discovered.
     accumulator.configure { task -> task.partialsDirectory.set(partialsDirectory) }
     // The results are wired as task outputs too, as module conflict resolution would otherwise drop
     // every project that shares a group and name with a sibling from the artifacts.
     project.allprojects { aggregated ->
-      // A project that another copy of the plugin claimed holds a producer of that copy's type,
-      // which this one cannot wire to its accumulator. That copy reports the project instead.
+      // A project that another copy of the plugin claimed has a producer of that copy's type
+      // registered in it, which this one cannot wire to its accumulator. That copy reports the
+      // project instead.
       if (claims(aggregated)) {
         // Written under the project that aggregates rather than each project's own build
-        // directory, so that a project which exists only to hold a nested include gains no build
-        // directory of its own. Passed rather than published, as this project registers the
+        // directory, so that no build directory is created in a project that exists only for a
+        // nested include. Passed rather than published, as this project registers the
         // producer itself and so needs no channel to reach it.
         // https://github.com/ben-manes/gradle-versions-plugin/issues/1040
         val outputFile = partialsDirectory.map { it.file(partialFileName(aggregated.path)) }
@@ -328,9 +331,9 @@ private fun registerProducer(
   val ownFile = project.layout.buildDirectory.file("dependencyUpdates/partial.json")
   service.get().registerLegacy(ownFile)
   // A default action runs only while the build has declared nothing of its own, so one registered
-  // here, ahead of the plugins that a project applies, names the configurations that a plugin alone
-  // filled. Reading the dependencies later cannot tell the two apart, as any configuration time
-  // reader of incoming.dependencies has by then run the actions that contribute them.
+  // here, ahead of the plugins that a project applies, identifies the configurations that a plugin
+  // alone filled. Reading the dependencies later cannot tell the two apart, as any configuration
+  // time reader of incoming.dependencies has by then run the actions that contribute them.
   // https://github.com/ben-manes/gradle-versions-plugin/issues/1028
   val filledByPlugin = ConcurrentHashMap.newKeySet<String>()
   project.configurations.configureEach { configuration ->
@@ -340,11 +343,12 @@ private fun registerProducer(
       try {
         configuration.defaultDependencies { filledByPlugin.add(configuration.name) }
       } catch (e: GradleException) {
-        // A configuration that has taken part in a resolution refuses a default action, so a
-        // project that applies this plugin after one did would fail to apply it at all. The mark
-        // is a best effort attribution, which is worth losing for that configuration but not the
-        // build. Its state does not answer this, as a configuration observed by another's
-        // resolution refuses one while still reporting itself as unresolved.
+        // Gradle rejects a default action on a configuration that has taken part in a resolution,
+        // so a project that applies this plugin after one did would fail to apply it at all. The
+        // mark is a best effort attribution, which is worth losing for that configuration but not
+        // the build. The configuration's own state cannot be checked for this: one observed by
+        // another's resolution is still reported as unresolved, yet a default action on it is
+        // rejected.
         project.logger.info(
           "Skipping the plugin mark for configuration ${project.path}:${configuration.name}",
           e,
@@ -364,15 +368,16 @@ private fun registerProducer(
       )
       task.partialJson.set(
         // Realized after every project has been evaluated, so that the settings are read as last
-        // configured and the container holds the configurations that late plugins added.
+        // configured and the container contains the configurations that late plugins added.
         project.provider {
           val parameters = service.get().resolve(project.path)
           val configurations =
             project.configurations
               .toList()
               .filter { it.isCanBeResolved && parameters.filterConfigurations.isSatisfiedBy(it) }
-          // The settings script's classpath holds the plugins its own plugins block declares, which
-          // no project's buildscript does. It is reported once, from the project that accumulates.
+          // The settings script's classpath contains the plugins its own plugins block declares,
+          // which appear in no project's buildscript. It is reported once, from the project that
+          // accumulates.
           // https://github.com/ben-manes/gradle-versions-plugin/issues/367
           val settingsConfigurations =
             // Compared by path rather than to project.rootProject, which isolated projects forbids.
@@ -441,7 +446,7 @@ private fun registerProducer(
       task.partialJson.disallowChanges()
     }
 
-  // Published once the project is configured, as whether it may carry a variant at all depends on
+  // Published once the project is configured, as whether it can have a variant at all depends on
   // the configurations that its plugins and build script create.
   if (project.state.executed) {
     publishResults(project, partial)
@@ -452,7 +457,7 @@ private fun registerProducer(
 }
 
 /**
- * Publishes the project's statuses as an outgoing variant, which carries no attributes where the
+ * Publishes the project's statuses as an outgoing variant, which has no attributes where the
  * project declares no variant of its own, as one that exposes a local aar or jar file through its
  * `default` configuration does.
  *
@@ -460,10 +465,10 @@ private fun registerProducer(
  * and Gradle drops the fallback as soon as the project declares an attributed variant. Attributing
  * this one would then serve the statuses to a consumer in place of the artifact it asked for, so it
  * is attributed only where the project has a variant of its own to be selected by instead. Whether
- * the `default` configuration holds an artifact yet is not asked, as a plugin may add its
+ * the `default` configuration contains an artifact yet is not checked, as a plugin may add its
  * publication from its own `afterEvaluate` and so after this runs, while the variants that decide
- * the fallback are declared as a plugin applies. The aggregate names this configuration rather than
- * matching it by attributes, so it reads the statuses either way.
+ * the fallback are declared as a plugin applies. The aggregate requests this configuration by name
+ * rather than matching it by attributes, so it reads the statuses either way.
  * https://github.com/ben-manes/gradle-versions-plugin/issues/1022
  */
 private fun publishResults(
@@ -521,8 +526,8 @@ private fun statusesOf(
       resolver.resolve(configuration, parameters.revision, nameDeclaringConfiguration, scriptClasspaths) {
         declaredKeys.getValue(configuration) - keysOf(configuration, filledByPlugin)
       }.filter { status ->
-        // A status that names no configuration, as an ordinary declaration's does, is kept
-        // whatever the filter rejects.
+        // A status with no configuration name, which is what an ordinary declaration produces,
+        // is kept whatever the filter rejects.
         status.configurations.isEmpty() ||
           status.configurations.any { parameters.filterDeclaredConfigurations.isSatisfiedBy(it) }
       }.map { it.toPartialStatus() }

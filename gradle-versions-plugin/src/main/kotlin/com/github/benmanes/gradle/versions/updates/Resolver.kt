@@ -135,7 +135,7 @@ class Resolver(
     val coordinates = current.coordinates
     val result = hashSetOf<DependencyStatus>()
     for (dependency in root.dependencies) {
-      // Constraints do not carry a resolved version to report against.
+      // A constraint has no resolved version to report against.
       if (dependency.isConstraint) {
         continue
       }
@@ -269,7 +269,7 @@ class Resolver(
       }
 
     // A rule that substitutes another module for this one applies to the query as well, which would
-    // pin the latest version to the one the rule names. Ask for the substituted module instead, so
+    // pin the latest version to the substitute. Ask for the substituted module instead, so
     // that the rule does not match and the query is answered for what the build actually resolves.
     val substitute = substitutions[Coordinate.from(dependency as Dependency).key]
 
@@ -404,10 +404,11 @@ class Resolver(
           if (scriptClasspath) recoverPluginCatalogConstraint(coordinate) else coordinate
         }
     // An empty configuration is still resolved below, so that a listener contributing to it has
-    // run by the time the declared set is read again. That resolution costs nothing. One holding
-    // only project or file dependencies is skipped, as resolving it would not, unless it imports
-    // a platform: scan first, and keep the cheap exit when the scan has nothing to say. This path
-    // resolved nothing at all before, so the scan is its first resolution rather than a second one.
+    // run by the time the declared set is read again. That resolution costs nothing. One
+    // containing only project or file dependencies is skipped, as resolving it would not, unless it
+    // imports a platform: scan first, and keep the cheap exit when the scan finds nothing. This
+    // path resolved nothing at all before, so the scan is its first resolution rather than a second
+    // one.
     if (declared.isEmpty() && configuration.allDependencies.isNotEmpty()) {
       val platformSources = if (checkConstraints) getPlatformSources(configuration, declared.keys) else emptyList()
       if (platformSources.isEmpty()) {
@@ -466,8 +467,8 @@ class Resolver(
 
     // A resolution listener contributes dependencies when a configuration is first resolved, which
     // is the resolution above, so they are missing from the declared set read before it. Read it
-    // again to pick up their declared version; otherwise only the query below sees them and their
-    // latest version is reported as the declared one, hiding the update.
+    // again to pick up their declared version; otherwise only the query below reaches them and
+    // their latest version is reported as the declared one, hiding the update.
     // https://github.com/ben-manes/gradle-versions-plugin/issues/992
     val contributed =
       getResolvableDependencies(configuration)
@@ -499,9 +500,10 @@ class Resolver(
       coordinates.keys - declaredBeforeActions - substitutions.values.toSet() - platformSourceKeys
 
     // A plugin that adds its private classpath eagerly, at apply time, is indistinguishable from a
-    // declaration by the time the snapshot above is taken, so what it leaves behind is named instead:
-    // a dependency declared directly on a resolvable configuration. A build declares against one it
-    // cannot resolve, and a resolvable classpath inherits its dependencies rather than holding them.
+    // declaration by the time the snapshot above is taken, so what it leaves behind is reported
+    // instead: a dependency declared directly on a resolvable configuration. A build declares
+    // against one it cannot resolve, and a resolvable classpath inherits its dependencies rather
+    // than having them declared on it.
     val declaringKeys =
       if (nameDeclaringConfiguration) {
         coordinates.keys intersect configuration.externalKeys().toSet()
@@ -522,9 +524,9 @@ class Resolver(
    * Returns the external platforms the build consumes through its own platform projects, such as a
    * BOM that an included build's platform imports and this build reaches by project substitution.
    *
-   * Resolved from a dedicated copy holding only the configuration's platform-category
+   * Resolved from a dedicated copy containing only the configuration's platform-category
    * declarations, always transitive, so a platform reached only through a project dependency (which
-   * carries no version for the main copy's own #231 flag to key off) is still found, without
+   * has no version for the main copy's own #231 flag to key off) is still found, without
    * perturbing the main copy's resolution. That copy is a second resolution of every configuration
    * declaring a platform, so a build's own beforeResolve hook runs once more than it did.
    */
@@ -541,7 +543,7 @@ class Resolver(
       getPlatformSources(resolvePlatformRoot(configuration, platformDependencies), declaredKeys)
     } catch (e: Exception) {
       // The scan is an extra resolution the report can do without: it is always transitive and
-      // carries the build's own resolution strategy, so a build with failOnVersionConflict() can
+      // applies the build's own resolution strategy, so a build with failOnVersionConflict() can
       // throw here even though the main, non-transitive copy resolved fine. Losing one
       // attribution beats losing every row of the configuration.
       failedPlatformScans.add(platformDependencies.toSet())
@@ -561,7 +563,7 @@ class Resolver(
     disableAutoTargetJvm(copy)
     copy.dependencies.clear()
     // Copied rather than shared, as copyRecursive does for the set cleared above: a withDependencies
-    // action carried onto this copy would otherwise mutate the build's own declarations.
+    // action copied onto this one would otherwise mutate the build's own declarations.
     copy.dependencies.addAll(platformDependencies.map { it.copy() })
     return copy.incoming.resolutionResult.root
   }
@@ -571,16 +573,17 @@ class Resolver(
    * build's platform imports and this build reaches by project substitution.
    *
    * Such a platform's constraints bound this build's versionless modules while the substituted
-   * project hides the coordinate to edit, so each one is reported as an entry of its own. Only a
-   * chain of platform variants that stays in project components until the imported module
-   * qualifies: a platform that an external platform imports is that platform's version choice
-   * rather than the build's, and one a library drags in is a resolution input, so the walk stops at
-   * the first external component either way. A platform the build declares itself already has a
-   * report entry and is skipped. The constraint the platform project's declaration states rides
-   * along, so a stated bound holds an imported row like any declared one. Each qualifying edge's
-   * dequeued source project, when it is one, is recorded as the coordinate's importer, by build
-   * tree path. Every importer of a coordinate is recorded, while the bound is the one the first
-   * qualifying edge stated, so a row that names several projects states the bound of one of them.
+   * project leaves the coordinate to edit out of the report, so each one is reported as an entry of
+   * its own. Only a chain of platform variants that stays inside project components until the
+   * imported module qualifies: a platform imported by an external platform is that platform's
+   * version choice rather than the build's, and one brought in by a library is a resolution input,
+   * so the walk stops at the first external component either way. A platform the build declares
+   * itself already has a report entry and is skipped. The constraint written on the platform
+   * project's declaration is kept, so it bounds an imported row like any declared one. Each
+   * qualifying edge's dequeued source project, when it is one, is recorded as the coordinate's
+   * importer, by build tree path. Every importer of a coordinate is recorded, while the bound comes
+   * from the first qualifying edge, so a row printed with several projects shows the bound of one
+   * of them.
    */
   private fun getPlatformSources(
     root: ResolvedComponentResult,
@@ -599,7 +602,7 @@ class Resolver(
         }
         val selected = dependency.selected
         // The edge's own variant, rather than the component's set, since a module published with
-        // only a pom offers both a library and a platform variant and a build can consume each.
+        // only a pom exposes both a library and a platform variant and a build can consume each.
         // Marking a component seen only once past this gate keeps an edge that resolved a library
         // variant from barring the platform edge that reaches the same project later.
         if (!isPlatform(dependency.resolvedVariant)) {
@@ -632,7 +635,7 @@ class Resolver(
         }
       }
     }
-    // Rebuilt only where an importer was recorded, since the constraint a rebuild carries over is
+    // Rebuilt only where an importer was recorded, since the constraint kept by a rebuild is
     // copied again on the way through and an unattributed coordinate is already what it needs to be.
     return sources.map { (key, coordinate) ->
       val importedBy = importers[key] ?: return@map coordinate
@@ -652,18 +655,18 @@ class Resolver(
    * Returns the coordinate rebuilt with the catalog's constraint, when a plugin-catalog alias
    * flattened to the coordinate's bare required version explains it unambiguously.
    *
-   * An alias stating no more than that required version explains the declaration just as well as a
-   * rich one, so it counts toward the ambiguity rather than being passed over for stating too
-   * little. An exact required version recovers nothing even when one alias explains it: a version
-   * stated inline in the plugins block cannot be told apart from one the catalog supplied once
+   * An alias whose constraint is no more than that required version explains the declaration just
+   * as well as a rich one, so it counts toward the ambiguity rather than being passed over. An
+   * exact required version recovers nothing even when one alias explains it: a version written
+   * inline in the plugins block cannot be told apart from one the catalog supplied once
    * Gradle has flattened it, and crediting the alias's bound to an inline declaration would hide
    * upgrades it never rejected. A required range keeps its own interval as the declared bound
    * either way, so recovering it can add no more than the alias's preference and in-range rejects.
    */
   private fun recoverPluginCatalogConstraint(coordinate: Coordinate): Coordinate {
     val declaredConstraint = coordinate.versionConstraint ?: return coordinate
-    // A versionless declaration states an empty required version, which an alias that only rejects
-    // would match, attaching a bound to a declaration that named no version to bound.
+    // A versionless declaration has an empty required version, which an alias that only rejects
+    // would match, attaching a bound to a declaration with no version to bound.
     if (isRich(declaredConstraint) || declaredConstraint.requiredVersion.isEmpty()) {
       return coordinate
     }
@@ -685,15 +688,15 @@ class Resolver(
     return Coordinate(coordinate.groupId, coordinate.artifactId, coordinate.version, coordinate.userReason, recovered)
   }
 
-  /** Whether the constraint carries more than a bare required version. */
+  /** Whether the constraint is more than a bare required version. */
   private fun isRich(constraint: VersionConstraint): Boolean =
     constraint.strictVersion.isNotEmpty() ||
       constraint.preferredVersion.isNotEmpty() ||
       constraint.rejectedVersions.isNotEmpty()
 
   /**
-   * Returns the version constraints the consumed platforms state for each module that is declared
-   * with no version of its own, keyed by that module and paired with the platform each came from.
+   * Returns the version constraints the consumed platforms set for each module declared without a
+   * version of its own, keyed by that module and paired with the platform each came from.
    *
    * Only a constraint edge whose source resolved as a platform qualifies. One from the resolution
    * root is the consumer's own `constraints {}` block, which is editable and thus governed by
@@ -748,11 +751,12 @@ class Resolver(
   }
 
   /**
-   * Returns the modules that any declaration in the configuration's hierarchy states a version for.
+   * Returns the modules that any declaration in the configuration's hierarchy declares a version
+   * for.
    *
    * The declared coordinates keep only the last declaration of a module, so a versionless one in a
    * configuration can mask a versioned one in another it extends. Reading every declaration keeps a
-   * platform from bounding a version the build states somewhere it can edit.
+   * platform from bounding a version the build declares somewhere it can edit.
    */
   private fun versionedKeys(configuration: Configuration): Set<Coordinate.Key> =
     getResolvableDependencies(configuration)
@@ -925,12 +929,12 @@ class Resolver(
     private val ABSOLUTE_URL = Regex("""^[a-zA-Z][a-zA-Z0-9+.-]*://""")
     private val DESUGARED_CATEGORY = Attribute.of(Category.CATEGORY_ATTRIBUTE.name, String::class.java)
 
-    /** Whether the category names a regular or enforced platform. */
+    /** Whether the category is that of a regular or enforced platform. */
     private fun isPlatformCategory(category: String?): Boolean =
       (category == Category.REGULAR_PLATFORM) || (category == Category.ENFORCED_PLATFORM)
 
     /**
-     * Whether the variant is a platform's. A local project's variant carries the typed [Category]
+     * Whether the variant is a platform's. A local project's variant has the typed [Category]
      * attribute while a published module's is desugared to a string, so both forms are read.
      */
     private fun isPlatform(variant: ResolvedVariantResult): Boolean {
@@ -942,7 +946,7 @@ class Resolver(
 
     /**
      * Whether the dependency declares a platform. A declaration created by `platform(...)` or
-     * `enforcedPlatform(...)` always carries the typed [Category] attribute; the desugared string
+     * `enforcedPlatform(...)` always has the typed [Category] attribute; the desugared string
      * form appears only on published module metadata, which the resolved-variant overload above
      * reads instead.
      */
@@ -996,12 +1000,13 @@ class Resolver(
 }
 
 /**
- * Returns the keys that only the named configurations hold, taken across the given one and the
+ * Returns the keys that appear only in the named configurations, taken across the given one and the
  * configurations it extends, so that the dependencies of a configuration a plugin alone filled are
  * known.
  *
- * A key another configuration in the hierarchy also holds is left out, as the build declaring a
- * module that a plugin happens to contribute elsewhere is a declaration of it and not a plugin's.
+ * A key that also appears in another configuration in the hierarchy is left out, as the build
+ * declaring a module that a plugin happens to contribute elsewhere is a declaration of it and not a
+ * plugin's.
  */
 internal fun keysOf(
   configuration: Configuration,
@@ -1022,16 +1027,16 @@ internal fun keysOf(
   return filled - declared
 }
 
-/** Returns the keys of the external dependencies the configuration itself holds. */
+/** Returns the keys of the external dependencies declared on the configuration itself. */
 internal fun Configuration.externalKeys(): List<Coordinate.Key> =
   dependencies
     .filterIsInstance<ExternalDependency>()
     .map { Coordinate.from(it as Dependency).key }
 
 /**
- * Returns the configurations that hold each of the given keys, taken across the given configuration
- * and the ones it extends, so that a contributed dependency names where it was declared against
- * rather than the resolvable configuration it was reached through.
+ * Returns the configurations each of the given keys appears in, taken across the given
+ * configuration and the ones it extends, so that a contributed dependency is reported against where
+ * it was declared rather than against the resolvable configuration it was reached through.
  */
 internal fun configurationsOf(
   configuration: Configuration,
