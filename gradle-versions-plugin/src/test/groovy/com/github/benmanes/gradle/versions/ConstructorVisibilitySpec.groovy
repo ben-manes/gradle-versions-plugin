@@ -31,14 +31,14 @@ final class ConstructorVisibilitySpec extends Specification {
     constraintCarrying.every { it.visibility == KVisibility.INTERNAL }
   }
 
-  def 'The constraint-carrying Coordinate constructors are internal'() {
-    given:
-    def constraintCarrying = JvmClassMappingKt.getKotlinClass(Coordinate).constructors
+  def 'The constructors beyond the released arity are internal'() {
+    given: 'the four constraint-carrying overloads, plus the one carrying the split marker'
+    def beyondReleased = JvmClassMappingKt.getKotlinClass(Coordinate).constructors
       .findAll { it.parameters.size() > 4 }
 
     expect:
-    constraintCarrying.size() == 4
-    constraintCarrying.every { it.visibility == KVisibility.INTERNAL }
+    beyondReleased.size() == 5
+    beyondReleased.every { it.visibility == KVisibility.INTERNAL }
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/801')

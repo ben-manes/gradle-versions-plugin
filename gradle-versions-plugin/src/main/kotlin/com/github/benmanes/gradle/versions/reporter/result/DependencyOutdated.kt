@@ -16,6 +16,25 @@ data class DependencyOutdated
     @AbsentWhenNull override val constrainedBy: List<String>? = null,
   ) : Dependency() {
     /**
+     * The available version is compared after everything the base class compares, so that two
+     * entries of one declared version are ordered apart by the version that separates them rather
+     * than only by the projects behind them.
+     */
+    override fun compareTo(other: Dependency): Int {
+      val byDependency = super.compareTo(other)
+      if (byDependency != 0 || other !is DependencyOutdated) {
+        return byDependency
+      }
+      return compareValuesBy(
+        this,
+        other,
+        { it.available.release },
+        { it.available.milestone },
+        { it.available.integration },
+      )
+    }
+
+    /**
      * Keeps the `copy` a release shipped callable. The generated one no longer is, now that the
      * constraining platforms moved it past ten parameters.
      */

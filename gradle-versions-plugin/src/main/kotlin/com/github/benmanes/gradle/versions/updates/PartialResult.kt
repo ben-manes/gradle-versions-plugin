@@ -31,12 +31,23 @@ data class PartialStatus
      * an external one by its module coordinate. Trails for the same reason as [platformProjects].
      */
     val constrainedBy: List<String> = emptyList(),
+    /**
+     * Whether one declared version of this module has different latest versions across the
+     * aggregated projects, which is settled by the aggregating task rather than by the producer.
+     * Trails for the same reason as [platformProjects], and transient because it is a fact about
+     * the whole report rather than about the project whose producer wrote this status.
+     */
+    @Transient val splitByLatest: Boolean = false,
   ) {
     val coordinate: Coordinate
-      get() = Coordinate(group, name, declaredVersion, userReason)
+      get() = Coordinate(group, name, declaredVersion, userReason, divergentLatest)
 
     val latestCoordinate: Coordinate
-      get() = Coordinate(group, name, latestVersion, userReason)
+      get() = Coordinate(group, name, latestVersion, userReason, divergentLatest)
+
+    /** The version that separates a split row from the other rows of its declared version. */
+    private val divergentLatest: String?
+      get() = latestVersion.takeIf { splitByLatest }
 
     /**
      * Keeps the `copy` a release shipped callable, which the generated one no longer is now that
@@ -56,7 +67,7 @@ data class PartialStatus
     ): PartialStatus =
       copy(
         group, name, declaredVersion, userReason, latestVersion, projectUrl, unresolved, contributed,
-        configurations, projectPath, platformProjects, constrainedBy,
+        configurations, projectPath, platformProjects, constrainedBy, splitByLatest,
       )
 
     /**
@@ -78,7 +89,30 @@ data class PartialStatus
     ): PartialStatus =
       copy(
         group, name, declaredVersion, userReason, latestVersion, projectUrl, unresolved, contributed,
-        configurations, projectPath, platformProjects, constrainedBy,
+        configurations, projectPath, platformProjects, constrainedBy, splitByLatest,
+      )
+
+    /**
+     * Keeps the `copy` a release shipped callable. The generated one no longer is, now that the
+     * split marker moved it past twelve parameters.
+     */
+    fun copy(
+      group: String = this.group,
+      name: String = this.name,
+      declaredVersion: String = this.declaredVersion,
+      userReason: String? = this.userReason,
+      latestVersion: String = this.latestVersion,
+      projectUrl: String? = this.projectUrl,
+      unresolved: UnresolvedInfo? = this.unresolved,
+      contributed: Boolean = this.contributed,
+      configurations: List<String> = this.configurations,
+      projectPath: String? = this.projectPath,
+      platformProjects: List<String> = this.platformProjects,
+      constrainedBy: List<String> = this.constrainedBy,
+    ): PartialStatus =
+      copy(
+        group, name, declaredVersion, userReason, latestVersion, projectUrl, unresolved, contributed,
+        configurations, projectPath, platformProjects, constrainedBy, splitByLatest,
       )
   }
 
