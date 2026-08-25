@@ -196,7 +196,7 @@ gradle.rootProject {
 
 Every task property is covered in [Task properties](#task-properties), which
 opens with [a recommended configuration](#a-recommended-configuration) most
-builds want: a stability filter so that a pre-release version is not offered
+builds need: a stability filter so that a pre-release version is not offered
 as an update, and a bound so that an upgrade the build has ruled out is not
 offered either.
 
@@ -214,10 +214,11 @@ The report also includes the dependencies that a plugin contributes lazily
 rather than the build declaring them, such as the Kotlin standard library and
 the tool versions of the `jacoco`, `checkstyle`, and `pmd` plugins. Their
 current version is whatever the contributing plugin supplies when the task
-runs, so a tool version the build never sets reports at the default bundled
-with Gradle—a version that appears nowhere in the build script. The reports
-mark such an entry so it does not read as a resolution bug, naming the
-configuration the plugin declared it against:
+runs, so a tool version the build never sets is reported at the default
+bundled with Gradle—a version that appears nowhere in the build script. An
+extra line is printed under such an entry, so it does not read as a resolution
+bug. The line shows the configuration the plugin declared the dependency
+against:
 
 ```text
  - org.jacoco:org.jacoco.ant [0.8.11 -> 0.8.13]
@@ -229,8 +230,8 @@ report compares against.
 
 A plugin that fills its classpath when it is applied, rather than when the
 configuration is first resolved, cannot be told apart from the build declaring
-the dependency. Such an entry names the configuration it was declared against
-instead:
+the dependency. Such an entry shows the configuration the dependency was
+declared against instead:
 
 ```text
  - org.jetbrains.kotlin:kotlin-build-tools-impl [2.4.0 -> 2.4.10]
@@ -238,7 +239,7 @@ instead:
 ```
 
 A configuration the build declares against directly, such as a tool
-configuration of its own, is named the same way. Reject the name an entry
+configuration of its own, is shown the same way. Reject the name an entry
 shows with [`filterDeclaredConfigurations`](#filterdeclaredconfigurations) to
 leave it out of the report.
 
@@ -252,11 +253,11 @@ update check may be disabled using the `checkForGradleUpdate` flag.
 
 ### Cache invalidation
 
-To find the latest version of a dependency, the task asks each repository which
-versions exist. Gradle caches that answer for 24 hours, so a version published
-within the last day may be missing from the report even though the repository
-already has it. Re-run with `--refresh-dependencies` to bypass the cache and
-query the repositories again:
+To find the latest version of a dependency, the task queries each repository
+for the versions available there. Gradle caches the result for 24 hours, so a
+version published within the last day may be missing from the report, because
+the cached answer predates it. Re-run with `--refresh-dependencies` to bypass
+the cache and query the repositories again:
 
 ```bash
 ./gradlew dependencyUpdates --refresh-dependencies
@@ -328,18 +329,18 @@ tasks.named("dependencyUpdates").configure {
   versions](#filtering-unstable-versions)).
 - `!satisfiesDeclaredBound` rejects a candidate outside a `strictly` or
   `reject` bound the build declares, or outside the version a consumed
-  platform states (see [Respecting declared
+  platform sets (see [Respecting declared
   bounds](#respecting-declared-bounds)).
 
-Each piece stands alone: drop any line whose behavior the build does not
-want, and the rest keep working.
+Each piece stands alone: drop any line whose behavior you do not want, and the
+rest keep working.
 
 The [configuration filters](#configuration-filter) are absent only because
-their arguments are build-specific: the names to reject come off your own
+their arguments are build-specific: the names to reject come from your own
 report.
 
-In Kotlin the `isNonStable` extension replaces a helper of that name the build
-already has. A top-level `fun isNonStable(version: String)` compiles to the same
+In Kotlin the `isNonStable` extension replaces a helper of that name already in
+the build. A top-level `fun isNonStable(version: String)` compiles to the same
 JVM signature, so keeping both fails the build with a platform declaration
 clash.
 
@@ -348,11 +349,11 @@ clash.
 ##### Configuration filter
 
 Two properties leave things out of the report. `filterConfigurations`
-decides which configurations the task checks: a rejected configuration is
+controls which configurations the task checks: a rejected configuration is
 never resolved, and nothing reachable only through it is reported.
-`filterDeclaredConfigurations` decides which entries the report keeps once
-the checks have run: it matches the configuration name printed on the entry
-itself.
+`filterDeclaredConfigurations` controls which entries stay in the report once
+the checks have run, matched against the configuration name printed on the
+entry itself.
 
 ###### `filterConfigurations`
 
@@ -387,13 +388,13 @@ tasks.named("dependencyUpdates").configure {
 
 </details>
 
-A dependency leaves the report once every configuration that reaches it is
-rejected, and everything reachable only through a rejected configuration
-leaves with it—rejecting `compileClasspath` removes the build's own
+A dependency is left out of the report once every configuration that reaches
+it is rejected, and so is everything reachable only through a rejected
+configuration—rejecting `compileClasspath` removes the build's own
 dependencies too. Reach for this filter when a whole configuration is noise:
 a skipped configuration also costs no version lookups, which suits the
-classpaths a plugin fills for its own tooling, holding versions the build
-never chose. The [Kotlin Gradle Plugin](#kotlin-gradle-plugin) and
+classpaths a plugin fills for its own tooling, at versions the build never
+chose. The [Kotlin Gradle Plugin](#kotlin-gradle-plugin) and
 [Android Gradle Plugin](#android-gradle-plugin) sections below give ready
 sets.
 
@@ -431,28 +432,28 @@ tasks.named("dependencyUpdates").configure {
 
 </details>
 
-It matches exactly the name the entry prints, from a "contributed by a
+It matches exactly the name printed on the entry, from a "contributed by a
 plugin into" line or a "declared in" one—a tool configuration the build
-declares against directly is rejectable the same way. An entry leaves the
-report when every name it shows is rejected, and an entry that names no
-configuration is never affected: dependencies declared through
-`implementation` and its siblings carry no name, so no rejection reaches
-them, and where such a declaration also backs a named entry, rejection
-removes the attribution line, never the dependency.
+declares against directly is rejectable the same way. An entry is left out of
+the report when every name it shows is rejected, and an entry printed with no
+configuration name is never affected: dependencies declared through
+`implementation` and its siblings are printed without one, so no rejection
+applies to them, and where such a declaration also backs a named entry, the
+rejection removes the attribution line rather than the dependency.
 
 ###### Choosing between them
 
 Both filters silence a tooling configuration like the KGP and AGP sets
 below; prefer `filterConfigurations` there, since it also skips the lookups.
-They part ways when the name an entry shows is not one the task checks (see
+The two differ when the name an entry shows is not one the task checks (see
 [The `dependencyUpdates` task](#the-dependencyupdates-task)): a declarable
 configuration read through a resolvable classpath that extends it, and
-`implementation` holding a plugin's contribution, both show names
-`filterConfigurations` never sees. `filterDeclaredConfigurations`
-matches the name shown, with no side effect on what is checked. Buildscript
-and settings classpath entries ordinarily name no configuration, so neither
-property affects them; one a plugin contributes is named `classpath` and can
-be rejected like any other entry.
+`implementation` with a plugin's contribution in it, both show a name that
+`filterConfigurations` cannot match. `filterDeclaredConfigurations` matches
+the name shown, with no side effect on what is checked. Buildscript and
+settings classpath entries are ordinarily printed with no configuration name,
+so neither property affects them; an entry a plugin contributes shows
+`classpath` and can be rejected like any other entry.
 
 ###### Kotlin Gradle Plugin
 
@@ -511,12 +512,12 @@ tasks.named("dependencyUpdates").configure {
 </details>
 
 The prefix stops short of the unsuffixed `kotlinCompilerPluginClasspath`,
-which keeps reporting, and stays narrower than dropping everything that
+which is still checked, and stays narrower than dropping everything that
 starts with `kotlin`. A compiler plugin the build itself declares resolves
 through these same suffixed classpaths and is filtered with them. Its Gradle
-plugin's marker still reports, so a version shared between the two stays
-visible, but a compiler plugin versioned apart from its Gradle plugin leaves
-the report with no replacement—keep the classpath that carries it if you
+plugin's marker is still reported, so a version shared between the two stays
+visible, but a compiler plugin versioned apart from its Gradle plugin is left
+out with nothing in its place—keep the classpath it resolves through if you
 declare one.
 
 ###### Android Gradle Plugin
@@ -524,9 +525,9 @@ declare one.
 The Android Gradle Plugin fills a set of its own. At AGP 9.3.1, which builds
 in its Kotlin support rather than applying a separate Kotlin plugin, that is
 `androidLintTool`, two of the Kotlin classpaths above, and a
-`unified-test-platform-*` family thirteen configurations wide. The family
-takes a prefix too: its membership shifts between AGP releases and no
-configuration a build fills itself uses it.
+`unified-test-platform-*` family thirteen configurations wide. Match that
+family by prefix as well: which configurations it contains changes between AGP
+releases, and no configuration a build fills itself starts with that prefix.
 
 <details open>
 <summary>Kotlin</summary>
@@ -569,7 +570,7 @@ tasks.named("dependencyUpdates").configure {
 
 </details>
 
-These names belong to the plugins at the versions above, not to Gradle, and
+These names come from the plugins at the versions above, not from Gradle, and
 they change between plugin releases. Take the set from your own report
 rather than from this page, and keep the matches exact wherever a plugin's
 configurations share a prefix with ones the build fills itself.
@@ -592,36 +593,36 @@ the platform project reports them.
 
 A project that *consumes* a platform does not declare that platform's
 constraints, under any of `platform("group:artifact:version")`,
-`enforcedPlatform`, or `platform(project(":platform"))`. Gradle hands those
+`enforcedPlatform`, or `platform(project(":platform"))`. Gradle supplies those
 versions to the consumer as resolution metadata, which `checkConstraints` does
 not read, so they are not enumerated in the consumer's report. This does not
 affect the modules the consumer declares itself: a versionless declaration whose
 version the platform supplies is reported and offered updates as usual. Only a
-module the consumer never declares is absent, and the platform project's own
-report covers those.
+module the consumer never declares is absent, and those appear in the platform
+project's own report.
 
 The platform a platform project imports is reported here, though. A build whose
 platform project declares `api(platform("group:artifact:version"))` reaches that
-BOM's constraints without naming the BOM anywhere the report covers, and an
-included build's platform hides it further, since that build is reported
-separately (see [Composite builds](#composite-builds)). With `checkConstraints`
-the BOM gets an entry of its own beside the versionless declarations it
-supplies, so the coordinate to bump is one the report names. A build that states
-a version for every module it declares reaches no further than the platform
-project itself. The walk stops at the first published platform: a
-BOM that BOM imports states the BOM's version choice rather than the build's, and
-a BOM a library brings along as resolution metadata is not one the build
-imported, so neither is reported. The BOM's entry names every platform project
-that imports it, by build tree path.
+BOM's constraints, but the BOM itself is declared nowhere the report covers, and
+a platform in an included build is further out of reach, since that build is
+reported separately (see [Composite builds](#composite-builds)). With
+`checkConstraints` an entry for the BOM is printed beside the versionless
+declarations whose versions it supplies, so the coordinate to bump appears in
+the report. Where the build declares a version for every module, the walk goes
+no further than the platform project itself. It also stops at the first
+published platform: a BOM imported by that BOM reflects the BOM's version rather
+than the build's, and a BOM that arrives as a library's resolution metadata was
+never imported by the build, so neither is reported. Every platform project
+that imports the BOM is printed on the BOM's entry, by build tree path.
 
 The platform behind a constrained module's version is included in that module's
 own entry either way, as `constrained by the platform :platform` for a platform
 project included in the build and `constrained by the platform group:artifact`
-for a BOM, whose own version appears on its own entry. A platform is only
-included when its constraint is the same version the entry shows: if something
+for a BOM, whose own version appears on its own entry. The platform is only
+printed when its constraint is the same version the entry shows. If something
 else in the build required a higher version and won out, changing the platform
-would not change that version. The coordinate to bump appears on the entry where
-the version is held (see
+would not change that version, so nothing is printed. The coordinate to bump
+appears on the entry where the version is stated (see
 [Respecting declared bounds](#respecting-declared-bounds)). This line does not
 depend on `checkConstraints`. The same names are present in the JSON and XML
 reports as `constrainedBy`, beside the `platformProjects` importers of a
@@ -713,9 +714,9 @@ def isNonStable = { String version ->
 </details>
 
 The trailing `-jre` and `-android` keep Guava's ordinary releases out of the
-unstable set. A library that states its qualifier some other way, such as
-`13.4.0.jre11`, still reads as unstable and needs the pattern extended, so check
-this against the versions your own build sees before relying on it.
+unstable set. A version that spells its qualifier some other way, such as
+`13.4.0.jre11`, still matches as unstable and needs the pattern extended, so
+check this against the versions in your own build before relying on it.
 
 You can then configure [Component Selection
 Rules](https://docs.gradle.org/current/userguide/dynamic_versions.html#sec:component_selection_rules).
@@ -858,15 +859,15 @@ tasks.named("dependencyUpdates").configure {
 
 ##### Respecting declared bounds
 
-A rule can also hold the report to what the build itself declared. The
-constraint a declaration stated is available as `versionConstraint`, Gradle's
-own
+A rule can also keep the report inside what the build itself declared. The
+constraint written on a declaration is available as `versionConstraint`,
+Gradle's own
 [`VersionConstraint`](https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/VersionConstraint.html).
-A module the build declares with no version of its own carries the constraints
-the platforms it consumes state for that module in `platformVersionConstraints`,
-a list rather than a single value because more than one consumed platform can
-bound the same module. The query that finds candidates is deliberately unbounded,
-so a rule that wants the report to respect what the build declared reads it from
+For a module the build declares without a version, the constraints its consumed
+platforms set for that module are available as `platformVersionConstraints`. It
+is a list rather than a single value, because more than one consumed platform
+can bound the same module. The query that finds candidates is deliberately
+unbounded, so a rule respecting what the build declared reads it from
 `versionConstraint` rather than restating it. It is null for a module no
 declaration was matched to, such as one a substitution rule resolved to, so
 guard for that.
@@ -908,11 +909,11 @@ reads it, so `strictly "[5.3, 6["` admits 5.3.26 and excludes 6.0.1, and
 `reject "[3.0,)"` excludes everything from 3.0 up. Only `strictly` and `reject`
 bound a candidate: a `require` version is a floor resolution may rise above, a
 range included, and a `prefer` version only breaks a tie, so a plain
-`implementation("group:name:1.2.3")` is not held back by this rule.
+`implementation("group:name:1.2.3")` is not bounded by this rule.
 
-A module declared with no version of its own is additionally bound by the
-version a consumed platform states for it, since the build cannot take that
-upgrade without also bumping the platform. Given a platform BOM that pins
+A module declared without a version is additionally bound by the version a
+consumed platform sets for it, since the build cannot take that upgrade without
+also bumping the platform. Given a platform BOM that pins
 `log4j-core` to `2.16.0`:
 
 <details open>
@@ -939,7 +940,7 @@ dependencies {
 
 </details>
 
-`satisfiesDeclaredBound` holds `log4j-core` to `2.16.0` even though
+`satisfiesDeclaredBound` bounds `log4j-core` at `2.16.0` even though
 `versionConstraint` is empty for it, because the bound comes from the platform
 instead:
 
@@ -957,56 +958,55 @@ entry, so the reason for the version shows up next to it. A platform project
 appears as its build tree path, `constrained by the platform :platform`, and a
 BOM as its group and module; where several platforms bound the module, all of
 them follow `constrained by the platforms`. A constraint written as a range is
-left out, since a range alone is not enough to tell which version was
-selected.
+left out, since a range alone does not identify which version was selected.
 
-The platform keeps its own report line, so the upgrade that is actually
-available, bumping the BOM, still shows. A build that centralizes its platforms
-in a platform project of its own, an included build's included, states the BOM
-where this report does not cover it; `checkConstraints` reports that BOM here
-anyway, so the coordinate to bump is named either way (see
-[Constraints](#constraints)). A bound the build states on the platform itself
-holds that line too: a BOM whose own version says `strictly "[2.0, 3.0["`,
-inline or through a version catalog, reports the newest version inside that
-range and never the major beyond it.
+The platform still has an entry of its own, so the upgrade that is actually
+available, bumping the BOM, is still printed. A build that centralizes its
+platforms in a platform project of its own, including one belonging to an
+included build, declares the BOM somewhere this report does not cover. With
+`checkConstraints` that BOM is reported here anyway, so the coordinate to bump
+is printed either way (see [Constraints](#constraints)). A bound the build
+declares on the platform itself applies to that entry too: where a BOM's own
+version is `strictly "[2.0, 3.0["`, inline or through a version catalog, the
+newest version inside that range is reported and never the major beyond it.
 
 The bound is deliberately narrow:
 
-- A module the build states a version for anywhere in the configuration
-  hierarchy keeps the floor semantics above; a platform never tightens a
-  version declared directly.
-- A platform that states a range admits in-range upgrades, the same as a
-  declared `strictly` range.
-- A platform that states only a `prefer` version does not bound, the same as
+- Where the build declares a version for a module anywhere in the
+  configuration hierarchy, the floor semantics above apply; a platform never
+  tightens a version declared directly.
+- A platform constraint written as a range admits in-range upgrades, the same
+  as a declared `strictly` range.
+- A platform constraint written as `prefer` alone does not bound, the same as
   a declared `prefer`.
 - When more than one consumed platform bounds the same module, a candidate
-  must satisfy every one of them. That is stricter than the version resolution
-  itself would settle on, so the report offers an upgrade only when no
-  consumed platform stands against it; the version currently resolved is
-  always accepted, whichever platform supplied it.
-- Only a platform bounds. A constraint an ordinary library publishes in its
-  module metadata supplies a version without bounding the report.
-- An `enforcedPlatform` states its own version with `strictly`, so the rule
-  holds the platform itself to that version and a newer BOM stops being
+  must satisfy every one of them. That is stricter than version resolution
+  itself would settle on, so an upgrade is offered only when every consumed
+  platform admits it; the version currently resolved is always accepted,
+  whichever platform supplied it.
+- Only a platform bounds. A constraint in an ordinary library's module
+  metadata supplies a version without bounding the report.
+- Gradle turns an `enforcedPlatform`'s own version into a `strictly`, so the
+  rule bounds the platform itself at that version and a newer BOM stops being
   offered; a plain `platform` keeps its own upgrade line.
 
 Three things to know before writing a rule against a declared bound. Rejecting
 every candidate for a module, including the version it currently resolves to,
-does not fail the build: the module moves to the unresolved section and its
-upgrade line goes with it. A bound naming a version that was never published
-does that, so a `strictly "1.2.3"` pointing at nothing reports as a resolution
-failure rather than as up to date.
+does not fail the build: the module is reported in the unresolved section
+instead, and its upgrade line with it. A bound on a version that was never
+published has that effect, so a `strictly "1.2.3"` matching nothing is reported
+as a resolution failure rather than as up to date.
 
 A `resolutionStrategy` that throws while the plugin applies it to a
 configuration, rather than while Gradle resolves the graph, skips that
 configuration instead: its dependencies are absent from every section, the
 skipped configuration is listed in the report's `skipped` section along with
-the failure, and the console is warned about it. The build still succeeds.
+the failure, and a warning is printed to the console. The build still succeeds.
 
 Narrowing the candidate set can also surface metadata that the unbounded query
-stepped over, with the same result. And a module whose only declaration is a
-constraint reports that constraint as its current version, so `currentVersion`
-may read `[2.0, 3.1[` rather than a resolved version.
+skipped over, with the same result. And where a module's only declaration is a
+constraint, that constraint is reported as its current version, so
+`currentVersion` may read `[2.0, 3.1[` rather than a resolved version.
 
 The declared `strictVersion`, `requiredVersion`, `preferredVersion` and
 `rejectedVersions` remain available on `versionConstraint` for rules that need
@@ -1684,10 +1684,11 @@ configuration cache the dependency metadata read during resolution is tracked as
 an input, so a newly published version invalidates the cached entry rather than
 serving a stale report.
 
-The merged report and the partial results it merges live in the aggregating
-project's build directory. `clean` removes them only if that project has a
-`clean` task, which the `base` plugin supplies. A root project that applies no
-other plugin can add `base` for that alone; the task itself does not need it.
+The merged report and the partial results it merges are written to the
+aggregating project's build directory. `clean` removes them only if that project
+has a `clean` task, which the `base` plugin supplies. A root project that
+applies no other plugin can add `base` for that alone; the task itself does not
+need it.
 
 <details open>
 <summary>Kotlin</summary>
@@ -1713,9 +1714,9 @@ plugins {
 
 </details>
 
-When a coordinate's declared version differs across the aggregated projects, the
-plain text, JSON, XML, and HTML reports name the projects that declared each
-version, so the entry no longer reads as self-contradictory:
+When a coordinate's declared version differs across the aggregated projects,
+the projects that declared each version are printed in the plain text, JSON,
+XML, and HTML reports, so the entry no longer reads as self-contradictory:
 
 ```text
 The following dependencies have later milestone versions:
@@ -1740,23 +1741,24 @@ The following dependencies have later milestone versions:
 ```
 
 So a coordinate's group and name can appear on two entries, and in two sections
-of one report. The projects behind each entry are what separate them.
+of one report; the projects printed on each are what distinguish them.
 
-The plain text and HTML reports name the first five projects and count the rest
-(`declared in :app, :lib, ... and 60 others`). The JSON and XML reports always
-carry the complete list, so use one of them when a tool needs every project.
+The plain text and HTML reports print the first five projects and a count of the
+rest (`declared in :app, :lib, ... and 60 others`). The JSON and XML reports
+always include the complete list, so use one of them when a tool needs every
+project.
 
-A project is named by the path it holds in the build tree, so a project of an
-included build reads as `:child:app` and that build's root as `:child`. Every
-build names its own root `:`, which would otherwise report the projects of two
+A project is printed as its path in the build tree, so a project of an included
+build reads as `:child:app` and that build's root as `:child`. In each build the
+root project's own path is `:`, which would otherwise put the projects of two
 builds under one name.
 
 With the settings plugin applied (see [Applying the
-plugin](#applying-the-plugin)), the root project receives the
-`dependencyUpdates` task and every other project contributes to it. No project
-applies a plugin itself, and a root build script is not required—add one only if
-you want to configure the task. The report also covers the plugins the settings
-script declares, which no project's buildscript carries; a version pinned in
+plugin](#applying-the-plugin)), the `dependencyUpdates` task is registered in
+the root project and every other project contributes to it. No project applies
+a plugin itself, and a root build script is not required—add one only if you
+want to configure the task. The report also covers the plugins the settings
+script declares, which appear in no project's buildscript; a version pinned in
 `pluginManagement` for a plugin the build never applies is not reported.
 
 The settings plugin registers the root project's `dependencyUpdates` task
@@ -1765,13 +1767,12 @@ task by that name now fails with a duplicate-task error—rename yours.
 
 #### Shared task settings
 
-Each project takes the settings that control resolution (`revision`,
-`rejectVersionIf` or a full `resolutionStrategy`, `filterConfigurations`,
-`filterDeclaredConfigurations`, `checkConstraints`, and
-`checkBuildEnvironmentConstraints`) from the nearest
-project up the hierarchy whose task set them. Configuring the root project's
-task therefore covers every project, unless a subproject configures its own (see
-[Task properties](#task-properties)).
+The settings that control resolution (`revision`, `rejectVersionIf` or a full
+`resolutionStrategy`, `filterConfigurations`, `filterDeclaredConfigurations`,
+`checkConstraints`, and `checkBuildEnvironmentConstraints`) are inherited from
+the nearest project up the hierarchy whose task set them. Configuring the root
+project's task therefore covers every project, unless a subproject configures
+its own (see [Task properties](#task-properties)).
 
 #### Composite builds
 
@@ -1815,12 +1816,12 @@ to exist. A build that must stay unmodified can have the plugin injected by an
 [init script](#initialization-script) instead.
 
 An included build's project can instead be merged into this build's report, by
-naming it in the `dependencyUpdatesAggregation` configuration of the project
-that aggregates. It is named by the coordinates that the include substitutes,
-and the included build must apply the plugin for the project to have a result to
-merge. Each declaration merges the one project it resolves to. The same
-configuration names a project of this build that the aggregating project's own
-tree does not cover, such as a sibling:
+declaring it in the `dependencyUpdatesAggregation` configuration of the project
+that aggregates. Declare it by the coordinates that the include substitutes, and
+apply the plugin in the included build, so that a partial result exists to
+merge. Each declaration merges the one project it resolves to. A project of this
+build that the aggregating project's own tree does not cover, such as a sibling,
+is declared the same way:
 
 <details open>
 <summary>Kotlin</summary>
@@ -1871,7 +1872,8 @@ A build that cannot apply the settings plugin can still cover every project (see
 [Contributor plugin](#contributor-plugin)).
 
 Under isolated projects, contributing projects that share a group and name are
-aggregated as one; the console warns about any project the report is missing.
+aggregated as one, and a warning is printed to the console for any project
+missing from the report.
 
 ## Other ways to apply the plugin
 
@@ -1894,7 +1896,7 @@ badge at the top of this page.
 > When the settings plugin is also applied, request the per-project plugin
 > *without* a version—the settings plugin already puts it on every project's
 > classpath, and a versioned request fails to resolve. This includes a version
-> catalog alias, which always carries a version.
+> catalog alias, which always includes a version.
 
 ### The `plugins` block
 
@@ -2008,7 +2010,8 @@ The contributor plugin registers only the producer that feeds the aggregate
 report, so `dependencyUpdates` remains a single task in the root project. The
 main plugin is a superset of the contributor plugin: a project that applies
 `io.github.ben-manes.versions` instead still feeds the aggregate report, and
-also gets its own `dependencyUpdates` task covering itself and its subprojects.
+also has a `dependencyUpdates` task of its own, covering itself and its
+subprojects.
 
 ### Initialization script
 
@@ -2017,9 +2020,9 @@ via a
 [Gradle init script](https://docs.gradle.org/current/userguide/init_scripts.html).
 Apply the settings plugin from `beforeSettings`, which covers every project of
 the build and works under isolated projects (see [Isolated
-projects](#isolated-projects)). Every build that runs gets its own
-`dependencyUpdates` task, so an included build is reported without being
-modified (see [Composite builds](#composite-builds)):
+projects](#isolated-projects)). A `dependencyUpdates` task is registered in
+every build that runs, so an included build is reported without being modified
+(see [Composite builds](#composite-builds)):
 
 <details open>
 <summary>Kotlin</summary>
@@ -2087,14 +2090,13 @@ A script has no implicit import for the plugin's types, so the imports at the
 top of these snippets are required to reference them by their simple names.
 
 An init script resolves the plugin on a classpath of its own, so a build that
-applies the plugin itself holds a second copy of it. An init script reaches a
-build before the build's own scripts do, so its copy is the one that reports and
-the build's copy defers to it, which leaves such a build working as it did. For
-the same reason the plugin is absent from the
-project's own classpath, so a `plugins` block that requests it alongside an init
-script needs a version, unlike one in a build whose settings script applies the
-settings plugin (see [Other ways to apply the
-plugin](#other-ways-to-apply-the-plugin)).
+applies the plugin itself ends up with a second copy of it. An init script runs
+before the build's own scripts, so its copy is the one that registers the task
+and the build's copy does nothing, which leaves such a build working as it did.
+For the same reason the plugin is absent from the project's own classpath, so a
+`plugins` block that requests it alongside an init script needs a version,
+unlike one in a build whose settings script applies the settings plugin (see
+[Other ways to apply the plugin](#other-ways-to-apply-the-plugin)).
 
 ## Samples
 
@@ -2135,16 +2137,16 @@ version, where the entries were merged into the newest of them before:
 
 > [!IMPORTANT]
 > - A coordinate's group and name can now appear on two entries of one report,
->   and in two of its sections. The projects behind each entry are included in
->   `projects` (see [Multi-project builds](#multi-project-builds)), which is what
->   separates them. A tool that keys the entries by group and name alone has to
->   key them by the projects as well.
+>   and in two of its sections. The projects for each entry are included in
+>   `projects` (see [Multi-project builds](#multi-project-builds)), which is
+>   what distinguishes them. A tool that keys the entries by group and name
+>   alone has to key them by the projects as well.
 
 > [!NOTE]
 > - A module that a platform bounds in one project and not in another is now up
 >   to date in the bounded project and outdated in the other, rather than
->   outdated in both. The merged entry showed the bounded project an upgrade
->   that is not available in it.
+>   outdated in both. The merged entry printed an upgrade that is not available
+>   in the bounded project.
 > - A split entry can include an attribution line that the merged one left out.
 >   The line is left out when a project outside the platform's importers
 >   declares the module. Once the entries are split, that project is on an entry
@@ -2153,32 +2155,32 @@ version, where the entries were merged into the newest of them before:
 
 ### v0.60.0
 
-v0.61.0 names a project by its path in the build tree wherever the report shows
-one, so the projects of an included build no longer share the `:` that every
-build answers for its own root, reports the platforms a build imports through
-its own platform projects, and reports the configurations a `resolutionStrategy`
-that throws left uninspected:
+In v0.61.0, a project is printed as its path in the build tree wherever one
+appears in the report, so the projects of an included build no longer share the
+`:` that stands for each build's own root. The platforms a build imports through
+its own platform projects are reported, as are the configurations left
+uninspected by a `resolutionStrategy` that throws:
 
 > [!IMPORTANT]
-> - A project of an included build is named by its build tree path, so an entry
->   reads `declared in :child` where it read `declared in root project` (see
->   [Multi-project builds](#multi-project-builds)). The JSON and XML reports
->   carry the same paths in `projects`.
-> - A `buildSrc` build is named the same way when its task is run from the
+> - A project of an included build is printed as its build tree path, so an
+>   entry reads `declared in :child` where it read `declared in root project`
+>   (see [Multi-project builds](#multi-project-builds)). The same paths appear
+>   in the JSON and XML reports, in `projects`.
+> - A `buildSrc` build is printed the same way when its task is run from the
 >   outer build, as `:buildSrc:dependencyUpdates`. Its report is headed
->   `:buildSrc` rather than `:`, and its projects are named beneath that path.
+>   `:buildSrc` rather than `:`, and its projects are printed beneath that path.
 >   Running the task from inside `buildSrc` makes it the root of its own build
 >   tree, which still reads `:`.
-> - An entry can now carry an attribution line reading `imported by the platform
->   :platforms`, naming the platform projects the build imports the dependency
->   through. A tool that parses the plain text report line by line has to skip
->   it, as it already does for the other attribution lines (see [Report
->   format](#report-format)). The JSON and XML reports carry the same paths in
->   `platformProjects`.
-> - The plain text report carries a section listing the configurations that
+> - An attribution line reading `imported by the platform :platforms` can now
+>   be printed under an entry, showing the platform projects the build imports
+>   the dependency through. A tool that parses the plain text report line by
+>   line has to skip it, as it already does for the other attribution lines (see
+>   [Report format](#report-format)). The same paths appear in the JSON and XML
+>   reports, in `platformProjects`.
+> - The plain text report now has a section listing the configurations that
 >   could not be inspected, after the dependency ones, where they were logged at
->   info level and left out silently before. The JSON and XML reports carry them
->   under `skipped`, which
+>   info level and left out silently before. They appear in the JSON and XML
+>   reports under `skipped`, which
 >   `count` does not include, so a tool totalling the report has to leave it out
 >   too (see [Report output](#report-output)).
 > - A custom `outputFormatter` that calls `copy` on `DependencyOutdated`,
@@ -2189,8 +2191,8 @@ that throws left uninspected:
 >   documented ones do, needs nothing.
 
 > [!TIP]
-> An entry can show a configuration name that `filterConfigurations` never
-> sees, such as a declarable configuration read through a resolvable classpath
+> An entry can show a configuration name that `filterConfigurations` cannot
+> match, such as a declarable configuration read through a resolvable classpath
 > that extends it. Rejecting the classpath instead removes the build's own
 > dependencies with it.
 > [`filterDeclaredConfigurations`](#filterdeclaredconfigurations) rejects the
@@ -2198,54 +2200,54 @@ that throws left uninspected:
 
 > [!NOTE]
 > - A dependency that two builds of a composite declare at different versions is
->   now reported as divergent. The attribution naming the projects behind each
->   version was withheld while every entry carried the same project path, which
->   in a composite was always `:`.
-> - A build using `checkConstraints` gains an entry for each platform its own
->   platform projects import, where the modules those constraints hold were
->   reported as up to date with nothing naming the coordinate to bump (see
->   [Constraints](#constraints)).
+>   now reported as divergent. The attribution showing the projects for each
+>   version was left out while every entry had the same project path, which in a
+>   composite was always `:`.
+> - With `checkConstraints`, an entry is now printed for each platform the
+>   build's own platform projects import. The modules those constraints bound
+>   were reported as up to date, with nothing to show the coordinate to bump
+>   (see [Constraints](#constraints)).
 > - A configuration that declares a platform is resolved a second time, to find
 >   those imports, so a `beforeResolve` hook on it runs once more than it did. A
 >   configuration declaring no platform resolves nothing extra.
 
 ### v0.59.0
 
-v0.60.0 names the configuration a dependency was declared directly against, so a
-plugin that fills a classpath of its own when it is applied no longer reads as
-the build declaring the dependency, states the reason a dependency constraint
-was declared with, and lets a component selection rule hold the report to the
-bound the build declared:
+In v0.60.0, the configuration a dependency was declared directly against is
+printed, so a plugin that fills a classpath of its own when it is applied no
+longer reads as the build declaring the dependency. The reason a dependency
+constraint was declared with is printed too, and a component selection rule can
+keep the report inside the bound the build declared:
 
 > [!IMPORTANT]
-> - An entry can now carry an attribution line where it carried none, naming the
->   configuration the dependency was declared against. A tool that parses the plain
->   text report line by line has to skip it, as it already does for the other
->   attribution lines (see [Report format](#report-format)). The JSON and XML
->   reports carry the same names in `configurations`, which until now held only
->   what a plugin contributed, so a tool reading that field has to read
->   `contributed` alongside it to tell the two apart.
-> - An entry for a dependency constraint declared with `because` now carries that
->   reason, where only a dependency's reason appeared before. It prints on the same
->   line as a dependency's reason does, so a tool that already handles one handles
->   both.
+> - An attribution line can now be printed under an entry that had none,
+>   showing the configuration the dependency was declared against. A tool that
+>   parses the plain text report line by line has to skip it, as it already does
+>   for the other attribution lines (see [Report format](#report-format)). The
+>   same names appear in the JSON and XML reports, in `configurations`, which
+>   until now contained only what a plugin contributed, so a tool reading that
+>   field has to read `contributed` alongside it to tell the two apart.
+> - The reason on a dependency constraint declared with `because` is now
+>   printed, where only a dependency's reason appeared before. It prints on the
+>   same line as a dependency's reason does, so a tool that already handles one
+>   handles both.
 
 > [!TIP]
-> - A component selection rule can hold the report to what the build declared,
->   with `rejectVersionIf { !satisfiesDeclaredBound }`. A module bounded by a
->   `strictly` or by a platform the build consumes is then held to that bound,
->   so the report offers only versions the build can actually take (see
+> - A component selection rule can keep the report inside what the build
+>   declared, with `rejectVersionIf { !satisfiesDeclaredBound }`. A module
+>   bounded by a `strictly` or by a platform the build consumes is then bounded
+>   there, so only versions the build can actually take are offered (see
 >   [Respecting declared bounds](#respecting-declared-bounds)).
 > - A Kotlin DSL build script that worked around the Gradle 9 overload ambiguity
->   by naming `Action<ComponentSelectionWithCurrent>` can go back to the untyped
->   `all { }` and `withModule(id) { }` forms.
+>   by spelling out `Action<ComponentSelectionWithCurrent>` can go back to the
+>   untyped `all { }` and `withModule(id) { }` forms.
 
 ### v0.58.0
 
-v0.59.0 reports the version another resolution found for a dependency that
-failed to resolve, and collects the partial result of every project under the
-project that aggregates them, so a project that exists only to hold a nested
-`include` no longer gains a `build` directory of its own:
+In v0.59.0, the version another resolution found for a dependency that failed
+to resolve is reported, and the partial result of every project is collected
+under the project that aggregates them, so no `build` directory is created in a
+project that exists only for a nested `include`:
 
 > [!IMPORTANT]
 > * A declared version that resolved in one place and failed in another is now
@@ -2255,7 +2257,7 @@ project that aggregates them, so a project that exists only to hold a nested
 >   A tool reading `count` as a dependency total, or treating the sections as
 >   disjoint, has to allow for the overlap (see
 >   [Report format](#report-format)).
-> * The unresolved section of the plain text report now names the declared
+> * The unresolved section of the plain text report now includes the declared
 >   version, as every other section does. A tool that parses that section line
 >   by line has to allow it.
 
@@ -2269,25 +2271,25 @@ project that aggregates them, so a project that exists only to hold a nested
 
 ### v0.57.0
 
-v0.58.0 routes the reporters through the build's logger and adds attribution
-lines to the reports:
+In v0.58.0, the reporters print through the build's logger, and attribution
+lines are added to the reports:
 
 > [!IMPORTANT]
 > * The console summary now prints at the lifecycle log level, so `--quiet`
 >   suppresses it. The report file is still written; read it, or drop
 >   `--quiet`, if a script was piping the console output (see
 >   [Report format](#report-format)).
-> * An entry may carry an indented attribution line naming the projects that
->   declared a divergent version (see
+> * An indented attribution line may be printed under an entry, showing the
+>   projects that declared a divergent version (see
 >   [Multi-project builds](#multi-project-builds)) or the configuration a
 >   plugin contributed it into (see
 >   [The `dependencyUpdates` task](#the-dependencyupdates-task)). A tool that
->   parses the plain text report line by line has to skip them; the JSON and
->   XML reports carry the same signal as fields instead.
+>   parses the plain text report line by line has to skip them; the same
+>   information appears as fields in the JSON and XML reports.
 
 ### v0.56.0
 
-v0.57.0 supports applying the settings plugin from an init script:
+In v0.57.0 the settings plugin can be applied from an init script:
 
 > [!IMPORTANT]
 > An init script that applies `VersionsPlugin` to `allprojects` reports per
@@ -2298,7 +2300,7 @@ v0.57.0 supports applying the settings plugin from an init script:
 
 ### v0.55.0
 
-v0.56.0 adds the settings plugin and makes it the recommended setup:
+In v0.56.0 the settings plugin is added, and it becomes the recommended setup:
 
 > [!TIP]
 > Apply `io.github.ben-manes.versions.settings` in the settings script (see
@@ -2318,15 +2320,15 @@ v0.56.0 adds the settings plugin and makes it the recommended setup:
 
 ### v0.54.0 and earlier
 
-v0.55.0 moves the plugin from the `com.github.ben-manes` namespace to
-`io.github.ben-manes` and raises the minimum supported Gradle version to 8.4:
+In v0.55.0 the plugin moves from the `com.github.ben-manes` namespace to
+`io.github.ben-manes`, and the minimum supported Gradle version rises to 8.4:
 
 > [!IMPORTANT]
 > * Move a `buildscript` or `initscript` `classpath` dependency to the
 >   `io.github.ben-manes:gradle-versions-plugin` coordinate. v0.54.0 is the
 >   last release published under
->   `com.github.ben-manes:gradle-versions-plugin`, so the old coordinate no
->   longer sees updates.
+>   `com.github.ben-manes:gradle-versions-plugin`, so no further updates are
+>   published under the old coordinate.
 > * Under the configuration cache, a custom `outputFormatter` cannot reach the
 >   project or the build script from inside the closure, because it runs at
 >   execution time (see [Report format](#report-format)). Read what it needs
