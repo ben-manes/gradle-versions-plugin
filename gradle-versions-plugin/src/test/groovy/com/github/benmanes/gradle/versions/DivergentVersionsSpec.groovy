@@ -16,6 +16,8 @@ import spock.lang.Specification
  */
 @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1032')
 final class DivergentVersionsSpec extends Specification {
+  private static final String GUICE_URL = '     https://code.google.com/p/google-guice/'
+
   @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
   private String mavenRepoUrl
 
@@ -267,6 +269,225 @@ final class DivergentVersionsSpec extends Specification {
     xmlReport.outdated.dependencies.outdatedDependency[0].projects.project*.text() == [':']
     htmlReport.contains('declared in root project')
     htmlReport.contains('declared in :app')
+  }
+
+  /**
+   * Writes an aggregated build with one declared version of a module across its projects, each
+   * rejecting different candidates for it, so that a different latest version is found in each.
+   */
+  private void writeSplitBuild(Map<String, String> rejectByProject, String declaredVersion = '2.0') {
+    def subprojects = rejectByProject.keySet().findAll { it != ':' }
+    testProjectDir.newFile('settings.gradle') <<
+      (subprojects.empty ? '' : "include ${subprojects.collect { "'$it'" }.join(', ')}")
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'io.github.ben-manes.versions'
+        }
+
+        allprojects {
+          apply plugin: 'java'
+          apply plugin: 'io.github.ben-manes.versions'
+
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+
+          dependencies {
+            implementation 'com.google.inject:guice:$declaredVersion'
+          }
+
+          dependencyUpdates {
+            checkForGradleUpdate = false
+          }
+        }
+
+        dependencyUpdates {
+          rejectVersionIf { ${rejectByProject[':']} }
+        }
+      """.stripIndent()
+    rejectByProject.each { project, reject ->
+      if (project == ':') {
+        return
+      }
+      testProjectDir.newFolder(project)
+      testProjectDir.newFile("$project/build.gradle") <<
+        """
+          dependencyUpdates {
+            rejectVersionIf { $reject }
+          }
+        """.stripIndent()
+    }
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1032')
+  def 'Splits the rows of one declared version with different latest versions'() {
+    given:
+    writeSplitBuild([':': 'false', 'app': "it.candidate.version == '3.1'"])
+
+    when:
+    def result = run([':dependencyUpdates', '--no-parallel'])
+    def nl = System.lineSeparator()
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains(
+      " - com.google.inject:guice [2.0 -> 3.0]${nl}$GUICE_URL${nl}     declared in :app")
+    result.output.contains(
+      " - com.google.inject:guice [2.0 -> 3.1]${nl}$GUICE_URL${nl}     declared in root project")
+  }
+
+  def 'Splits the rows into their own sections when only one is outdated'() {
+    given:
+    writeSplitBuild([':': 'false', 'app': "it.candidate.version != '2.0'"])
+
+    when:
+    def result = run(
+      [':dependencyUpdates', '-DoutputFormatter=plain,json,xml', '--no-parallel'])
+    def nl = System.lineSeparator()
+    def jsonReport = new JsonSlurper()
+      .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
+    def xmlReport = new XmlParser()
+      .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.xml'))
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains(" - com.google.inject:guice:2.0${nl}     declared in :app")
+    result.output.contains(
+      " - com.google.inject:guice [2.0 -> 3.1]${nl}$GUICE_URL${nl}     declared in root project")
+    jsonReport.current.dependencies*.projects == [[':app']]
+    jsonReport.outdated.dependencies*.projects == [[':']]
+    jsonReport.outdated.dependencies[0].available.milestone == '3.1'
+    xmlReport.current.dependencies.dependency[0].projects.project*.text() == [':app']
+    xmlReport.outdated.dependencies.outdatedDependency[0].projects.project*.text() == [':']
+  }
+
+  def 'Includes both projects on one row when their latest versions match'() {
+    given:
+    writeSplitBuild(
+      [':': "it.candidate.version == '3.1'", 'app': 'false', 'lib': 'false'])
+
+    when:
+    def result = run([':dependencyUpdates', '--no-parallel'])
+    def nl = System.lineSeparator()
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains(
+      " - com.google.inject:guice [2.0 -> 3.0]${nl}$GUICE_URL${nl}     declared in root project")
+    result.output.contains(
+      " - com.google.inject:guice [2.0 -> 3.1]${nl}$GUICE_URL${nl}     declared in :app, :lib")
+    result.output.count('com.google.inject:guice') == 2
+  }
+
+  def 'Keeps every row of a three way split in one section'() {
+    given:
+    writeSplitBuild([
+      ':': 'false',
+      'app': "it.candidate.version == '3.1'",
+      'lib': "it.candidate.version in ['3.1', '3.0']",
+    ])
+
+    when:
+    def result = run([':dependencyUpdates', '-DoutputFormatter=plain,json', '--no-parallel'])
+    def jsonReport = new JsonSlurper()
+      .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.count('com.google.inject:guice') == 3
+    jsonReport.outdated.dependencies*.available.milestone.sort() == ['2.2', '3.0', '3.1']
+    jsonReport.outdated.dependencies*.projects.flatten().sort() == [':', ':app', ':lib']
+  }
+
+  def 'Splits the rows in the exceeded section'() {
+    given:
+    writeSplitBuild(
+      [':': "it.candidate.version == '3.1'", 'app': "it.candidate.version in ['3.1', '3.0']"],
+      '3.1')
+
+    when:
+    def result = run([':dependencyUpdates', '-DoutputFormatter=plain,json', '--no-parallel'])
+    def jsonReport = new JsonSlurper()
+      .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
+
+    then: 'each row shows the latest version found for it, not one shared across the key'
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('[3.1 <- 3.0]')
+    result.output.contains('[3.1 <- 2.2]')
+    jsonReport.exceeded.dependencies*.latest.sort() == ['2.2', '3.0']
+  }
+
+  def 'Splits the row a platform bounds in its consumer and not in the platform itself'() {
+    given: 'the platform declares the constraint that bounds the module in the project consuming it'
+    testProjectDir.newFile('settings.gradle') << "include 'platform'"
+    testProjectDir.newFolder('platform')
+    testProjectDir.newFile('platform/build.gradle') <<
+      """
+        plugins { id 'java-platform' }
+        dependencies {
+          constraints {
+            api 'com.google.inject:guice:2.0'
+          }
+        }
+      """.stripIndent()
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        subprojects {
+          apply plugin: 'io.github.ben-manes.versions'
+        }
+
+        allprojects {
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+
+          tasks.dependencyUpdates {
+            checkConstraints = true
+            checkForGradleUpdate = false
+            rejectVersionIf { !it.satisfiesDeclaredBound }
+          }
+        }
+
+        dependencies {
+          api platform(project(':platform'))
+          api 'com.google.inject:guice'
+        }
+      """.stripIndent()
+
+    when:
+    def result = run([':dependencyUpdates', '--no-parallel'])
+    def nl = System.lineSeparator()
+
+    then: 'the bounded row stays up to date rather than taking the platform row\'s upgrade'
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains(
+      " - com.google.inject:guice:2.0${nl}" +
+        "     constrained by the platform :platform in root project")
+    result.output.contains(" - com.google.inject:guice [2.0 -> 3.1]${nl}$GUICE_URL")
+  }
+
+  def 'Keeps one row and no project names when the latest versions match'() {
+    given:
+    writeSplitBuild([':': 'false', 'app': 'false'])
+
+    when:
+    def result = run([':dependencyUpdates', '--no-parallel'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains(' - com.google.inject:guice [2.0 -> 3.1]')
+    result.output.count('com.google.inject:guice') == 1
+    !result.output.contains('declared in')
   }
 
   def 'Names no project in a single project report'() {

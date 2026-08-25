@@ -427,15 +427,16 @@ fun reporterFor(
   gradleReleaseChannel: String,
   skipped: List<SkippedConfiguration> = emptyList(),
 ): DependencyUpdatesReporter {
-  val versions = VersionMapping(logger, statuses)
-  val projectsByCoordinate = divergentProjects(statuses)
-  val contributedCoordinates = contributedCoordinates(statuses, logger)
-  val configurationsByCoordinate = namedConfigurations(statuses, contributedCoordinates)
-  val platformProjectsByCoordinate = platformProjectsByCoordinate(statuses, logger)
-  val constrainedByCoordinate = constrainedByCoordinate(statuses, logger)
-  val unresolved = statuses.mapNotNullTo(mutableSetOf()) { it.unresolved }
+  val split = markDivergentlyResolved(statuses)
+  val versions = VersionMapping(logger, split)
+  val projectsByCoordinate = divergentProjects(split)
+  val contributedCoordinates = contributedCoordinates(split, logger)
+  val configurationsByCoordinate = namedConfigurations(split, contributedCoordinates)
+  val platformProjectsByCoordinate = platformProjectsByCoordinate(split, logger)
+  val constrainedByCoordinate = constrainedByCoordinate(split, logger)
+  val unresolved = split.mapNotNullTo(mutableSetOf()) { it.unresolved }
   val projectUrls =
-    statuses
+    split
       .filter { !it.projectUrl.isNullOrEmpty() }
       .associateBy(
         { mapOf("group" to it.group, "name" to it.name) },
@@ -467,19 +468,29 @@ private fun contributedCoordinates(
   statuses: List<PartialStatus>,
   logger: Logger,
 ): Set<Coordinate> {
-  val byCoordinate = statuses.groupBy { it.coordinate }
+  // Grouped by the declaration rather than by the coordinate, so that splitting a row does not put
+  // two disagreeing projects into groups that are each unanimous on their own.
+  val byDeclaration = statuses.groupBy { Declaration(it) }
   // Withheld when the projects disagree, which is a mark that cannot be trusted rather than one
   // that does not apply, so it is reported instead of passing as an ordinary unmarked entry.
-  for ((coordinate, group) in byCoordinate) {
+  for ((declaration, group) in byDeclaration) {
     if (group.any { it.contributed } && !group.all { it.contributed }) {
       logger.info(
-        "The projects disagree on whether a plugin contributed ${coordinate.groupId}:" +
-          "${coordinate.artifactId}, so it is left unmarked: contributed by " +
+        "The projects disagree on whether a plugin contributed ${declaration.group}:" +
+          "${declaration.name}, so it is left unmarked: contributed by " +
           group.filter { it.contributed }.mapNotNull { it.projectPath }.sorted().joinToString(", "),
       )
     }
   }
-  return byCoordinate.filterValues { group -> group.all { it.contributed } }.keys
+  return byDeclaration
+    .filterValues { group -> group.all { it.contributed } }
+    .values
+    .flatMapTo(mutableSetOf()) { group -> group.map { it.coordinate } }
+}
+
+/** One module at one declared version, which a split leaves as several coordinates. */
+private data class Declaration(val group: String, val name: String, val declaredVersion: String) {
+  constructor(status: PartialStatus) : this(status.group, status.name, status.declaredVersion)
 }
 
 /**
@@ -498,13 +509,18 @@ private fun namedConfigurations(
   contributed: Set<Coordinate>,
 ): Map<Coordinate, List<String>> =
   statuses
-    .groupBy { it.coordinate }
-    .filter { (coordinate, group) ->
-      coordinate in contributed ||
+    // Grouped by the declaration for the same reason as the marks above: whether a configuration
+    // was named in every observing project is a question about all of them, which a split narrows.
+    .groupBy { Declaration(it) }
+    .filter { (_, group) ->
+      group.any { it.coordinate in contributed } ||
         group.groupBy { it.projectPath }.values.all { project ->
           project.any { it.configurations.isNotEmpty() }
         }
-    }.mapValues { (_, group) -> group.flatMap { it.configurations }.distinct().sorted() }
+    }.flatMap { (_, group) ->
+      val names = group.flatMap { it.configurations }.distinct().sorted()
+      group.map { it.coordinate to names }
+    }.toMap()
     .filterValues { it.isNotEmpty() }
 
 /**
@@ -572,7 +588,54 @@ private fun constrainedByCoordinate(
       coordinate to sources.toList().sorted()
     }.toMap()
 
-/** Returns the projects behind each version of a key whose declared versions diverge. */
+/**
+ * Returns the statuses with the rows of a declared version whose latest version differs across the
+ * aggregated projects marked, so that each of those latest versions is printed on a row of its own.
+ *
+ * The marked rows are returned as copies and the argument is left alone, since this is a published
+ * entry point and the statuses a caller passes are its own.
+ *
+ * Merged, the newest of them is printed for every project, including the ones it is not available
+ * in. That is what happens when a platform bounds the module in one project and not in another.
+ * The rows are separated by the latest version rather than by the project, so that the projects
+ * which agree are printed on one row and included on it together, exactly as they are when their
+ * declared versions differ.
+ *
+ * An unresolved row has no latest version to be split by and is left whole. So is a coordinate with
+ * two latest versions inside a single project, which happens when its buildscript and its
+ * dependencies use different repositories. Splitting that one would leave two rows with the same
+ * project name, which the report's sorted groups compare as equal and drop, so this exclusion is
+ * what keeps a split row's projects disjoint.
+ */
+private fun markDivergentlyResolved(statuses: List<PartialStatus>): List<PartialStatus> {
+  if (statuses.mapTo(mutableSetOf()) { it.projectPath }.size <= 1) {
+    return statuses
+  }
+  val marked =
+    statuses
+      .withIndex()
+      .filter { (_, status) -> status.projectPath != null && status.unresolved == null }
+      .groupBy { (_, status) -> status.coordinate }
+      .values
+      .filter { statusesOfVersion ->
+        val byProject = statusesOfVersion.groupBy { (_, status) -> status.projectPath }
+        byProject.size > 1 &&
+          byProject.values.all { rows -> rows.mapTo(mutableSetOf()) { it.value.latestVersion }.size == 1 } &&
+          byProject.values.mapTo(mutableSetOf()) { it.first().value.latestVersion }.size > 1
+      }.flatten()
+      .mapTo(mutableSetOf()) { it.index }
+  if (marked.isEmpty()) {
+    return statuses
+  }
+  return statuses.mapIndexed { index, status ->
+    if (index in marked) status.copy(splitByLatest = true) else status
+  }
+}
+
+/**
+ * Returns the projects behind each version of a key whose declared versions differ, or whose one
+ * declared version has different latest versions across the projects.
+ */
 private fun divergentProjects(statuses: List<PartialStatus>): Map<Coordinate, List<String>> {
   if (statuses.mapTo(mutableSetOf()) { it.projectPath }.size <= 1) {
     return emptyMap()
@@ -581,8 +644,10 @@ private fun divergentProjects(statuses: List<PartialStatus>): Map<Coordinate, Li
     .filter { it.projectPath != null }
     .groupBy { Coordinate.Key(it.group, it.name) }
     .values
-    .filter { statusesOfKey -> statusesOfKey.mapTo(mutableSetOf()) { it.declaredVersion }.size > 1 }
-    .flatten()
+    .filter { statusesOfKey ->
+      statusesOfKey.mapTo(mutableSetOf()) { it.declaredVersion }.size > 1 ||
+        statusesOfKey.any { it.splitByLatest }
+    }.flatten()
     .groupBy({ it.coordinate }, { it.projectPath!! })
     .mapValues { (_, paths) -> paths.distinct().sorted() }
 }

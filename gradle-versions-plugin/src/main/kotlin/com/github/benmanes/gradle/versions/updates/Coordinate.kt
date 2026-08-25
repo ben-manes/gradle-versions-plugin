@@ -66,6 +66,32 @@ class Coordinate(
   val key: Key
     get() = Key(groupId, artifactId)
 
+  /**
+   * The latest version found for this row, set only when one declared version of the module has
+   * different latest versions across the aggregated projects. Null on every other row, so that an
+   * unsplit row has the identity it always had.
+   *
+   * It arrives through a constructor rather than a setter, because it is part of [equals],
+   * [hashCode] and [compareTo], and a coordinate already held in a hash map or a sorted set is
+   * unreachable and mis-ordered if its identity changes underneath the collection.
+   */
+  internal var divergentLatest: String? = null
+    private set
+
+  /**
+   * As above, additionally carrying the latest version that separates this row from the other rows
+   * of its declared version. Distinct from the constructor below by the type of its last parameter.
+   */
+  internal constructor(
+    groupId: String?,
+    artifactId: String?,
+    version: String?,
+    userReason: String?,
+    divergentLatest: String?,
+  ) : this(groupId, artifactId, version, userReason) {
+    this.divergentLatest = divergentLatest
+  }
+
   internal constructor(
     groupId: String?,
     artifactId: String?,
@@ -134,12 +160,16 @@ class Coordinate(
     return "$groupId:$artifactId:$version"
   }
 
+  // The split marker is compared as a string rather than as a version. It is here to keep the
+  // ordering consistent with equals, which a sorted set requires, and the order it imposes among
+  // the rows of one declared version is never the order the report prints them in.
   override fun compareTo(other: Coordinate): Int {
     return compareValuesBy(
       this,
       other,
       { it.key },
       { it.version },
+      { it.divergentLatest.orEmpty() },
     )
   }
 
@@ -150,6 +180,7 @@ class Coordinate(
     if (groupId != other.groupId) return false
     if (artifactId != other.artifactId) return false
     if (version != other.version) return false
+    if (divergentLatest != other.divergentLatest) return false
     return true
   }
 
@@ -157,6 +188,7 @@ class Coordinate(
     var result = groupId.hashCode()
     result = 31 * result + artifactId.hashCode()
     result = 31 * result + version.hashCode()
+    result = 31 * result + divergentLatest.hashCode()
     return result
   }
 

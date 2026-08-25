@@ -46,6 +46,18 @@ final class PartialResultSpec extends Specification {
     decoded.statuses[0].projectPath == null
   }
 
+  def 'The split marker is not serialized'() {
+    given:
+    def result = new PartialResult(PartialResult.FORMAT_VERSION, ':', [status('guava', '1.0')], [])
+
+    when:
+    def json = result.toJson()
+
+    then:
+    !json.contains('splitByLatest')
+    PartialResult.fromJson(json) == result
+  }
+
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1028')
   def 'A partial without the contributed key reads as declared'() {
     given:

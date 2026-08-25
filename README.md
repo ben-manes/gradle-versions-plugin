@@ -1723,6 +1723,25 @@ The following dependencies have later milestone versions:
      declared in root project
 ```
 
+One declared version can also have different latest versions across the
+projects, which happens when a platform bounds the module in some of them and
+not in others. Each of those latest versions is shown on an entry of its own,
+with the projects included the same way, rather than the newest of them being
+shown for every project:
+
+```text
+The following dependencies are using the latest milestone version:
+ - com.google.inject:guice:2.0
+     constrained by the platform :platform in root project
+
+The following dependencies have later milestone versions:
+ - com.google.inject:guice [2.0 -> 7.0.0]
+     declared in :platform
+```
+
+So a coordinate's group and name can appear on two entries, and in two sections
+of one report. The projects behind each entry are what separate them.
+
 The plain text and HTML reports name the first five projects and count the rest
 (`declared in :app, :lib, ... and 60 others`). The JSON and XML reports always
 carry the complete list, so use one of them when a tool needs every project.
@@ -2107,6 +2126,30 @@ build is on and work upward. Each section migrates to the version covered by
 the section above it, and the topmost migrates to the current release.
 *Important*s are must-dos, *Tip*s are actions you should or may want to take,
 and *Note*s are things worth knowing that need no action.
+
+### v0.61.0
+
+In the next release, a coordinate whose one declared version has different
+latest versions across the aggregated projects is shown on one entry per latest
+version, where the entries were merged into the newest of them before:
+
+> [!IMPORTANT]
+> - A coordinate's group and name can now appear on two entries of one report,
+>   and in two of its sections. The projects behind each entry are included in
+>   `projects` (see [Multi-project builds](#multi-project-builds)), which is what
+>   separates them. A tool that keys the entries by group and name alone has to
+>   key them by the projects as well.
+
+> [!NOTE]
+> - A module that a platform bounds in one project and not in another is now up
+>   to date in the bounded project and outdated in the other, rather than
+>   outdated in both. The merged entry showed the bounded project an upgrade
+>   that is not available in it.
+> - A split entry can include an attribution line that the merged one left out.
+>   The line is left out when a project outside the platform's importers
+>   declares the module. Once the entries are split, that project is on an entry
+>   of its own, so the line is printed again (see [Report
+>   format](#report-format)).
 
 ### v0.60.0
 
