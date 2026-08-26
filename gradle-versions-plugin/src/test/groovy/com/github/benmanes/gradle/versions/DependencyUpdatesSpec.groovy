@@ -350,7 +350,7 @@ final class DependencyUpdatesSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/844')
-  def 'An unresolved dependency reports its project url rather than a version'() {
+  def 'An unresolved dependency is printed with its project url rather than a version'() {
     given:
     def project = singleProject()
     def projectUrl = 'https://code.google.com/p/google-guice/'
@@ -437,7 +437,7 @@ final class DependencyUpdatesSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/475')
-  def 'Single project with a snapshot-only module reports up to date'() {
+  def 'Single project with a snapshot-only module is reported as up to date'() {
     given:
     def project = singleProject()
     addRepositoryTo(project)
@@ -463,7 +463,7 @@ final class DependencyUpdatesSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/475')
-  def 'Single project with a snapshot module having a newer release still reports the upgrade'() {
+  def 'Single project with a snapshot module having a newer release still shows the upgrade'() {
     given:
     def project = singleProject()
     addRepositoryTo(project)
@@ -490,7 +490,7 @@ final class DependencyUpdatesSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/475')
-  def 'Single project already on the newest snapshot of a mixed module reports up to date'() {
+  def 'Single project already on the newest snapshot of a mixed module is reported as up to date'() {
     given:
     def project = singleProject()
     addRepositoryTo(project)
@@ -516,7 +516,7 @@ final class DependencyUpdatesSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/475')
-  def 'Single project where a snapshot exemption does not carry to another module'() {
+  def 'Single project where a snapshot exemption does not extend to another module'() {
     given:
     def project = singleProject()
     addRepositoryTo(project)
@@ -546,7 +546,7 @@ final class DependencyUpdatesSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/475')
-  def 'Single project declaring a snapshot-only module dynamically reports up to date'() {
+  def 'Single project declaring a snapshot-only module dynamically is reported as up to date'() {
     given:
     def project = singleProject()
     addRepositoryTo(project)

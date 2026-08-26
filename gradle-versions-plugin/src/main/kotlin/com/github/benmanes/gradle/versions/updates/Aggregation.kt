@@ -245,8 +245,9 @@ internal fun registerAggregation(
     // The destination is published for the producers that those projects register, as a settings
     // plugin reaches a project that has no build script and it would otherwise be given a build
     // directory to hold nothing else. Only the project at the root path publishes, as a mid tree
-    // aggregate reads the projects it does not own as variant artifacts, which never cared where
-    // the file lives. Compared by path rather than to project.rootProject, which is forbidden here.
+    // aggregate reads the projects it does not own as variant artifacts, for which the file's
+    // location does not matter. Compared by path rather than to project.rootProject, which is
+    // forbidden here.
     // https://github.com/ben-manes/gradle-versions-plugin/issues/1040
     //
     // The projects publish where an earlier release wrote their results as well, which the cleanup

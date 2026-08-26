@@ -71,7 +71,7 @@ final class ReportJoinSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1032')
-  def 'A divergent version names its declaring projects'() {
+  def 'A divergent version is printed with its declaring projects'() {
     given:
     def root = twoProjects('com.google.inject', 'guice', '3\\.1', '2.0', '3.0')
 
@@ -83,7 +83,7 @@ final class ReportJoinSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1032')
-  def 'A shared version carries no projects'() {
+  def 'A shared version is printed with no projects'() {
     given:
     def root = twoProjects('com.google.inject', 'guice', 'nomatch', '3.1', '3.1')
 
@@ -165,7 +165,7 @@ final class ReportJoinSpec extends Specification {
     then:
     result.outdated.dependencies*.version == ['2.0']
     result.outdated.dependencies.first().available.milestone == '3.1'
-    // The resolution that could not answer is still reported, as it is the user's to see.
+    // The resolution that failed is still reported, as it is the user's to see.
     result.unresolved.dependencies*.name == ['guice']
   }
 
@@ -187,7 +187,7 @@ final class ReportJoinSpec extends Specification {
   def 'A version declared without one is undeclared when a resolution answered for it'() {
     given:
     def root = ProjectBuilder.builder().withName('root').build()
-    // The script classpath can answer for the version-less declaration and the project cannot, so
+    // The script classpath resolves the version-less declaration and the project cannot, so
     // the module is both declared without a version and one a resolution failed on.
     root.buildscript.repositories {
       maven {
@@ -210,7 +210,7 @@ final class ReportJoinSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1050')
-  def 'A version reported against a failure is counted in each section that holds it'() {
+  def 'A version reported against a failure is counted in each section it appears in'() {
     given:
     def root = blindAndSeeing()
 
@@ -226,7 +226,7 @@ final class ReportJoinSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1050')
-  def 'A project that could not resolve a version is still named behind it'() {
+  def 'A project that could not resolve a version is still printed on its row'() {
     given:
     def root = blindAndSeeing()
     def ahead = ProjectBuilder.builder().withName('ahead').withParent(root).build()
@@ -246,7 +246,7 @@ final class ReportJoinSpec extends Specification {
     def result = evaluate(root)
 
     then:
-    // Dropping the blind project's status outright would leave 2.0 named against :seeing alone.
+    // Dropping the blind project's status outright would leave 2.0 printed against :seeing alone.
     result.outdated.dependencies.find { it.version == '2.0' }.projects == [':blind', ':seeing']
     result.outdated.dependencies.find { it.version == '3.0' }.projects == [':ahead']
   }
@@ -287,7 +287,7 @@ final class ReportJoinSpec extends Specification {
 
   /**
    * A root project whose two children declare the same module, where only {@code :seeing} has a
-   * repository to resolve it against. It answers for 2.0, while {@code :blind} resolves nothing.
+   * repository to resolve it against. It resolves 2.0, while {@code :blind} resolves nothing.
    */
   private def blindAndSeeing(String blindVersion = '2.0') {
     def root = ProjectBuilder.builder().withName('root').build()

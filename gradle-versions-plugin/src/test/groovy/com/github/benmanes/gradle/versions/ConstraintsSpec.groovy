@@ -205,7 +205,7 @@ final class ConstraintsSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/802')
-  def 'Show updates for a dependency held to a strict version by a constraint'() {
+  def 'Show updates for a dependency bounded at a strict version by a constraint'() {
     given:
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
@@ -283,7 +283,7 @@ final class ConstraintsSpec extends Specification {
     given:
     // Gradle constrains every project's buildscript classpath to its own log4j version. Neither
     // the empty middle project nor the leaf declares a repository to resolve that against, so
-    // only the root, whose plugins block carries the plugin management repositories, can answer.
+    // only the root, whose plugins block supplies the plugin management repositories, resolves it.
     testProjectDir.newFile('settings.gradle') << "include 'middle:leaf'"
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
@@ -326,7 +326,7 @@ final class ConstraintsSpec extends Specification {
     // The plugin management repositories land in the root's buildscript repositories, so a root
     // that takes its plugins from a plugins block alone is queried rather than skipped. The fixture
     // tops out at 2.17.0, below the 2.17.1 that Gradle constrains its classpath to, so the entry
-    // reports in the exceed section, which is only printed when the query actually ran.
+    // is reported in the exceed section, which is only printed when the query actually ran.
     testProjectDir.newFile('settings.gradle') <<
       """
         pluginManagement {
@@ -362,7 +362,7 @@ final class ConstraintsSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/756')
-  def "Report a buildscript repository that cannot answer for the classpath"() {
+  def "Report a buildscript repository that cannot resolve the classpath"() {
     given:
     // Declared but holding nothing, which is a misconfiguration rather than a project with no
     // script classpath of its own, so the failure is still the user's to see.
@@ -546,7 +546,7 @@ final class ConstraintsSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
-  def 'Names the platform project that imports an external platform'() {
+  def 'Prints the platform project that imports an external platform'() {
     given: 'a chain of same-build platform projects, only the last of which imports the BOM'
     testProjectDir.newFile('settings.gradle') << "include 'app-platform', 'test-platform'\n"
     testProjectDir.newFolder('app-platform')
@@ -614,7 +614,7 @@ final class ConstraintsSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
-  def 'Names every platform project that imports the same external platform'() {
+  def 'Prints every platform project that imports the same external platform'() {
     given: 'two platform projects, each importing the same external bom'
     testProjectDir.newFile('settings.gradle') << "include 'platform-a', 'platform-b'\n"
     ['platform-a', 'platform-b'].each { name ->
@@ -673,7 +673,7 @@ final class ConstraintsSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
-  def 'Names every importer of an external platform they bound differently'() {
+  def 'Prints every importer of an external platform they bound differently'() {
     given: 'two platform projects importing the same bom, one of them stating a preference'
     testProjectDir.newFile('settings.gradle') << "include 'platform-a', 'platform-b'\n"
     ['platform-a': "api platform('com.example:external-bom:1.0')",
@@ -734,7 +734,7 @@ final class ConstraintsSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
-  def 'Withholds the mark of a module a platform project declares as a library'() {
+  def 'Omits the mark of a module a platform project declares as a library'() {
     given: 'one platform project importing a pom module as a platform and another as a library'
     testProjectDir.newFile('settings.gradle') << "include 'platform-a', 'platform-b', 'platform-c'\n"
     ['platform-a': "api 'com.google.guava:guava:15.0'",
@@ -864,7 +864,7 @@ final class ConstraintsSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
-  def 'Names the platform project that constrains a versionless module'() {
+  def 'Prints the platform project that constrains a versionless module'() {
     given: 'a platform project stating the bound in its own constraints block'
     testProjectDir.newFile('settings.gradle') << "include 'platform'\n"
     testProjectDir.newFolder('platform')
@@ -920,7 +920,7 @@ final class ConstraintsSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
-  def 'Names the external platform that constrains a versionless module'() {
+  def 'Prints the external platform that constrains a versionless module'() {
     given: 'an external bom imported directly, bounding a versionless declaration'
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
@@ -960,7 +960,7 @@ final class ConstraintsSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
-  def 'Names every platform that states the same bound'() {
+  def 'Prints every platform that sets the same bound'() {
     given: 'two platform projects constraining the same module to the same version'
     testProjectDir.newFile('settings.gradle') << "include 'platform-a', 'platform-b'\n"
     ['platform-a', 'platform-b'].each { name ->
@@ -1075,7 +1075,7 @@ final class ConstraintsSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
-  def 'Withholds the bound when a project outside the platforms declares the module'() {
+  def 'Omits the bound when a project outside the platforms declares the module'() {
     given: 'one project bounded by the platform and a sibling declaring the same version itself'
     testProjectDir.newFile('settings.gradle') << "include 'app', 'other', 'platform'\n"
     testProjectDir.newFolder('platform')
@@ -1147,7 +1147,7 @@ final class ConstraintsSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
-  def 'Names the constraining platform in the file reports'() {
+  def 'Prints the constraining platform in the file reports'() {
     given: 'an external bom bounding a versionless declaration'
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
@@ -1197,7 +1197,7 @@ final class ConstraintsSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
-  def 'Names only the platform whose stated bound is the version reported'() {
+  def 'Prints only the platform whose bound is the version reported'() {
     given: 'two platforms stating different bounds, of which the higher wins'
     testProjectDir.newFile('settings.gradle') << "include 'platform-low', 'platform-high'\n"
     ['platform-low': '2.0', 'platform-high': '3.0'].each { name, version ->
@@ -1257,7 +1257,7 @@ final class ConstraintsSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
-  def 'Withholds the platform mark when a drag pushes the version past the bound'() {
+  def 'Omits the platform mark when a drag pushes the version past the bound'() {
     given: 'a platform bound a transitive requirement overrides'
     testProjectDir.newFile('settings.gradle') << "include 'platform'\n"
     testProjectDir.newFolder('platform')
@@ -1315,7 +1315,7 @@ final class ConstraintsSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
-  def 'Names an external platform by its module, not the version it resolved to'() {
+  def 'Prints an external platform by its module, not the version it resolved to'() {
     given: 'an imported bom a library drags to a release the build never names'
     testProjectDir.newFile('settings.gradle') << "include 'platform-a'\n"
     testProjectDir.newFolder('platform-a')

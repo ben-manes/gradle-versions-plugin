@@ -11,7 +11,7 @@ import spock.lang.Issue
 import spock.lang.Specification
 
 /**
- * A specification for naming the projects behind a coordinate whose declared versions diverge
+ * A specification for printing the projects behind a coordinate whose declared versions diverge
  * across an aggregated build.
  */
 @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1032')
@@ -64,7 +64,7 @@ final class DivergentVersionsSpec extends Specification {
       .build()
   }
 
-  def 'Names the projects behind a divergent coordinate'() {
+  def 'Prints the projects behind a divergent coordinate'() {
     given:
     writeBuild('', "implementation 'com.google.guava:guava:15.0'")
     testProjectDir.newFolder('app')
@@ -94,7 +94,7 @@ final class DivergentVersionsSpec extends Specification {
     result.output.count('declared in') == 2
   }
 
-  def 'Lists every project that declared the shared version'() {
+  def 'Prints every project that declared the shared version'() {
     given:
     writeBuild('', "implementation 'com.google.inject:guice:2.0'")
     testProjectDir.newFolder('app')
@@ -153,7 +153,7 @@ final class DivergentVersionsSpec extends Specification {
       projects.collect { ":$it" }
   }
 
-  def 'Names every project of a list at the elision threshold'() {
+  def 'Prints every project of a list at the elision threshold'() {
     given:
     def projects = (1..6).collect { "p$it" }
     writeBuild('', "implementation 'com.google.inject:guice:2.0'", projects)
@@ -241,7 +241,7 @@ final class DivergentVersionsSpec extends Specification {
     (report.current.dependencies + report.outdated.dependencies).every { !it.containsKey('projects') }
   }
 
-  def 'Names the projects in the file reports'() {
+  def 'Prints the projects in the file reports'() {
     given:
     writeBuild('', "implementation 'com.google.guava:guava:15.0'")
     testProjectDir.newFolder('app')
@@ -490,7 +490,7 @@ final class DivergentVersionsSpec extends Specification {
     !result.output.contains('declared in')
   }
 
-  def 'Names no project in a single project report'() {
+  def 'Prints no project in a single project report'() {
     given:
     testProjectDir.newFile('build.gradle') <<
       """
@@ -526,7 +526,7 @@ final class DivergentVersionsSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
     result.output.contains('com.google.inject:guice [3.0 -> 3.1]')
-    // The resolvable configuration the second version was declared against is named, which is where
+    // The resolvable configuration the second version was declared against is printed, which is where
     // it was declared rather than which project declared it.
     result.output.contains("declared in the 'second' configuration")
     !result.output.contains('declared in root project')

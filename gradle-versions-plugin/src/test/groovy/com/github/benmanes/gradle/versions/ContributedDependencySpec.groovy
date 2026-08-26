@@ -140,7 +140,7 @@ final class ContributedDependencySpec extends Specification {
     !report.outdated.dependencies[0].containsKey('contributed')
   }
 
-  def 'Names the contributing project behind a divergent version'() {
+  def 'Prints the contributing project behind a divergent version'() {
     given:
     testProjectDir.newFile('settings.gradle') << "include 'app'"
     writeBuild(
@@ -205,7 +205,7 @@ final class ContributedDependencySpec extends Specification {
     !result.output.contains('contributed by a plugin')
   }
 
-  def 'Names the configuration a contributed constraint was declared against'() {
+  def 'Prints the configuration a contributed constraint was declared against'() {
     given:
     writeBuild(
       """
@@ -238,7 +238,7 @@ final class ContributedDependencySpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1055')
-  def 'Names the resolvable configuration a dependency was declared directly against'() {
+  def 'Prints the resolvable configuration a dependency was declared directly against'() {
     given:
     writeBuild(
       """
@@ -301,7 +301,7 @@ final class ContributedDependencySpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1055')
-  def 'Names the configuration when another resolvable one also reaches the dependency'() {
+  def 'Prints the configuration when another resolvable one also reaches the dependency'() {
     given:
     writeBuild(
       """
@@ -329,7 +329,7 @@ final class ContributedDependencySpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1055')
-  def 'Names a stock configuration that is declarable and resolvable'() {
+  def 'Prints a stock configuration that is declarable and resolvable'() {
     given:
     writeBuild(
       """
@@ -454,7 +454,7 @@ final class ContributedDependencySpec extends Specification {
     !result.output.contains('declared in the')
   }
 
-  def 'Names every configuration a plugin contributed the coordinate into'() {
+  def 'Prints every configuration a plugin contributed the coordinate into'() {
     given:
     testProjectDir.newFile('settings.gradle') << "include 'app'\ninclude 'lib'"
     writeBuild(

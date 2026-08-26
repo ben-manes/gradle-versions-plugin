@@ -14,7 +14,7 @@ import spock.lang.Unroll
 /**
  * A component selection rule can only respect what the build declared if the declared
  * {@code VersionConstraint} reaches the closure. Without it the rule has to restate in the build
- * script a bound that is already stated in the declaration.
+ * script a bound that is already written in the declaration.
  */
 @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/755')
 final class DeclaredVersionConstraintSpec extends Specification {
@@ -115,7 +115,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
     result.output.contains("PROBE guava strict='' required='15.0' rejects=[[16.0,)]")
   }
 
-  def 'the README recipe does not offer a version the build rejected'() {
+  def 'a version the build rejected is not offered under the README recipe'() {
     given: 'guice rejects its own newest version, guava rejects nothing'
     writeBuildFile(
       """
@@ -235,7 +235,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/755')
-  def 'a required range does not hold back a module a conflict pushed past it'() {
+  def 'a required range does not bound a module a conflict pushed past it'() {
     given: 'guice is declared as a range, and a transitive requires a version above that range'
     writeBuildFile(
       """
@@ -256,7 +256,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
     report().outdated.dependencies[0].available.milestone == '3.1'
   }
 
-  def 'a module with no declared bound is not held back'() {
+  def 'a module with no declared bound is not bounded'() {
     given: 'a plain declaration is a floor resolution may rise above, not a bound'
     writeBuildFile(
       """
@@ -359,7 +359,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
     gradleVersion << ['8.4', '9.6.1']
   }
 
-  def 'a bound naming an unpublished version loses the report line to the unresolved section'() {
+  def 'a bound on an unpublished version moves the report line to the unresolved section'() {
     given: 'guice 2.1 is listed in the repository metadata but was never published'
     writeBuildFile(
       """
@@ -497,7 +497,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
   // A project platform's own module is aggregated into the same build, so its own view of
   // log4j-core (undeclared, unbounded from its own perspective) reaches the merged report too and
   // the module name is identical: the current/outdated JSON split above cannot isolate the
-  // consumer's bounded view from the platform's own. Verify this shape via the rule directly
+  // consumer's bounded view from the platform's own. Verify this case through the rule directly
   // instead, as 'the platform constraints reach the rule' does, and via the range check below,
   // which discriminates the consumer's entry from the platform's by declared version text.
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
@@ -544,7 +544,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
-  def 'a constraint an ordinary library states does not bound the module'() {
+  def 'a constraint in an ordinary library does not bound the module'() {
     given: 'the same constraint shape as above, stated by a java-library rather than a platform'
     testProjectDir.newFile('settings.gradle') << "include 'lib'\n"
     testProjectDir.newFolder('lib')

@@ -373,7 +373,7 @@ final class CompositeBuildSpec extends Specification {
           dependencyUpdatesAggregation 'com.example:child:1.0'
         }
       """.stripIndent()
-    // Substituted onto the included build's project, so the aggregation holds a module dependency
+    // Substituted onto the included build's project, so the aggregation has a module dependency
     // rather than a project one, and its artifact is added late enough to leave the project without
     // a variant of its own to be selected by.
     includedBuild(
@@ -484,7 +484,7 @@ final class CompositeBuildSpec extends Specification {
     !result.output.contains('com.example:dragged-bom')
   }
 
-  def 'Holds the reported platform to the bound the platform project states'() {
+  def 'Bounds the reported platform at the version the platform project declares'() {
     given:
     testProjectDir.newFile('settings.gradle') << "includeBuild 'platforms'"
     testProjectDir.newFile('build.gradle') <<
@@ -615,7 +615,7 @@ final class CompositeBuildSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
-  def 'Names the importing platform in the file reports'() {
+  def 'Prints the importing platform in the file reports'() {
     given:
     testProjectDir.newFile('settings.gradle') << "includeBuild 'platforms'"
     testProjectDir.newFile('build.gradle') <<
@@ -932,7 +932,7 @@ final class CompositeBuildSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
-  def 'Withholds the platform mark when another project declares the imported platform'() {
+  def 'Omits the platform mark when another project declares the imported platform'() {
     given:
     testProjectDir.newFile('settings.gradle') <<
       """
@@ -1001,7 +1001,7 @@ final class CompositeBuildSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
-  def 'Names the platform importer by its build-tree path when the report runs in an included build'() {
+  def 'Prints the platform importer by its build-tree path when the report runs in an included build'() {
     given: 'the composite runs the aggregating task from inside the included build, not the root'
     testProjectDir.newFile('settings.gradle') << "includeBuild 'child'"
     testProjectDir.newFile('build.gradle') << ''
@@ -1268,7 +1268,7 @@ final class CompositeBuildSpec extends Specification {
     result.task(':child:dependencyUpdates').outcome == SUCCESS
     result.output.contains('Failed to inspect the dependencies of the following configurations')
 
-    // Each build reports on its own projects, named by the path they hold in the build tree so
+    // Each build reports on its own projects, printed as the path they have in the build tree so
     // that the included build's root is told apart from the including build's.
     [including, included].every { it.skipped.count > 0 }
     [including, included].every { it.skipped.configurations*.name.contains('compileClasspath') }
@@ -1277,14 +1277,14 @@ final class CompositeBuildSpec extends Specification {
     including.skipped.configurations.every { it.project == ':' }
     included.skipped.configurations.every { it.project == ':child' }
 
-    // The warning accompanying the section names the same project the section does, rather than
-    // reporting both builds' roots under the one name each answers for itself.
+    // The warning above the section shows the same project the section does, rather than printing
+    // both builds' roots under the ':' that each build uses for its own.
     result.output.contains('in :child:')
     result.output.count('in root project:') == 1
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1075')
-  def 'Names an included build that aggregates its own projects by its build tree path'() {
+  def 'Prints an included build that aggregates its own projects by its build tree path'() {
     given:
     testProjectDir.newFile('settings.gradle') << "includeBuild 'child'"
     testProjectDir.newFile('build.gradle') << ''
@@ -1344,7 +1344,7 @@ final class CompositeBuildSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1075')
-  def 'Names the projects that declare a divergent version by their build tree paths'() {
+  def 'Prints the projects that declare a divergent version by their build tree paths'() {
     given:
     testProjectDir.newFile('settings.gradle') << "includeBuild 'child'"
     testProjectDir.newFile('build.gradle') <<
@@ -1413,8 +1413,8 @@ final class CompositeBuildSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
 
-    // Both roots answer ':' for their own build, which read as one project and withheld the
-    // divergence altogether rather than naming the two that disagree.
+    // The path of each build's own root is ':', which read as one project and left out the
+    // divergence altogether rather than printing the two that disagree.
     json.outdated.dependencies.find { it.name == 'jvm-library' }.projects == [':child']
     json.current.dependencies.find { it.name == 'jvm-library' }.projects == [':']
     result.output.contains("declared in the 'tool' configuration in root project")

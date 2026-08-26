@@ -296,7 +296,7 @@ final class AggregationSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1040')
-  def 'A project without a build script gains no build directory'() {
+  def 'No build directory is created in a project without a build script'() {
     given:
     new File(testProjectDir.root, 'settings.gradle').text = "include ':apps:app-a'"
     testProjectDir.newFolder('apps', 'app-a')
@@ -438,7 +438,7 @@ final class AggregationSpec extends Specification {
       """.stripIndent()
     testProjectDir.newFolder('tool')
     // Applies base, so it has a consumable default configuration and no variant of its own, which
-    // is what decides whether its statuses carry attributes.
+    // is what decides whether its statuses have attributes.
     new File(testProjectDir.root, 'tool/build.gradle').text =
       """
         plugins {

@@ -49,7 +49,7 @@ final class ReporterLogLevelSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/388')
-  def 'An empty outputFormatter does not announce the skipped report file'() {
+  def 'An empty outputFormatter does not log the skipped report file'() {
     given:
     buildFileWith("outputFormatter = ''")
 
