@@ -357,7 +357,7 @@ final class RejectVersionIfSpec extends Specification {
     !closureState.contains('ComponentSelectionWithCurrent')
   }
 
-  def 'an unresolved dependency reports the cause that failed it'() {
+  def 'an unresolved dependency is printed with the cause that failed it'() {
     given: 'a filter that throws, which Gradle reports as an unresolved dependency'
     buildFile = writeBuildFile('candidate.version == noSuchProperty')
 

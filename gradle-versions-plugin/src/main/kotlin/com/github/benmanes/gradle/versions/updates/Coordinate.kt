@@ -12,7 +12,7 @@ import org.gradle.api.artifacts.component.ModuleComponentSelector
 import org.gradle.api.internal.artifacts.dependencies.DefaultImmutableVersionConstraint
 
 // The parameter list is the one 0.59.0 released. A default argument compiles callers against a
-// synthetic constructor carrying the argument mask, so adding a parameter here, even a defaulted one,
+// synthetic constructor with an argument mask, so adding a parameter here, even a defaulted one,
 // leaves a caller of `Coordinate(group, name, version)` linking against a signature that no longer
 // exists. The constraint arrives through a secondary constructor instead.
 
@@ -30,10 +30,10 @@ class Coordinate(
   val version: String = version ?: "none"
 
   /**
-   * The constraint the declaration stated, which the resolved version alone does not carry. Held as
-   * an immutable copy, since a selection rule is handed this and the declaration's own constraint
-   * is mutable. Null for a coordinate no declaration was matched to, such as the module a
-   * substitution rule resolved to, or one rebuilt from a partial result.
+   * The constraint written on the declaration, which the resolved version alone does not include.
+   * Kept as an immutable copy, since a selection rule is given this and the declaration's own
+   * constraint is mutable. Null for a coordinate no declaration was matched to, such as the module
+   * a substitution rule resolved to, or one rebuilt from a partial result.
    *
    * Copying it needs a class Gradle does not publish, and every coordinate passes through here, so a
    * release that moves the class leaves the constraint unknown rather than failing the whole report.
@@ -42,9 +42,9 @@ class Coordinate(
     private set
 
   /**
-   * The constraints the platforms this module's consumer depends on state for it, empty when no
-   * declaration named this module without a version or no consumed platform bounds it. A release
-   * that moves the copying class leaves this empty rather than failing the whole report.
+   * The constraints the platforms this module's consumer depends on set for it, empty when no
+   * declaration referenced this module without a version or no consumed platform bounds it. A
+   * release that moves the copying class leaves this empty rather than failing the whole report.
    */
   var platformVersionConstraints: List<VersionConstraint> = emptyList()
     private set
@@ -72,14 +72,14 @@ class Coordinate(
    * unsplit row has the identity it always had.
    *
    * It arrives through a constructor rather than a setter, because it is part of [equals],
-   * [hashCode] and [compareTo], and a coordinate already held in a hash map or a sorted set is
+   * [hashCode] and [compareTo], and a coordinate already in a hash map or a sorted set becomes
    * unreachable and mis-ordered if its identity changes underneath the collection.
    */
   internal var divergentLatest: String? = null
     private set
 
   /**
-   * As above, additionally carrying the latest version that separates this row from the other rows
+   * As above, additionally taking the latest version that separates this row from the other rows
    * of its declared version. Distinct from the constructor below by the type of its last parameter.
    */
   internal constructor(

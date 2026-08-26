@@ -81,7 +81,7 @@ final class BuildSrcAggregationSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1075')
-  def 'Names a buildSrc build by its build tree path rather than the root project path'() {
+  def 'Prints a buildSrc build by its build tree path rather than the root project path'() {
     when:
     def result = run(':buildSrc:dependencyUpdates')
 
@@ -94,7 +94,7 @@ final class BuildSrcAggregationSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1075')
-  def 'Names the projects of a buildSrc build with subprojects by their build tree paths'() {
+  def 'Prints the projects of a buildSrc build with subprojects by their build tree paths'() {
     given:
     testProjectDir.newFile('buildSrc/settings.gradle') << "include 'logic'"
     testProjectDir.newFolder('buildSrc', 'logic')

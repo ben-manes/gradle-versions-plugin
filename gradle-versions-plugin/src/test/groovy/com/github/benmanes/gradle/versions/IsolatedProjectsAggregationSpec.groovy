@@ -121,8 +121,8 @@ final class IsolatedProjectsAggregationSpec extends Specification {
     result.task(':app:dependencyUpdates').outcome == SUCCESS
     result.output.contains('Isolated Projects is an incubating feature.')
     // Only the project at the root path publishes where the results are collected, as one that
-    // aggregates from further down reads the projects it does not own as variant artifacts, which
-    // never cared where the file lives. Its own producer falls back to its build directory.
+    // aggregates from further down reads the projects it does not own as variant artifacts, for
+    // which the file's location does not matter. Its own producer falls back to its build directory.
     new File(testProjectDir.root, 'app/build/dependencyUpdates/partial.json').exists()
     !new File(testProjectDir.root, 'build/dependencyUpdates/partials').exists()
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
@@ -208,7 +208,7 @@ final class IsolatedProjectsAggregationSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/801')
-  def 'Names the project of a skipped configuration with isolated projects'() {
+  def 'Prints the project of a skipped configuration with isolated projects'() {
     given:
     // The measured #801 trigger: a withModule id missing its ':name' half.
     new File(testProjectDir.root, 'app/build.gradle') <<
@@ -226,12 +226,12 @@ final class IsolatedProjectsAggregationSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('Isolated Projects is an incubating feature.')
-    // Only the project whose strategy throws loses its dependencies, so the other still reports.
+    // Only the project whose strategy throws loses its dependencies, so the other is still reported.
     result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
     !result.output.contains('com.google.inject:guice [')
 
-    // Each project resolves in isolation and the aggregate names it from the partial result it
-    // published, rather than from the project it was read into.
+    // Each project resolves in isolation and the aggregate takes its name from the partial result
+    // it published, rather than from the project it was read into.
     def json = new JsonSlurper()
       .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
     json.skipped.count > 0

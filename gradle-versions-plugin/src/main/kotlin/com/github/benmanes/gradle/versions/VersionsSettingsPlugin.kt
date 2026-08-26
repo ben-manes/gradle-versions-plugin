@@ -16,8 +16,8 @@ class VersionsSettingsPlugin : Plugin<Settings> {
       return
     }
 
-    // The settings script's classpath carries the versions of the plugins that its own plugins
-    // block declares, which no project's buildscript does.
+    // The settings script's classpath contains the versions of the plugins that its own plugins
+    // block declares, which appear in no project's buildscript.
     // https://github.com/ben-manes/gradle-versions-plugin/issues/367
     publishSettingsClasspath(settings.gradle, settings.buildscript.configurations.toList())
 
@@ -26,8 +26,8 @@ class VersionsSettingsPlugin : Plugin<Settings> {
     // so the older hook is equivalent and does not require Gradle 8.8. Capturing the settings or a
     // field here would no longer be safe.
     settings.gradle.beforeProject { project ->
-      // Only the root receives the reporting task, so that invoking dependencyUpdates by name runs
-      // one task and writes one merged report rather than one per project.
+      // The reporting task is registered only in the root, so that invoking dependencyUpdates by
+      // name runs one task and writes one merged report rather than one per project.
       if (project.path == ":") {
         project.pluginManager.apply(VersionsPlugin::class.java)
       } else {

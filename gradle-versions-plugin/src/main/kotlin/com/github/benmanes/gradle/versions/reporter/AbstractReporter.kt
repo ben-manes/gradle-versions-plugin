@@ -62,12 +62,12 @@ private fun configurationsLabel(names: List<String>): String {
 /**
  * Returns the line describing where the dependency's version came from, or null for a declared one.
  *
- * A row gets at most one attribution line, and the order below picks which, nearest cause first:
- * the platform a row was imported through comes before the platform that constrains it, then a
- * declaration, then the plugin that contributed it. Only a module declared without a version can be
- * constrained by a platform, so a declaration displaced by that line would point at a spot in the
- * build script with no version in it. Which line a row qualifies for is decided where the statuses
- * are assembled; the order below settles only which one wins.
+ * At most one attribution line is printed under a row. The order below decides which one, nearest
+ * cause first: the platform a row was imported through comes before the platform that constrains
+ * it, then a declaration, then the plugin that contributed it. Only a module declared without a
+ * version can be constrained by a platform, so a declaration displaced by that line would point at
+ * a spot in the build script with no version in it. Which line a row qualifies for is decided where
+ * the statuses are assembled; the order below settles only which one wins.
  */
 internal fun sourceLabel(dependency: Dependency): String? {
   val projects = dependency.projects

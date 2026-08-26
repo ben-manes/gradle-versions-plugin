@@ -102,7 +102,7 @@ final class PluginMarkerCatalogSpec extends Specification {
     gradleVersion << ['current', '8.4']
   }
 
-  def 'the rule sees the catalog declaration verbatim'() {
+  def 'the rule reads the catalog declaration verbatim'() {
     given:
     pluginManagementSettings()
     catalog(
@@ -463,7 +463,7 @@ final class PluginMarkerCatalogSpec extends Specification {
     result.output.contains('PROBE rejects=[]')
   }
 
-  def 'a declaration stating its own rich constraint keeps it'() {
+  def 'a declaration with its own rich constraint keeps it'() {
     given:
     catalog(
       """

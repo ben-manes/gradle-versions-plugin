@@ -44,7 +44,8 @@ import java.util.TreeSet
  * and gradle updates.
  * @property gradleReleaseChannel The gradle release channel to use for reporting.
  * @property latestByCurrent The latest version found for each declared version.
- * @property projectsByCoordinate The projects behind each version of a coordinate whose versions diverge.
+ * @property projectsByCoordinate The projects for each version of a coordinate whose versions
+ * diverge.
  * @property contributedCoordinates The coordinates that only lazy actions contributed, no project declaring them.
  * @property configurationsByCoordinate The configurations a plugin contributed each marked coordinate into.
  * @property skipped The configurations whose dependencies could not be inspected because applying the
@@ -471,7 +472,7 @@ private fun contributedCoordinates(
   // Grouped by the declaration rather than by the coordinate, so that splitting a row does not put
   // two disagreeing projects into groups that are each unanimous on their own.
   val byDeclaration = statuses.groupBy { Declaration(it) }
-  // Withheld when the projects disagree, which is a mark that cannot be trusted rather than one
+  // Left out when the projects disagree, which is a mark that cannot be trusted rather than one
   // that does not apply, so it is reported instead of passing as an ordinary unmarked entry.
   for ((declaration, group) in byDeclaration) {
     if (group.any { it.contributed } && !group.all { it.contributed }) {
@@ -494,15 +495,16 @@ private data class Declaration(val group: String, val name: String, val declared
 }
 
 /**
- * Returns the configurations each coordinate names, taken across the projects that observed it, so
- * that a plugin which fills a differently named configuration per project is reported as filling
- * both rather than either.
+ * Returns the configurations printed for each coordinate, taken across the projects that observed
+ * it, so that a plugin which fills a differently named configuration per project is reported as
+ * filling both rather than either.
  *
- * A marked coordinate names whichever configurations were seen, as the mark already says a plugin
- * put it there. An unmarked one is named only where every project that observed it declared it
- * against a configuration of its own, so that a project declaring it ordinarily is not described as
- * declaring it somewhere it did not. A project reaches the same dependency through every resolvable
- * configuration that extends the one holding it, so naming one of them is enough for that project.
+ * For a marked coordinate, every configuration seen is used, as the mark already shows that a
+ * plugin put it there. A configuration is printed for an unmarked one only where every
+ * project that observed it declared it against a configuration of its own, so that a project
+ * declaring it ordinarily is not described as declaring it somewhere it did not. A project reaches
+ * the same dependency through every resolvable configuration that extends the one it is declared
+ * on, so naming one of them is enough for that project.
  */
 private fun namedConfigurations(
   statuses: List<PartialStatus>,
@@ -525,7 +527,7 @@ private fun namedConfigurations(
 
 /**
  * Returns the platform projects each coordinate was imported through, unioned across projects.
- * Withheld when a project outside that importer set declares the coordinate, since a declaration
+ * Left out when a project outside that importer set declares the coordinate, since a declaration
  * anywhere else is the row to edit and the mark would point somewhere else. A declaring project
  * that is itself one of the named importers is not a disagreement: the mark already points at it.
  */
@@ -633,7 +635,7 @@ private fun markDivergentlyResolved(statuses: List<PartialStatus>): List<Partial
 }
 
 /**
- * Returns the projects behind each version of a key whose declared versions differ, or whose one
+ * Returns the projects for each version of a key whose declared versions differ, or whose one
  * declared version has different latest versions across the projects.
  */
 private fun divergentProjects(statuses: List<PartialStatus>): Map<Coordinate, List<String>> {

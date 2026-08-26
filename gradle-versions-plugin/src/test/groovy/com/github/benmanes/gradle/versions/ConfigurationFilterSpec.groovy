@@ -77,7 +77,7 @@ final class ConfigurationFilterSpec extends Specification {
       .build()
   }
 
-  def 'Names a configuration a plugin filled but cannot resolve'() {
+  def 'Prints a configuration a plugin filled but cannot resolve'() {
     given:
     writeBuild(bucketConfigurations())
 
@@ -91,7 +91,7 @@ final class ConfigurationFilterSpec extends Specification {
       "     contributed by a plugin into the 'toolBucket' configuration")
   }
 
-  def 'Keeps the entry when filterConfigurations rejects the configuration it names'() {
+  def 'Keeps the entry when filterConfigurations rejects the configuration it shows'() {
     given:
     writeBuild(bucketConfigurations("filterConfigurations { it.name != 'toolBucket' }"))
 
@@ -411,7 +411,7 @@ final class ConfigurationFilterSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    // A contributed buildscript entry names 'classpath' and is rejected like any other entry.
+    // A contributed buildscript entry shows 'classpath' and is rejected like any other entry.
     !result.output.contains('com.google.inject:guice')
     // The plainly declared classpath dependency is unnamed and stays.
     result.output.contains(' - com.google.code.findbugs:jsr305 [3.0.1 -> ')

@@ -338,7 +338,7 @@ final class SkippedConfigurationSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/801')
-  def 'Configurations skipped for distinct reasons get a heading and a warning each'() {
+  def 'Configurations skipped for distinct reasons are printed with a heading and a warning each'() {
     given:
     testProjectDir.newFile('build.gradle') <<
       """

@@ -220,12 +220,12 @@ final class SettingsPluginAggregationSpec extends Specification {
     // Guards the flag itself: the property is a silent no-op on a Gradle whose spelling differs
     // (pre-9.7 uses org.gradle.unsafe.isolated-projects), which would pass the non-isolated branch.
     result.output.contains('Isolated Projects is an incubating feature.')
-    // A project that exists only to hold a nested include has no build script to apply a plugin
+    // A project that exists only for a nested include has no build script to apply a plugin
     // from, so the settings plugin reaches it and an earlier release gave it a build directory to
     // hold the partial result. The producer writes under the aggregating project instead.
     !new File(testProjectDir.root, 'container/build').exists()
     new File(testProjectDir.root, 'build/dependencyUpdates/partials').list().length == 5
-    // The container is still resolved, as the settings script can carry a dependency into a project
+    // The container is still resolved, as the settings script can add a dependency to a project
     // that has no build script of its own.
     result.output.contains('com.example:jvm-library [1.0 -> 2.0]')
 
@@ -312,8 +312,8 @@ final class SettingsPluginAggregationSpec extends Specification {
     then:
     root.task(':dependencyUpdates').outcome == SUCCESS
     // Module conflict resolution aggregates two projects that share a group and name as one, so the
-    // artifacts name fewer projects than the build has producers. The results of the other project
-    // are still its own, and its report reads them from where it wrote them.
+    // artifacts cover fewer projects than the build has producers. The results of the other project
+    // are still its own, and its own report reads them from where its producer wrote them.
     partial.exists()
   }
 
@@ -351,7 +351,7 @@ final class SettingsPluginAggregationSpec extends Specification {
           tool 'com.example:jvm-library:1.0'
         }
       """.stripIndent()
-    // Resolved on its own configuration rather than the runtime classpath, which also carries the
+    // Resolved on its own configuration rather than the runtime classpath, which also contains the
     // external dependency this build reports on, whose poms the test repository publishes without
     // the files to resolve them to.
     new File(testProjectDir.root, 'app/build.gradle') <<
@@ -431,7 +431,7 @@ final class SettingsPluginAggregationSpec extends Specification {
     consumed.task(':app:resolveLate').outcome == SUCCESS
     new File(testProjectDir.root, 'app/build/late/late.jar').exists()
     // Served in the artifact's place before this was left out of variant selection, rather than
-    // failing, so the consumer took the statuses onto its classpath and carried on.
+    // failing, so the consumer resolved the statuses onto its classpath and the build continued.
     !new File(testProjectDir.root, 'app/build/late/partial.json').exists()
   }
 

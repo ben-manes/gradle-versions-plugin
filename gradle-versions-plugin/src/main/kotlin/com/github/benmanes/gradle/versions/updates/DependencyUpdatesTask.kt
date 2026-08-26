@@ -31,7 +31,7 @@ import javax.annotation.Nullable
  */
 open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
-  /** The settings the per-project producers read, held here so that they are configured as one. */
+  /** The settings the per-project producers read, kept here so that they are configured as one. */
   @get:Internal
   internal val parameters = DependencyUpdatesParameters()
 
@@ -181,8 +181,9 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   var aggregatedProjectPaths: Set<String> = emptySet()
 
   /**
-   * The directory the partial results are collected under, wired by the plugin only where it also
-   * knows every project that owns one, as the sweep below would otherwise remove a result in use.
+   * The directory the partial results are collected under, wired by the plugin only where it can
+   * also identify every project that writes one, as the sweep below would otherwise remove a result
+   * in use.
    */
   @get:Internal
   val partialsDirectory: DirectoryProperty = project.objects.directoryProperty()
@@ -217,8 +218,8 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   /** Merges the partial results of every project and writes the report. */
   @TaskAction
   fun dependencyUpdates() {
-    // Sweeps the partial of any project that has left the build, which no remaining task owns. The
-    // files are wired by path rather than discovered, so a stale one is never read, only left
+    // Sweeps the partial of any project no longer in the build, which no remaining task writes.
+    // The files are wired by path rather than discovered, so a stale one is never read, only left
     // behind. The directory stays undeclared as an output, as declaring it would overlap the
     // producers' own output files.
     val expected = partialResults.files
@@ -229,7 +230,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
     // Removes what an earlier release wrote into each project's own build directory, which `clean`
     // cannot reach in a project that applies no plugin of its own, as `clean` comes from the base
-    // plugin. A file that a producer still writes is held back. The directories are removed only
+    // plugin. A file that a producer still writes is left alone. The directories are removed only
     // while empty, which is all that delete() will do.
     // https://github.com/ben-manes/gradle-versions-plugin/issues/1040
     if (cleanLegacyPartials) {
