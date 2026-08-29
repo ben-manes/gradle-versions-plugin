@@ -110,6 +110,47 @@ final class AggregationConfigurationCacheSpec extends Specification {
       .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
   }
 
+  def 'Honors a setting inherited from an ancestor on the store and on the cache hit'() {
+    // A cache hit does not run configuration, so the shared service holds no settings at all when
+    // the task's inputs are replayed. The inherited values must therefore already be in the entry.
+    // The cases above configure the root's own task, which reads back correctly even when nothing
+    // is inherited, so only a subproject that configures none of its own covers this.
+    given:
+    new File(testProjectDir.root, 'build.gradle') <<
+      """
+        subprojects {
+          apply plugin: 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          revision = 'release'
+          checkConstraints = true
+        }
+      """.stripIndent()
+    new File(testProjectDir.root, 'app/build.gradle') <<
+      """
+        dependencies {
+          constraints {
+            implementation 'com.google.guava:guava:15.0'
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def arguments = [':app:dependencyUpdates', '--no-parallel', '--configuration-cache']
+    def store = run(arguments)
+    def hit = run(arguments)
+
+    then:
+    store.task(':app:dependencyUpdates').outcome == SUCCESS
+    hit.output.contains('Reusing configuration cache')
+    // The header names the inherited revision, and the constrained guava is reported under the
+    // inherited check, on the store and again on the replay.
+    [store, hit].every { it.output.contains('The following dependencies have later release versions:') }
+    [store, hit].every { !it.output.contains('The following dependencies have later milestone versions:') }
+    [store, hit].every { it.output.contains('com.google.guava:guava') }
+  }
+
   @Unroll
   def 'Honors #hook on the store and on the cache hit'() {
     given:
