@@ -5,6 +5,7 @@ import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -528,6 +529,7 @@ final class TaskOptionSpec extends Specification {
   }
 
   @Unroll
+  @IgnoreIf({ data.gradleVersion.startsWith('9') && !jvm.java17Compatible })
   def 'Binds the options under Gradle #gradleVersion'() {
     given: 'the plugin on the buildscript classpath, so a pinned Gradle runs it'
     def classpath = getClass().classLoader.getResource('plugin-classpath.txt').readLines()
