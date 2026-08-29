@@ -3,6 +3,7 @@ package com.github.benmanes.gradle.versions.updates
 import com.github.benmanes.gradle.versions.reporter.Reporter
 import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.reporter.result.SkippedConfiguration
+import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentFilter
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
@@ -23,6 +24,7 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.options.Option
+import org.gradle.api.tasks.options.OptionValues
 import java.io.File
 import javax.annotation.Nullable
 
@@ -38,15 +40,47 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   /** Returns the resolution revision level. */
   @get:Input
   var revision: String
-    get() = (System.getProperties()["revision"] ?: parameters.revision ?: "milestone") as String
+    get() =
+      settingOf(
+        parameters.revisionFromCommandLine,
+        "revision",
+        parameters.revision ?: DEFAULT_REVISION,
+      )
     set(value) {
       parameters.revision = value
     }
 
+  /** Sets the resolution revision level for this invocation alone. */
+  @Option(option = "revision", description = "Resolves against this revision level.")
+  internal fun setRevisionFromCommandLine(revision: String) {
+    parameters.revisionFromCommandLine = revision
+  }
+
+  /** Returns the revision levels `gradle help --task dependencyUpdates` lists for the option. */
+  @OptionValues("revision")
+  fun getRevisionValues(): List<String> = listOf("release", "milestone", "integration")
+
+  private var gradleReleaseChannelFromCommandLine: String? = null
+
   /** Returns the resolution revision level. */
   @Input
   var gradleReleaseChannel: String = RELEASE_CANDIDATE.id
-    get() = (System.getProperties()["gradleReleaseChannel"] ?: field) as String
+    get() = settingOf(gradleReleaseChannelFromCommandLine, "gradleReleaseChannel", field)
+
+  /** Sets the Gradle release channel for this invocation alone. */
+  @Option(
+    option = "gradle-release-channel",
+    description = "Reports the Gradle releases of this channel.",
+  )
+  internal fun setGradleReleaseChannelFromCommandLine(gradleReleaseChannel: String) {
+    gradleReleaseChannelFromCommandLine = gradleReleaseChannel
+  }
+
+  /** Returns the release channels `gradle help --task dependencyUpdates` lists for the option. */
+  @OptionValues("gradle-release-channel")
+  fun getGradleReleaseChannelValues(): List<String> = GradleReleaseChannel.values().map { it.id }
+
+  private var outputDirFromCommandLine: String? = null
 
   /** Returns the outputDir destination. */
   @Input
@@ -59,13 +93,27 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
       val base = if (relative == null || relative.path.isEmpty()) buildDirectory else relative
       "${base.path}/dependencyUpdates"
     }
-    get() = (System.getProperties()["outputDir"] ?: field) as String
+    get() = settingOf(outputDirFromCommandLine, "outputDir", field)
+
+  /** Sets where the report is written for this invocation alone. */
+  @Option(option = "output-dir", description = "Writes the report into this directory.")
+  internal fun setOutputDirFromCommandLine(outputDir: String) {
+    outputDirFromCommandLine = outputDir
+  }
+
+  private var reportfileNameFromCommandLine: String? = null
 
   /** Returns the filename of the report. */
   @Input
   @Optional
   var reportfileName: String = "report"
-    get() = (System.getProperties()["reportfileName"] ?: field) as String
+    get() = settingOf(reportfileNameFromCommandLine, "reportfileName", field)
+
+  /** Sets the report's file name for this invocation alone. */
+  @Option(option = "report-file-name", description = "Writes the report under this file name.")
+  internal fun setReportfileNameFromCommandLine(reportfileName: String) {
+    reportfileNameFromCommandLine = reportfileName
+  }
 
   /**
    * Sets an output formatting for the task result. It can either be a [String] referencing one of
@@ -98,9 +146,12 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
    */
   private var outputFormatterArgument: OutputFormatterArgument = OutputFormatterArgument.DEFAULT
 
+  private var outputFormatterFromCommandLine: String? = null
+
   @Input
   @Optional
   fun getOutputFormatterName(): String? {
+    namedOutputFormatter()?.let { return it }
     return with(outputFormatterArgument) {
       if (this is OutputFormatterArgument.BuiltIn) {
         formatterNames
@@ -110,20 +161,57 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
     }
   }
 
+  /** Returns the formatter named on the command line or in a system property, if either is set. */
+  private fun namedOutputFormatter(): String? = outputFormatterFromCommandLine ?: System.getProperty("outputFormatter")
+
+  private var checkForGradleUpdateFromCommandLine: Boolean? = null
+
   // Groovy generates both get/is accessors for boolean properties unless we manually define some.
   // Gradle will reject this behavior starting in 7.0 so we make sure to define accessors ourselves.
   @Input
   var checkForGradleUpdate: Boolean = true
+    get() = settingOf(checkForGradleUpdateFromCommandLine, field)
+
+  /** Reports the available Gradle releases for this invocation alone. */
+  @Option(
+    option = "check-for-gradle-update",
+    description = "Reports the Gradle releases available for the build to upgrade to.",
+  )
+  internal fun setCheckForGradleUpdateFromCommandLine(checkForGradleUpdate: Boolean) {
+    checkForGradleUpdateFromCommandLine = checkForGradleUpdate
+  }
+
+  private var gradleVersionsApiBaseUrlFromCommandLine: String? = null
 
   @Input
   var gradleVersionsApiBaseUrl: String = "https://services.gradle.org/versions/"
+    get() = settingOf(gradleVersionsApiBaseUrlFromCommandLine, field)
+
+  /** Reads the Gradle releases from another service for this invocation alone. */
+  @Option(
+    option = "gradle-versions-api-base-url",
+    description = "Reads the Gradle releases from this service rather than the public one.",
+  )
+  internal fun setGradleVersionsApiBaseUrlFromCommandLine(gradleVersionsApiBaseUrl: String) {
+    gradleVersionsApiBaseUrlFromCommandLine = gradleVersionsApiBaseUrl
+  }
 
   @get:Input
   var checkConstraints: Boolean
-    get() = parameters.checkConstraints ?: false
+    get() =
+      settingOf(parameters.checkConstraintsFromCommandLine, parameters.checkConstraints ?: false)
     set(value) {
       parameters.checkConstraints = value
     }
+
+  /** Reports the constrained versions for this invocation alone. */
+  @Option(
+    option = "check-constraints",
+    description = "Reports the versions that a constraints block manages.",
+  )
+  internal fun setCheckConstraintsFromCommandLine(checkConstraints: Boolean) {
+    parameters.checkConstraintsFromCommandLine = checkConstraints
+  }
 
   @get:Internal
   var filterConfigurations: Spec<Configuration>
@@ -141,10 +229,23 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
   @get:Input
   var checkBuildEnvironmentConstraints: Boolean
-    get() = parameters.checkBuildEnvironmentConstraints ?: false
+    get() =
+      settingOf(
+        parameters.checkBuildEnvironmentConstraintsFromCommandLine,
+        parameters.checkBuildEnvironmentConstraints ?: false,
+      )
     set(value) {
       parameters.checkBuildEnvironmentConstraints = value
     }
+
+  /** Reports the build environment's constrained versions for this invocation alone. */
+  @Option(
+    option = "check-build-environment-constraints",
+    description = "Reports the versions that a constraints block manages for the build environment.",
+  )
+  internal fun setCheckBuildEnvironmentConstraintsFromCommandLine(checkBuildEnvironmentConstraints: Boolean) {
+    parameters.checkBuildEnvironmentConstraintsFromCommandLine = checkBuildEnvironmentConstraints
+  }
 
   @Internal
   @Nullable
@@ -342,10 +443,17 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
   /** Returns the outputDir format. */
   private fun outputFormatter(): OutputFormatterArgument {
-    val outputFormatterProperty = System.getProperties()["outputFormatter"] as? String
-
-    return outputFormatterProperty?.let { OutputFormatterArgument.BuiltIn(it) }
+    return namedOutputFormatter()?.let { OutputFormatterArgument.BuiltIn(it) }
       ?: outputFormatterArgument
+  }
+
+  /** Sets the report's format for this invocation alone, as a comma separated list of names. */
+  @Option(
+    option = "output-formatter",
+    description = "Writes the report in these formats, as a comma separated list.",
+  )
+  internal fun setOutputFormatterFromCommandLine(outputFormatter: String) {
+    outputFormatterFromCommandLine = outputFormatter
   }
 
   /**
