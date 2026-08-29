@@ -17,6 +17,7 @@ Plugin](https://www.mojohaus.org/versions-maven-plugin).
   - [Cache invalidation](#cache-invalidation)
   - [Task properties](#task-properties)
     - [A recommended configuration](#a-recommended-configuration)
+    - [Command line options](#command-line-options)
     - [What the report checks](#what-the-report-checks)
       - [Configuration filter](#configuration-filter)
         - [`filterConfigurations`](#filterconfigurations)
@@ -343,6 +344,51 @@ In Kotlin the `isNonStable` extension replaces a helper of that name already in
 the build. A top-level `fun isNonStable(version: String)` compiles to the same
 JVM signature, so keeping both fails the build with a platform declaration
 clash.
+
+#### Command line options
+
+Every task property that configures the report or where it is written is also a
+command line option, so a single run can change what the report contains
+without an edit to the build script. Use one to see what a check leaves out,
+then return to the configured behavior on the next run:
+
+```bash
+./gradlew dependencyUpdates --no-check-constraints
+```
+
+| Option | Property |
+| --- | --- |
+| `--revision` | `revision` |
+| `--[no-]check-constraints` | `checkConstraints` |
+| `--[no-]check-build-environment-constraints` | `checkBuildEnvironmentConstraints` |
+| `--[no-]check-for-gradle-update` | `checkForGradleUpdate` |
+| `--gradle-release-channel` | `gradleReleaseChannel` |
+| `--gradle-versions-api-base-url` | `gradleVersionsApiBaseUrl` |
+| `--output-formatter` | `outputFormatter` |
+| `--output-dir` | `outputDir` |
+| `--report-file-name` | `reportfileName` |
+| `--[no-]clean-legacy-partials` | `cleanLegacyPartials` |
+
+`--[no-]` marks the options that take no argument, so
+`--no-check-for-gradle-update` turns off a check that is enabled in the build
+script. Every option, its description, and the values `--revision` and
+`--gradle-release-channel` accept are printed by `gradle help --task
+dependencyUpdates`.
+
+`--clean-legacy-partials` is a one-off cleanup rather than a report setting;
+see [v0.61.0](#v0610) for when to run it.
+
+The properties configured with a predicate rather than a plain value have no
+option, since no command line can express the logic: `filterConfigurations`,
+`filterDeclaredConfigurations`, `rejectVersionIf` and a `resolutionStrategy`.
+
+Where more than one is set, the command line option is the one that applies,
+ahead of a system property and of what is configured in the build.
+
+An option applies within the build it is invoked in. Where a report merges an
+[included build](#composite-builds), that build's rows are resolved with its own
+configuration, since the option is not passed to the included build. A system
+property reaches it, being set for the whole JVM.
 
 #### What the report checks
 
@@ -1063,7 +1109,9 @@ The `dependencyUpdates` task takes several optional parameters to adjust its
 behavior. The `revision`, `gradleReleaseChannel`, `outputFormatter`,
 `outputDir`, and `reportfileName` properties may also be set as system
 properties, which override the task configuration for ad hoc runs (e.g.
-`-Drevision=release`):
+`-Drevision=release`). The system properties predate the [command line
+options](#command-line-options) and the options are preferred; where both are
+set, the option is the one that applies:
 
 <details open>
 <summary>Kotlin</summary>
