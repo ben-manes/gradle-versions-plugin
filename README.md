@@ -356,24 +356,25 @@ then return to the configured behavior on the next run:
 ./gradlew dependencyUpdates --no-check-constraints
 ```
 
-| Option | Property |
-| --- | --- |
-| `--revision` | `revision` |
-| `--[no-]check-constraints` | `checkConstraints` |
-| `--[no-]check-build-environment-constraints` | `checkBuildEnvironmentConstraints` |
-| `--[no-]check-for-gradle-update` | `checkForGradleUpdate` |
-| `--gradle-release-channel` | `gradleReleaseChannel` |
-| `--gradle-versions-api-base-url` | `gradleVersionsApiBaseUrl` |
-| `--output-formatter` | `outputFormatter` |
-| `--output-dir` | `outputDir` |
-| `--report-file-name` | `reportfileName` |
-| `--[no-]clean-legacy-partials` | `cleanLegacyPartials` |
+| Option | Property | Default |
+| --- | --- | --- |
+| `--revision` | `revision` | `milestone` |
+| `--[no-]check-constraints` | `checkConstraints` | `false` |
+| `--[no-]check-build-environment-constraints` | `checkBuildEnvironmentConstraints` | `false` |
+| `--[no-]check-for-gradle-update` | `checkForGradleUpdate` | `true` |
+| `--gradle-release-channel` | `gradleReleaseChannel` | `release-candidate` |
+| `--gradle-versions-api-base-url` | `gradleVersionsApiBaseUrl` | `https://services.gradle.org/versions/` |
+| `--output-formatter` | `outputFormatter` | `text` |
+| `--output-dir` | `outputDir` | `build/dependencyUpdates` |
+| `--report-file-name` | `reportfileName` | `report` |
+| `--[no-]clean-legacy-partials` | `cleanLegacyPartials` | `false` |
 
 `--[no-]` marks the options that take no argument, so
 `--no-check-for-gradle-update` turns off a check that is enabled in the build
-script. Every option, its description, and the values `--revision` and
-`--gradle-release-channel` accept are printed by `gradle help --task
-dependencyUpdates`.
+script. A relative `--output-dir` is resolved against the project directory,
+which is where its default sits. Every option, its description, and the values
+`--revision` and `--gradle-release-channel` accept are printed by `gradle help
+--task dependencyUpdates`.
 
 `--clean-legacy-partials` is a one-off cleanup rather than a report setting;
 see [v0.61.0](#v0610) for when to run it.
