@@ -17,6 +17,8 @@ Plugin](https://www.mojohaus.org/versions-maven-plugin).
   - [Cache invalidation](#cache-invalidation)
   - [Task properties](#task-properties)
     - [A recommended configuration](#a-recommended-configuration)
+    - [Every property](#every-property)
+    - [Command line options](#command-line-options)
     - [What the report checks](#what-the-report-checks)
       - [Configuration filter](#configuration-filter)
         - [`filterConfigurations`](#filterconfigurations)
@@ -33,6 +35,9 @@ Plugin](https://www.mojohaus.org/versions-maven-plugin).
       - [Gradle versions API base URL](#gradle-versions-api-base-url)
     - [Report output](#report-output)
       - [Optional parameters](#optional-parameters)
+        - [`checkForGradleUpdate`](#checkforgradleupdate)
+        - [`outputDir`](#outputdir)
+        - [`reportfileName`](#reportfilename)
       - [Report format](#report-format)
   - [Multi-project builds](#multi-project-builds)
     - [Shared task settings](#shared-task-settings)
@@ -343,6 +348,55 @@ In Kotlin the `isNonStable` extension replaces a helper of that name already in
 the build. A top-level `fun isNonStable(version: String)` compiles to the same
 JVM signature, so keeping both fails the build with a platform declaration
 clash.
+
+#### Every property
+
+Each property below configures the report or where it is written, and links to
+the section that describes it. A property taking a predicate or a closure has no
+command line option, since no command line can express the logic.
+
+| Property | Values | Default | Option |
+| --- | --- | --- | --- |
+| [`revision`](#revisions) | `release`, `milestone`, `integration` | `milestone` | `--revision` |
+| [`gradleReleaseChannel`](#gradle-release-channel) | `current`, `release-candidate`, `nightly` | `release-candidate` | `--gradle-release-channel` |
+| [`checkForGradleUpdate`](#checkforgradleupdate) | `true`, `false` | `true` | `--[no-]check-for-gradle-update` |
+| [`checkConstraints`](#constraints) | `true`, `false` | `false` | `--[no-]check-constraints` |
+| [`checkBuildEnvironmentConstraints`](#constraints) | `true`, `false` | `false` | `--[no-]check-build-environment-constraints` |
+| [`filterConfigurations`](#filterconfigurations) | a `Spec<Configuration>` | every configuration | |
+| [`filterDeclaredConfigurations`](#filterdeclaredconfigurations) | a `Spec<String>` | every name | |
+| [`rejectVersionIf`](#filtering-unstable-versions) | a predicate over the candidate | nothing rejected | |
+| [`outputFormatter`](#report-format) | `text`, `json`, `xml`, `html`, a comma separated list of those, or a `Reporter` | `text` | `--output-formatter` |
+| [`outputDir`](#outputdir) | a directory path | `<buildDirectory>/dependencyUpdates` | `--output-dir` |
+| [`reportfileName`](#reportfilename) | a file name, without the extension | `report` | `--report-file-name` |
+| [`gradleVersionsApiBaseUrl`](#gradle-versions-api-base-url) | a URL | `https://services.gradle.org/versions/` | `--gradle-versions-api-base-url` |
+| [`cleanLegacyPartials`](#v0610) | `true`, `false` | `false` | `--[no-]clean-legacy-partials` |
+
+The [`resolutionStrategy`](#filtering-unstable-versions) block is configured
+rather than set to a value, so it is absent from the table above.
+
+#### Command line options
+
+Each option in the table above changes a property for a single run, without an
+edit to the build script. Use one to see what a check leaves out, then return to
+the configured behavior on the next run:
+
+```bash
+./gradlew dependencyUpdates --no-check-constraints
+```
+
+`--[no-]` marks the options that take no argument, so
+`--no-check-for-gradle-update` turns off a check that is enabled in the build
+script. Every option, its description, and the values `--revision` and
+`--gradle-release-channel` accept are printed by `gradle help --task
+dependencyUpdates`.
+
+Where more than one is set, the command line option is the one that applies,
+ahead of a system property and of what is configured in the build.
+
+An option applies within the build it is invoked in. Where a report merges an
+[included build](#composite-builds), that build's rows are resolved with its own
+configuration, since the option is not passed to the included build. A system
+property is, being set for the whole JVM.
 
 #### What the report checks
 
@@ -1060,10 +1114,12 @@ availability.
 ##### Optional parameters
 
 The `dependencyUpdates` task takes several optional parameters to adjust its
-behavior. The `revision`, `gradleReleaseChannel`, `outputFormatter`,
-`outputDir`, and `reportfileName` properties may also be set as system
-properties, which override the task configuration for ad hoc runs (e.g.
-`-Drevision=release`):
+behavior. For an ad hoc run, change one with its [command line
+option](#command-line-options) (e.g. `--revision release`). The `revision`,
+`gradleReleaseChannel`, `outputFormatter`, `outputDir`, and `reportfileName`
+properties may also be set as system properties (e.g. `-Drevision=release`),
+which predate the options and are kept for the builds that use them; where both
+are set, the option is the one that applies:
 
 <details open>
 <summary>Kotlin</summary>
@@ -1094,6 +1150,32 @@ tasks.named("dependencyUpdates").configure {
 ```
 
 </details>
+
+###### `checkForGradleUpdate`
+
+Whether the report includes the Gradle releases the build could upgrade to,
+which are read from the [Gradle versions
+API](#gradle-versions-api-base-url) over the network for each
+[release channel](#gradle-release-channel) consulted. Turning it off skips those
+requests, which suits a build that runs offline or in a restricted environment:
+
+```bash
+./gradlew dependencyUpdates --no-check-for-gradle-update
+```
+
+###### `outputDir`
+
+The directory the report file is written into. A relative path is resolved
+against the project directory and an absolute one is used as given. The default
+is `dependencyUpdates` under the project's build directory, which is
+`build/dependencyUpdates` in a standard layout.
+
+###### `reportfileName`
+
+The report file's name, without an extension. Each formatter supplies its own,
+so `report` becomes `report.txt`, `report.json`, `report.xml` or `report.html`.
+Naming more than one formatter writes one file per format, all sharing this
+name.
 
 ##### Report format
 

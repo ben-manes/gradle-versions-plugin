@@ -46,9 +46,37 @@ internal fun isIsolatedProjectsEnabled(project: Project): Boolean =
     (project.gradle.startParameter as StartParameterInternal).isolatedProjects.get()
   }.getOrDefault(false)
 
+/**
+ * Returns the setting in effect. A command line option applies ahead of a system property, and
+ * both apply ahead of what is configured in the build.
+ */
+internal fun settingOf(
+  fromCommandLine: String?,
+  systemPropertyName: String,
+  configured: String,
+): String =
+  fromCommandLine
+    ?: System.getProperty(systemPropertyName)
+    ?: configured
+
+/**
+ * Returns the setting in effect for one that reads no system property, with a command line option
+ * ahead of what is configured in the build.
+ */
+internal fun <T : Any> settingOf(
+  fromCommandLine: T?,
+  configured: T,
+): T = fromCommandLine ?: configured
+
+/** The revision level resolved against when neither the build nor an override states one. */
+internal const val DEFAULT_REVISION = "milestone"
+
 /** The task settings that a project's producer reads while its input is realized; null is unset. */
 internal class DependencyUpdatesParameters {
   var revision: String? = null
+
+  /** Set by the task's command line option, which applies ahead of the two settings below. */
+  var revisionFromCommandLine: String? = null
 
   @Transient
   var filterConfigurations: Spec<Configuration>? = null
@@ -63,6 +91,13 @@ internal class DependencyUpdatesParameters {
   var resolutionStrategySet: Boolean = false
   var checkConstraints: Boolean? = null
   var checkBuildEnvironmentConstraints: Boolean? = null
+
+  /**
+   * Set by the task's command line options. Read ahead of every configured value in the chain, so
+   * that an option applies to a project where the setting is configured on its own task.
+   */
+  var checkConstraintsFromCommandLine: Boolean? = null
+  var checkBuildEnvironmentConstraintsFromCommandLine: Boolean? = null
 }
 
 /**
@@ -119,16 +154,27 @@ internal abstract class DependencyUpdatesParametersService :
         .toList()
     return ResolvedParameters(
       revision =
-        (System.getProperties()["revision"] as String?)
-          ?: chain.firstNotNullOfOrNull { it.revision } ?: "milestone",
+        settingOf(
+          fromCommandLine = chain.firstNotNullOfOrNull { it.revisionFromCommandLine },
+          systemPropertyName = "revision",
+          configured = chain.firstNotNullOfOrNull { it.revision } ?: DEFAULT_REVISION,
+        ),
       filterConfigurations =
         chain.firstNotNullOfOrNull { it.filterConfigurations } ?: ALL_CONFIGURATIONS,
       filterDeclaredConfigurations =
         chain.firstNotNullOfOrNull { it.filterDeclaredConfigurations } ?: ALL_DECLARED_CONFIGURATIONS,
       resolutionStrategy = chain.firstOrNull { it.resolutionStrategySet }?.resolutionStrategy,
-      checkConstraints = chain.firstNotNullOfOrNull { it.checkConstraints } ?: false,
+      checkConstraints =
+        settingOf(
+          fromCommandLine = chain.firstNotNullOfOrNull { it.checkConstraintsFromCommandLine },
+          configured = chain.firstNotNullOfOrNull { it.checkConstraints } ?: false,
+        ),
       checkBuildEnvironmentConstraints =
-        chain.firstNotNullOfOrNull { it.checkBuildEnvironmentConstraints } ?: false,
+        settingOf(
+          fromCommandLine =
+            chain.firstNotNullOfOrNull { it.checkBuildEnvironmentConstraintsFromCommandLine },
+          configured = chain.firstNotNullOfOrNull { it.checkBuildEnvironmentConstraints } ?: false,
+        ),
     )
   }
 }

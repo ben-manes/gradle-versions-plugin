@@ -61,6 +61,30 @@ How a pull request lands:
 - Beyond that, match the file you are editing: Kotlin sources carry no
   license header, comments are rare and explain only what the code cannot,
   and a README snippet is added in both Kotlin and Groovy.
+- Add a command line option, with `@Option`, to every task property a build
+  author sets to configure the report or where it is written, so that a single
+  run can change it without an edit to the build script. A property configured
+  with a predicate has no option, since no command line can express the logic.
+  The system properties named after `revision`, `gradleReleaseChannel`,
+  `outputFormatter`, `outputDir` and `reportfileName` predate the options and
+  remain for compatibility; where more than one is set, the option is the one
+  that applies, and no system property is added for a new property.
+- Gradle applies a command line option by calling a setter on the task. Have
+  that setter assign a separate field, not the field assigned from a build
+  script, and read them in order: the command line value first, then the system
+  property if there is one, then the configured value. Assigning the same field
+  fails three ways. A system property is read before the configured value, so
+  the value from `-Drevision` would be used instead of the one from
+  `--revision`. The configured value is read from the nearest project up the
+  hierarchy where one is set, so an option given on the root task would not
+  apply to a subproject that sets its own. And a `taskGraph.whenReady` or
+  `doFirst` block assigns the property after Gradle has applied the options,
+  overwriting the value from the command line.
+- An option applies only within the build it is invoked in. In a report that
+  merges an included build, that build's rows are resolved from that build's own
+  configuration, so they are unaffected by an option; document any behavior that
+  differs between the two in the README's [Composite
+  builds](README.md#composite-builds) section.
 - A change that an existing build has to react to, such as different report
   output or a behavior that is now off by default, also gets a subsection in
   the README's
