@@ -91,6 +91,7 @@ internal class DependencyUpdatesParameters {
   var resolutionStrategySet: Boolean = false
   var checkConstraints: Boolean? = null
   var checkBuildEnvironmentConstraints: Boolean? = null
+  var rejectOutOfBoundVersions: Boolean? = null
 
   /**
    * Set by the task's command line options. Read ahead of every configured value in the chain, so
@@ -98,6 +99,7 @@ internal class DependencyUpdatesParameters {
    */
   var checkConstraintsFromCommandLine: Boolean? = null
   var checkBuildEnvironmentConstraintsFromCommandLine: Boolean? = null
+  var rejectOutOfBoundVersionsFromCommandLine: Boolean? = null
 }
 
 /**
@@ -175,6 +177,11 @@ internal abstract class DependencyUpdatesParametersService :
             chain.firstNotNullOfOrNull { it.checkBuildEnvironmentConstraintsFromCommandLine },
           configured = chain.firstNotNullOfOrNull { it.checkBuildEnvironmentConstraints } ?: false,
         ),
+      rejectOutOfBoundVersions =
+        settingOf(
+          fromCommandLine = chain.firstNotNullOfOrNull { it.rejectOutOfBoundVersionsFromCommandLine },
+          configured = chain.firstNotNullOfOrNull { it.rejectOutOfBoundVersions } ?: true,
+        ),
     )
   }
 }
@@ -187,6 +194,7 @@ internal class InheritedSettings(
   val revision: String,
   val checkConstraints: Boolean,
   val checkBuildEnvironmentConstraints: Boolean,
+  val rejectOutOfBoundVersions: Boolean,
 )
 
 /** The settings that apply to a single project's producer. */
@@ -197,6 +205,7 @@ internal class ResolvedParameters(
   val resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?,
   val checkConstraints: Boolean,
   val checkBuildEnvironmentConstraints: Boolean,
+  val rejectOutOfBoundVersions: Boolean,
 )
 
 /** Registers the per-project producers and wires their results into the accumulator task. */
@@ -219,6 +228,7 @@ internal fun registerAggregation(
         revision = resolved.revision,
         checkConstraints = resolved.checkConstraints,
         checkBuildEnvironmentConstraints = resolved.checkBuildEnvironmentConstraints,
+        rejectOutOfBoundVersions = resolved.rejectOutOfBoundVersions,
       )
     }
   accumulator.configure { task ->
@@ -589,7 +599,8 @@ private fun statusesOf(
   if (configurations.isEmpty()) {
     return emptyList()
   }
-  val resolver = Resolver(project, parameters.resolutionStrategy, checkConstraints)
+  val resolver =
+    Resolver(project, parameters.resolutionStrategy, checkConstraints, parameters.rejectOutOfBoundVersions)
   // Snapshotted for every configuration before the first resolution, as resolving one
   // configuration runs the lazy actions of the configurations it extends. A build that read the
   // dependencies while configuring has already run them, which the discount below corrects for.

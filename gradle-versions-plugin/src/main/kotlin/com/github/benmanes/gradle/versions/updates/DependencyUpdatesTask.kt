@@ -65,6 +65,11 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
               parameters.checkBuildEnvironmentConstraintsFromCommandLine,
               parameters.checkBuildEnvironmentConstraints ?: false,
             ),
+          rejectOutOfBoundVersions =
+            settingOf(
+              parameters.rejectOutOfBoundVersionsFromCommandLine,
+              parameters.rejectOutOfBoundVersions ?: true,
+            ),
         )
       },
     )
@@ -267,6 +272,22 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   )
   internal fun setCheckBuildEnvironmentConstraintsFromCommandLine(checkBuildEnvironmentConstraints: Boolean) {
     parameters.checkBuildEnvironmentConstraintsFromCommandLine = checkBuildEnvironmentConstraints
+  }
+
+  @get:Input
+  var rejectOutOfBoundVersions: Boolean
+    get() = inherited.get().rejectOutOfBoundVersions
+    set(value) {
+      parameters.rejectOutOfBoundVersions = value
+    }
+
+  /** Reports the versions outside a declared bound for this invocation alone. */
+  @Option(
+    option = "reject-out-of-bound-versions",
+    description = "Leaves out the versions outside a declared bound or a consumed platform's.",
+  )
+  internal fun setRejectOutOfBoundVersionsFromCommandLine(rejectOutOfBoundVersions: Boolean) {
+    parameters.rejectOutOfBoundVersionsFromCommandLine = rejectOutOfBoundVersions
   }
 
   @Internal

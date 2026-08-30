@@ -677,7 +677,7 @@ final class CompositeBuildSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
     def bom = jsonReport.outdated.dependencies.find { it.name == 'external-bom' }
     bom.platformProjects == [':platforms']
-    def guice = jsonReport.outdated.dependencies.find { it.name == 'guice' }
+    def guice = jsonReport.current.dependencies.find { it.name == 'guice' }
     !guice.containsKey('platformProjects')
     def bomElement = xmlReport.outdated.dependencies.outdatedDependency.find {
       it.name.text() == 'external-bom'

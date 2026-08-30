@@ -1,5 +1,6 @@
 package com.github.benmanes.gradle.versions.updates
 
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.xml.XmlSlurper
 import groovy.xml.slurpersupport.GPathResult
@@ -48,7 +49,15 @@ class Resolver(
   private val project: Project,
   private val resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?,
   private val checkConstraints: Boolean,
+  private val rejectOutOfBoundVersions: Boolean,
 ) {
+  /** Retained so the arity released before the bound filter was added still links. */
+  constructor(
+    project: Project,
+    resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?,
+    checkConstraints: Boolean,
+  ) : this(project, resolutionStrategy, checkConstraints, rejectOutOfBoundVersions = false)
+
   private var projectUrls = ConcurrentHashMap<ModuleVersionIdentifier, ProjectUrl>()
 
   // The platform declarations whose scan threw, so a configuration inheriting the same ones does
@@ -223,6 +232,7 @@ class Resolver(
     addRevisionFilter(copy, revision, current.coordinates)
     addAttributes(copy, configuration)
     addCustomResolutionStrategy(copy, current.coordinates)
+    addDeclaredBoundFilter(copy, current.coordinates)
 
     disableAutoTargetJvm(copy)
     return copy
@@ -356,6 +366,36 @@ class Resolver(
             revisionFilter(selectionAction, selectionAction.metadata)
           }
         }
+      }
+    }
+  }
+
+  /**
+   * Adds the filter that holds the report to the bound declared for a module, leaving out the
+   * upgrades [ComponentSelectionWithCurrent.isUpgradeOutOfDeclaredBound] marks as out of bound.
+   *
+   * Registered after the rules configured in the build, since a rejected candidate is not passed
+   * to the rules that follow, and a rule written in a build script is still evaluated for every
+   * candidate it was evaluated for before.
+   */
+  private fun addDeclaredBoundFilter(
+    configuration: Configuration,
+    currentCoordinates: Map<Coordinate.Key, Coordinate>,
+  ) {
+    if (!rejectOutOfBoundVersions) {
+      return
+    }
+    configuration.resolutionStrategy { inner ->
+      ResolutionStrategyWithCurrent(inner, currentCoordinates).componentSelection { rules ->
+        rules.all(
+          Action<ComponentSelectionWithCurrent> { current ->
+            @Suppress("SENSELESS_COMPARISON")
+            val isNotNull = current.currentVersion != null && current.candidate.version != null
+            if (isNotNull && current.isUpgradeOutOfDeclaredBound) {
+              current.reject("Rejected by rejectOutOfBoundVersions")
+            }
+          },
+        )
       }
     }
   }

@@ -65,10 +65,10 @@ final class DeclaredVersionConstraintSpec extends Specification {
       """.stripIndent()
   }
 
-  private def run() {
+  private def run(String... options) {
     def result = GradleRunner.create()
       .withProjectDir(testProjectDir.root)
-      .withArguments('dependencyUpdates')
+      .withArguments(['dependencyUpdates'] + options.toList())
       .withPluginClasspath()
       .build()
     assert result.task(':dependencyUpdates').outcome == SUCCESS
@@ -143,8 +143,8 @@ final class DeclaredVersionConstraintSpec extends Specification {
     report().unresolved.dependencies.isEmpty()
   }
 
-  def 'without the rule the rejected version is offered, so the rule is what changes it'() {
-    given:
+  def 'the declared bound is respected without a rule, as the task property is on by default'() {
+    given: 'a guice declaration rejecting its own newest version, with no rule beside it'
     writeBuildFile(
       """
         api('com.google.inject:guice') {
@@ -159,7 +159,72 @@ final class DeclaredVersionConstraintSpec extends Specification {
     when:
     run()
 
+    then: 'guice stops below the rejected version, which the README recipe used to be needed for'
+    report().outdated.dependencies*.name == ['guice']
+    report().outdated.dependencies[0].available.milestone == '3.0'
+  }
+
+  def 'a constraint stating a range still bounds the report, though its version reads as a range'() {
+    given: 'a constraint with no declaration beside it, so the row reports the range as its version'
+    writeBuildFile(
+      """
+        constraints {
+          api('com.google.inject:guice') {
+            version {
+              strictly '[2.0, 3.0['
+            }
+          }
+        }
+      """,
+      'checkConstraints = true')
+
+    when:
+    run()
+
+    then: 'the top of the declared range, not the 3.1 the unbounded query finds'
+    def guice = report().outdated.dependencies.find { it.name == 'guice' }
+    guice != null
+    guice.available.milestone == '2.2'
+  }
+
+  def 'rejectOutOfBoundVersions = false offers the version the build rejects'() {
+    given:
+    writeBuildFile(
+      """
+        api('com.google.inject:guice') {
+          version {
+            require '2.0'
+            reject '3.1'
+          }
+        }
+      """,
+      'rejectOutOfBoundVersions = false')
+
+    when:
+    run()
+
     then: 'the unbounded query offers the very version the build rejects'
+    report().outdated.dependencies*.name == ['guice']
+    report().outdated.dependencies[0].available.milestone == '3.1'
+  }
+
+  def 'the command line option shows what the bound withholds for a single run'() {
+    given: 'the build leaves the property at its default'
+    writeBuildFile(
+      """
+        api('com.google.inject:guice') {
+          version {
+            require '2.0'
+            reject '3.1'
+          }
+        }
+      """,
+      '')
+
+    when:
+    run('--no-reject-out-of-bound-versions')
+
+    then: 'the version the bound withholds is offered'
     report().outdated.dependencies*.name == ['guice']
     report().outdated.dependencies[0].available.milestone == '3.1'
   }
@@ -300,6 +365,45 @@ final class DeclaredVersionConstraintSpec extends Specification {
     then: 'the selected version is in bound even where the interval alone would exclude it'
     !result.output.contains('com.google.inject:guice [3.0 <- ')
     result.output.contains(' - com.google.inject:guice:3.0')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/755')
+  def 'a dynamic classpath bound the resolved version already exceeds does not hold the report'() {
+    given: 'the same classpath range resolution rose above, with no rule to reject with'
+    testProjectDir.newFile('build.gradle') <<
+      """
+        buildscript {
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+          configurations.create('probeClasspath')
+          dependencies {
+            constraints {
+              probeClasspath 'com.google.guava:guava:15.0'
+            }
+            probeClasspath 'com.google.guava:guava'
+            probeClasspath 'com.google.inject:guice:[2.0, 3.0['
+            probeClasspath 'com.example:guice-consumer:1.0'
+          }
+        }
+
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.named('dependencyUpdates').configure {
+          checkForGradleUpdate = false
+        }
+      """.stripIndent()
+
+    when:
+    def result = run()
+
+    then: 'a bound the resolved version already sits above holds nothing, so the upgrade stands'
+    result.output.contains('com.google.inject:guice [3.0 -> 7.0.0]')
   }
 
   def 'a module with no declared bound is not bounded'() {
@@ -458,8 +562,8 @@ final class DeclaredVersionConstraintSpec extends Specification {
     then: 'the mutation is refused, and the reported current version is the resolved one'
     result.output.contains('PROBE-REFUSED')
     !result.output.contains('PROBE-MUTATED')
-    report().outdated.dependencies*.name == ['guice']
-    report().outdated.dependencies[0].version == '3.0'
+    report().current.dependencies*.name == ['guice']
+    report().current.dependencies[0].version == '3.0'
   }
 
   def 'a substituted module has no declared constraint, and the recipe tolerates it'() {
@@ -523,14 +627,14 @@ final class DeclaredVersionConstraintSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
-  def 'without the rule the platform-supplied module is offered every upgrade, so the rule is what changes it'() {
-    given: 'the bounded shape above, with no rule installed'
+  def 'with the bound turned off the platform-supplied module is offered every upgrade'() {
+    given: 'the bounded declarations above, with the property turned off'
     writeBuildFile(
       """
         api platform('org.apache.logging.log4j:log4j:2.16.0')
         api 'org.apache.logging.log4j:log4j-core'
       """,
-      '')
+      'rejectOutOfBoundVersions = false')
 
     when:
     run()
