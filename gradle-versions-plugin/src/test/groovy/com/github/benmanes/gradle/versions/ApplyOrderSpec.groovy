@@ -19,7 +19,7 @@ import spock.lang.Unroll
 @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1049')
 final class ApplyOrderSpec extends Specification {
   private static final String GRADLE_8 = '8.4'
-  private static final String GRADLE_9 = '9.7.0'
+  private static final String GRADLE_9 = GradleVersions.CURRENT
   private static final List<String> PLUGINS =
     ['io.github.ben-manes.versions', 'io.github.ben-manes.versions.contributor']
 

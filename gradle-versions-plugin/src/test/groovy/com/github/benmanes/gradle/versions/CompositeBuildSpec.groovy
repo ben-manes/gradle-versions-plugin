@@ -257,7 +257,7 @@ final class CompositeBuildSpec extends Specification {
 
     when:
     def result = GradleRunner.create()
-      .withGradleVersion('9.6.1')
+      .withGradleVersion(GradleVersions.CURRENT)
       .withProjectDir(testProjectDir.root)
       .withArguments(':dependencyUpdates', '--configure-on-demand', '--parallel',
         '--configuration-cache')
@@ -1187,7 +1187,7 @@ final class CompositeBuildSpec extends Specification {
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
 
     where:
-    gradleVersion << ['9.0.0', '9.6.1']
+    gradleVersion << ['9.0.0', GradleVersions.CURRENT]
   }
 
   // The measured #801 trigger: a withModule id missing its ':name' half.
@@ -1254,7 +1254,7 @@ final class CompositeBuildSpec extends Specification {
 
     when:
     def result = GradleRunner.create()
-      .withGradleVersion('9.6.1')
+      .withGradleVersion(GradleVersions.CURRENT)
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates', ':child:dependencyUpdates',
         '-DoutputFormatter=plain,json')

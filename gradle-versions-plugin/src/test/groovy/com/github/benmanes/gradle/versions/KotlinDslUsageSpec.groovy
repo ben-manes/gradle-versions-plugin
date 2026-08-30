@@ -76,7 +76,7 @@ final class KotlinDslUsageSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
-    gradleVersion << ['8.4', '9.6.1']
+    gradleVersion << ['8.4', GradleVersions.CURRENT]
   }
 
   // Gradle 9 requires JVM 17.
@@ -116,7 +116,7 @@ final class KotlinDslUsageSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
-    gradleVersion << ['8.4', '9.6.1']
+    gradleVersion << ['8.4', GradleVersions.CURRENT]
   }
 
   def 'rejectVersionIf binds to the ComponentFilter overload from kotlin-dsl'() {

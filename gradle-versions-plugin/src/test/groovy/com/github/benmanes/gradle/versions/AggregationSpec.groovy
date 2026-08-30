@@ -129,7 +129,7 @@ final class AggregationSpec extends Specification {
     result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
 
     where:
-    gradleVersion << ['9.0.0', '9.6.1']
+    gradleVersion << ['9.0.0', GradleVersions.CURRENT]
   }
 
   def 'Reports every projects producer in the merged report'() {

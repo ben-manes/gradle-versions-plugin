@@ -576,7 +576,7 @@ final class TaskOptionSpec extends Specification {
     on.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
-    gradleVersion << ['8.4', '9.7.1']
+    gradleVersion << ['8.4', GradleVersions.CURRENT]
   }
 
   def 'Prints every command line option the task accepts'() {
