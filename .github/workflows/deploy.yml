@@ -31,7 +31,7 @@ jobs:
           java-version: 8
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
 
       # A rebase merge produces a commit no pull request check ran on, so the tag can
       # carry a tree the build workflow has never seen. Build it here, where a failure
