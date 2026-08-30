@@ -179,6 +179,16 @@ internal abstract class DependencyUpdatesParametersService :
   }
 }
 
+/**
+ * A project's settings that hold a plain value, read back from the accumulator task. Kept apart
+ * from [ResolvedParameters], where the predicates are never serialized into a task's inputs.
+ */
+internal class InheritedSettings(
+  val revision: String,
+  val checkConstraints: Boolean,
+  val checkBuildEnvironmentConstraints: Boolean,
+)
+
 /** The settings that apply to a single project's producer. */
 internal class ResolvedParameters(
   val revision: String,
@@ -195,7 +205,26 @@ internal fun registerAggregation(
   accumulator: TaskProvider<DependencyUpdatesTask>,
 ) {
   val service = parametersService(project.gradle)
-  accumulator.configure { task -> service.get().register(project.path, task.parameters) }
+  // Read here so that the provider below captures this rather than the project, which the
+  // configuration cache cannot serialize.
+  val path = project.path
+  // Realized after every project is configured, as the producers' inputs are, so that the values
+  // read back from the task are the ones the producers resolved with rather than only what is
+  // configured on this project. All three are taken from one resolution, so a read cannot mix a
+  // stale value with a fresh one.
+  val inherited =
+    project.provider {
+      val resolved = service.get().resolve(path)
+      InheritedSettings(
+        revision = resolved.revision,
+        checkConstraints = resolved.checkConstraints,
+        checkBuildEnvironmentConstraints = resolved.checkBuildEnvironmentConstraints,
+      )
+    }
+  accumulator.configure { task ->
+    service.get().register(path, task.parameters)
+    task.inherited.set(inherited)
+  }
   // Realizes the task, so that a configuration block on a task that nothing else realizes is still
   // applied before the producers read the settings.
   project.afterEvaluate { accumulator.get() }

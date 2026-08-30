@@ -15,6 +15,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.specs.Spec
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
@@ -37,15 +38,41 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   @get:Internal
   internal val parameters = DependencyUpdatesParameters()
 
+  /**
+   * The settings as the producers resolved them, wired by the plugin from the shared settings so
+   * that they are read back as resolved rather than as configured on this project alone. All three
+   * are taken from one resolution, so a read cannot mix them. The convention covers a task the
+   * plugin did not register, where only this project's own settings are known.
+   */
+  @get:Internal
+  internal val inherited: Property<InheritedSettings> =
+    project.objects.property(InheritedSettings::class.java).convention(
+      project.provider {
+        InheritedSettings(
+          revision =
+            settingOf(
+              parameters.revisionFromCommandLine,
+              "revision",
+              parameters.revision ?: DEFAULT_REVISION,
+            ),
+          checkConstraints =
+            settingOf(
+              parameters.checkConstraintsFromCommandLine,
+              parameters.checkConstraints ?: false,
+            ),
+          checkBuildEnvironmentConstraints =
+            settingOf(
+              parameters.checkBuildEnvironmentConstraintsFromCommandLine,
+              parameters.checkBuildEnvironmentConstraints ?: false,
+            ),
+        )
+      },
+    )
+
   /** Returns the resolution revision level. */
   @get:Input
   var revision: String
-    get() =
-      settingOf(
-        parameters.revisionFromCommandLine,
-        "revision",
-        parameters.revision ?: DEFAULT_REVISION,
-      )
+    get() = inherited.get().revision
     set(value) {
       parameters.revision = value
     }
@@ -198,8 +225,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
   @get:Input
   var checkConstraints: Boolean
-    get() =
-      settingOf(parameters.checkConstraintsFromCommandLine, parameters.checkConstraints ?: false)
+    get() = inherited.get().checkConstraints
     set(value) {
       parameters.checkConstraints = value
     }
@@ -229,11 +255,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
   @get:Input
   var checkBuildEnvironmentConstraints: Boolean
-    get() =
-      settingOf(
-        parameters.checkBuildEnvironmentConstraintsFromCommandLine,
-        parameters.checkBuildEnvironmentConstraints ?: false,
-      )
+    get() = inherited.get().checkBuildEnvironmentConstraints
     set(value) {
       parameters.checkBuildEnvironmentConstraints = value
     }

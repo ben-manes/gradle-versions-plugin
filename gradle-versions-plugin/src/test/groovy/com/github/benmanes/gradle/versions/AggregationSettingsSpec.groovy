@@ -205,4 +205,90 @@ final class AggregationSettingsSpec extends Specification {
     result.output.contains('readBack=true')
     result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
   }
+
+  def 'Prints the inherited revision in the header of a subproject report'() {
+    // The getters fell back to the value configured on this project while the producers resolved
+    // with the nearest ancestor's, so the default revision level was printed in the header over
+    // rows that had been resolved at the inherited one.
+    given:
+    new File(testProjectDir.root, 'build.gradle') <<
+      """
+        subprojects {
+          apply plugin: 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          revision = 'release'
+        }
+      """.stripIndent()
+
+    when:
+    def result = run([':app:dependencyUpdates', '--no-parallel'])
+
+    then:
+    result.task(':app:dependencyUpdates').outcome == SUCCESS
+    result.output.contains('The following dependencies have later release versions:')
+    !result.output.contains('The following dependencies have later milestone versions:')
+  }
+
+  def 'Reads back the inherited constraint checks in a subproject with none of its own'() {
+    // Neither check is visible in the report, so the getters are read back instead and compared
+    // against what the producers resolved with, which is what the two constrained rows show.
+    given:
+    new File(testProjectDir.root, 'build.gradle') <<
+      """
+        subprojects {
+          apply plugin: 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+          checkBuildEnvironmentConstraints = true
+        }
+      """.stripIndent()
+    // Rewritten rather than appended to, as a buildscript block must come first in the script.
+    new File(testProjectDir.root, 'app/build.gradle').text =
+      """
+        buildscript {
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+
+          dependencies {
+            constraints {
+              classpath 'backport-util-concurrent:backport-util-concurrent:1.0'
+            }
+          }
+        }
+
+        tasks.register('readBack') {
+          def checkConstraints = tasks.dependencyUpdates.checkConstraints
+          def checkBuildEnvironmentConstraints =
+            tasks.dependencyUpdates.checkBuildEnvironmentConstraints
+          doLast {
+            println "readBack=\$checkConstraints,\$checkBuildEnvironmentConstraints"
+          }
+        }
+
+        dependencies {
+          implementation 'com.google.inject:guice:2.0'
+          constraints {
+            implementation 'com.google.guava:guava:15.0'
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = run([':app:readBack', ':app:dependencyUpdates', '--no-parallel'])
+
+    then:
+    result.task(':app:dependencyUpdates').outcome == SUCCESS
+    // guava is only a project constraint and backport-util-concurrent is only a buildscript one,
+    // so each row is printed only when its own inherited check applied. The getters must agree.
+    result.output.contains('com.google.guava:guava')
+    result.output.contains('backport-util-concurrent:backport-util-concurrent')
+    result.output.contains('readBack=true,true')
+  }
 }
