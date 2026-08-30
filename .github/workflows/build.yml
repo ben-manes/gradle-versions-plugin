@@ -75,7 +75,7 @@ jobs:
         if: matrix.java-version == 17
         uses: gradle/actions/setup-gradle@v5
         with:
-          gradle-version: '9.6.1'
+          gradle-version: '9.7.1'
 
       - name: Run examples on Gradle 9
         if: matrix.java-version == 17

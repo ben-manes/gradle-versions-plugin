@@ -90,16 +90,16 @@ final class DifferentGradleVersionsSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
-    gradleVersion | warningMode
-    '8.4'         | 'all'
-    '8.5'         | 'all'
-    '8.6'         | 'all'
-    '8.7'         | 'all'
-    '8.8'         | 'all'
-    '8.9'         | 'all'
-    '8.10'        | 'all'
-    '8.11.1'      | 'fail'
-    '9.6.1'       | 'fail'
+    gradleVersion          | warningMode
+    '8.4'                  | 'all'
+    '8.5'                  | 'all'
+    '8.6'                  | 'all'
+    '8.7'                  | 'all'
+    '8.8'                  | 'all'
+    '8.9'                  | 'all'
+    '8.10'                 | 'all'
+    '8.11.1'               | 'fail'
+    GradleVersions.CURRENT | 'fail'
   }
 
   @Unroll

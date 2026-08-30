@@ -356,7 +356,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
-    gradleVersion << ['8.4', '9.6.1']
+    gradleVersion << ['8.4', GradleVersions.CURRENT]
   }
 
   def 'a bound on an unpublished version moves the report line to the unresolved section'() {

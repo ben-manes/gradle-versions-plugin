@@ -120,7 +120,7 @@ final class SettingsClasspathSpec extends Specification {
       'com.example.settings-demo:com.example.settings-demo.gradle.plugin [1.0 -> 2.0]'
 
     when:
-    def stored = runOn('9.7.0', arguments)
+    def stored = runOn(GradleVersions.CURRENT, arguments)
 
     then:
     stored.task(':dependencyUpdates').outcome == SUCCESS
@@ -128,7 +128,7 @@ final class SettingsClasspathSpec extends Specification {
     stored.output.contains(expected)
 
     when:
-    def hit = runOn('9.7.0', arguments)
+    def hit = runOn(GradleVersions.CURRENT, arguments)
 
     then:
     hit.task(':dependencyUpdates').outcome == SUCCESS
