@@ -256,6 +256,52 @@ final class DeclaredVersionConstraintSpec extends Specification {
     report().outdated.dependencies[0].available.milestone == '3.1'
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/755')
+  def 'a script classpath does not report the version it resolved as a downgrade'() {
+    given: 'a classpath range a transitive requires more than, so resolution rises above it'
+    // The versionless guava declaration is what makes the copy resolve transitively, which is the
+    // only way guice-consumer's requirement can push guice past its range. Drop it and the report
+    // never reaches the case below.
+    testProjectDir.newFile('build.gradle') <<
+      """
+        buildscript {
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+          configurations.create('probeClasspath')
+          dependencies {
+            constraints {
+              probeClasspath 'com.google.guava:guava:15.0'
+            }
+            probeClasspath 'com.google.guava:guava'
+            probeClasspath 'com.google.inject:guice:[2.0, 3.0['
+            probeClasspath 'com.example:guice-consumer:1.0'
+          }
+        }
+
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.named('dependencyUpdates').configure {
+          checkForGradleUpdate = false
+          rejectVersionIf {
+            !satisfiesDeclaredBound
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = run()
+
+    then: 'the selected version is in bound even where the interval alone would exclude it'
+    !result.output.contains('com.google.inject:guice [3.0 <- ')
+    result.output.contains(' - com.google.inject:guice:3.0')
+  }
+
   def 'a module with no declared bound is not bounded'() {
     given: 'a plain declaration is a floor resolution may rise above, not a bound'
     writeBuildFile(

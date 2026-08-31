@@ -502,7 +502,7 @@ private fun registerProducer(
               // configuration, so naming it would describe a script rather than a plugin.
               nameDeclaringConfiguration = false,
               // The plugins block deposits its flattened markers only on these classpaths, so
-              // only they recover a catalog plugin constraint.
+              // only they read a dynamic required version as a bound.
               scriptClasspaths = true,
               skipped,
             )

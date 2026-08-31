@@ -57,6 +57,15 @@ class Coordinate(
     private set
 
   /**
+   * Whether the build declared this coordinate on a script classpath, the sole route by which a
+   * plugin marker enters a build. A marker has one declaration and no competing edge, so a dynamic
+   * required version written on it, `[1.0, 2[` or `1.+`, is read as a bound rather than as a
+   * floor. False for a coordinate a platform scan or a substitution rule reached instead.
+   * https://github.com/ben-manes/gradle-versions-plugin/issues/755
+   */
+  internal var onScriptClasspath: Boolean = false
+
+  /**
    * The platforms whose constraint is the version reported, empty otherwise. A platform project
    * appears as its build tree path and an external one as its group and module.
    */

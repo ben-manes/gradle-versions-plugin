@@ -333,9 +333,9 @@ tasks.named("dependencyUpdates").configure {
   version is itself a pre-release (see [Filtering unstable
   versions](#filtering-unstable-versions)).
 - `!satisfiesDeclaredBound` rejects a candidate outside a `strictly` or
-  `reject` bound the build declares, or outside the version a consumed
-  platform sets (see [Respecting declared
-  bounds](#respecting-declared-bounds)).
+  `reject` bound the build declares, outside a dynamic version declared on the
+  buildscript classpath, or outside the version a consumed platform sets (see
+  [Respecting declared bounds](#respecting-declared-bounds)).
 
 Each piece stands alone: drop any line whose behavior you do not want, and the
 rest keep working.
@@ -964,6 +964,16 @@ reads it, so `strictly "[5.3, 6["` admits 5.3.26 and excludes 6.0.1, and
 bound a candidate: a `require` version is a floor resolution may rise above, a
 range included, and a `prefer` version only breaks a tie, so a plain
 `implementation("group:name:1.2.3")` is not bounded by this rule.
+
+The buildscript classpath is the exception. There a dynamic required version
+bounds the candidate, so a plugin declared as `version "[1.0, 2["` or
+`version "1.+"` is not offered 2.0, whether the version was written in the
+`plugins` block or came from a version catalog alias. Gradle flattens an alias to
+a bare required version on the marker it synthesizes, leaving the two forms
+identical, and a plugin has one declaration, so the interval is the version
+declared rather than a floor something else may push past. The version already
+resolved stays in bound, since a transitive requirement on a classpath can push
+the selection past the interval.
 
 A module declared without a version is additionally bound by the version a
 consumed platform sets for it, since the build cannot take that upgrade without
@@ -2225,6 +2235,13 @@ version, where the entries were merged into the newest of them before:
 >   alone has to key them by the projects as well.
 
 > [!NOTE]
+> - A dependency on the buildscript classpath declared with a dynamic version,
+>   `[1.0, 2[` or `1.+`, is no longer offered a version outside it under
+>   `rejectVersionIf { !satisfiesDeclaredBound }`. The presence of a version
+>   catalog no longer changes that answer either: where the `plugins` block
+>   versioned a plugin inline as a range, the upgrade was withheld when an unused
+>   alias for the same plugin was present in the catalog and offered when it was
+>   not (see [Respecting declared bounds](#respecting-declared-bounds)).
 > - A module that a platform bounds in one project and not in another is now up
 >   to date in the bounded project and outdated in the other, rather than
 >   outdated in both. The merged entry printed an upgrade that is not available
