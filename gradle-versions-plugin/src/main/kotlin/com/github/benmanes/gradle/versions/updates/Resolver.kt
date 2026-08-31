@@ -1,7 +1,6 @@
 package com.github.benmanes.gradle.versions.updates
 
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
-import com.github.benmanes.gradle.versions.updates.resolutionstrategy.statesVersionRange
 import groovy.xml.XmlSlurper
 import groovy.xml.slurpersupport.GPathResult
 import groovy.xml.slurpersupport.NodeChildren
@@ -17,8 +16,6 @@ import org.gradle.api.artifacts.DependencyConstraint
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
-import org.gradle.api.artifacts.VersionCatalogsExtension
-import org.gradle.api.artifacts.VersionConstraint
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.component.ModuleComponentSelector
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
@@ -60,22 +57,6 @@ class Resolver(
   // while skipping one costs an attribution at most.
   private val failedPlatformScans = hashSetOf<Set<ModuleDependency>>()
 
-  // Gradle flattens a version-catalog plugin alias to a bare required range on the marker
-  // dependency it synthesizes for the buildscript classpath, dropping strictly/prefer/reject.
-  // https://github.com/ben-manes/gradle-versions-plugin/issues/755
-  private val pluginCatalogConstraints: Map<Coordinate.Key, List<VersionConstraint>> by lazy {
-    val catalogs = project.extensions.findByType(VersionCatalogsExtension::class.java)
-    val constraints = hashMapOf<Coordinate.Key, MutableList<VersionConstraint>>()
-    catalogs?.forEach { catalog ->
-      for (alias in catalog.pluginAliases) {
-        val plugin = catalog.findPlugin(alias).orElse(null)?.orNull ?: continue
-        val key = Coordinate.Key(plugin.pluginId, "${plugin.pluginId}.gradle.plugin")
-        constraints.getOrPut(key) { mutableListOf() }.add(plugin.version)
-      }
-    }
-    constraints
-  }
-
   init {
     logRepositories()
   }
@@ -104,9 +85,8 @@ class Resolver(
 
   /**
    * Returns the version status as above, naming the configuration of a dependency declared directly
-   * against it when asked, which the buildscript's configurations are resolved without, and
-   * recovering catalog plugin constraints only on a script classpath, the sole route by which a
-   * plugin marker enters a build.
+   * against it when asked, which the buildscript's configurations are resolved without, and marking
+   * the coordinates of a script classpath, the sole route by which a plugin marker enters a build.
    */
   internal fun resolve(
     configuration: Configuration,
@@ -397,12 +377,7 @@ class Resolver(
     nameDeclaringConfiguration: Boolean,
     scriptClasspath: Boolean,
   ): CurrentCoordinates {
-    val declared =
-      getResolvableDependencies(configuration)
-        .associateBy { it.key }
-        .mapValues { (_, coordinate) ->
-          if (scriptClasspath) recoverPluginCatalogConstraint(coordinate) else coordinate
-        }
+    val declared = getResolvableDependencies(configuration).associateBy { it.key }
     // An empty configuration is still resolved below, so that a listener contributing to it has
     // run by the time the declared set is read again. That resolution costs nothing. One
     // containing only project or file dependencies is skipped, as resolving it would not, unless it
@@ -510,6 +485,18 @@ class Resolver(
       } else {
         emptySet()
       }
+
+    // A plugin marker reaches a build only here, and only as a single declaration with nothing to
+    // resolve against it, which is what lets its dynamic required version be read as a bound. Only
+    // what the classpath declares qualifies: a platform source is discovered by walking a
+    // platform's own graph rather than declared here, and a substitution target is reached through
+    // a rule rather than written down, so both keep the floor semantics of an ordinary
+    // declaration.
+    if (scriptClasspath) {
+      for (key in declared.keys + contributed.map { it.key }) {
+        coordinates[key]?.onScriptClasspath = true
+      }
+    }
 
     return CurrentCoordinates(
       coordinates,
@@ -650,49 +637,6 @@ class Resolver(
       )
     }
   }
-
-  /**
-   * Returns the coordinate rebuilt with the catalog's constraint, when a plugin-catalog alias
-   * flattened to the coordinate's bare required version explains it unambiguously.
-   *
-   * An alias whose constraint is no more than that required version explains the declaration just
-   * as well as a rich one, so it counts toward the ambiguity rather than being passed over. An
-   * exact required version recovers nothing even when one alias explains it: a version written
-   * inline in the plugins block cannot be told apart from one the catalog supplied once
-   * Gradle has flattened it, and crediting the alias's bound to an inline declaration would hide
-   * upgrades it never rejected. A required range keeps its own interval as the declared bound
-   * either way, so recovering it can add no more than the alias's preference and in-range rejects.
-   */
-  private fun recoverPluginCatalogConstraint(coordinate: Coordinate): Coordinate {
-    val declaredConstraint = coordinate.versionConstraint ?: return coordinate
-    // A versionless declaration has an empty required version, which an alias that only rejects
-    // would match, attaching a bound to a declaration with no version to bound.
-    if (isRich(declaredConstraint) || declaredConstraint.requiredVersion.isEmpty()) {
-      return coordinate
-    }
-    val candidates =
-      pluginCatalogConstraints[coordinate.key].orEmpty()
-        .filter { it.requiredVersion == declaredConstraint.requiredVersion }
-        .distinctBy { listOf(it.requiredVersion, it.strictVersion, it.preferredVersion, it.rejectedVersions) }
-    if (candidates.size > 1) {
-      project.logger.info(
-        "Multiple version catalog aliases for ${coordinate.key} state differing version constraints; " +
-          "keeping the declared constraint",
-      )
-      return coordinate
-    }
-    if (!statesVersionRange(declaredConstraint.requiredVersion)) {
-      return coordinate
-    }
-    val recovered = candidates.singleOrNull()?.takeIf { isRich(it) } ?: return coordinate
-    return Coordinate(coordinate.groupId, coordinate.artifactId, coordinate.version, coordinate.userReason, recovered)
-  }
-
-  /** Whether the constraint is more than a bare required version. */
-  private fun isRich(constraint: VersionConstraint): Boolean =
-    constraint.strictVersion.isNotEmpty() ||
-      constraint.preferredVersion.isNotEmpty() ||
-      constraint.rejectedVersions.isNotEmpty()
 
   /**
    * Returns the version constraints the consumed platforms set for each module declared without a

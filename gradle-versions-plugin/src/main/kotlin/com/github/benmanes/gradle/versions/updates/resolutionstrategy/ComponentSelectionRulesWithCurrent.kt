@@ -114,6 +114,7 @@ class ComponentSelectionRulesWithCurrent(
       current.version,
       current.versionConstraint,
       current.platformVersionConstraints,
+      current.onScriptClasspath,
     )
   }
 }

@@ -5,7 +5,6 @@ import org.gradle.api.artifacts.VersionConstraint
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionComparator
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionSelectorScheme
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionRangeSelector
 
 class ComponentSelectionWithCurrent internal constructor(
   private val delegate: ComponentSelection,
@@ -17,6 +16,11 @@ class ComponentSelectionWithCurrent internal constructor(
    * module's declaration has its own version or no consumed platform bounds it.
    */
   val platformVersionConstraints: List<VersionConstraint>,
+  /**
+   * Whether the declaration sits on a script classpath, where a dynamic required version is read
+   * as a bound.
+   */
+  private val onScriptClasspath: Boolean = false,
 ) : ComponentSelection by delegate {
   /** Retained so the arity released before the constraint was added still links. */
   constructor(
@@ -29,9 +33,18 @@ class ComponentSelectionWithCurrent internal constructor(
    * resolution reads it, so that a range is honored rather than compared as a string.
    *
    * Only `strictly` and `reject` bound a candidate. A `require` version is a floor that resolution
-   * may rise above, a range included, and a `prefer` version is consulted only to break a tie, so
-   * neither excludes an upgrade the build already permits. True for a module that declared no
-   * bound at all.
+   * may rise above, and a `prefer` version is consulted only to break a tie, so neither excludes an
+   * upgrade the build already permits. True for a module that declared no bound at all.
+   *
+   * A *dynamic* required version, such as `[1.0, 2[` or `1.+`, is the one exception, and it applies
+   * on a script classpath alone. A plugin marker has a single declaration and no competing
+   * requirement, so the interval is the version declared rather than a floor. It is also the only
+   * form a version-catalog plugin alias survives as, since Gradle flattens the alias to a bare
+   * required version on the marker; reading it is what lets both declaration forms answer alike,
+   * which they must, as the marker is identical either way. The version currently selected is
+   * always within bound, since a transitive requirement on a classpath can push the selection past
+   * the interval.
+   * https://github.com/ben-manes/gradle-versions-plugin/issues/755
    *
    * A module declared without a version is additionally bounded by the constraints the platforms
    * the consumer depends on set for it, and the version currently selected is always within
@@ -39,7 +52,7 @@ class ComponentSelectionWithCurrent internal constructor(
    */
   val satisfiesDeclaredBound: Boolean
     get() =
-      DeclaredBound.accepts(versionConstraint, candidate.version) &&
+      DeclaredBound.accepts(versionConstraint, candidate.version, currentVersion, onScriptClasspath) &&
         DeclaredBound.acceptsPlatformSupplied(platformVersionConstraints, currentVersion, candidate.version)
 
   override fun toString(): String {
@@ -73,6 +86,8 @@ private object DeclaredBound {
   fun accepts(
     constraint: VersionConstraint?,
     candidate: String,
+    currentVersion: String,
+    dynamicRequiredBounds: Boolean,
   ): Boolean {
     val parser = scheme
     if (parser == null || constraint == null) {
@@ -80,7 +95,16 @@ private object DeclaredBound {
     }
     return try {
       val strict = constraint.strictVersion
-      if (strict.isNotEmpty() && !parser.parseSelector(strict).accept(candidate)) {
+      val outOfBound =
+        if (strict.isNotEmpty()) {
+          !parser.parseSelector(strict).accept(candidate)
+        } else {
+          // The selected version is left in bound, since a transitive requirement can push the
+          // selection past an interval that is only a floor.
+          dynamicRequiredBounds && candidate != currentVersion &&
+            excludedByDynamicRequired(constraint.requiredVersion, candidate)
+        }
+      if (outOfBound) {
         false
       } else {
         constraint.rejectedVersions.none { parser.parseSelector(it).accept(candidate) }
@@ -90,14 +114,23 @@ private object DeclaredBound {
     }
   }
 
-  /** Whether the version parses as a range selector, the form a rich constraint flattens to. */
-  fun statesRange(version: String): Boolean {
+  /**
+   * Whether the required version is dynamic and excludes the candidate. A selector admitting every
+   * version, `latest.release` among them, therefore bounds nothing. The catch is a guard for a
+   * release that moves the parser or rejects a form Gradle itself accepted, which leaves the bound
+   * unknown rather than failing the whole report, as [accepts] does for a linkage failure.
+   */
+  private fun excludedByDynamicRequired(
+    version: String,
+    candidate: String,
+  ): Boolean {
     val parser = scheme
     if (parser == null || version.isEmpty()) {
       return false
     }
     return try {
-      parser.parseSelector(version) is VersionRangeSelector
+      val selector = parser.parseSelector(version)
+      selector.isDynamic && !selector.accept(candidate)
     } catch (e: Exception) {
       false
     }
@@ -133,6 +166,3 @@ private object DeclaredBound {
     }
   }
 }
-
-/** Whether the version parses as a range selector, the form a rich constraint flattens to. */
-internal fun statesVersionRange(version: String): Boolean = DeclaredBound.statesRange(version)
