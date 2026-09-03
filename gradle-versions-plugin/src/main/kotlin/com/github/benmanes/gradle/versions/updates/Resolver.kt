@@ -41,6 +41,7 @@ import org.gradle.maven.MavenModule
 import org.gradle.maven.MavenPomArtifact
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Resolves the configuration to determine the version status of its dependencies.
@@ -65,6 +66,8 @@ class Resolver(
   // depends on the resolving configuration's own attributes, constraints and resolution strategy,
   // while skipping one costs an attribution at most.
   private val failedPlatformScans = hashSetOf<Set<ModuleDependency>>()
+
+  private val warnedDeprecatedBound = AtomicBoolean()
 
   init {
     logRepositories()
@@ -400,13 +403,25 @@ class Resolver(
     }
   }
 
+  /** Warned once per project, since a rule is evaluated for every candidate of every configuration. */
+  private fun warnDeprecatedBound() {
+    if (warnedDeprecatedBound.compareAndSet(false, true)) {
+      project.logger.warn(
+        "satisfiesDeclaredBound is deprecated; drop it from rejectVersionIf, " +
+          "since rejectOutOfBoundVersions applies the declared bound instead.",
+      )
+    }
+  }
+
   /** Adds a custom resolution strategy only applicable for the dependency updates task.  */
   private fun addCustomResolutionStrategy(
     configuration: Configuration,
     currentCoordinates: Map<Coordinate.Key, Coordinate>,
   ) {
     configuration.resolutionStrategy { inner ->
-      resolutionStrategy?.execute(ResolutionStrategyWithCurrent(inner, currentCoordinates))
+      resolutionStrategy?.execute(
+        ResolutionStrategyWithCurrent(inner, currentCoordinates, ::warnDeprecatedBound),
+      )
     }
   }
 

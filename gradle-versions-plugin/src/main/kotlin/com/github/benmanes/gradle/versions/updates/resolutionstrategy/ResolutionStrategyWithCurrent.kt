@@ -7,10 +7,17 @@ import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.artifacts.DependencySubstitutions
 import org.gradle.api.artifacts.ResolutionStrategy
 
-class ResolutionStrategyWithCurrent(
+class ResolutionStrategyWithCurrent internal constructor(
   private val delegate: ResolutionStrategy,
   private val currentCoordinates: Map<Coordinate.Key, Coordinate>,
+  private val onDeprecatedBoundRead: () -> Unit,
 ) {
+  /** Retained so the arity released before the deprecation warning was added still links. */
+  constructor(
+    delegate: ResolutionStrategy,
+    currentCoordinates: Map<Coordinate.Key, Coordinate>,
+  ) : this(delegate, currentCoordinates, {})
+
   fun failOnVersionConflict(): ResolutionStrategyWithCurrent {
     delegate.failOnVersionConflict()
     return this
@@ -57,6 +64,7 @@ class ResolutionStrategyWithCurrent(
     return ComponentSelectionRulesWithCurrent(
       delegate.componentSelection,
       currentCoordinates,
+      onDeprecatedBoundRead,
     )
   }
 }

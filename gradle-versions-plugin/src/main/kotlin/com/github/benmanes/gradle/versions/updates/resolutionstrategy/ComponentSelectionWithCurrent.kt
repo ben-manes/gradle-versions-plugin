@@ -23,6 +23,8 @@ class ComponentSelectionWithCurrent internal constructor(
    * as a bound.
    */
   private val onScriptClasspath: Boolean = false,
+  /** Called when a rule reads [satisfiesDeclaredBound], so the deprecation can be warned once. */
+  private val onDeprecatedBoundRead: () -> Unit = {},
 ) : ComponentSelection by delegate {
   /** Retained so the arity released before the constraint was added still links. */
   constructor(
@@ -52,16 +54,29 @@ class ComponentSelectionWithCurrent internal constructor(
    * the consumer depends on set for it, and the version currently selected is always within
    * bound.
    */
-  val satisfiesDeclaredBound: Boolean
+  internal val withinDeclaredBound: Boolean
     get() =
       DeclaredBound.accepts(versionConstraint, candidate.version, currentVersion, onScriptClasspath) &&
         DeclaredBound.acceptsPlatformSupplied(platformVersionConstraints, currentVersion, candidate.version)
 
   /**
+   * Whether the candidate lies within the declared bound, as [withinDeclaredBound] reads it.
+   *
+   * Deprecated: the task's `rejectOutOfBoundVersions` property leaves a candidate outside the
+   * declared bound out of the report on its own, so nothing is left for a rule to reject.
+   */
+  @Deprecated("rejectOutOfBoundVersions applies the declared bound; drop the clause from rejectVersionIf.")
+  val satisfiesDeclaredBound: Boolean
+    get() {
+      onDeprecatedBoundRead()
+      return withinDeclaredBound
+    }
+
+  /**
    * Whether the candidate is an upgrade that lies outside the declared bound, which is what the
    * task's `rejectOutOfBoundVersions` property leaves out of the report.
    *
-   * The condition is narrower than [satisfiesDeclaredBound], which is evaluated for the candidate
+   * The condition is narrower than [withinDeclaredBound], which is evaluated for the candidate
    * alone. A candidate no newer than the version in use is not an upgrade at all, and rejecting it
    * would take the exceeded entry off the report without withholding anything. Where the version
    * in use already lies outside the bound, nothing is held to that bound, so an upgrade past it is
@@ -76,7 +91,7 @@ class ComponentSelectionWithCurrent internal constructor(
           currentVersion,
           onScriptClasspath,
         ) &&
-        !satisfiesDeclaredBound
+        !withinDeclaredBound
 
   override fun toString(): String {
     return """\

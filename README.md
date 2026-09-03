@@ -952,21 +952,16 @@ everything from 3.0 up. Only `strictly` and `reject` bound a candidate: a
 `prefer` version only breaks a tie, so a plain
 `implementation("group:name:1.2.3")` is not bounded.
 
-Less is left out than a hand-written rule leaves out, in two cases where a
-bound settles nothing. A candidate no newer than the version in use is not an
-upgrade, so it stays, and a module whose version already exceeds everything
-published is still listed on the exceeded row. Where the version in use already
-lies outside the bound, the bound is not applied at all, since a transitive
-requirement that pushed the version past a platform leaves that platform
-bounding nothing. A hand-written rule rejects both, so
-`rejectOutOfBoundVersions = false` beside a `rejectVersionIf {
-!satisfiesDeclaredBound }` reproduces the stricter behavior exactly.
+The bound is not applied in two cases where it settles nothing. A candidate no
+newer than the version in use is not an upgrade, so it stays, and a module
+whose version already exceeds everything published is still listed on the
+exceeded row. Where the version in use already lies outside the bound, the
+bound is not applied at all, since a transitive requirement that pushed the
+version past a platform leaves that platform bounding nothing.
 
-The same bound is readable from a rule. The
-constraint written on a declaration is available as `versionConstraint`,
-Gradle's own
-[`VersionConstraint`](https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/VersionConstraint.html),
-and the verdict behind the property is available as `satisfiesDeclaredBound`.
+The same bound is readable from a rule. The constraint written on a
+declaration is available as `versionConstraint`, Gradle's
+[`VersionConstraint`](https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/VersionConstraint.html).
 For a module declared without a version, the constraints fixed for that module
 by the consumed platforms are available as `platformVersionConstraints`. It
 is a list rather than a single value, because more than one consumed platform
@@ -974,7 +969,8 @@ can bound the same module. The query that finds candidates is deliberately
 unbounded, so a rule that respects a declared bound reads it from
 `versionConstraint` rather than restating it. It is null for a module no
 declaration was matched to, such as one a substitution rule resolved to, so
-guard for that.
+guard for that. `satisfiesDeclaredBound`, the verdict a rule applied before the
+property did, is deprecated and will be removed in a later release.
 
 The buildscript classpath is the exception. There a dynamic required version
 bounds the candidate, so a plugin declared as `version "[1.0, 2["` or
@@ -2254,9 +2250,11 @@ before:
 >   alone has to key them by the projects as well.
 
 > [!TIP]
-> - A build that wrote `rejectVersionIf { !satisfiesDeclaredBound }` can drop
->   the clause, which `rejectOutOfBoundVersions` now applies on its own.
->   Keeping it changes nothing.
+> - Drop `!satisfiesDeclaredBound` from a `rejectVersionIf` rule, since
+>   `rejectOutOfBoundVersions` now applies the bound on its own. The member is
+>   deprecated and will be removed in a later release; a warning is printed
+>   once per project when a rule reads it. A rule that keeps the clause still
+>   rejects under `--no-reject-out-of-bound-versions`.
 
 > [!NOTE]
 > - The presence of a version catalog no longer changes whether a plugin the

@@ -164,6 +164,51 @@ final class DeclaredVersionConstraintSpec extends Specification {
     report().outdated.dependencies[0].available.milestone == '3.0'
   }
 
+  def 'a rule reading satisfiesDeclaredBound is warned once per build that it is deprecated'() {
+    given: 'two modules, so the rule is evaluated for more than one candidate'
+    writeBuildFile(
+      """
+        api('com.google.inject:guice') {
+          version {
+            require '2.0'
+            reject '3.1'
+          }
+        }
+        api 'com.google.guava:guava:15.0'
+      """,
+      """
+        rejectVersionIf {
+          !satisfiesDeclaredBound
+        }
+      """)
+
+    when:
+    def result = run()
+
+    then: 'one warning, not one per candidate'
+    result.output.count('satisfiesDeclaredBound is deprecated') == 1
+  }
+
+  def 'the default bound filter reads no deprecated member, so nothing is warned'() {
+    given:
+    writeBuildFile(
+      """
+        api('com.google.inject:guice') {
+          version {
+            require '2.0'
+            reject '3.1'
+          }
+        }
+      """,
+      '')
+
+    when:
+    def result = run()
+
+    then:
+    !result.output.contains('is deprecated')
+  }
+
   def 'a constraint stating a range still bounds the report, though its version reads as a range'() {
     given: 'a constraint with no declaration beside it, so the row reports the range as its version'
     writeBuildFile(
