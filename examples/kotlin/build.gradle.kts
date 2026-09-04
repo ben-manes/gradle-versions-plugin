@@ -75,6 +75,9 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
   // optional parameters
   checkForGradleUpdate = true
   rejectOutOfBoundVersions = true
+  // On by default. Turned off here so that the rejectVersionIf examples above are the whole
+  // pre-release policy.
+  rejectPreReleaseVersions = false
   outputFormatter = "json"
   outputDir = "build/dependencyUpdates"
   reportfileName = "report"

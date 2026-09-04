@@ -85,7 +85,7 @@ final class IsolatedProjectsAggregationSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
-    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     !result.output.contains('The dependency updates report is missing')
   }
 
@@ -106,7 +106,7 @@ final class IsolatedProjectsAggregationSpec extends Specification {
     !new File(testProjectDir.root, 'app/build/dependencyUpdates/partial.json').exists()
     !new File(testProjectDir.root, 'lib/build/dependencyUpdates/partial.json').exists()
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
-    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1040')
@@ -227,7 +227,7 @@ final class IsolatedProjectsAggregationSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('Isolated Projects is an incubating feature.')
     // Only the project whose strategy throws loses its dependencies, so the other is still reported.
-    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     !result.output.contains('com.google.inject:guice [')
 
     // Each project resolves in isolation and the aggregate takes its name from the partial result

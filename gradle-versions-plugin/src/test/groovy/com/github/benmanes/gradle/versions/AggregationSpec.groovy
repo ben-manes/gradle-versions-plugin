@@ -66,7 +66,7 @@ final class AggregationSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
-    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     !result.output.contains('The dependency updates report is missing')
   }
 
@@ -93,7 +93,7 @@ final class AggregationSpec extends Specification {
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
     // Every project is aggregated automatically, so declaring one is redundant rather than
     // narrowing, and the redundant declaration must not report it twice.
-    result.output.count('com.google.guava:guava [15.0 -> 16.0-rc1]') == 1
+    result.output.count('com.google.guava:guava [15.0 -> 16.0]') == 1
   }
 
   def 'Aggregates in parallel with the configuration cache'() {
@@ -106,7 +106,7 @@ final class AggregationSpec extends Specification {
     second.task(':dependencyUpdates').outcome == SUCCESS
     second.output.contains('Reusing configuration cache')
     second.output.contains('com.google.inject:guice [2.0 -> 3.1]')
-    second.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    second.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     // The expected paths are task state, so a cache hit must not degrade to a false warning.
     !second.output.contains('The dependency updates report is missing')
   }
@@ -126,7 +126,7 @@ final class AggregationSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
-    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
 
     where:
     gradleVersion << ['9.0.0', GradleVersions.CURRENT]
@@ -152,7 +152,7 @@ final class AggregationSpec extends Specification {
           dependencies {
             components {
               all { details ->
-                if (details.id.version.contains('-rc')) {
+                if (details.id.version.startsWith('16.')) {
                   details.status = 'milestone'
                 }
               }
@@ -168,10 +168,10 @@ final class AggregationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    // The release candidate is a milestone, so the release revision holds guava at 15.0. A producer
-    // that resolved at the default revision instead would offer 16.0-rc1 as the later version.
+    // Guava's whole 16.0 line is a milestone here, so under the release revision guava stays at 15.0.
+    // A producer that resolved at the default revision instead would report 16.0 as the later version.
     report.contains('"guava"')
-    !report.contains('16.0-rc1')
+    !report.contains('16.0')
   }
 
   def 'Aggregates sibling projects that share a group and name'() {
@@ -219,7 +219,7 @@ final class AggregationSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
-    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     // Task-output wiring bypasses module conflict resolution, so no partial is evicted.
     !result.output.contains('The dependency updates report is missing')
   }
@@ -246,7 +246,7 @@ final class AggregationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     result.output.contains('com.google.inject:guice [2.2 -> 3.1]')
   }
 

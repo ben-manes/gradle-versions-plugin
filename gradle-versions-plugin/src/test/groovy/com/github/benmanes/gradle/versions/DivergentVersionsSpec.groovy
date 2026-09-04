@@ -71,7 +71,7 @@ final class DivergentVersionsSpec extends Specification {
     testProjectDir.newFile('app/build.gradle') <<
       """
         dependencies {
-          implementation 'com.google.guava:guava:16.0-rc1'
+          implementation 'com.google.guava:guava:16.0'
         }
       """.stripIndent()
     testProjectDir.newFolder('lib')
@@ -88,9 +88,9 @@ final class DivergentVersionsSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains(" - com.google.guava:guava:16.0-rc1${nl}     declared in :app")
+    result.output.contains(" - com.google.guava:guava:16.0${nl}     declared in :app")
     result.output.contains(
-      " - com.google.guava:guava [15.0 -> 16.0-rc1]${nl}     declared in root project")
+      " - com.google.guava:guava [15.0 -> 16.0]${nl}     declared in root project")
     result.output.count('declared in') == 2
   }
 
@@ -204,7 +204,7 @@ final class DivergentVersionsSpec extends Specification {
     ------------------------------------------------------------
 
     The following dependencies have later milestone versions:
-     - com.google.guava:guava [15.0 -> 16.0-rc1]
+     - com.google.guava:guava [15.0 -> 16.0]
       """.stripIndent().replace('\r', '').replace('\n', System.lineSeparator())
 
     then:
@@ -248,7 +248,7 @@ final class DivergentVersionsSpec extends Specification {
     testProjectDir.newFile('app/build.gradle') <<
       """
         dependencies {
-          implementation 'com.google.guava:guava:16.0-rc1'
+          implementation 'com.google.guava:guava:16.0'
         }
       """.stripIndent()
     testProjectDir.newFolder('lib')

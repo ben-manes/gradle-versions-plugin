@@ -71,6 +71,9 @@ internal fun <T : Any> settingOf(
 /** The revision level resolved against when neither the build nor an override states one. */
 internal const val DEFAULT_REVISION = "milestone"
 
+/** The revision that selects the newest version whatever its qualifier, snapshots included. */
+internal const val INTEGRATION_REVISION = "integration"
+
 /** The task settings that a project's producer reads while its input is realized; null is unset. */
 internal class DependencyUpdatesParameters {
   var revision: String? = null
@@ -92,6 +95,7 @@ internal class DependencyUpdatesParameters {
   var checkConstraints: Boolean? = null
   var checkBuildEnvironmentConstraints: Boolean? = null
   var rejectOutOfBoundVersions: Boolean? = null
+  var rejectPreReleaseVersions: Boolean? = null
 
   /**
    * Set by the task's command line options. Read ahead of every configured value in the chain, so
@@ -100,6 +104,7 @@ internal class DependencyUpdatesParameters {
   var checkConstraintsFromCommandLine: Boolean? = null
   var checkBuildEnvironmentConstraintsFromCommandLine: Boolean? = null
   var rejectOutOfBoundVersionsFromCommandLine: Boolean? = null
+  var rejectPreReleaseVersionsFromCommandLine: Boolean? = null
 }
 
 /**
@@ -154,13 +159,14 @@ internal abstract class DependencyUpdatesParametersService :
       generateSequence(path) { if (it == ":") null else it.substringBeforeLast(':').ifEmpty { ":" } }
         .mapNotNull { byPath[it] }
         .toList()
+    val revision =
+      settingOf(
+        fromCommandLine = chain.firstNotNullOfOrNull { it.revisionFromCommandLine },
+        systemPropertyName = "revision",
+        configured = chain.firstNotNullOfOrNull { it.revision } ?: DEFAULT_REVISION,
+      )
     return ResolvedParameters(
-      revision =
-        settingOf(
-          fromCommandLine = chain.firstNotNullOfOrNull { it.revisionFromCommandLine },
-          systemPropertyName = "revision",
-          configured = chain.firstNotNullOfOrNull { it.revision } ?: DEFAULT_REVISION,
-        ),
+      revision = revision,
       filterConfigurations =
         chain.firstNotNullOfOrNull { it.filterConfigurations } ?: ALL_CONFIGURATIONS,
       filterDeclaredConfigurations =
@@ -182,6 +188,15 @@ internal abstract class DependencyUpdatesParametersService :
           fromCommandLine = chain.firstNotNullOfOrNull { it.rejectOutOfBoundVersionsFromCommandLine },
           configured = chain.firstNotNullOfOrNull { it.rejectOutOfBoundVersions } ?: true,
         ),
+      // Off by default under the integration revision, which selects the newest version whatever
+      // its qualifier, snapshots included. An explicit setting still applies there.
+      rejectPreReleaseVersions =
+        settingOf(
+          fromCommandLine = chain.firstNotNullOfOrNull { it.rejectPreReleaseVersionsFromCommandLine },
+          configured =
+            chain.firstNotNullOfOrNull { it.rejectPreReleaseVersions }
+              ?: (revision != INTEGRATION_REVISION),
+        ),
     )
   }
 }
@@ -195,6 +210,7 @@ internal class InheritedSettings(
   val checkConstraints: Boolean,
   val checkBuildEnvironmentConstraints: Boolean,
   val rejectOutOfBoundVersions: Boolean,
+  val rejectPreReleaseVersions: Boolean,
 )
 
 /** The settings that apply to a single project's producer. */
@@ -206,6 +222,7 @@ internal class ResolvedParameters(
   val checkConstraints: Boolean,
   val checkBuildEnvironmentConstraints: Boolean,
   val rejectOutOfBoundVersions: Boolean,
+  val rejectPreReleaseVersions: Boolean,
 )
 
 /** Registers the per-project producers and wires their results into the accumulator task. */
@@ -219,7 +236,7 @@ internal fun registerAggregation(
   val path = project.path
   // Realized after every project is configured, as the producers' inputs are, so that the values
   // read back from the task are the ones the producers resolved with rather than only what is
-  // configured on this project. All four are taken from one resolution, so a read cannot mix a
+  // configured on this project. All five are taken from one resolution, so a read cannot mix a
   // stale value with a fresh one.
   val inherited =
     project.provider {
@@ -229,6 +246,7 @@ internal fun registerAggregation(
         checkConstraints = resolved.checkConstraints,
         checkBuildEnvironmentConstraints = resolved.checkBuildEnvironmentConstraints,
         rejectOutOfBoundVersions = resolved.rejectOutOfBoundVersions,
+        rejectPreReleaseVersions = resolved.rejectPreReleaseVersions,
       )
     }
   accumulator.configure { task ->
@@ -608,9 +626,10 @@ private fun statusesOf(
     Resolver(
       project,
       parameters.resolutionStrategy,
-      checkConstraints,
-      parameters.rejectOutOfBoundVersions,
-      onDeprecatedBoundRead,
+      checkConstraints = checkConstraints,
+      rejectOutOfBoundVersions = parameters.rejectOutOfBoundVersions,
+      rejectPreReleaseVersions = parameters.rejectPreReleaseVersions,
+      onDeprecatedBoundRead = onDeprecatedBoundRead,
     )
   // Snapshotted for every configuration before the first resolution, as resolving one
   // configuration runs the lazy actions of the configurations it extends. A build that read the

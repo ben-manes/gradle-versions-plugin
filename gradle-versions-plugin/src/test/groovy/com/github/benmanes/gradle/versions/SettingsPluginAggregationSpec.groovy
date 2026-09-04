@@ -93,7 +93,7 @@ final class SettingsPluginAggregationSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
-    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     // The project plugin cannot register a producer in a project that does not apply it, so a
     // root-only project application omits the subprojects and warns. Applying from the settings
     // reaches every project, so the report is complete without asking the user to.
@@ -119,7 +119,7 @@ final class SettingsPluginAggregationSpec extends Specification {
     hit.task(':dependencyUpdates').outcome == SUCCESS
     hit.output.contains('Configuration cache entry reused')
     hit.output.contains('com.google.inject:guice [2.0 -> 3.1]')
-    hit.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    hit.output.contains('com.google.guava:guava [15.0 -> 16.0]')
   }
 
   def 'Reports the same as applying the plugin to each project'() {
@@ -182,7 +182,7 @@ final class SettingsPluginAggregationSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
-    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     !result.output.contains('The dependency updates report is missing')
 
     where:
@@ -475,7 +475,7 @@ final class SettingsPluginAggregationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     !result.output.contains('The dependency updates report is missing')
     // A second producer for the project would report its modules twice.
     result.output.count('com.google.inject:guice [2.0 -> 3.1]') == 1

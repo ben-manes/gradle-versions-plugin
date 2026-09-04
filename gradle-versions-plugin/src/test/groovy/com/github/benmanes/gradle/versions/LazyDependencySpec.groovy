@@ -64,17 +64,11 @@ final class LazyDependencySpec extends Specification {
           deps.add(project.dependencies.create('com.google.guava:guava:15.0'))
         }
 
-        def isNonStable = { String version ->
-          def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { it -> version.toUpperCase().contains(it) }
-          def regex = /^[0-9,.v-]+(-r|-jre|-android)?\$/
-          return !stableKeyword && !(version ==~ regex)
-        }
-
         tasks.named('dependencyUpdates').configure {
           outputFormatter = 'json'
           checkForGradleUpdate = false
           rejectVersionIf {
-            isNonStable(it.candidate.version) && !isNonStable(it.currentVersion)
+            it.candidate.version.startsWith('16.')
           }
         }
         """.stripIndent()
@@ -143,7 +137,7 @@ final class LazyDependencySpec extends Specification {
     report.count == 1
     report.outdated.dependencies*.name == ['guava']
     report.outdated.dependencies[0].version == '15.0'
-    report.outdated.dependencies[0].available.milestone == '16.0-rc1'
+    report.outdated.dependencies[0].available.milestone == '16.0'
     report.current.dependencies.isEmpty()
     report.undeclared.dependencies.isEmpty()
   }

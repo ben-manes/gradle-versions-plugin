@@ -29,7 +29,7 @@ final class DependencySubstitutionSpec extends Specification {
     with(result.outdated.dependencies.toList()) {
       it*.name == ['guava']
       it*.version == ['15.0']
-      it*.available*.milestone == ['16.0-rc1']
+      it*.available*.milestone == ['16.0']
     }
   }
 
@@ -45,7 +45,7 @@ final class DependencySubstitutionSpec extends Specification {
     })
 
     then:
-    seen == ['guava:15.0 -> 16.0-rc1']
+    seen == ['guava:15.0 -> 16.0']
   }
 
   /** A project declaring a module that a substitution rule replaces with {@code replacement}. */

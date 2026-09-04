@@ -52,6 +52,7 @@ Plugin](https://www.mojohaus.org/versions-maven-plugin).
 - [Samples](#samples)
 - [Compatibility](#compatibility)
 - [Migrating from prior versions](#migrating-from-prior-versions)
+  - [v0.61.0](#v0610)
   - [v0.60.0](#v0600)
   - [v0.59.0](#v0590)
   - [v0.58.0](#v0580)
@@ -278,9 +279,7 @@ the cache and query the repositories again:
 
 #### A recommended configuration
 
-The properties below each solve a different problem, and most builds end up
-wanting the same few. This is a complete starting point, assembled from the
-sections that follow:
+Most builds start from the same configuration, and it is now one line:
 
 <details open>
 <summary>Kotlin</summary>
@@ -288,18 +287,8 @@ sections that follow:
 ```kotlin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
-fun String.isNonStable(): Boolean {
-  val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { uppercase().contains(it) }
-  val regex = "^[0-9,.v-]+(-r|-jre|-android)?$".toRegex()
-  val isStable = stableKeyword || regex.matches(this)
-  return isStable.not()
-}
-
 tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
   checkConstraints = true
-  rejectVersionIf {
-    candidate.version.isNonStable() && !currentVersion.isNonStable()
-  }
 }
 ```
 
@@ -309,17 +298,8 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
 <summary>Groovy</summary>
 
 ```groovy
-def isNonStable = { String version ->
-  def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { it -> version.toUpperCase().contains(it) }
-  def regex = /^[0-9,.v-]+(-r|-jre|-android)?$/
-  return !stableKeyword && !(version ==~ regex)
-}
-
 tasks.named("dependencyUpdates").configure {
   checkConstraints = true
-  rejectVersionIf {
-    isNonStable(candidate.version) && !isNonStable(currentVersion)
-  }
 }
 ```
 
@@ -327,26 +307,19 @@ tasks.named("dependencyUpdates").configure {
 
 - `checkConstraints` adds the versions a `constraints` block manages to the
   report (see [Constraints](#constraints)).
-- The stability clause rejects a pre-release candidate unless the current
-  version is itself a pre-release (see [Filtering unstable
-  versions](#filtering-unstable-versions)).
-- A candidate outside a `strictly` or `reject` bound written in the build,
-  outside a dynamic version declared on the buildscript classpath, or outside
-  the version fixed by a consumed platform, is already left out by
-  `rejectOutOfBoundVersions`, which is on by default (see [Respecting declared
-  bounds](#respecting-declared-bounds)).
 
-Each piece stands alone: drop any line whose behavior you do not want, and the
-rest keep working.
+Nothing else is needed. A pre-release candidate is left out by
+`rejectPreReleaseVersions`, and a candidate outside a `strictly` or `reject`
+bound written in the build, outside a dynamic version declared on the
+buildscript classpath, or outside the version fixed by a consumed platform is
+left out by `rejectOutOfBoundVersions`. Both are on by default (see [Filtering
+unstable versions](#filtering-unstable-versions) and [Respecting declared
+bounds](#respecting-declared-bounds)); set either to `false` to see what it
+leaves out.
 
 The [configuration filters](#configuration-filter) are absent only because
 their arguments are build-specific: the names to reject come from your own
 report.
-
-In Kotlin the `isNonStable` extension replaces a helper of that name already in
-the build. A top-level `fun isNonStable(version: String)` compiles to the same
-JVM signature, so keeping both fails the build with a platform declaration
-clash.
 
 #### Every property
 
@@ -364,6 +337,7 @@ command line option, since no command line can express the logic.
 | [`filterConfigurations`](#filterconfigurations) | a `Spec<Configuration>` | every configuration | |
 | [`filterDeclaredConfigurations`](#filterdeclaredconfigurations) | a `Spec<String>` | every name | |
 | [`rejectOutOfBoundVersions`](#respecting-declared-bounds) | `true`, `false` | `true` | `--[no-]reject-out-of-bound-versions` |
+| [`rejectPreReleaseVersions`](#filtering-unstable-versions) | `true`, `false` | `true` | `--[no-]reject-pre-release-versions` |
 | [`rejectVersionIf`](#filtering-unstable-versions) | a predicate over the candidate | nothing rejected | |
 | [`outputFormatter`](#report-format) | `text`, `json`, `xml`, `html`, a comma separated list of those, or a `Reporter` | `text` | `--output-formatter` |
 | [`outputDir`](#outputdir) | a directory path | `<buildDirectory>/dependencyUpdates` | `--output-dir` |
@@ -730,15 +704,88 @@ hoc usage:
 ```
 
 Because Maven repositories do not mark pre-release versions, an alpha or release
-candidate can still appear as the latest version under any revision. To only be
-offered stable updates, reject pre-release candidates (see [Filtering unstable
+candidate reaches the query as the latest version under any revision. What keeps
+it out of the report under `release` and `milestone` is the version string
+rather than the revision (see [Filtering unstable
 versions](#filtering-unstable-versions)).
 
 ##### Filtering unstable versions
 
-To further control which versions are accepted, define what counts as an
-unstable version. There is no agreed standard, but this is a good starting
-point:
+A pre-release candidate is left out of the report unless the current version
+is itself a pre-release, in which case newer pre-releases are still reported.
+The markers are `alpha`, `beta`, `canary`, `candidate`, `cr`, `dev`,
+`draft`, `ea`, `eap`, `experimental`, `m`, `milestone`, `nightly`, `pr`, `pre`,
+`preview`, `rc`, `snap`, `snapshot` and `unstable`, each matched
+case-insensitively and only where it stands on its own, along with Maven's
+timestamped snapshot form. A marker may also follow a digit directly, as in
+`3.2.0rc2`, except `m`, which after a digit is a letter suffix such as
+`1.1.1m` rather than a milestone.
+
+`incubating` is not a marker. The Apache Incubator requires it in the version
+of a podling's releases, so matching it would leave a release out.
+
+A version ending in a commit hash counts too, since a CI job that publishes on
+every commit puts the hash in the version. The hash has to be seven or more hex
+characters with at least one `a-f`, so a trailing run of digits stays a build
+number. Anything after a `+` is semantic versioning's build metadata and is not
+checked.
+
+The check is for a pre-release marker rather than for a stable pattern, so a
+version with a qualifier not in the list, such as `10.2.0.jre11`, `1.1.17.SP2`
+or `0.4-groovy-1.6`, is passed through rather than hidden.
+
+Under the `integration` revision the filter is off by default, and
+`rejectPreReleaseVersions` reads `false`: that revision selects the newest
+version whatever its qualifier, snapshots included. Setting the property, or
+passing the option, turns it on there too.
+
+A candidate is left out by being rejected, so for a module with only
+pre-releases published, and the declared version no longer among them, no
+candidate is left to resolve. That entry is reported as unresolved, with the
+rejected versions listed, rather than as up to date. A `rejectVersionIf` filter
+that rejects everything has the same effect.
+
+A convention the markers above do not cover goes in a `rejectVersionIf`
+filter, which is applied in addition to the built-in check rather than in place
+of it. A candidate is left out if either rejects it, so the filter only has to
+cover the conventions that are not in the marker list, such as graphql-java's
+`-nf-` builds:
+
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  rejectVersionIf {
+    candidate.version.contains("-nf-") && !currentVersion.contains("-nf-")
+  }
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
+tasks.named("dependencyUpdates").configure {
+  rejectVersionIf {
+    candidate.version.contains('-nf-') && !currentVersion.contains('-nf-')
+  }
+}
+```
+
+</details>
+
+Neither check can restore what the other rejected. To see every published
+candidate, including the pre-releases, turn the built-in filter off with
+`rejectPreReleaseVersions = false`, or with `--no-reject-pre-release-versions`
+for a single run (see [Command line options](#command-line-options)). Turn it
+off too for a policy of your own, written as a whole in a component selection
+rule. There is no agreed standard for what counts as unstable, but this is a
+common starting point:
 
 <details open>
 <summary>Kotlin</summary>
@@ -768,9 +815,17 @@ def isNonStable = { String version ->
 </details>
 
 The trailing `-jre` and `-android` keep Guava's ordinary releases out of the
-unstable set. A version that spells its qualifier some other way, such as
-`13.4.0.jre11`, still matches as unstable and needs the pattern extended, so
-check this against the versions in your own build before relying on it.
+unstable set. Note the direction this runs in: it matches the forms a release
+may take and hides everything else, so a release with a qualifier the pattern
+does not match is left out of the report rather than passed through. Spring's
+`.SECnn` security releases go that way, and so do `13.4.0.jre11`, `1.1.31.sec01`
+and `9.2-1002-jdbc4`. Check the pattern against the versions in your own build
+before relying on it.
+
+In Kotlin the `isNonStable` extension replaces a helper of that name already in
+the build. A top-level `fun isNonStable(version: String)` compiles to the same
+JVM signature, so keeping both fails the build with a platform declaration
+clash.
 
 You can then configure [Component Selection
 Rules](https://docs.gradle.org/current/userguide/dynamic_versions.html#sec:component_selection_rules).
@@ -1870,8 +1925,8 @@ task by that name now fails with a duplicate-task error—rename yours.
 
 The settings that control resolution (`revision`, `rejectVersionIf` or a full
 `resolutionStrategy`, `filterConfigurations`, `filterDeclaredConfigurations`,
-`checkConstraints`, `checkBuildEnvironmentConstraints`, and
-`rejectOutOfBoundVersions`) are inherited from
+`checkConstraints`, `checkBuildEnvironmentConstraints`,
+`rejectOutOfBoundVersions`, and `rejectPreReleaseVersions`) are inherited from
 the nearest project up the hierarchy whose task set them. Configuring the root
 project's task therefore covers every project, unless a subproject configures
 its own (see [Task properties](#task-properties)).
@@ -2233,13 +2288,19 @@ and *Note*s are things worth knowing that need no action.
 
 ### v0.61.0
 
-In the next release, the report is held to the bounds written in the build
-without a rule written for it, and a coordinate with one declared version and
-different latest versions across the aggregated projects is shown on one entry
-per latest version, where the entries were merged into the newest of them
-before:
+In the next release, a pre-release candidate is left out of the report unless
+the current version is itself a pre-release, the report is held to the bounds
+written in the build without a rule written for it, and a coordinate with one
+declared version and different latest versions across the aggregated projects
+is shown on one entry per latest version, where the entries were merged into
+the newest of them before:
 
 > [!IMPORTANT]
+> - A dependency with no newer release, only a newer pre-release, is now
+>   reported as up to date, where that pre-release was reported before. Set
+>   `rejectPreReleaseVersions = false` to include pre-releases again, or pass
+>   `--no-reject-pre-release-versions` for a single run (see [Filtering unstable
+>   versions](#filtering-unstable-versions)).
 > - A candidate outside a `strictly` or `reject` bound written in the build,
 >   outside a dynamic version declared on the buildscript classpath, or outside
 >   the version fixed by a consumed platform, is left out of the report, where
@@ -2253,6 +2314,13 @@ before:
 >   alone has to key them by the projects as well.
 
 > [!TIP]
+> - The `isNonStable` recipe formerly recommended here can be dropped, along with
+>   the `rejectVersionIf` clause that called it. The built-in check matches
+>   pre-release markers rather than a stable pattern, so a qualifier not in its
+>   list, such as `13.4.0.jre11`, stays in the report. A convention not in the
+>   marker list, such as graphql-java's `-nf-` builds, still goes in a
+>   `rejectVersionIf` filter, which is applied in addition to the built-in
+>   check.
 > - Drop `!satisfiesDeclaredBound` from a `rejectVersionIf` rule, since the
 >   bound is now applied by `rejectOutOfBoundVersions`. The member is
 >   deprecated and will be removed in a later release; a warning is printed
@@ -2262,6 +2330,11 @@ before:
 >   `--no-reject-out-of-bound-versions` as without it.
 
 > [!NOTE]
+> - Newer pre-releases are still reported when the current version is itself a
+>   pre-release.
+> - A module with only pre-releases published, and the declared version no
+>   longer among them, is reported as unresolved rather than as up to date,
+>   since every candidate is rejected.
 > - The presence of a version catalog no longer changes whether a plugin
 >   versioned inline as a range in the `plugins` block is offered an upgrade
 >   past that range. The upgrade was withheld when an unused alias for the same plugin was

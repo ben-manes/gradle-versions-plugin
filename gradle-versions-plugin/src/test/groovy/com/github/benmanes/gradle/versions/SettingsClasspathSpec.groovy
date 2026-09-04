@@ -178,7 +178,7 @@ final class SettingsClasspathSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     // Declared in the settings, not in any project, so the accumulator reports it exactly once.
     result.output.count(
       'com.example.settings-demo:com.example.settings-demo.gradle.plugin [1.0 -> 2.0]') == 1
@@ -228,7 +228,7 @@ final class SettingsClasspathSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.guava:guava [15.0 -> 16.0-rc1]')
+    result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     result.output.contains(
       'com.example.settings-demo:com.example.settings-demo.gradle.plugin [1.0 -> 2.0]')
   }
