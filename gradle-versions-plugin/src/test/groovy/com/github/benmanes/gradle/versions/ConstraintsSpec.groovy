@@ -1252,10 +1252,13 @@ final class ConstraintsSpec extends Specification {
       .withPluginClasspath()
       .build()
 
-    then: 'the platform whose bound lost is not named'
-    result.output.contains('com.google.inject:guice [3.0 -> 3.1]')
-    result.output.contains('constrained by the platform :platform-high')
+    then: 'the platform whose bound won still bounds the module, and is the only one named'
+    result.output.contains(
+      ' - com.google.inject:guice:3.0\n     constrained by the platform :platform-high in root project')
     !result.output.contains('constrained by the platforms')
+
+    and: 'the upgrade past that bound is listed on the platform declaring it'
+    result.output.contains('com.google.inject:guice [3.0 -> 3.1]')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 

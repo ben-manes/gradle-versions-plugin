@@ -77,20 +77,19 @@ class ComponentSelectionWithCurrent internal constructor(
    *
    * The condition is narrower than [withinDeclaredBound], which is evaluated for the candidate
    * alone. A candidate no newer than the version in use is not an upgrade at all, and rejecting it
-   * would take the exceeded entry off the report without withholding anything. Where the version
-   * in use already lies outside the bound, nothing is held to that bound, so an upgrade past it is
-   * still available.
+   * would take the exceeded entry off the report while leaving nothing out. Each bound is applied
+   * only where the version in use lies within it: a platform that a transitive requirement pushed
+   * the version past bounds nothing, while a second platform pinning the version in use still does.
    */
   internal val isUpgradeOutOfDeclaredBound: Boolean
     get() =
-      DeclaredBound.isNewer(currentVersion, candidate.version) &&
-        DeclaredBound.holds(
-          versionConstraint,
-          platformVersionConstraints,
-          currentVersion,
-          onScriptClasspath,
-        ) &&
-        !withinDeclaredBound
+      DeclaredBound.isUpgradeOutOfBound(
+        versionConstraint,
+        platformVersionConstraints,
+        currentVersion,
+        candidate.version,
+        onScriptClasspath,
+      )
 
   override fun toString(): String {
     return """\
@@ -148,8 +147,8 @@ private object DeclaredBound {
 
   /**
    * Whether the constraint the build declared admits the version. Split out of [accepts] so that
-   * [holds] can ask it of the resolved version itself, which [accepts] leaves in bound rather than
-   * testing against a dynamic required bound.
+   * [isUpgradeOutOfBound] can ask it of the resolved version itself, which [accepts] leaves in bound
+   * rather than testing against a dynamic required bound.
    */
   private fun admitsDeclared(
     constraint: VersionConstraint?,
@@ -257,26 +256,30 @@ private object DeclaredBound {
   }
 
   /**
-   * Whether the version resolved for the module lies within the bound written for it. Where the
-   * resolved version already lies outside that bound, nothing is held to it, which is reached most
-   * often by a transitive requirement pushing the selection past a platform.
+   * Whether the candidate is an upgrade outside a bound the resolved version lies within. A bound
+   * the resolved version already lies outside is not applied, which is reached most often by a
+   * transitive requirement pushing the selection past a platform; the other bounds on the module
+   * still are. A constraint reported with no declaration beside it carries its selector where a
+   * resolved version would sit, so the declared bound applies to every candidate there.
    */
-  fun holds(
+  fun isUpgradeOutOfBound(
     constraint: VersionConstraint?,
     platformConstraints: List<VersionConstraint>,
     currentVersion: String,
+    candidate: String,
     dynamicRequiredBounds: Boolean,
   ): Boolean =
     try {
-      // Where a constraint is reported with no declaration beside it, its selector sits where a
-      // resolved version would, and a selector cannot be compared against the bound it duplicates.
-      isSelectorText(currentVersion) ||
+      isNewer(currentVersion, candidate) &&
         (
-          admitsDeclared(constraint, currentVersion, dynamicRequiredBounds) &&
-            platformConstraints.all { admits(it, currentVersion) }
+          (
+            (isSelectorText(currentVersion) || admitsDeclared(constraint, currentVersion, dynamicRequiredBounds)) &&
+              !admitsDeclared(constraint, candidate, dynamicRequiredBounds)
+          ) ||
+            platformConstraints.any { admits(it, currentVersion) && !admits(it, candidate) }
         )
     } catch (e: LinkageError) {
-      true
+      false
     }
 
   /**
