@@ -1,11 +1,13 @@
 package com.github.benmanes.gradle.versions.updates.resolutionstrategy
 
-import org.gradle.api.artifacts.ComponentSelection
 import com.github.benmanes.gradle.versions.updates.VersionMapping
+import org.gradle.api.artifacts.ComponentSelection
 import org.gradle.api.artifacts.VersionConstraint
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionComparator
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionSelectorScheme
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector
+import java.util.concurrent.ConcurrentHashMap
 
 class ComponentSelectionWithCurrent internal constructor(
   private val delegate: ComponentSelection,
@@ -137,6 +139,15 @@ private object DeclaredBound {
     }
   }
 
+  // A declared selector is parsed once, since the filter is evaluated for every candidate of a
+  // module and Gradle's parser caches no selector. The strings are the few a build declares.
+  private val selectors = ConcurrentHashMap<String, VersionSelector>()
+
+  private fun selector(
+    scheme: DefaultVersionSelectorScheme,
+    text: String,
+  ): VersionSelector = selectors.computeIfAbsent(text) { scheme.parseSelector(it) }
+
   fun accepts(
     constraint: VersionConstraint?,
     candidate: String,
@@ -165,14 +176,14 @@ private object DeclaredBound {
       val strict = constraint.strictVersion
       val outOfBound =
         if (strict.isNotEmpty()) {
-          !parser.parseSelector(strict).accept(version)
+          !selector(parser, strict).accept(version)
         } else {
           dynamicRequiredBounds && excludedByDynamicRequired(constraint.requiredVersion, version)
         }
       if (outOfBound) {
         false
       } else {
-        constraint.rejectedVersions.none { parser.parseSelector(it).accept(version) }
+        constraint.rejectedVersions.none { selector(parser, it).accept(version) }
       }
     } catch (e: LinkageError) {
       true
@@ -191,7 +202,7 @@ private object DeclaredBound {
       return false
     }
     return try {
-      val selector = parser.parseSelector(version)
+      val selector = selector(parser, version)
       selector.isDynamic || selector.selector != version
     } catch (e: Exception) {
       false
@@ -213,7 +224,7 @@ private object DeclaredBound {
       return false
     }
     return try {
-      val selector = parser.parseSelector(version)
+      val selector = selector(parser, version)
       selector.isDynamic && !selector.accept(candidate)
     } catch (e: Exception) {
       false
@@ -252,9 +263,9 @@ private object DeclaredBound {
     val parser = scheme ?: return true
     val strict = constraint.strictVersion
     val required = constraint.requiredVersion
-    return (strict.isEmpty() || parser.parseSelector(strict).accept(version)) &&
-      (required.isEmpty() || parser.parseSelector(required).accept(version)) &&
-      constraint.rejectedVersions.none { parser.parseSelector(it).accept(version) }
+    return (strict.isEmpty() || selector(parser, strict).accept(version)) &&
+      (required.isEmpty() || selector(parser, required).accept(version)) &&
+      constraint.rejectedVersions.none { selector(parser, it).accept(version) }
   }
 
   /**
