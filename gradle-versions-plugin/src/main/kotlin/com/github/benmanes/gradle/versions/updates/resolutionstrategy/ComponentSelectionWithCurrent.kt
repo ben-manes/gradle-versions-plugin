@@ -1,10 +1,10 @@
 package com.github.benmanes.gradle.versions.updates.resolutionstrategy
 
 import org.gradle.api.artifacts.ComponentSelection
+import com.github.benmanes.gradle.versions.updates.VersionMapping
 import org.gradle.api.artifacts.VersionConstraint
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionComparator
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionSelectorScheme
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.Version
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
 
 class ComponentSelectionWithCurrent internal constructor(
@@ -111,25 +111,27 @@ ComponentSelectionWithCurrent{
  * than failing the report, which is why the linkage failure is caught instead of thrown.
  */
 private object DeclaredBound {
-  private val scheme: DefaultVersionSelectorScheme? by lazy {
-    try {
-      DefaultVersionSelectorScheme(DefaultVersionComparator(), VersionParser())
-    } catch (e: LinkageError) {
-      null
-    }
-  }
-
-  private val comparator: Comparator<Version>? by lazy {
-    try {
-      DefaultVersionComparator().asVersionComparator()
-    } catch (e: LinkageError) {
-      null
-    }
-  }
-
+  // One parser for the scheme and the comparator, since each keeps a cache of every version
+  // string it reads for the classloader's life.
   private val parser: VersionParser? by lazy {
     try {
       VersionParser()
+    } catch (e: LinkageError) {
+      null
+    }
+  }
+
+  private val scheme: DefaultVersionSelectorScheme? by lazy {
+    try {
+      parser?.let { DefaultVersionSelectorScheme(DefaultVersionComparator(), it) }
+    } catch (e: LinkageError) {
+      null
+    }
+  }
+
+  private val comparator: Comparator<String>? by lazy {
+    try {
+      parser?.let { VersionMapping.versionComparator(it) }
     } catch (e: LinkageError) {
       null
     }
@@ -296,13 +298,11 @@ private object DeclaredBound {
     candidate: String,
   ): Boolean {
     val order = comparator
-    val versions = parser
-    if (order == null || versions == null || currentVersion.isEmpty()) {
+    if (order == null || currentVersion.isEmpty()) {
       return true
     }
     return try {
-      isSelectorText(currentVersion) ||
-        order.compare(versions.transform(candidate), versions.transform(currentVersion)) > 0
+      isSelectorText(currentVersion) || order.compare(candidate, currentVersion) > 0
     } catch (e: Exception) {
       true
     } catch (e: LinkageError) {
