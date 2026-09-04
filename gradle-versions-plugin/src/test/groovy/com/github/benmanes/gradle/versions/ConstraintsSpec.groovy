@@ -495,7 +495,7 @@ final class ConstraintsSpec extends Specification {
       .build()
 
     then: 'the versionless declaration is checked, at the version the platform supplied'
-    result.output.contains('org.apache.logging.log4j:log4j-core [2.16.0 -> 2.17.0]')
+    result.output.contains('org.apache.logging.log4j:log4j-core:2.16.0')
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
@@ -954,7 +954,7 @@ final class ConstraintsSpec extends Specification {
       .build()
 
     then: 'the bom is named by its module, the version left to its own row'
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice:2.0')
     result.output.contains('constrained by the platform com.example:external-bom\n')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
@@ -1128,6 +1128,9 @@ final class ConstraintsSpec extends Specification {
 
         tasks.dependencyUpdates {
           checkConstraints = true
+          // The mark is withheld from a merged entry, which the bound would otherwise split by
+          // holding the importing project to the platform while the declaring one rises past it.
+          rejectOutOfBoundVersions = false
         }
       """.stripIndent()
 
@@ -1186,11 +1189,11 @@ final class ConstraintsSpec extends Specification {
 
     then: 'the machine readable reports carry the bound, and only where one was stated'
     result.task(':dependencyUpdates').outcome == SUCCESS
-    def guice = jsonReport.outdated.dependencies.find { it.name == 'guice' }
+    def guice = jsonReport.current.dependencies.find { it.name == 'guice' }
     guice.constrainedBy == ['com.example:external-bom']
     def bom = jsonReport.outdated.dependencies.find { it.name == 'external-bom' }
     !bom.containsKey('constrainedBy')
-    def guiceElement = xmlReport.outdated.dependencies.outdatedDependency.find {
+    def guiceElement = xmlReport.current.dependencies.dependency.find {
       it.name.text() == 'guice'
     }
     guiceElement.constrainedBy.constraint*.text() == ['com.example:external-bom']
@@ -1249,10 +1252,13 @@ final class ConstraintsSpec extends Specification {
       .withPluginClasspath()
       .build()
 
-    then: 'the platform whose bound lost is not named'
-    result.output.contains('com.google.inject:guice [3.0 -> 3.1]')
-    result.output.contains('constrained by the platform :platform-high')
+    then: 'the platform whose bound won still bounds the module, and is the only one named'
+    result.output.contains(
+      ' - com.google.inject:guice:3.0\n     constrained by the platform :platform-high in root project')
     !result.output.contains('constrained by the platforms')
+
+    and: 'the upgrade past that bound is listed on the platform declaring it'
+    result.output.contains('com.google.inject:guice [3.0 -> 3.1]')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 

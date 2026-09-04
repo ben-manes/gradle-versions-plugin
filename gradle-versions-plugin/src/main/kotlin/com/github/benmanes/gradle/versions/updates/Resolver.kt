@@ -1,5 +1,6 @@
 package com.github.benmanes.gradle.versions.updates
 
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import groovy.xml.XmlSlurper
 import groovy.xml.slurpersupport.GPathResult
@@ -40,15 +41,32 @@ import org.gradle.maven.MavenModule
 import org.gradle.maven.MavenPomArtifact
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Resolves the configuration to determine the version status of its dependencies.
  */
-class Resolver(
+class Resolver internal constructor(
   private val project: Project,
   private val resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?,
   private val checkConstraints: Boolean,
+  private val rejectOutOfBoundVersions: Boolean,
+  /** Called when a rule reads the deprecated bound, so the warning is printed once per project. */
+  private val onDeprecatedBoundRead: () -> Unit,
 ) {
+  /** Retained so the arity released before the bound filter was added still links. */
+  constructor(
+    project: Project,
+    resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?,
+    checkConstraints: Boolean,
+  ) : this(
+    project,
+    resolutionStrategy,
+    checkConstraints,
+    rejectOutOfBoundVersions = true,
+    onDeprecatedBoundRead = deprecatedBoundWarning(project),
+  )
+
   private var projectUrls = ConcurrentHashMap<ModuleVersionIdentifier, ProjectUrl>()
 
   // The platform declarations whose scan threw, so a configuration inheriting the same ones does
@@ -220,6 +238,7 @@ class Resolver(
     // The copy inherits activated dependency locking but has no lock state of its own.
     copy.resolutionStrategy.deactivateDependencyLocking()
 
+    addDeclaredBoundFilter(copy, current.coordinates)
     addRevisionFilter(copy, revision, current.coordinates)
     addAttributes(copy, configuration)
     addCustomResolutionStrategy(copy, current.coordinates)
@@ -360,13 +379,45 @@ class Resolver(
     }
   }
 
+  /**
+   * Adds the filter that leaves out the upgrades outside the bound declared for a module, which
+   * [ComponentSelectionWithCurrent.isUpgradeOutOfDeclaredBound] identifies.
+   *
+   * Registered first, ahead of the revision filter and the rules configured in the build, since a
+   * rejected candidate is not passed to the rules that follow: the revision filter reads each
+   * candidate's metadata, which resolves it, and a rule can only reject, so an out-of-bound
+   * candidate costs nothing further and the report is the same. The version in use is never
+   * rejected here, so a rule reading the deprecated bound is still warned.
+   */
+  private fun addDeclaredBoundFilter(
+    configuration: Configuration,
+    currentCoordinates: Map<Coordinate.Key, Coordinate>,
+  ) {
+    if (!rejectOutOfBoundVersions) {
+      return
+    }
+    configuration.resolutionStrategy { inner ->
+      ResolutionStrategyWithCurrent(inner, currentCoordinates).componentSelection { rules ->
+        rules.all(
+          Action<ComponentSelectionWithCurrent> { current ->
+            if (current.isUpgradeOutOfDeclaredBound) {
+              current.reject("Rejected by rejectOutOfBoundVersions")
+            }
+          },
+        )
+      }
+    }
+  }
+
   /** Adds a custom resolution strategy only applicable for the dependency updates task.  */
   private fun addCustomResolutionStrategy(
     configuration: Configuration,
     currentCoordinates: Map<Coordinate.Key, Coordinate>,
   ) {
     configuration.resolutionStrategy { inner ->
-      resolutionStrategy?.execute(ResolutionStrategyWithCurrent(inner, currentCoordinates))
+      resolutionStrategy?.execute(
+        ResolutionStrategyWithCurrent(inner, currentCoordinates, onDeprecatedBoundRead),
+      )
     }
   }
 
@@ -1009,4 +1060,20 @@ internal fun configurationsOf(
     pending.addAll(next.extendsFrom)
   }
   return names.mapValues { (_, held) -> held.toList() }
+}
+
+/**
+ * Warns once, however many rules read the deprecated bound across the project's resolutions,
+ * since a rule is evaluated for every candidate of every configuration and script classpath.
+ */
+internal fun deprecatedBoundWarning(project: Project): () -> Unit {
+  val warned = AtomicBoolean()
+  return {
+    if (warned.compareAndSet(false, true)) {
+      project.logger.warn(
+        "satisfiesDeclaredBound is deprecated; drop it from rejectVersionIf, " +
+          "since rejectOutOfBoundVersions applies the declared bound instead.",
+      )
+    }
+  }
 }

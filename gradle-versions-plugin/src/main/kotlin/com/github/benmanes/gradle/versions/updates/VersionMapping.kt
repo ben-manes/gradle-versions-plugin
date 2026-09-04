@@ -64,9 +64,11 @@ class VersionMapping(private val logger: Logger, statuses: List<PartialStatus>) 
   }
 
   companion object {
-    private fun makeVersionComparator(): Comparator<String> {
+    private fun makeVersionComparator(): Comparator<String> = versionComparator(VersionParser())
+
+    /** Orders version strings the way dependency resolution orders them, through the given parser. */
+    internal fun versionComparator(versionParser: VersionParser): Comparator<String> {
       val baseComparator = DefaultVersionComparator().asVersionComparator()
-      val versionParser = VersionParser()
       return Comparator { string1, string2 ->
         baseComparator.compare(versionParser.transform(string1), versionParser.transform(string2))
       }

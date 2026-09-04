@@ -72,13 +72,9 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
     maturityLevel(candidate.version) < maturityLevel(currentVersion)
   }
 
-  // Example 5: keep the report inside the bound the build already declares
-  rejectVersionIf {
-    !satisfiesDeclaredBound
-  }
-
   // optional parameters
   checkForGradleUpdate = true
+  rejectOutOfBoundVersions = true
   outputFormatter = "json"
   outputDir = "build/dependencyUpdates"
   reportfileName = "report"

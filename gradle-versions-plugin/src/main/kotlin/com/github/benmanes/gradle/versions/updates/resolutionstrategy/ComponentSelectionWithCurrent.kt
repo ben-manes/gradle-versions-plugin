@@ -1,10 +1,13 @@
 package com.github.benmanes.gradle.versions.updates.resolutionstrategy
 
+import com.github.benmanes.gradle.versions.updates.VersionMapping
 import org.gradle.api.artifacts.ComponentSelection
 import org.gradle.api.artifacts.VersionConstraint
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionComparator
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionSelectorScheme
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector
+import java.util.concurrent.ConcurrentHashMap
 
 class ComponentSelectionWithCurrent internal constructor(
   private val delegate: ComponentSelection,
@@ -21,6 +24,8 @@ class ComponentSelectionWithCurrent internal constructor(
    * as a bound.
    */
   private val onScriptClasspath: Boolean = false,
+  /** Called when a rule reads [satisfiesDeclaredBound], so the deprecation can be warned once. */
+  private val onDeprecatedBoundRead: () -> Unit = {},
 ) : ComponentSelection by delegate {
   /** Retained so the arity released before the constraint was added still links. */
   constructor(
@@ -50,10 +55,43 @@ class ComponentSelectionWithCurrent internal constructor(
    * the consumer depends on set for it, and the version currently selected is always within
    * bound.
    */
-  val satisfiesDeclaredBound: Boolean
+  internal val withinDeclaredBound: Boolean
     get() =
       DeclaredBound.accepts(versionConstraint, candidate.version, currentVersion, onScriptClasspath) &&
         DeclaredBound.acceptsPlatformSupplied(platformVersionConstraints, currentVersion, candidate.version)
+
+  /**
+   * Whether the candidate lies within the declared bound, as [withinDeclaredBound] reads it.
+   *
+   * Deprecated: the task's `rejectOutOfBoundVersions` property leaves a candidate outside the
+   * declared bound out of the report on its own, so nothing is left for a rule to reject.
+   */
+  @Deprecated("rejectOutOfBoundVersions applies the declared bound; drop the clause from rejectVersionIf.")
+  val satisfiesDeclaredBound: Boolean
+    get() {
+      onDeprecatedBoundRead()
+      return withinDeclaredBound
+    }
+
+  /**
+   * Whether the candidate is an upgrade that lies outside the declared bound, which is what the
+   * task's `rejectOutOfBoundVersions` property leaves out of the report.
+   *
+   * The condition is narrower than [withinDeclaredBound], which is evaluated for the candidate
+   * alone. A candidate no newer than the version in use is not an upgrade at all, and rejecting it
+   * would take the exceeded entry off the report while leaving nothing out. Each bound is applied
+   * only where the version in use lies within it: a platform that a transitive requirement pushed
+   * the version past bounds nothing, while a second platform pinning the version in use still does.
+   */
+  internal val isUpgradeOutOfDeclaredBound: Boolean
+    get() =
+      DeclaredBound.isUpgradeOutOfBound(
+        versionConstraint,
+        platformVersionConstraints,
+        currentVersion,
+        candidate.version,
+        onScriptClasspath,
+      )
 
   override fun toString(): String {
     return """\
@@ -75,18 +113,59 @@ ComponentSelectionWithCurrent{
  * than failing the report, which is why the linkage failure is caught instead of thrown.
  */
 private object DeclaredBound {
-  private val scheme: DefaultVersionSelectorScheme? by lazy {
+  // One parser for the scheme and the comparator, since each keeps a cache of every version
+  // string it reads for the classloader's life.
+  private val parser: VersionParser? by lazy {
     try {
-      DefaultVersionSelectorScheme(DefaultVersionComparator(), VersionParser())
+      VersionParser()
     } catch (e: LinkageError) {
       null
     }
   }
 
+  private val scheme: DefaultVersionSelectorScheme? by lazy {
+    try {
+      parser?.let { DefaultVersionSelectorScheme(DefaultVersionComparator(), it) }
+    } catch (e: LinkageError) {
+      null
+    }
+  }
+
+  private val comparator: Comparator<String>? by lazy {
+    try {
+      parser?.let { VersionMapping.versionComparator(it) }
+    } catch (e: LinkageError) {
+      null
+    }
+  }
+
+  // A declared selector is parsed once, since the filter is evaluated for every candidate of a
+  // module and Gradle's parser caches no selector. The strings are the few a build declares.
+  private val selectors = ConcurrentHashMap<String, VersionSelector>()
+
+  private fun selector(
+    scheme: DefaultVersionSelectorScheme,
+    text: String,
+  ): VersionSelector = selectors.computeIfAbsent(text) { scheme.parseSelector(it) }
+
   fun accepts(
     constraint: VersionConstraint?,
     candidate: String,
     currentVersion: String,
+    dynamicRequiredBounds: Boolean,
+  ): Boolean =
+    // The selected version is left in bound, since a transitive requirement can push the selection
+    // past an interval that is only a floor.
+    admitsDeclared(constraint, candidate, dynamicRequiredBounds && candidate != currentVersion)
+
+  /**
+   * Whether the constraint the build declared admits the version. Split out of [accepts] so that
+   * [isUpgradeOutOfBound] can ask it of the resolved version itself, which [accepts] leaves in bound
+   * rather than testing against a dynamic required bound.
+   */
+  private fun admitsDeclared(
+    constraint: VersionConstraint?,
+    version: String,
     dynamicRequiredBounds: Boolean,
   ): Boolean {
     val parser = scheme
@@ -97,20 +176,36 @@ private object DeclaredBound {
       val strict = constraint.strictVersion
       val outOfBound =
         if (strict.isNotEmpty()) {
-          !parser.parseSelector(strict).accept(candidate)
+          !selector(parser, strict).accept(version)
         } else {
-          // The selected version is left in bound, since a transitive requirement can push the
-          // selection past an interval that is only a floor.
-          dynamicRequiredBounds && candidate != currentVersion &&
-            excludedByDynamicRequired(constraint.requiredVersion, candidate)
+          dynamicRequiredBounds && excludedByDynamicRequired(constraint.requiredVersion, version)
         }
       if (outOfBound) {
         false
       } else {
-        constraint.rejectedVersions.none { parser.parseSelector(it).accept(candidate) }
+        constraint.rejectedVersions.none { selector(parser, it).accept(version) }
       }
     } catch (e: LinkageError) {
       true
+    }
+  }
+
+  /**
+   * Whether the text is a selector rather than a version, which is what a constraint reported with
+   * no declaration beside it carries where a resolved version would sit. A range and a dynamic
+   * version are selectors, and so is a single-version range such as `[2.0]`, which parses to the
+   * exact selector for a different string.
+   */
+  private fun isSelectorText(version: String): Boolean {
+    val parser = scheme
+    if (parser == null || version.isEmpty()) {
+      return false
+    }
+    return try {
+      val selector = selector(parser, version)
+      selector.isDynamic || selector.selector != version
+    } catch (e: Exception) {
+      false
     }
   }
 
@@ -129,7 +224,7 @@ private object DeclaredBound {
       return false
     }
     return try {
-      val selector = parser.parseSelector(version)
+      val selector = selector(parser, version)
       selector.isDynamic && !selector.accept(candidate)
     } catch (e: Exception) {
       false
@@ -154,13 +249,73 @@ private object DeclaredBound {
       return true
     }
     return try {
-      constraints.all { constraint ->
-        val strict = constraint.strictVersion
-        val required = constraint.requiredVersion
-        (strict.isEmpty() || parser.parseSelector(strict).accept(candidate)) &&
-          (required.isEmpty() || parser.parseSelector(required).accept(candidate)) &&
-          constraint.rejectedVersions.none { parser.parseSelector(it).accept(candidate) }
-      }
+      constraints.all { admits(it, candidate) }
+    } catch (e: LinkageError) {
+      true
+    }
+  }
+
+  /** Whether the constraint the platform supplied admits the version, as [accepts] reads one. */
+  private fun admits(
+    constraint: VersionConstraint,
+    version: String,
+  ): Boolean {
+    val parser = scheme ?: return true
+    val strict = constraint.strictVersion
+    val required = constraint.requiredVersion
+    return (strict.isEmpty() || selector(parser, strict).accept(version)) &&
+      (required.isEmpty() || selector(parser, required).accept(version)) &&
+      constraint.rejectedVersions.none { selector(parser, it).accept(version) }
+  }
+
+  /**
+   * Whether the candidate is an upgrade outside a bound the resolved version lies within. A bound
+   * the resolved version already lies outside is not applied, which is reached most often by a
+   * transitive requirement pushing the selection past a platform; the other bounds on the module
+   * still are. A constraint reported with no declaration beside it carries its selector where a
+   * resolved version would sit, so the declared bound applies to every candidate there.
+   */
+  fun isUpgradeOutOfBound(
+    constraint: VersionConstraint?,
+    platformConstraints: List<VersionConstraint>,
+    currentVersion: String,
+    candidate: String,
+    dynamicRequiredBounds: Boolean,
+  ): Boolean =
+    try {
+      isNewer(currentVersion, candidate) &&
+        (
+          (
+            (isSelectorText(currentVersion) || admitsDeclared(constraint, currentVersion, dynamicRequiredBounds)) &&
+              !admitsDeclared(constraint, candidate, dynamicRequiredBounds)
+          ) ||
+            platformConstraints.any { admits(it, currentVersion) && !admits(it, candidate) }
+        )
+    } catch (e: LinkageError) {
+      false
+    }
+
+  /**
+   * Whether the candidate is newer than the version resolved for the module, ordered the way
+   * dependency resolution orders versions, since a candidate that is not an upgrade is not one to
+   * leave out. An unreadable version counts as newer, so the bound still applies as it did before.
+   *
+   * Compared rather than parsed as a selector, since a version is not a selector: a resolved
+   * version containing a bracket or a comma parses as an exact selector matching nothing, which
+   * would silently answer no for every candidate.
+   */
+  fun isNewer(
+    currentVersion: String,
+    candidate: String,
+  ): Boolean {
+    val order = comparator
+    if (order == null || currentVersion.isEmpty()) {
+      return true
+    }
+    return try {
+      isSelectorText(currentVersion) || order.compare(candidate, currentVersion) > 0
+    } catch (e: Exception) {
+      true
     } catch (e: LinkageError) {
       true
     }

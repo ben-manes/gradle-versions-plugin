@@ -61,6 +61,15 @@ How a pull request lands:
 - Beyond that, match the file you are editing: Kotlin sources carry no
   license header, comments are rare and explain only what the code cannot,
   and a README snippet is added in both Kotlin and Groovy.
+- A setting that affects which entries appear in the report goes on the task
+  as a property, so that it can be set from the command line. A fact about a
+  candidate that cannot be worked out from a build script alone, such as
+  whether the candidate lies within a declared bound, goes on the
+  `rejectVersionIf` receiver, so that a rule that is not built in can still be
+  written in a build script. Do not document a setting as a `rejectVersionIf`
+  recipe to copy into a build script. `resolutionStrategy` is only for how the
+  candidates are resolved, and the output properties only for where and how
+  the report is written.
 - Add a command line option, with `@Option`, to every task property a build
   author sets to configure the report or where it is written, so that a single
   run can change it without an edit to the build script. A property configured

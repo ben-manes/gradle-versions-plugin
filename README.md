@@ -298,8 +298,7 @@ fun String.isNonStable(): Boolean {
 tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
   checkConstraints = true
   rejectVersionIf {
-    (candidate.version.isNonStable() && !currentVersion.isNonStable()) ||
-      !satisfiesDeclaredBound
+    candidate.version.isNonStable() && !currentVersion.isNonStable()
   }
 }
 ```
@@ -319,8 +318,7 @@ def isNonStable = { String version ->
 tasks.named("dependencyUpdates").configure {
   checkConstraints = true
   rejectVersionIf {
-    (isNonStable(candidate.version) && !isNonStable(currentVersion)) ||
-      !satisfiesDeclaredBound
+    isNonStable(candidate.version) && !isNonStable(currentVersion)
   }
 }
 ```
@@ -332,10 +330,11 @@ tasks.named("dependencyUpdates").configure {
 - The stability clause rejects a pre-release candidate unless the current
   version is itself a pre-release (see [Filtering unstable
   versions](#filtering-unstable-versions)).
-- `!satisfiesDeclaredBound` rejects a candidate outside a `strictly` or
-  `reject` bound the build declares, outside a dynamic version declared on the
-  buildscript classpath, or outside the version a consumed platform sets (see
-  [Respecting declared bounds](#respecting-declared-bounds)).
+- A candidate outside a `strictly` or `reject` bound written in the build,
+  outside a dynamic version declared on the buildscript classpath, or outside
+  the version fixed by a consumed platform, is already left out by
+  `rejectOutOfBoundVersions`, which is on by default (see [Respecting declared
+  bounds](#respecting-declared-bounds)).
 
 Each piece stands alone: drop any line whose behavior you do not want, and the
 rest keep working.
@@ -364,6 +363,7 @@ command line option, since no command line can express the logic.
 | [`checkBuildEnvironmentConstraints`](#constraints) | `true`, `false` | `false` | `--[no-]check-build-environment-constraints` |
 | [`filterConfigurations`](#filterconfigurations) | a `Spec<Configuration>` | every configuration | |
 | [`filterDeclaredConfigurations`](#filterdeclaredconfigurations) | a `Spec<String>` | every name | |
+| [`rejectOutOfBoundVersions`](#respecting-declared-bounds) | `true`, `false` | `true` | `--[no-]reject-out-of-bound-versions` |
 | [`rejectVersionIf`](#filtering-unstable-versions) | a predicate over the candidate | nothing rejected | |
 | [`outputFormatter`](#report-format) | `text`, `json`, `xml`, `html`, a comma separated list of those, or a `Reporter` | `text` | `--output-formatter` |
 | [`outputDir`](#outputdir) | a directory path | `<buildDirectory>/dependencyUpdates` | `--output-dir` |
@@ -913,31 +913,19 @@ tasks.named("dependencyUpdates").configure {
 
 ##### Respecting declared bounds
 
-A rule can also keep the report inside what the build itself declared. The
-constraint written on a declaration is available as `versionConstraint`,
-Gradle's own
-[`VersionConstraint`](https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/VersionConstraint.html).
-For a module the build declares without a version, the constraints its consumed
-platforms set for that module are available as `platformVersionConstraints`. It
-is a list rather than a single value, because more than one consumed platform
-can bound the same module. The query that finds candidates is deliberately
-unbounded, so a rule respecting what the build declared reads it from
-`versionConstraint` rather than restating it. It is null for a module no
-declaration was matched to, such as one a substitution rule resolved to, so
-guard for that.
+The report is held to the bounds written in the build. A candidate outside a
+bound on the declaration, or outside the version fixed by a consumed platform,
+is left out, so the only versions listed are ones the build can actually be
+moved to. Set `rejectOutOfBoundVersions` to `false` to turn that off:
 
 <details open>
 <summary>Kotlin</summary>
-
-Keep the report inside the bound the build already declares:
 
 ```kotlin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
 tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
-  rejectVersionIf {
-    !satisfiesDeclaredBound
-  }
+  rejectOutOfBoundVersions = false
 }
 ```
 
@@ -946,24 +934,45 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
 <details>
 <summary>Groovy</summary>
 
-Keep the report inside the bound the build already declares:
-
 ```groovy
 tasks.named("dependencyUpdates").configure {
-  rejectVersionIf {
-    !satisfiesDeclaredBound
-  }
+  rejectOutOfBoundVersions = false
 }
 ```
 
 </details>
 
-`satisfiesDeclaredBound` reads a declared range the way dependency resolution
-reads it, so `strictly "[5.3, 6["` admits 5.3.26 and excludes 6.0.1, and
-`reject "[3.0,)"` excludes everything from 3.0 up. Only `strictly` and `reject`
-bound a candidate: a `require` version is a floor resolution may rise above, a
-range included, and a `prefer` version only breaks a tie, so a plain
-`implementation("group:name:1.2.3")` is not bounded by this rule.
+To see what is left out, without an edit to the build script, run
+`./gradlew dependencyUpdates --no-reject-out-of-bound-versions`. Run it to
+learn what a bounded module could be moved to if the bound were lifted, such
+as whether a fix was released for the module ahead of its platform.
+
+A bound is read the way dependency resolution reads it, so `strictly "[5.3,
+6["` admits 5.3.26 and excludes 6.0.1, and `reject "[3.0,)"` excludes
+everything from 3.0 up. Only `strictly` and `reject` bound a candidate: a
+`require` version is a floor resolution may rise above, a range included, and a
+`prefer` version only breaks a tie, so a plain
+`implementation("group:name:1.2.3")` is not bounded.
+
+The bound is not applied in two cases where it makes no difference. A
+candidate no newer than the version in use is not an upgrade, so it stays, and
+a module at a version above everything published is still listed on the
+exceeded row. Where the version in use already lies outside the bound, the
+bound is not applied at all: once a transitive requirement has pushed the
+version past a platform, the platform no longer bounds anything.
+
+The same bound is readable from a rule. The constraint written on a
+declaration is available as `versionConstraint`, Gradle's
+[`VersionConstraint`](https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/VersionConstraint.html).
+For a module declared without a version, the constraints fixed for that module
+by the consumed platforms are available as `platformVersionConstraints`. It
+is a list rather than a single value, because more than one consumed platform
+can bound the same module. The query that finds candidates is deliberately
+unbounded, so a rule that applies a declared bound reads it from
+`versionConstraint` rather than restating it. It is null for a module no
+declaration was matched to, such as one a substitution rule resolved to, so
+guard for that. `satisfiesDeclaredBound`, the verdict a rule applied before the
+property did, is deprecated and will be removed in a later release.
 
 The buildscript classpath is the exception. There a dynamic required version
 bounds the candidate, so a plugin declared as `version "[1.0, 2["` or
@@ -971,9 +980,10 @@ bounds the candidate, so a plugin declared as `version "[1.0, 2["` or
 `plugins` block or came from a version catalog alias. Gradle flattens an alias to
 a bare required version on the marker it synthesizes, leaving the two forms
 identical, and a plugin has one declaration, so the interval is the version
-declared rather than a floor something else may push past. The version already
-resolved stays in bound, since a transitive requirement on a classpath can push
-the selection past the interval.
+declared rather than a floor something else may push past. Where a transitive
+requirement on a classpath has pushed the selection past the interval, the
+version already resolved lies outside the bound, and the bound is not applied,
+as above.
 
 A module declared without a version is additionally bound by the version a
 consumed platform sets for it, since the build cannot take that upgrade without
@@ -1004,9 +1014,8 @@ dependencies {
 
 </details>
 
-`satisfiesDeclaredBound` bounds `log4j-core` at `2.16.0` even though
-`versionConstraint` is empty for it, because the bound comes from the platform
-instead:
+`log4j-core` is bounded at `2.16.0` even though `versionConstraint` is empty
+for it, because the bound comes from the platform instead:
 
 ```text
 The following dependencies are using the latest milestone version:
@@ -1861,7 +1870,8 @@ task by that name now fails with a duplicate-task error—rename yours.
 
 The settings that control resolution (`revision`, `rejectVersionIf` or a full
 `resolutionStrategy`, `filterConfigurations`, `filterDeclaredConfigurations`,
-`checkConstraints`, and `checkBuildEnvironmentConstraints`) are inherited from
+`checkConstraints`, `checkBuildEnvironmentConstraints`, and
+`rejectOutOfBoundVersions`) are inherited from
 the nearest project up the hierarchy whose task set them. Configuring the root
 project's task therefore covers every project, unless a subproject configures
 its own (see [Task properties](#task-properties)).
@@ -2223,25 +2233,40 @@ and *Note*s are things worth knowing that need no action.
 
 ### v0.61.0
 
-In the next release, a coordinate whose one declared version has different
-latest versions across the aggregated projects is shown on one entry per latest
-version, where the entries were merged into the newest of them before:
+In the next release, the report is held to the bounds written in the build
+without a rule written for it, and a coordinate with one declared version and
+different latest versions across the aggregated projects is shown on one entry
+per latest version, where the entries were merged into the newest of them
+before:
 
 > [!IMPORTANT]
+> - A candidate outside a `strictly` or `reject` bound written in the build,
+>   outside a dynamic version declared on the buildscript classpath, or outside
+>   the version fixed by a consumed platform, is left out of the report, where
+>   it was listed before. Set `rejectOutOfBoundVersions = false` to list it
+>   again, or pass `--no-reject-out-of-bound-versions` for a single run (see
+>   [Respecting declared bounds](#respecting-declared-bounds)).
 > - A coordinate's group and name can now appear on two entries of one report,
 >   and in two of its sections. The projects for each entry are included in
 >   `projects` (see [Multi-project builds](#multi-project-builds)), which is
 >   what distinguishes them. A tool that keys the entries by group and name
 >   alone has to key them by the projects as well.
 
+> [!TIP]
+> - Drop `!satisfiesDeclaredBound` from a `rejectVersionIf` rule, since the
+>   bound is now applied by `rejectOutOfBoundVersions`. The member is
+>   deprecated and will be removed in a later release; a warning is printed
+>   once per project when a rule reads it, and a Kotlin DSL build that treats
+>   compiler warnings as errors has to drop the clause before upgrading. With
+>   the clause still in a rule, the same candidates are rejected under
+>   `--no-reject-out-of-bound-versions` as without it.
+
 > [!NOTE]
-> - A dependency on the buildscript classpath declared with a dynamic version,
->   `[1.0, 2[` or `1.+`, is no longer offered a version outside it under
->   `rejectVersionIf { !satisfiesDeclaredBound }`. The presence of a version
->   catalog no longer changes that answer either: where the `plugins` block
->   versioned a plugin inline as a range, the upgrade was withheld when an unused
->   alias for the same plugin was present in the catalog and offered when it was
->   not (see [Respecting declared bounds](#respecting-declared-bounds)).
+> - The presence of a version catalog no longer changes whether a plugin
+>   versioned inline as a range in the `plugins` block is offered an upgrade
+>   past that range. The upgrade was withheld when an unused alias for the same plugin was
+>   present in the catalog and offered when it was not (see [Respecting declared
+>   bounds](#respecting-declared-bounds)).
 > - A module that a platform bounds in one project and not in another is now up
 >   to date in the bounded project and outdated in the other, rather than
 >   outdated in both. The merged entry printed an upgrade that is not available

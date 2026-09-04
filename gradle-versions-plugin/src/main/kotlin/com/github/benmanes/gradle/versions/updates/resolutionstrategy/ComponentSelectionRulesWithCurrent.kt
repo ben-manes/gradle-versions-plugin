@@ -8,10 +8,17 @@ import org.gradle.api.artifacts.ComponentSelectionRules
 import org.gradle.internal.rules.RuleSourceBackedRuleAction
 import org.gradle.model.internal.type.ModelType
 
-class ComponentSelectionRulesWithCurrent(
+class ComponentSelectionRulesWithCurrent internal constructor(
   private val delegate: ComponentSelectionRules,
   private val currentCoordinates: Map<Coordinate.Key, Coordinate>,
+  private val onDeprecatedBoundRead: () -> Unit,
 ) {
+  /** Retained so the arity released before the deprecation warning was added still links. */
+  constructor(
+    delegate: ComponentSelectionRules,
+    currentCoordinates: Map<Coordinate.Key, Coordinate>,
+  ) : this(delegate, currentCoordinates, {})
+
   fun all(selectionAction: Action<in ComponentSelectionWithCurrent>): ComponentSelectionRulesWithCurrent {
     delegate.all {
       wrapComponentSelection(it)?.let { wrapped ->
@@ -115,6 +122,7 @@ class ComponentSelectionRulesWithCurrent(
       current.versionConstraint,
       current.platformVersionConstraints,
       current.onScriptClasspath,
+      onDeprecatedBoundRead,
     )
   }
 }
