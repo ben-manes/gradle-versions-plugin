@@ -7,14 +7,14 @@ import spock.lang.Unroll
 
 /**
  * A specification for the pre-release predicate. The cases are drawn from a survey of every
- * published version of the 1,078 most depended-on artifacts on Maven Central, Google's Maven
- * repository, Clojars and the Gradle Plugin Portal.
+ * published version of 1,870 widely used artifacts on Maven Central, Google's Maven repository,
+ * Clojars and the Gradle Plugin Portal.
  * https://github.com/ben-manes/gradle-versions-plugin/issues/440
  */
 @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/440')
 final class VersionStabilitySpec extends Specification {
   @Unroll
-  def 'a pre-release marker is recognized in #version'() {
+  def 'a pre-release marker is matched in #version'() {
     expect:
     VersionStability.isPreRelease(version)
 
@@ -31,6 +31,7 @@ final class VersionStabilitySpec extends Specification {
       '2.1-EA1',
       '17.0.0-dev',
       '2.5-SNAPSHOT',
+      '2.5-snapshot',
       '2.5-20240101.120000-1',
       '3.2.0rc2',
       '2.10.0.pr1',
@@ -41,14 +42,14 @@ final class VersionStabilitySpec extends Specification {
   }
 
   @Unroll
-  def 'a release that qualifies itself is left alone: #version'() {
+  def 'a qualified release is left alone: #version'() {
     expect:
     !VersionStability.isPreRelease(version)
 
     where:
-    // Every one of these is a shipped release whose string names a platform, a patch level or a
-    // cross-build. A stable-version pattern has to anticipate each of them; this predicate does
-    // not have to know any of them, which is the reason it is written in this direction.
+    // Every one of these is a shipped release with a platform, patch level or cross-build
+    // qualifier. A stable-version pattern has to list each of them; this predicate matches known
+    // markers and lets everything else through.
     version << [
       '1.0.0',
       'v1.2.3',
@@ -75,10 +76,13 @@ final class VersionStabilitySpec extends Specification {
       '4.2.0.GA_CP01',
       '1.0.0+build.5',
       '2.0.0-deprecated-use-gradle-api',
-      // The single most dangerous case the survey found: a final Jackson release whose artifact
-      // qualifier ends in a capital M and a number. A marker rule that allowed a letter on its
-      // left would read `KotlinM11` as milestone 11 and hide a shipped release.
+      // The most dangerous case in the survey: a final Jackson release with a qualifier ending in
+      // a capital M and a number. A marker rule allowing a letter to the left of `m` would match
+      // `KotlinM11` as milestone 11 and hide a shipped release.
       '2.5.1.1.KotlinM11',
+      // The one-letter marker after a digit: an OpenSSL letter release, as the bytedeco presets
+      // publish it. A marker rule allowing a digit to the left of `m` would hide it.
+      '1.1.1m-1.5.7',
       '0.9.1.space',
     ]
   }
@@ -89,9 +93,9 @@ final class VersionStabilitySpec extends Specification {
     VersionStability.isPreRelease(version)
 
     where:
-    // A cross-build or platform qualifier does not rescue a candidate that also names a
-    // pre-release, and `0.9.2-pre2-RELEASE` is one the README recipe calls stable outright.
-    version << ['22.0-rc1-android', '2.4-M7-groovy-4.0', '13-ea+14b', '0.9.2-pre2-RELEASE']
+    // A cross-build or platform qualifier does not cancel a pre-release marker beside it, and
+    // `0.9.2-pre2-RELEASE` is matched as stable outright by the README recipe.
+    version << ['22.0-rc1-android', '2.4-M7-groovy-4.0', '13-ea+14b', '26-ea+11', '0.9.2-pre2-RELEASE']
   }
 
   @Unroll
@@ -100,8 +104,9 @@ final class VersionStabilitySpec extends Specification {
     !VersionStability.isPreRelease(version)
 
     where:
-    // `pre` in `prefetch`, `m` in `mysql`, `rc` in `arch`, `dev` in `device`. A substring test of
-    // the kind the README recipe uses reads all four as unstable.
+    // `pre` in `prefetch`, `m` in `mysql`, `rc` in `arch`, `dev` in `device` and `development`. A
+    // substring match on the marker would flag every one of these, and so does the README recipe,
+    // since none of them matches its stable pattern.
     version << ['1.0-prefetch', '1.0-mysql', '1.0-march', '1.0-device', '1.0-development-kit']
   }
 
@@ -117,10 +122,10 @@ final class VersionStabilitySpec extends Specification {
   }
 
   @Unroll
-  def 'a release the Apache Incubator requires to say so is still a release: #version'() {
+  def 'a release the Apache Incubator requires to be marked incubating is still a release: #version'() {
     expect:
-    // A podling has to ship `-incubating`, so reading it as a marker would withhold the release
-    // itself. https://incubator.apache.org/guides/releasemanagement.html
+    // A podling has to ship `-incubating`, so matching it as a marker would leave the release
+    // out. https://incubator.apache.org/guides/releasemanagement.html
     !VersionStability.isPreRelease(version)
 
     where:
@@ -128,13 +133,13 @@ final class VersionStabilitySpec extends Specification {
   }
 
   @Unroll
-  def 'build metadata carries no precedence, so a hash behind a plus is not a pre-release: #version'() {
+  def 'build metadata has no precedence, so nothing after a plus is a pre-release: #version'() {
     expect:
     // https://semver.org/#spec-item-10
     !VersionStability.isPreRelease(version)
 
     where:
-    version << ['1.0.0+build.1a2b3c4', '1.0.0+1a2b3c4', '2.3.4+d6c85cab1ef1a44']
+    version << ['1.0.0+build.1a2b3c4', '1.0.0+1a2b3c4', '2.3.4+d6c85cab1ef1a44', '1.2.3+alpha.1']
   }
 
   @Unroll
@@ -148,16 +153,7 @@ final class VersionStabilitySpec extends Specification {
     version << ['2.0.0-1234567', '1.0-20240315', '9.2-1002-jdbc4', '2.8.0.20240101']
   }
 
-  @Unroll
-  def 'an early-access marker still reads as one: #version'() {
-    expect:
-    VersionStability.isPreRelease(version)
-
-    where:
-    version << ['1.1-ea', '2.1-EA1', '26-ea+11', '17.0.19-ea+2']
-  }
-
-  def 'a convention no general marker set has is passed through, not withheld'() {
+  def 'a convention no general marker set has is passed through, not rejected'() {
     expect: 'ActiveMQ Artemis spells an alpha milestone `.AM27`, and graphql-java stamps a date'
     !VersionStability.isPreRelease('2.0.0.AM27')
     !VersionStability.isPreRelease('230521-nf-execution')
@@ -168,24 +164,15 @@ final class VersionStabilitySpec extends Specification {
   }
 
   @Unroll
-  def 'snapshots are recognized by both of Maven\'s spellings: #version'() {
+  def 'an upgrade from #current to #candidate is rejected: #rejected'() {
     expect:
-    VersionStability.isSnapshot(version)
+    VersionStability.isLessStable(candidate, current) == rejected
 
     where:
-    version << ['2.5-SNAPSHOT', '2.5-snapshot', '2.5-20240101.120000-1']
-  }
-
-  @Unroll
-  def 'upgrading from #current to #candidate is withheld: #withheld'() {
-    expect:
-    VersionStability.isLessStable(candidate, current) == withheld
-
-    where:
-    current          | candidate          || withheld
+    current          | candidate          || rejected
     '1.0.0'          | '2.0.0-rc1'        || true
     '1.0.0'          | '2.0.0'            || false
-    // Already on a pre-release, so the next one is exactly what this build wants to hear about.
+    // Already on a pre-release, so the next one is reported.
     '2.0.0-rc1'      | '2.0.0-rc2'        || false
     '2.0.0-rc1'      | '2.0.0'            || false
     '9.7.0-rc-1'     | '9.7.0-rc-2'       || false
@@ -193,11 +180,5 @@ final class VersionStabilitySpec extends Specification {
     // A release variant is a release on both sides, so nothing is withheld either way.
     '10.2.0.jre8'    | '10.2.0.jre11'     || false
     '1.1.17.SP1'     | '1.1.17.SP2'       || false
-  }
-
-  def 'a release is not a snapshot'() {
-    expect:
-    !VersionStability.isSnapshot('1.0.0')
-    !VersionStability.isSnapshot('10.2.0.jre11')
   }
 }

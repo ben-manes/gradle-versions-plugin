@@ -1,91 +1,79 @@
 package com.github.benmanes.gradle.versions.updates
 
 /**
- * Recognizes the version strings that name a pre-release.
+ * Matches the version strings of pre-releases.
  *
- * This answers "is this a pre-release?" rather than "is this stable?", and the direction is the
- * whole point. A stable-version test has to recognize every way a project can qualify a release it
- * did ship, and that set is open-ended: `10.2.0.jre11`, `0.10.0-hadoop1`, `1.1.33.android`,
- * `9.2-1002-jdbc4`, `0.4-groovy-1.6`, `1.1.17.SP2`, `2.0.10.graal` are all releases whose strings
- * no pattern anticipated. A test built that way hides them, which is the failure a build cannot
- * afford: an update it never learns about.
+ * The check is for a pre-release marker rather than for a stable pattern. A stable pattern has to
+ * list every qualifier a project may put on a release, and that set is open-ended: `10.2.0.jre11`,
+ * `0.10.0-hadoop1`, `1.1.33.android`, `9.2-1002-jdbc4`, `0.4-groovy-1.6`, `1.1.17.SP2` and
+ * `2.0.10.graal` are all releases, and none of them matches the pattern recommended in the README. A
+ * pattern of that kind hides a release, and the update is then never reported.
  *
- * A pre-release marker set is closed and small by comparison, so this recognizes those and leaves
- * everything else alone. Being wrong here can only leave a pre-release in the report, which is what a
- * build sees today with no filter at all.
+ * The set of pre-release markers is small by comparison, so this matches those and leaves
+ * everything else alone. A version with a qualifier not in the list is passed through, so a miss
+ * leaves a pre-release in the report rather than hiding a release.
  *
  * https://github.com/ben-manes/gradle-versions-plugin/issues/440
  */
 internal object VersionStability {
   /**
    * The markers, each of which has to stand on its own rather than appear inside a longer word, so
-   * that `3.0-GAMMA` is a milestone and `1.0-legacy` is not a `GA` release.
+   * that `1.0-mysql` is not a milestone and `1.0-march` is not a release candidate. `ea` is early
+   * access, and `pr` is how Jackson abbreviates `pre` in `2.10.0.pr1`.
    *
-   * `incubating` is deliberately absent. It reads like a marker, but the Apache Incubator requires
-   * it of a podling's *released* artifacts, so recognizing it would withhold a release.
+   * `incubating` is deliberately absent. The Apache Incubator requires it in the version of a
+   * podling's *released* artifacts, so matching it would leave a release out.
    */
   private val MARKERS =
     listOf(
-      "alpha", "beta", "canary", "candidate", "cr", "dev", "draft", "eap", "experimental",
-      "m", "milestone", "nightly", "pre", "preview", "rc", "snap", "snapshot",
-      "unstable",
+      "alpha", "beta", "canary", "candidate", "cr", "dev", "draft", "ea", "eap", "experimental",
+      "milestone", "nightly", "pr", "pre", "preview", "rc", "snap", "snapshot", "unstable",
     )
 
+  // A marker may follow a separator or a digit, as in `3.2.0rc2`. The one-letter `m` of `3.0-M1`
+  // is the exception: after a digit it is a letter suffix, as in the `1.1.1m-1.5.7` of a
+  // repackaged OpenSSL, so it is only a marker after a separator.
   private val MARKER =
     Regex(
-      "(?:^|[-._+]|(?<=\\d))(${MARKERS.joinToString("|")})(?=[-._+]|\\d|$)",
+      "(?:(?:^|[-._]|(?<=\\d))(?:${MARKERS.joinToString("|")})|(?:^|[-._])m)(?=[-._]|\\d|$)",
       RegexOption.IGNORE_CASE,
     )
 
-  // Jackson publishes `2.10.0.pr1`, abbreviating the same word `pre` spells.
-  private val ABBREVIATED_PRE = Regex("""[-._+]pr\d+$""", RegexOption.IGNORE_CASE)
-
-  // Maven's own snapshot conventions, which are a published convention rather than a guess.
+  // Maven's timestamped snapshot, a published convention rather than a guess. The `-SNAPSHOT`
+  // spelling is a marker above.
   // https://maven.apache.org/guides/getting-started/index.html#what-is-a-snapshot-version
   private val TIMESTAMPED_SNAPSHOT = Regex("""-\d{8}\.\d{6}-\d+$""")
 
-  // A version ending in a commit hash is something a CI job published, not something a project
-  // released. At least one `a-f` is required so that a build number spelled in digits alone, such
+  // A version ending in a commit hash was published by a CI job rather than released by a
+  // project. At least one `a-f` is required so that a build number spelled in digits alone, such
   // as `2.0.0-1234567`, is left alone: those are not hashes and some of them are releases.
   private val COMMIT_HASH =
-    Regex("""[-._+](?=[0-9a-f]*[a-f])[0-9a-f]{7,}$""", RegexOption.IGNORE_CASE)
-
-  private val EARLY_ACCESS = Regex("""(?:^|[-._+])ea(?=$|[-._+]|\d{1,3}$)""", RegexOption.IGNORE_CASE)
+    Regex("""[-._](?=[0-9a-f]*[a-f])[0-9a-f]{7,}$""", RegexOption.IGNORE_CASE)
 
   /**
-   * Returns whether [version] names a pre-release, by a marker this recognizes or by a trailing
-   * commit hash. A build whose dependencies use a convention this does not carry names it in a
-   * `rejectVersionIf` filter, which composes with this one rather than replacing it.
+   * Returns whether [version] is a pre-release, by a marker in the list above, by Maven's
+   * timestamped snapshot form, or by a trailing commit hash. A convention not in the list goes in a
+   * `rejectVersionIf` filter, which is applied in addition to this check.
    */
   @JvmStatic
   fun isPreRelease(version: String): Boolean {
-    if (isSnapshot(version)) return true
-    if (MARKER.containsMatchIn(version) || ABBREVIATED_PRE.containsMatchIn(version)) return true
-    // Semantic versioning says build metadata carries no precedence, so a release may end in a
-    // hash that names the commit it was built from. Only what precedes the `+` decides.
+    // Under semantic versioning build metadata has no precedence, so a release may end in a `+`
+    // and, say, the hash of the commit it was built from. Only the part before the `+` is checked.
     // https://semver.org/#spec-item-10
-    return COMMIT_HASH.containsMatchIn(version.substringBefore('+')) ||
-      EARLY_ACCESS.containsMatchIn(version)
+    val qualified = version.substringBefore('+')
+    return MARKER.containsMatchIn(qualified) ||
+      TIMESTAMPED_SNAPSHOT.containsMatchIn(qualified) ||
+      COMMIT_HASH.containsMatchIn(qualified)
   }
 
   /**
-   * Returns whether upgrading from [currentVersion] to [candidateVersion] would trade a release for
-   * a pre-release, which is the question a report actually has to answer. A build already sitting on
-   * a release candidate still wants to hear about the next one, so the candidate is only withheld
-   * when the version in hand is a release.
+   * Returns whether an upgrade from [currentVersion] to [candidateVersion] would trade a release
+   * for a pre-release. The candidate is only rejected when the current version is a release, so
+   * that the next release candidate is still reported to a build on one.
    */
   @JvmStatic
   fun isLessStable(
     candidateVersion: String,
     currentVersion: String,
   ): Boolean = isPreRelease(candidateVersion) && !isPreRelease(currentVersion)
-
-  /**
-   * Returns whether [version] names a snapshot, by either of Maven's two spellings. The word is
-   * matched anywhere rather than on a boundary, unlike the markers above, because Maven's
-   * convention is the literal suffix rather than a qualifier a publisher chose.
-   */
-  @JvmStatic
-  fun isSnapshot(version: String): Boolean =
-    version.contains("SNAPSHOT", ignoreCase = true) || TIMESTAMPED_SNAPSHOT.containsMatchIn(version)
 }
