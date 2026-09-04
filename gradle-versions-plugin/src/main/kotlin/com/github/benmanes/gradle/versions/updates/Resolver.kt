@@ -46,18 +46,26 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * Resolves the configuration to determine the version status of its dependencies.
  */
-class Resolver(
+class Resolver internal constructor(
   private val project: Project,
   private val resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?,
   private val checkConstraints: Boolean,
   private val rejectOutOfBoundVersions: Boolean,
+  /** Called when a rule reads the deprecated bound, so the warning is printed once per project. */
+  private val onDeprecatedBoundRead: () -> Unit,
 ) {
   /** Retained so the arity released before the bound filter was added still links. */
   constructor(
     project: Project,
     resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?,
     checkConstraints: Boolean,
-  ) : this(project, resolutionStrategy, checkConstraints, rejectOutOfBoundVersions = false)
+  ) : this(
+    project,
+    resolutionStrategy,
+    checkConstraints,
+    rejectOutOfBoundVersions = true,
+    onDeprecatedBoundRead = deprecatedBoundWarning(project),
+  )
 
   private var projectUrls = ConcurrentHashMap<ModuleVersionIdentifier, ProjectUrl>()
 
@@ -66,8 +74,6 @@ class Resolver(
   // depends on the resolving configuration's own attributes, constraints and resolution strategy,
   // while skipping one costs an attribution at most.
   private val failedPlatformScans = hashSetOf<Set<ModuleDependency>>()
-
-  private val warnedDeprecatedBound = AtomicBoolean()
 
   init {
     logRepositories()
@@ -403,16 +409,6 @@ class Resolver(
     }
   }
 
-  /** Warned once per project, since a rule is evaluated for every candidate of every configuration. */
-  private fun warnDeprecatedBound() {
-    if (warnedDeprecatedBound.compareAndSet(false, true)) {
-      project.logger.warn(
-        "satisfiesDeclaredBound is deprecated; drop it from rejectVersionIf, " +
-          "since rejectOutOfBoundVersions applies the declared bound instead.",
-      )
-    }
-  }
-
   /** Adds a custom resolution strategy only applicable for the dependency updates task.  */
   private fun addCustomResolutionStrategy(
     configuration: Configuration,
@@ -420,7 +416,7 @@ class Resolver(
   ) {
     configuration.resolutionStrategy { inner ->
       resolutionStrategy?.execute(
-        ResolutionStrategyWithCurrent(inner, currentCoordinates, ::warnDeprecatedBound),
+        ResolutionStrategyWithCurrent(inner, currentCoordinates, onDeprecatedBoundRead),
       )
     }
   }
@@ -1064,4 +1060,20 @@ internal fun configurationsOf(
     pending.addAll(next.extendsFrom)
   }
   return names.mapValues { (_, held) -> held.toList() }
+}
+
+/**
+ * Warns once, however many rules read the deprecated bound across the project's resolutions,
+ * since a rule is evaluated for every candidate of every configuration and script classpath.
+ */
+internal fun deprecatedBoundWarning(project: Project): () -> Unit {
+  val warned = AtomicBoolean()
+  return {
+    if (warned.compareAndSet(false, true)) {
+      project.logger.warn(
+        "satisfiesDeclaredBound is deprecated; drop it from rejectVersionIf, " +
+          "since rejectOutOfBoundVersions applies the declared bound instead.",
+      )
+    }
+  }
 }

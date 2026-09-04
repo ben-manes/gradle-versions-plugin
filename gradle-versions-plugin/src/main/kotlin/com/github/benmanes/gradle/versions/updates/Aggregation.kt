@@ -488,6 +488,8 @@ private fun registerProducer(
               .filter { it.isCanBeResolved }
 
           val skipped = mutableListOf<SkippedInfo>()
+          // Shared by both resolutions below, so the deprecation is warned once for the project.
+          val onDeprecatedBoundRead = deprecatedBoundWarning(project)
           val statuses =
             statusesOf(
               project,
@@ -498,6 +500,7 @@ private fun registerProducer(
               nameDeclaringConfiguration = true,
               scriptClasspaths = false,
               skipped,
+              onDeprecatedBoundRead,
             )
           val buildscriptStatuses =
             statusesOf(
@@ -515,6 +518,7 @@ private fun registerProducer(
               // only they read a dynamic required version as a bound.
               scriptClasspaths = true,
               skipped,
+              onDeprecatedBoundRead,
             )
           // Warned once the whole project's configurations and script classpaths are known, as the
           // two calls above share this list and a configuration skipped by each would otherwise be
@@ -595,12 +599,19 @@ private fun statusesOf(
   nameDeclaringConfiguration: Boolean,
   scriptClasspaths: Boolean,
   skipped: MutableList<SkippedInfo>,
+  onDeprecatedBoundRead: () -> Unit,
 ): List<PartialStatus> {
   if (configurations.isEmpty()) {
     return emptyList()
   }
   val resolver =
-    Resolver(project, parameters.resolutionStrategy, checkConstraints, parameters.rejectOutOfBoundVersions)
+    Resolver(
+      project,
+      parameters.resolutionStrategy,
+      checkConstraints,
+      parameters.rejectOutOfBoundVersions,
+      onDeprecatedBoundRead,
+    )
   // Snapshotted for every configuration before the first resolution, as resolving one
   // configuration runs the lazy actions of the configurations it extends. A build that read the
   // dependencies while configuring has already run them, which the discount below corrects for.

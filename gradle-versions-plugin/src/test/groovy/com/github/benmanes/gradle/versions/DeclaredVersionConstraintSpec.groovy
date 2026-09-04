@@ -164,28 +164,57 @@ final class DeclaredVersionConstraintSpec extends Specification {
     report().outdated.dependencies[0].available.milestone == '3.0'
   }
 
-  def 'a rule reading satisfiesDeclaredBound is warned once per build that it is deprecated'() {
-    given: 'two modules, so the rule is evaluated for more than one candidate'
-    writeBuildFile(
+  def 'a rule reading satisfiesDeclaredBound is warned once per project that it is deprecated'() {
+    given: 'a script classpath and two modules, so the rule is evaluated by both resolutions'
+    testProjectDir.newFile('build.gradle') <<
       """
-        api('com.google.inject:guice') {
-          version {
-            require '2.0'
-            reject '3.1'
+        buildscript {
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+          dependencies {
+            constraints {
+              classpath 'com.google.guava:guava:15.0'
+            }
           }
         }
-        api 'com.google.guava:guava:15.0'
-      """,
-      """
-        rejectVersionIf {
-          !satisfiesDeclaredBound
+
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
         }
-      """)
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          api('com.google.inject:guice') {
+            version {
+              require '2.0'
+              reject '3.1'
+            }
+          }
+          api 'com.google.guava:guava:15.0'
+        }
+
+        tasks.named('dependencyUpdates').configure {
+          checkForGradleUpdate = false
+          checkBuildEnvironmentConstraints = true
+          rejectVersionIf {
+            !satisfiesDeclaredBound
+          }
+        }
+      """.stripIndent()
 
     when:
     def result = run()
 
-    then: 'one warning, not one per candidate'
+    then: 'one warning, not one per candidate and not one per resolution'
     result.output.count('satisfiesDeclaredBound is deprecated') == 1
   }
 
@@ -206,7 +235,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
     def result = run()
 
     then:
-    !result.output.contains('is deprecated')
+    !result.output.contains('satisfiesDeclaredBound is deprecated')
   }
 
   def 'a constraint stating a range still bounds the report, though its version reads as a range'() {
