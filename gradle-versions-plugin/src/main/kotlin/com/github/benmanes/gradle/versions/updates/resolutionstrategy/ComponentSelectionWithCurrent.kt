@@ -297,12 +297,15 @@ private object DeclaredBound {
   ): Boolean {
     val order = comparator
     val versions = parser
-    if (order == null || versions == null || currentVersion.isEmpty() || isSelectorText(currentVersion)) {
+    if (order == null || versions == null || currentVersion.isEmpty()) {
       return true
     }
     return try {
-      order.compare(versions.transform(candidate), versions.transform(currentVersion)) > 0
+      isSelectorText(currentVersion) ||
+        order.compare(versions.transform(candidate), versions.transform(currentVersion)) > 0
     } catch (e: Exception) {
+      true
+    } catch (e: LinkageError) {
       true
     }
   }

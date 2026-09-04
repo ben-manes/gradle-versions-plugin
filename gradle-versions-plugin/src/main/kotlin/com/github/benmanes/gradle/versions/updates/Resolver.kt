@@ -398,9 +398,7 @@ class Resolver internal constructor(
       ResolutionStrategyWithCurrent(inner, currentCoordinates).componentSelection { rules ->
         rules.all(
           Action<ComponentSelectionWithCurrent> { current ->
-            @Suppress("SENSELESS_COMPARISON")
-            val isNotNull = current.currentVersion != null && current.candidate.version != null
-            if (isNotNull && current.isUpgradeOutOfDeclaredBound) {
+            if (current.isUpgradeOutOfDeclaredBound) {
               current.reject("Rejected by rejectOutOfBoundVersions")
             }
           },
