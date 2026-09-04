@@ -40,7 +40,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
   /**
    * The settings as the producers resolved them, wired by the plugin from the shared settings so
-   * that they are read back as resolved rather than as configured on this project alone. All four
+   * that they are read back as resolved rather than as configured on this project alone. All five
    * are taken from one resolution, so a read cannot mix them. The convention covers a task the
    * plugin did not register, where only this project's own settings are known.
    */
@@ -48,13 +48,14 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   internal val inherited: Property<InheritedSettings> =
     project.objects.property(InheritedSettings::class.java).convention(
       project.provider {
+        val revision =
+          settingOf(
+            parameters.revisionFromCommandLine,
+            "revision",
+            parameters.revision ?: DEFAULT_REVISION,
+          )
         InheritedSettings(
-          revision =
-            settingOf(
-              parameters.revisionFromCommandLine,
-              "revision",
-              parameters.revision ?: DEFAULT_REVISION,
-            ),
+          revision = revision,
           checkConstraints =
             settingOf(
               parameters.checkConstraintsFromCommandLine,
@@ -73,7 +74,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
           rejectPreReleaseVersions =
             settingOf(
               parameters.rejectPreReleaseVersionsFromCommandLine,
-              parameters.rejectPreReleaseVersions ?: true,
+              parameters.rejectPreReleaseVersions ?: (revision != INTEGRATION_REVISION),
             ),
         )
       },
@@ -296,11 +297,11 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   }
 
   /**
-   * Whether a candidate that names a pre-release is withheld from the report when the version a
-   * build declares does not itself name one, so that upgrading never trades a release for a
-   * pre-release without being asked. A build already on a pre-release keeps seeing newer ones. A
-   * convention this does not recognize is named in a [rejectVersionIf] filter, which composes with
-   * this one rather than replacing it. See [VersionStability.isLessStable].
+   * Whether a pre-release candidate is left out of the report while the current version is not
+   * itself a pre-release, so that newer pre-releases are still reported to a build on one. A
+   * convention the built-in markers do not cover goes in a [rejectVersionIf] filter, applied in
+   * addition to this check. Off by default under the `integration` revision, which selects the
+   * newest version whatever its qualifier, and read back as `false` there unless set.
    */
   @get:Input
   var rejectPreReleaseVersions: Boolean
@@ -309,10 +310,10 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
       parameters.rejectPreReleaseVersions = value
     }
 
-  /** Withholds a pre-release candidate, or lets one through, for this invocation alone. */
+  /** Leaves out a pre-release candidate, or lets one through, for this invocation alone. */
   @Option(
     option = "reject-pre-release-versions",
-    description = "Leaves out a candidate that names a pre-release when the declared version does not.",
+    description = "Leaves out a pre-release candidate when the current version is not a pre-release.",
   )
   internal fun setRejectPreReleaseVersionsFromCommandLine(rejectPreReleaseVersions: Boolean) {
     parameters.rejectPreReleaseVersionsFromCommandLine = rejectPreReleaseVersions

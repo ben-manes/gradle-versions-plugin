@@ -71,6 +71,9 @@ internal fun <T : Any> settingOf(
 /** The revision level resolved against when neither the build nor an override states one. */
 internal const val DEFAULT_REVISION = "milestone"
 
+/** The revision that selects the newest version whatever its qualifier, snapshots included. */
+internal const val INTEGRATION_REVISION = "integration"
+
 /** The task settings that a project's producer reads while its input is realized; null is unset. */
 internal class DependencyUpdatesParameters {
   var revision: String? = null
@@ -156,13 +159,14 @@ internal abstract class DependencyUpdatesParametersService :
       generateSequence(path) { if (it == ":") null else it.substringBeforeLast(':').ifEmpty { ":" } }
         .mapNotNull { byPath[it] }
         .toList()
+    val revision =
+      settingOf(
+        fromCommandLine = chain.firstNotNullOfOrNull { it.revisionFromCommandLine },
+        systemPropertyName = "revision",
+        configured = chain.firstNotNullOfOrNull { it.revision } ?: DEFAULT_REVISION,
+      )
     return ResolvedParameters(
-      revision =
-        settingOf(
-          fromCommandLine = chain.firstNotNullOfOrNull { it.revisionFromCommandLine },
-          systemPropertyName = "revision",
-          configured = chain.firstNotNullOfOrNull { it.revision } ?: DEFAULT_REVISION,
-        ),
+      revision = revision,
       filterConfigurations =
         chain.firstNotNullOfOrNull { it.filterConfigurations } ?: ALL_CONFIGURATIONS,
       filterDeclaredConfigurations =
@@ -184,10 +188,14 @@ internal abstract class DependencyUpdatesParametersService :
           fromCommandLine = chain.firstNotNullOfOrNull { it.rejectOutOfBoundVersionsFromCommandLine },
           configured = chain.firstNotNullOfOrNull { it.rejectOutOfBoundVersions } ?: true,
         ),
+      // Off by default under the integration revision, which selects the newest version whatever
+      // its qualifier, snapshots included. An explicit setting still applies there.
       rejectPreReleaseVersions =
         settingOf(
           fromCommandLine = chain.firstNotNullOfOrNull { it.rejectPreReleaseVersionsFromCommandLine },
-          configured = chain.firstNotNullOfOrNull { it.rejectPreReleaseVersions } ?: true,
+          configured =
+            chain.firstNotNullOfOrNull { it.rejectPreReleaseVersions }
+              ?: (revision != INTEGRATION_REVISION),
         ),
     )
   }
@@ -618,10 +626,10 @@ private fun statusesOf(
     Resolver(
       project,
       parameters.resolutionStrategy,
-      checkConstraints,
-      parameters.rejectOutOfBoundVersions,
-      parameters.rejectPreReleaseVersions,
-      onDeprecatedBoundRead,
+      checkConstraints = checkConstraints,
+      rejectOutOfBoundVersions = parameters.rejectOutOfBoundVersions,
+      rejectPreReleaseVersions = parameters.rejectPreReleaseVersions,
+      onDeprecatedBoundRead = onDeprecatedBoundRead,
     )
   // Snapshotted for every configuration before the first resolution, as resolving one
   // configuration runs the lazy actions of the configurations it extends. A build that read the

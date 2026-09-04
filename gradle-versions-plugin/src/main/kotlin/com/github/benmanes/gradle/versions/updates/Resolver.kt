@@ -55,7 +55,10 @@ class Resolver internal constructor(
   /** Called when a rule reads the deprecated bound, so the warning is printed once per project. */
   private val onDeprecatedBoundRead: () -> Unit,
 ) {
-  /** Retained so the arity released before the bound filter was added still links. */
+  /**
+   * Retained so the arity released before the bound and pre-release filters were added still links.
+   * Both filters are on.
+   */
   constructor(
     project: Project,
     resolutionStrategy: Action<in ResolutionStrategyWithCurrent>?,
@@ -241,9 +244,9 @@ class Resolver internal constructor(
     copy.resolutionStrategy.deactivateDependencyLocking()
 
     addDeclaredBoundFilter(copy, current.coordinates)
+    addPreReleaseFilter(copy, current.coordinates)
     addRevisionFilter(copy, revision, current.coordinates)
     addAttributes(copy, configuration)
-    addPreReleaseFilter(copy, revision, current.coordinates)
     addCustomResolutionStrategy(copy, current.coordinates)
 
     disableAutoTargetJvm(copy)
@@ -413,31 +416,30 @@ class Resolver internal constructor(
   }
 
   /**
-   * Rejects a pre-release candidate with a component selection rule of its own, registered on the
-   * configuration rather than through [DependencyUpdatesTask.rejectVersionIf]. That setter marks
-   * the task's parameters as having a resolution strategy, and a project marked that way supplies
-   * its own strategy to the inheritance chain instead of taking its nearest ancestor's, so routing
-   * this filter through it would stop every subproject inheriting the root's `rejectVersionIf`.
+   * Adds the filter that leaves out a pre-release candidate while the current version is a release,
+   * which [VersionStability.isLessStable] computes. Registered ahead of the revision filter for the
+   * reason given on [addDeclaredBoundFilter], and on the configuration rather than through
+   * [DependencyUpdatesTask.rejectVersionIf]: that setter marks the task's parameters as having a
+   * resolution strategy, and a project marked that way is resolved with its own strategy instead
+   * of its nearest ancestor's, so routing this filter through it would stop every subproject
+   * inheriting the root's `rejectVersionIf`.
    */
   private fun addPreReleaseFilter(
     configuration: Configuration,
-    revision: String,
     currentCoordinates: Map<Coordinate.Key, Coordinate>,
   ) {
-    // The integration revision is how a build asks to see snapshots, and every snapshot is a
-    // pre-release, so filtering there would leave that revision with nothing to report.
-    if (!rejectPreReleaseVersions || revision == "integration") return
-    configuration.resolutionStrategy { strategy ->
-      strategy.componentSelection { rules ->
-        rules.all { selection ->
-          val candidateCoordinate = Coordinate.from(selection.candidate)
-          val currentVersion = currentCoordinates[candidateCoordinate.key]?.version
-          if (currentVersion != null &&
-            VersionStability.isLessStable(candidateCoordinate.version, currentVersion)
-          ) {
-            selection.reject("Pre-release rejected by rejectPreReleaseVersions")
-          }
-        }
+    if (!rejectPreReleaseVersions) {
+      return
+    }
+    configuration.resolutionStrategy { inner ->
+      ResolutionStrategyWithCurrent(inner, currentCoordinates).componentSelection { rules ->
+        rules.all(
+          Action<ComponentSelectionWithCurrent> { current ->
+            if (VersionStability.isLessStable(current.candidate.version, current.currentVersion)) {
+              current.reject("Pre-release rejected by rejectPreReleaseVersions")
+            }
+          },
+        )
       }
     }
   }

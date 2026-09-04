@@ -6,14 +6,16 @@ import groovy.json.JsonSlurper
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
+import spock.lang.Issue
 import spock.lang.Specification
 
 /**
- * {@code rejectPreReleaseVersions} withholds a pre-release candidate from the report by default,
- * unless the build already declares a pre-release, in which case a newer pre-release is still
- * reported. A convention the built-in markers do not cover is named in a {@code rejectVersionIf}
- * filter, which composes with this one rather than replacing it.
+ * With {@code rejectPreReleaseVersions}, on by default, a pre-release candidate is left out of the
+ * report unless the current version is itself a pre-release, in which case a newer pre-release is
+ * still reported. A convention the built-in markers do not cover goes in a {@code rejectVersionIf}
+ * filter, which is applied in addition to the built-in check.
  */
+@Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/440')
 final class CheckPreReleaseVersionsSpec extends Specification {
   @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
   private String reportFolder
@@ -90,7 +92,7 @@ final class CheckPreReleaseVersionsSpec extends Specification {
     report.outdated.dependencies.isEmpty()
   }
 
-  def 'rejectPreReleaseVersions false restores the pre-release candidate'() {
+  def 'with rejectPreReleaseVersions false the pre-release candidate is reported'() {
     given:
     writeBuildFile('com.example:prerelease-widget:1.0', 'rejectPreReleaseVersions = false')
 
@@ -102,7 +104,7 @@ final class CheckPreReleaseVersionsSpec extends Specification {
     report.outdated.dependencies[0].available.milestone == '1.2-beta'
   }
 
-  def 'the command line option restores the pre-release candidate for one run'() {
+  def 'the command line option turns the filter off for one run'() {
     given:
     writeBuildFile('com.example:prerelease-widget:1.0')
 
@@ -114,7 +116,7 @@ final class CheckPreReleaseVersionsSpec extends Specification {
     report.outdated.dependencies[0].available.milestone == '1.2-beta'
   }
 
-  def 'the command line option overrides a build that turned the filter off'() {
+  def 'the command line option overrides the property set to false in the build'() {
     given:
     writeBuildFile('com.example:prerelease-widget:1.0', 'rejectPreReleaseVersions = false')
 
@@ -126,22 +128,22 @@ final class CheckPreReleaseVersionsSpec extends Specification {
     report.outdated.dependencies.isEmpty()
   }
 
-  def 'a module with no release at all reports as unresolved rather than up to date'() {
-    given: 'peer publishes only 1.0-alpha and 1.0-beta, and the declared 0.9 was never published'
+  def 'a module with only pre-releases published and no declared version to fall back to is unresolved'() {
+    given: 'only 1.0-alpha and 1.0-beta of peer are published, and the declared 0.9 never was'
     writeBuildFile('com.example:prerelease-peer:0.9')
 
     when:
     def report = runReport()
 
     then: 'every candidate is rejected, so the dynamic query matches nothing'
-    // A known cost of filtering by rejection, shared with a rejectVersionIf that rejects
-    // everything. The build still succeeds, and the entry names the versions that were rejected.
+    // A known cost of filtering by rejection, the same as with a rejectVersionIf that rejects
+    // everything. The build still succeeds, and the rejected versions are listed in the reason.
     report.unresolved.dependencies*.name == ['prerelease-peer']
     report.unresolved.dependencies[0].reason.contains('1.0-beta')
     report.outdated.dependencies.isEmpty()
   }
 
-  def 'a build already on a pre-release still sees a newer pre-release'() {
+  def 'a newer pre-release is still reported to a build already on one'() {
     given:
     writeBuildFile('com.example:prerelease-peer:1.0-alpha')
 
@@ -153,7 +155,7 @@ final class CheckPreReleaseVersionsSpec extends Specification {
     report.outdated.dependencies[0].available.milestone == '1.0-beta'
   }
 
-  def 'a rejectVersionIf filter names a convention the built-in markers do not cover'() {
+  def 'a rejectVersionIf filter covers a convention the built-in markers do not'() {
     given:
     writeBuildFile('com.example:prerelease-flagged:1.0', '''
           rejectVersionIf {
@@ -170,7 +172,7 @@ final class CheckPreReleaseVersionsSpec extends Specification {
   }
 
   def 'the built-in filter and a rejectVersionIf filter both apply'() {
-    given: 'the filter rejects guava 16.0, leaving only the 16.0-rc1 the built-in check withholds'
+    given: 'the filter rejects guava 16.0, leaving only the 16.0-rc1 the built-in check rejects'
     writeBuildFile('com.google.guava:guava:15.0', '''
           rejectVersionIf {
             candidate.version == '16.0'
@@ -185,7 +187,7 @@ final class CheckPreReleaseVersionsSpec extends Specification {
     report.outdated.dependencies.isEmpty()
   }
 
-  def 'the integration revision is left alone, since every snapshot is a pre-release'() {
+  def 'under the integration revision a snapshot is reported'() {
     given:
     writeBuildFile('com.example:snapshot-mixed:1.5', "revision = 'integration'")
 
@@ -195,6 +197,43 @@ final class CheckPreReleaseVersionsSpec extends Specification {
     then:
     report.outdated.dependencies*.name == ['snapshot-mixed']
     report.outdated.dependencies[0].available.integration == '2.0-SNAPSHOT'
+  }
+
+  def 'under the integration revision the filter is off, and the property reads false'() {
+    given: 'a beta rather than a snapshot, so the exemption covers the whole revision'
+    writeBuildFile('com.example:prerelease-widget:1.0', '''
+          revision = 'integration'
+          doLast { println "rejectPreReleaseVersions=$rejectPreReleaseVersions" }
+        ''')
+
+    when:
+    def result = GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+    def report = new JsonSlurper().parseText(new File(reportFolder, 'report.json').text) as Map
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('rejectPreReleaseVersions=false')
+    report.outdated.dependencies*.name == ['prerelease-widget']
+    report.outdated.dependencies[0].available.integration == '1.2-beta'
+  }
+
+  def 'under the integration revision an explicit setting still applies'() {
+    given:
+    writeBuildFile('com.example:prerelease-widget:1.0', '''
+          revision = 'integration'
+          rejectPreReleaseVersions = true
+        ''')
+
+    when:
+    def report = runReport()
+
+    then:
+    report.current.dependencies*.name == ['prerelease-widget']
+    report.outdated.dependencies.isEmpty()
   }
 
   private void writeMultiProjectBuild(String dependency, String taskConfig) {
@@ -234,7 +273,7 @@ final class CheckPreReleaseVersionsSpec extends Specification {
         """.stripIndent()
   }
 
-  def 'a subproject takes rejectPreReleaseVersions from the root task'() {
+  def 'a subproject inherits rejectPreReleaseVersions from the root task'() {
     given:
     writeMultiProjectBuild('com.example:prerelease-widget:1.0', 'rejectPreReleaseVersions = false')
 
@@ -246,7 +285,7 @@ final class CheckPreReleaseVersionsSpec extends Specification {
     report.outdated.dependencies[0].available.milestone == '1.2-beta'
   }
 
-  def 'a marker the built-in set does not recognize is passed through, not withheld'() {
+  def 'a qualifier not in the built-in markers is passed through'() {
     given:
     writeBuildFile('com.example:prerelease-flagged:1.0')
 
