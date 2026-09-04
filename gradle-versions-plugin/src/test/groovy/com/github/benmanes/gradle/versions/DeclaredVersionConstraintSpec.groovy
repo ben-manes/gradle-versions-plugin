@@ -232,6 +232,29 @@ final class DeclaredVersionConstraintSpec extends Specification {
     guice.available.milestone == '2.2'
   }
 
+  def 'a constraint stating a single-version range still bounds the report'() {
+    given: 'a strictly written as [2.0], which parses to the exact version but reads as a range'
+    writeBuildFile(
+      """
+        constraints {
+          api('com.google.inject:guice') {
+            version {
+              strictly '[2.0]'
+            }
+          }
+        }
+      """,
+      'checkConstraints = true')
+
+    when:
+    run()
+
+    then: 'the pinned version, not the 3.1 the unbounded query finds'
+    def guice = report().outdated.dependencies.find { it.name == 'guice' }
+    guice != null
+    guice.available.milestone == '2.0'
+  }
+
   def 'rejectOutOfBoundVersions = false offers the version the build rejects'() {
     given:
     writeBuildFile(

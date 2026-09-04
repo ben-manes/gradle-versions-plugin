@@ -6,7 +6,6 @@ import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultV
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionSelectorScheme
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.Version
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionRangeSelector
 
 class ComponentSelectionWithCurrent internal constructor(
   private val delegate: ComponentSelection,
@@ -179,14 +178,20 @@ private object DeclaredBound {
     }
   }
 
-  /** Whether the version parses as a range selector, the form a rich constraint flattens to. */
-  private fun statesRange(version: String): Boolean {
+  /**
+   * Whether the text is a selector rather than a version, which is what a constraint reported with
+   * no declaration beside it carries where a resolved version would sit. A range and a dynamic
+   * version are selectors, and so is a single-version range such as `[2.0]`, which parses to the
+   * exact selector for a different string.
+   */
+  private fun isSelectorText(version: String): Boolean {
     val parser = scheme
     if (parser == null || version.isEmpty()) {
       return false
     }
     return try {
-      parser.parseSelector(version) is VersionRangeSelector
+      val selector = parser.parseSelector(version)
+      selector.isDynamic || selector.selector != version
     } catch (e: Exception) {
       false
     }
@@ -263,9 +268,9 @@ private object DeclaredBound {
     dynamicRequiredBounds: Boolean,
   ): Boolean =
     try {
-      // Where a constraint is reported with no declaration beside it, the range sits where a
-      // resolved version would, and a range cannot be compared against the bound it duplicates.
-      statesRange(currentVersion) ||
+      // Where a constraint is reported with no declaration beside it, its selector sits where a
+      // resolved version would, and a selector cannot be compared against the bound it duplicates.
+      isSelectorText(currentVersion) ||
         (
           admitsDeclared(constraint, currentVersion, dynamicRequiredBounds) &&
             platformConstraints.all { admits(it, currentVersion) }
@@ -289,7 +294,7 @@ private object DeclaredBound {
   ): Boolean {
     val order = comparator
     val versions = parser
-    if (order == null || versions == null || currentVersion.isEmpty() || statesRange(currentVersion)) {
+    if (order == null || versions == null || currentVersion.isEmpty() || isSelectorText(currentVersion)) {
       return true
     }
     return try {
