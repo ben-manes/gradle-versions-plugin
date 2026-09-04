@@ -341,6 +341,7 @@ command line option, since no command line can express the logic.
 | [`filterConfigurations`](#filterconfigurations) | a `Spec<Configuration>` | every configuration | |
 | [`filterDeclaredConfigurations`](#filterdeclaredconfigurations) | a `Spec<String>` | every name | |
 | [`rejectOutOfBoundVersions`](#respecting-declared-bounds) | `true`, `false` | `true` | `--[no-]reject-out-of-bound-versions` |
+| [`rejectPreReleaseVersions`](#filtering-unstable-versions) | `true`, `false` | `true` | `--[no-]reject-pre-release-versions` |
 | [`rejectVersionIf`](#filtering-unstable-versions) | a predicate over the candidate | nothing rejected | |
 | [`outputFormatter`](#report-format) | `text`, `json`, `xml`, `html`, a comma separated list of those, or a `Reporter` | `text` | `--output-formatter` |
 | [`outputDir`](#outputdir) | a directory path | `<buildDirectory>/dependencyUpdates` | `--output-dir` |
@@ -771,9 +772,11 @@ tasks.named("dependencyUpdates").configure {
 
 Neither check can restore what the other withheld. To see every candidate the
 repositories offer, including the pre-releases, turn the built-in filter off with
-`rejectPreReleaseVersions = false`. Do that too when you want a policy of your
-own, and write the whole of it as a component selection rule instead. There is no
-agreed standard for what counts as unstable, but this is a common starting point:
+`rejectPreReleaseVersions = false`, or with `--no-reject-pre-release-versions`
+for a single run (see [Command line options](#command-line-options)). Turn it off
+too when you want a policy of your own, and write the whole of it as a component
+selection rule instead. There is no agreed standard for what counts as unstable,
+but this is a common starting point:
 
 <details open>
 <summary>Kotlin</summary>

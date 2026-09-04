@@ -68,10 +68,10 @@ final class CheckPreReleaseVersionsSpec extends Specification {
     return file
   }
 
-  private Map runReport() {
+  private Map runReport(List<String> extraArguments = []) {
     def result = GradleRunner.create()
       .withProjectDir(testProjectDir.root)
-      .withArguments('dependencyUpdates')
+      .withArguments(['dependencyUpdates'] + extraArguments)
       .withPluginClasspath()
       .build()
     assert result.task(':dependencyUpdates').outcome == SUCCESS
@@ -100,6 +100,30 @@ final class CheckPreReleaseVersionsSpec extends Specification {
     then:
     report.outdated.dependencies*.name == ['prerelease-widget']
     report.outdated.dependencies[0].available.milestone == '1.2-beta'
+  }
+
+  def 'the command line option restores the pre-release candidate for one run'() {
+    given:
+    writeBuildFile('com.example:prerelease-widget:1.0')
+
+    when:
+    def report = runReport(['--no-reject-pre-release-versions'])
+
+    then:
+    report.outdated.dependencies*.name == ['prerelease-widget']
+    report.outdated.dependencies[0].available.milestone == '1.2-beta'
+  }
+
+  def 'the command line option overrides a build that turned the filter off'() {
+    given:
+    writeBuildFile('com.example:prerelease-widget:1.0', 'rejectPreReleaseVersions = false')
+
+    when:
+    def report = runReport(['--reject-pre-release-versions'])
+
+    then:
+    report.current.dependencies*.name == ['prerelease-widget']
+    report.outdated.dependencies.isEmpty()
   }
 
   def 'a build already on a pre-release is still offered a newer pre-release'() {

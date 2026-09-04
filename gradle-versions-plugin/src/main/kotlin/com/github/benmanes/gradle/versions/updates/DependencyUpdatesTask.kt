@@ -309,6 +309,15 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
       parameters.rejectPreReleaseVersions = value
     }
 
+  /** Withholds a pre-release candidate, or lets one through, for this invocation alone. */
+  @Option(
+    option = "reject-pre-release-versions",
+    description = "Leaves out a candidate that names a pre-release when the declared version does not.",
+  )
+  internal fun setRejectPreReleaseVersionsFromCommandLine(rejectPreReleaseVersions: Boolean) {
+    parameters.rejectPreReleaseVersionsFromCommandLine = rejectPreReleaseVersions
+  }
+
   @Internal
   @Nullable
   @Transient
