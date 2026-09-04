@@ -39,6 +39,7 @@ def isNonStable = { String version ->
 
 tasks.named("dependencyUpdates").configure {
   checkForGradleUpdate = true
+  rejectOutOfBoundVersions = true
 
   // Example 1: reject all non stable versions
   rejectVersionIf {
@@ -69,11 +70,6 @@ tasks.named("dependencyUpdates").configure {
   }
   rejectVersionIf {
     maturityLevel(candidate.version) < maturityLevel(currentVersion)
-  }
-
-  // Example 5: keep the report inside the bound the build already declares
-  rejectVersionIf {
-    !satisfiesDeclaredBound
   }
 }
 
