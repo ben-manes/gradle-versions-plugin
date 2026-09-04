@@ -284,7 +284,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
     guice.available.milestone == '2.0'
   }
 
-  def 'rejectOutOfBoundVersions = false offers the version the build rejects'() {
+  def 'with rejectOutOfBoundVersions = false the version the build rejects is listed'() {
     given:
     writeBuildFile(
       """
@@ -305,7 +305,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
     report().outdated.dependencies[0].available.milestone == '3.1'
   }
 
-  def 'the command line option shows what the bound withholds for a single run'() {
+  def 'the command line option lists what the bound leaves out, for a single run'() {
     given: 'the build leaves the property at its default'
     writeBuildFile(
       """
@@ -321,7 +321,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
     when:
     run('--no-reject-out-of-bound-versions')
 
-    then: 'the version the bound withholds is offered'
+    then: 'the version left out by the bound is listed'
     report().outdated.dependencies*.name == ['guice']
     report().outdated.dependencies[0].available.milestone == '3.1'
   }
@@ -499,7 +499,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
     when:
     def result = run()
 
-    then: 'a bound the resolved version already sits above holds nothing, so the upgrade stands'
+    then: 'a bound the resolved version already lies outside is not applied, so the upgrade is listed'
     result.output.contains('com.google.inject:guice [3.0 -> 7.0.0]')
   }
 

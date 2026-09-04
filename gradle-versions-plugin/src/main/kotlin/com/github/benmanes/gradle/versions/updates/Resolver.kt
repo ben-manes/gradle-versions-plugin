@@ -380,8 +380,8 @@ class Resolver internal constructor(
   }
 
   /**
-   * Adds the filter that holds the report to the bound declared for a module, leaving out the
-   * upgrades [ComponentSelectionWithCurrent.isUpgradeOutOfDeclaredBound] marks as out of bound.
+   * Adds the filter that leaves out the upgrades outside the bound declared for a module, which
+   * [ComponentSelectionWithCurrent.isUpgradeOutOfDeclaredBound] identifies.
    *
    * Registered after the rules configured in the build, since a rejected candidate is not passed
    * to the rules that follow, and a rule written in a build script is still evaluated for every

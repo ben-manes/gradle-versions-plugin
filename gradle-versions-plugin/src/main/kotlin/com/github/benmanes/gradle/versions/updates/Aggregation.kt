@@ -219,7 +219,7 @@ internal fun registerAggregation(
   val path = project.path
   // Realized after every project is configured, as the producers' inputs are, so that the values
   // read back from the task are the ones the producers resolved with rather than only what is
-  // configured on this project. All three are taken from one resolution, so a read cannot mix a
+  // configured on this project. All four are taken from one resolution, so a read cannot mix a
   // stale value with a fresh one.
   val inherited =
     project.provider {

@@ -40,7 +40,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
   /**
    * The settings as the producers resolved them, wired by the plugin from the shared settings so
-   * that they are read back as resolved rather than as configured on this project alone. All three
+   * that they are read back as resolved rather than as configured on this project alone. All four
    * are taken from one resolution, so a read cannot mix them. The convention covers a task the
    * plugin did not register, where only this project's own settings are known.
    */
@@ -281,7 +281,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
       parameters.rejectOutOfBoundVersions = value
     }
 
-  /** Reports the versions outside a declared bound for this invocation alone. */
+  /** Leaves out the versions outside a declared bound for this invocation alone. */
   @Option(
     option = "reject-out-of-bound-versions",
     description = "Leaves out the versions outside a declared bound or a consumed platform's.",

@@ -980,9 +980,10 @@ bounds the candidate, so a plugin declared as `version "[1.0, 2["` or
 `plugins` block or came from a version catalog alias. Gradle flattens an alias to
 a bare required version on the marker it synthesizes, leaving the two forms
 identical, and a plugin has one declaration, so the interval is the version
-declared rather than a floor something else may push past. The version already
-resolved stays in bound, since a transitive requirement on a classpath can push
-the selection past the interval.
+declared rather than a floor something else may push past. Where a transitive
+requirement on a classpath has pushed the selection past the interval, the
+version already resolved lies outside the bound, and the bound is not applied,
+as above.
 
 A module declared without a version is additionally bound by the version a
 consumed platform sets for it, since the build cannot take that upgrade without
@@ -2255,9 +2256,10 @@ before:
 > - Drop `!satisfiesDeclaredBound` from a `rejectVersionIf` rule, since the
 >   bound is now applied by `rejectOutOfBoundVersions`. The member is
 >   deprecated and will be removed in a later release; a warning is printed
->   once per project when a rule reads it. With the clause still in a rule,
->   the same candidates are rejected under `--no-reject-out-of-bound-versions`
->   as without it.
+>   once per project when a rule reads it, and a Kotlin DSL build that treats
+>   compiler warnings as errors has to drop the clause before upgrading. With
+>   the clause still in a rule, the same candidates are rejected under
+>   `--no-reject-out-of-bound-versions` as without it.
 
 > [!NOTE]
 > - The presence of a version catalog no longer changes whether a plugin
