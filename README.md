@@ -913,10 +913,10 @@ tasks.named("dependencyUpdates").configure {
 
 ##### Respecting declared bounds
 
-The report stays inside the bounds written in the build itself. A candidate
-outside a bound on the declaration, or outside the version fixed by a consumed
-platform, is left out, so the only versions listed are ones the build can
-actually move to. `rejectOutOfBoundVersions` turns that off:
+The report is held to the bounds written in the build. A candidate outside a
+bound on the declaration, or outside the version fixed by a consumed platform,
+is left out, so the only versions listed are ones the build can actually be
+moved to. Set `rejectOutOfBoundVersions` to `false` to turn that off:
 
 <details open>
 <summary>Kotlin</summary>
@@ -944,8 +944,8 @@ tasks.named("dependencyUpdates").configure {
 
 To see what is left out, without an edit to the build script, run
 `./gradlew dependencyUpdates --no-reject-out-of-bound-versions`. Run it to
-learn what a bounded module could move to if the bound were lifted, such as
-whether a fix shipped in the module before its platform caught up.
+learn what a bounded module could be moved to if the bound were lifted, such
+as whether a fix was released for the module ahead of its platform.
 
 A bound is read the way dependency resolution reads it, so `strictly "[5.3,
 6["` admits 5.3.26 and excludes 6.0.1, and `reject "[3.0,)"` excludes
@@ -954,12 +954,12 @@ everything from 3.0 up. Only `strictly` and `reject` bound a candidate: a
 `prefer` version only breaks a tie, so a plain
 `implementation("group:name:1.2.3")` is not bounded.
 
-The bound is not applied in two cases where it settles nothing. A candidate no
-newer than the version in use is not an upgrade, so it stays, and a module
-whose version already exceeds everything published is still listed on the
+The bound is not applied in two cases where it makes no difference. A
+candidate no newer than the version in use is not an upgrade, so it stays, and
+a module at a version above everything published is still listed on the
 exceeded row. Where the version in use already lies outside the bound, the
-bound is not applied at all, since a transitive requirement that pushed the
-version past a platform leaves that platform bounding nothing.
+bound is not applied at all: once a transitive requirement has pushed the
+version past a platform, the platform no longer bounds anything.
 
 The same bound is readable from a rule. The constraint written on a
 declaration is available as `versionConstraint`, Gradle's
@@ -968,7 +968,7 @@ For a module declared without a version, the constraints fixed for that module
 by the consumed platforms are available as `platformVersionConstraints`. It
 is a list rather than a single value, because more than one consumed platform
 can bound the same module. The query that finds candidates is deliberately
-unbounded, so a rule that respects a declared bound reads it from
+unbounded, so a rule that applies a declared bound reads it from
 `versionConstraint` rather than restating it. It is null for a module no
 declaration was matched to, such as one a substitution rule resolved to, so
 guard for that. `satisfiesDeclaredBound`, the verdict a rule applied before the
@@ -2233,7 +2233,7 @@ and *Note*s are things worth knowing that need no action.
 ### v0.61.0
 
 In the next release, the report is held to the bounds written in the build
-without a rule to ask for it, and a coordinate whose one declared version has
+without a rule written for it, and a coordinate with one declared version and
 different latest versions across the aggregated projects is shown on one entry
 per latest version, where the entries were merged into the newest of them
 before:
@@ -2252,16 +2252,17 @@ before:
 >   alone has to key them by the projects as well.
 
 > [!TIP]
-> - Drop `!satisfiesDeclaredBound` from a `rejectVersionIf` rule, since
->   `rejectOutOfBoundVersions` now applies the bound on its own. The member is
+> - Drop `!satisfiesDeclaredBound` from a `rejectVersionIf` rule, since the
+>   bound is now applied by `rejectOutOfBoundVersions`. The member is
 >   deprecated and will be removed in a later release; a warning is printed
->   once per project when a rule reads it. A rule that keeps the clause still
->   rejects under `--no-reject-out-of-bound-versions`.
+>   once per project when a rule reads it. With the clause still in a rule,
+>   the same candidates are rejected under `--no-reject-out-of-bound-versions`
+>   as without it.
 
 > [!NOTE]
-> - The presence of a version catalog no longer changes whether a plugin the
->   `plugins` block versioned inline as a range is offered an upgrade past that
->   range. The upgrade was withheld when an unused alias for the same plugin was
+> - The presence of a version catalog no longer changes whether a plugin
+>   versioned inline as a range in the `plugins` block is offered an upgrade
+>   past that range. The upgrade was withheld when an unused alias for the same plugin was
 >   present in the catalog and offered when it was not (see [Respecting declared
 >   bounds](#respecting-declared-bounds)).
 > - A module that a platform bounds in one project and not in another is now up

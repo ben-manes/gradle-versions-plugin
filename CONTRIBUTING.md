@@ -61,16 +61,15 @@ How a pull request lands:
 - Beyond that, match the file you are editing: Kotlin sources carry no
   license header, comments are rare and explain only what the code cannot,
   and a README snippet is added in both Kotlin and Groovy.
-- A policy, which is anything that decides which entries appear in the report,
-  is a task property. A fact about a candidate, which is anything that cannot
-  be worked out from a build script alone, is a member of the `rejectVersionIf`
-  receiver, and exists so that a policy not shipped here can still be written
-  in a build script. Configuring `resolutionStrategy` changes the resolution
-  the candidates come from, and the output properties cover only where and how
-  the report is written; neither is a place for a policy. A policy documented
-  as a recipe to copy into a build script belongs on the task instead, since a
-  command line option reaches a task property and reaches no rule written in a
-  build script.
+- A setting that affects which entries appear in the report goes on the task
+  as a property, so that it can be set from the command line. A fact about a
+  candidate that cannot be worked out from a build script alone, such as
+  whether the candidate lies within a declared bound, goes on the
+  `rejectVersionIf` receiver, so that a rule that is not built in can still be
+  written in a build script. Do not document a setting as a `rejectVersionIf`
+  recipe to copy into a build script. `resolutionStrategy` is only for how the
+  candidates are resolved, and the output properties only for where and how
+  the report is written.
 - Add a command line option, with `@Option`, to every task property a build
   author sets to configure the report or where it is written, so that a single
   run can change it without an edit to the build script. A property configured
