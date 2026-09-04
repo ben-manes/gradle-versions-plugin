@@ -943,7 +943,9 @@ tasks.named("dependencyUpdates").configure {
 </details>
 
 To see what is left out, without an edit to the build script, run
-`./gradlew dependencyUpdates --no-reject-out-of-bound-versions`.
+`./gradlew dependencyUpdates --no-reject-out-of-bound-versions`. Run it to
+learn what a bounded module could move to if the bound were lifted, such as
+whether a fix shipped in the module before its platform caught up.
 
 A bound is read the way dependency resolution reads it, so `strictly "[5.3,
 6["` admits 5.3.26 and excludes 6.0.1, and `reject "[3.0,)"` excludes
