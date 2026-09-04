@@ -326,7 +326,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
     report().outdated.dependencies[0].available.milestone == '3.1'
   }
 
-  def 'the README recipe compiles and applies under the Kotlin DSL'() {
+  def 'the README snippet compiles and applies under the Kotlin DSL'() {
     given:
     testProjectDir.newFile('build.gradle.kts') <<
       """
@@ -353,18 +353,16 @@ final class DeclaredVersionConstraintSpec extends Specification {
         tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
           outputFormatter = "json"
           checkForGradleUpdate = false
-          rejectVersionIf {
-            !satisfiesDeclaredBound
-          }
+          rejectOutOfBoundVersions = false
         }
       """.stripIndent()
 
     when:
     run()
 
-    then:
+    then: 'the property is settable from a Kotlin script, and off lists the rejected version'
     report().outdated.dependencies*.name == ['guice']
-    report().outdated.dependencies[0].available.milestone == '3.0'
+    report().outdated.dependencies[0].available.milestone == '3.1'
   }
 
   def 'a declared range bounds the report, and an in-range upgrade is still offered'() {
@@ -416,6 +414,41 @@ final class DeclaredVersionConstraintSpec extends Specification {
     then: 'a required version is a floor resolution may rise above, a range included'
     report().outdated.dependencies*.name == ['guice']
     report().outdated.dependencies[0].available.milestone == '3.1'
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/755')
+  def 'a dynamic classpath bound is applied with no rule written for it'() {
+    given: 'a classpath range nothing pushes past, and no rejectVersionIf rule'
+    testProjectDir.newFile('build.gradle') <<
+      """
+        buildscript {
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+          configurations.create('probeClasspath')
+          dependencies {
+            probeClasspath 'com.google.inject:guice:[2.0, 3.0['
+          }
+        }
+
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.named('dependencyUpdates').configure {
+          checkForGradleUpdate = false
+        }
+      """.stripIndent()
+
+    when:
+    def result = run()
+
+    then: 'the newest version inside the range, with 3.0 and 3.1 left out by default'
+    result.output.contains(' - com.google.inject:guice:2.2')
+    !result.output.contains('com.google.inject:guice [2.2 -> ')
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/755')
