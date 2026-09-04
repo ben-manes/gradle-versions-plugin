@@ -806,6 +806,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
       """,
       """
         checkConstraints = true
+        rejectOutOfBoundVersions = false
         rejectVersionIf {
           if (candidate.module == 'log4j-core' && currentVersion == '2.16.0') {
             println "PROBE \${candidate.module}@\${candidate.version} bound=\${satisfiesDeclaredBound}" +
@@ -1025,6 +1026,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
       """,
       """
         checkConstraints = true
+        rejectOutOfBoundVersions = false
         rejectVersionIf {
           if (candidate.module == 'guice' && currentVersion == '2.0') {
             println "PROBE guice@\${candidate.version} bound=\${satisfiesDeclaredBound}"

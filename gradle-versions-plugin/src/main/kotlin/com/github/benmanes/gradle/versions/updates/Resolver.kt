@@ -238,10 +238,10 @@ class Resolver internal constructor(
     // The copy inherits activated dependency locking but has no lock state of its own.
     copy.resolutionStrategy.deactivateDependencyLocking()
 
+    addDeclaredBoundFilter(copy, current.coordinates)
     addRevisionFilter(copy, revision, current.coordinates)
     addAttributes(copy, configuration)
     addCustomResolutionStrategy(copy, current.coordinates)
-    addDeclaredBoundFilter(copy, current.coordinates)
 
     disableAutoTargetJvm(copy)
     return copy
@@ -383,9 +383,11 @@ class Resolver internal constructor(
    * Adds the filter that leaves out the upgrades outside the bound declared for a module, which
    * [ComponentSelectionWithCurrent.isUpgradeOutOfDeclaredBound] identifies.
    *
-   * Registered after the rules configured in the build, since a rejected candidate is not passed
-   * to the rules that follow, and a rule written in a build script is still evaluated for every
-   * candidate it was evaluated for before.
+   * Registered first, ahead of the revision filter and the rules configured in the build, since a
+   * rejected candidate is not passed to the rules that follow: the revision filter reads each
+   * candidate's metadata, which resolves it, and a rule can only reject, so an out-of-bound
+   * candidate costs nothing further and the report is the same. The version in use is never
+   * rejected here, so a rule reading the deprecated bound is still warned.
    */
   private fun addDeclaredBoundFilter(
     configuration: Configuration,
