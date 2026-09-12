@@ -24,17 +24,7 @@ final class CheckPreReleaseVersionsSpec extends Specification {
   private String mavenRepoUrl
 
   def 'setup'() {
-    def pluginClasspathResource = getClass().classLoader.getResource("plugin-classpath.txt")
-    if (pluginClasspathResource == null) {
-      throw new IllegalStateException(
-        "Did not find plugin classpath resource, run `testClasses` build task.")
-    }
-
-    def pluginClasspath = pluginClasspathResource.readLines().collect { new File(it) }
-    classpathString = pluginClasspath
-      .collect { it.absolutePath.replace('\\', '\\\\') } // escape backslashes in Windows paths
-      .collect { "'$it'" }
-      .join(", ")
+    classpathString = PluginClasspath.asFilesArgument()
     reportFolder = "${testProjectDir.root.path.replaceAll("\\\\", '/')}/build/dependencyUpdates"
     mavenRepoUrl = getClass().getResource('/maven/').toURI()
   }

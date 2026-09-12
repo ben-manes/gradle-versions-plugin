@@ -15,29 +15,12 @@ plugins {
 group = properties["GROUP"].toString()
 version = properties["VERSION_NAME"].toString()
 
-// Write the plugin's classpath to a file to share with the tests
-tasks.register("createClasspathManifest") {
-  val outputDir = layout.buildDirectory.dir(name).get().asFile
-
-  inputs.files(sourceSets.main.get().runtimeClasspath)
-  outputs.dir(outputDir)
-
-  doLast {
-    outputDir.mkdirs()
-    file("$outputDir/plugin-classpath.txt").writeText(sourceSets.main.get().runtimeClasspath.joinToString("\n"))
-  }
-}
-
 dependencies {
-  compileOnly(gradleApi())
-
   implementation(localGroovy())
   implementation(platform(libs.kotlin.bom))
   implementation(libs.kotlin.stdlib)
   implementation(libs.okhttp)
   implementation(libs.moshi)
-
-  testRuntimeOnly(files(tasks.named("createClasspathManifest")))
 
   testImplementation(localGroovy())
   testImplementation(gradleTestKit())

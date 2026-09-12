@@ -28,15 +28,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
     reportFolder = "${testProjectDir.root.path.replaceAll('\\\\', '/')}/build/dependencyUpdates"
     mavenRepoUrl = getClass().getResource('/maven/').toURI()
 
-    def pluginClasspathResource = getClass().classLoader.getResource('plugin-classpath.txt')
-    if (pluginClasspathResource == null) {
-      throw new IllegalStateException(
-        'Did not find plugin classpath resource, run `testClasses` build task.')
-    }
-    classpathString = pluginClasspathResource.readLines()
-      .collect { it.replace('\\', '\\\\') }
-      .collect { "'$it'" }
-      .join(', ')
+    classpathString = PluginClasspath.asFilesArgument()
   }
 
   private void writeBuildFile(String declarations, String taskBody) {

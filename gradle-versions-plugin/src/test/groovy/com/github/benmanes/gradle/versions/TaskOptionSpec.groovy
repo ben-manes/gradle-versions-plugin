@@ -555,8 +555,7 @@ final class TaskOptionSpec extends Specification {
 
   def 'Resolves an included build merged into the report with that build\'s own settings'() {
     given: 'one report merging an included build, each build applying the plugin'
-    def classpath = getClass().classLoader.getResource('plugin-classpath.txt').readLines()
-      .collect { it.replace('\\', '\\\\') }.collect { "'$it'" }.join(', ')
+    def classpath = PluginClasspath.asFilesArgument()
     testProjectDir.newFile('settings.gradle') << "includeBuild 'child'"
     rootBuildFile() <<
       """
@@ -622,8 +621,7 @@ final class TaskOptionSpec extends Specification {
   @IgnoreIf({ data.gradleVersion.startsWith('9') && !jvm.java17Compatible })
   def 'Binds the options under Gradle #gradleVersion'() {
     given: 'the plugin on the buildscript classpath, so a pinned Gradle runs it'
-    def classpath = getClass().classLoader.getResource('plugin-classpath.txt').readLines()
-      .collect { it.replace('\\', '\\\\') }.collect { "'$it'" }.join(', ')
+    def classpath = PluginClasspath.asFilesArgument()
     rootBuildFile() <<
       """
         buildscript {
