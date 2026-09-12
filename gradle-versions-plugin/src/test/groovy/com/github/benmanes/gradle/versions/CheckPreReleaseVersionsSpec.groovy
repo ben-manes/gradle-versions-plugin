@@ -94,7 +94,7 @@ final class CheckPreReleaseVersionsSpec extends Specification {
   }
 
   private Map runReport(List<String> extraArguments = []) {
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments(['dependencyUpdates'] + extraArguments)
       .withPluginClasspath()
@@ -210,7 +210,7 @@ final class CheckPreReleaseVersionsSpec extends Specification {
   }
 
   private void runUpdates(List<String> extraArguments = []) {
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments(['dependencyUpdates'] + extraArguments)
       .withPluginClasspath()
@@ -348,7 +348,7 @@ final class CheckPreReleaseVersionsSpec extends Specification {
         ''')
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()

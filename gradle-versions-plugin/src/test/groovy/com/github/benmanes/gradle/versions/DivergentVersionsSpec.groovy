@@ -58,7 +58,7 @@ final class DivergentVersionsSpec extends Specification {
   }
 
   private def run(List<String> arguments) {
-    return GradleRunner.create()
+    return TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments(arguments)
       .withPluginClasspath()
@@ -438,7 +438,7 @@ final class DivergentVersionsSpec extends Specification {
       [':': "project.path == ':' && it.candidate.version == '3.1'", 'app': 'false', 'lib': 'false'])
 
     when:
-    def store = GradleRunner.create()
+    def store = TestKitRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
       .withArguments([':dependencyUpdates', '--no-parallel', '--configuration-cache'])

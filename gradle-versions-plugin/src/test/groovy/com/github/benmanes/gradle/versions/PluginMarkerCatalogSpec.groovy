@@ -60,7 +60,7 @@ final class PluginMarkerCatalogSpec extends Specification {
   }
 
   private def runOn(String gradleVersion, List<String> extraArgs = []) {
-    def runner = GradleRunner.create()
+    def runner = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments(['dependencyUpdates'] + extraArgs)
       .withPluginClasspath()

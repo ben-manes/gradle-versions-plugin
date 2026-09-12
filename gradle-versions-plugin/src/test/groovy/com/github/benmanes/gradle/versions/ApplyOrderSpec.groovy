@@ -82,7 +82,7 @@ final class ApplyOrderSpec extends Specification {
   }
 
   private def run(String gradleVersion, String... arguments) {
-    return GradleRunner.create()
+    return TestKitRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
       .withArguments(arguments)

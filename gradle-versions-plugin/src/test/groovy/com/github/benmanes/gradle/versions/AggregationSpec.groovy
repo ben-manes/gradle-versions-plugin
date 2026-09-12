@@ -53,7 +53,7 @@ final class AggregationSpec extends Specification {
   }
 
   private def run(List<String> arguments) {
-    return GradleRunner.create()
+    return TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments(arguments)
       .withPluginClasspath()
@@ -116,7 +116,7 @@ final class AggregationSpec extends Specification {
   @Unroll
   def 'Aggregates in parallel on Gradle #gradleVersion'() {
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates', '--parallel', '--configuration-cache')

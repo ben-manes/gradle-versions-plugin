@@ -101,7 +101,7 @@ final class ReporterLogLevelSpec extends Specification {
   }
 
   private def run(List<String> arguments) {
-    return GradleRunner.create()
+    return TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments(arguments)
       .build()

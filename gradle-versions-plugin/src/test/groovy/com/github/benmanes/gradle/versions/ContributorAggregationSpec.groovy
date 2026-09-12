@@ -65,7 +65,7 @@ final class ContributorAggregationSpec extends Specification {
   }
 
   private def run(String... arguments) {
-    return GradleRunner.create()
+    return TestKitRunner.create()
       .withGradleVersion(GradleVersions.CURRENT)
       .withProjectDir(testProjectDir.root)
       .withArguments(arguments)
@@ -186,7 +186,7 @@ final class ContributorAggregationSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion(GradleVersions.CURRENT)
       .withProjectDir(testProjectDir.root)
       .withArguments(':dependencyUpdates')
@@ -208,7 +208,7 @@ final class ContributorAggregationSpec extends Specification {
     producer.task(':app:partialDependencyUpdates').outcome == SUCCESS
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion(GradleVersions.CURRENT)
       .withProjectDir(testProjectDir.root)
       .withArguments(':app:dependencyUpdates')

@@ -64,7 +64,7 @@ final class KotlinDslUsageSpec extends Specification {
     '''
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion(gradleVersion)
       .withPluginClasspath()
       .withProjectDir(testProjectDir.root)
@@ -104,7 +104,7 @@ final class KotlinDslUsageSpec extends Specification {
     '''
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion(gradleVersion)
       .withPluginClasspath()
       .withProjectDir(testProjectDir.root)
@@ -134,7 +134,7 @@ final class KotlinDslUsageSpec extends Specification {
     '''
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withPluginClasspath()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
@@ -167,7 +167,7 @@ final class KotlinDslUsageSpec extends Specification {
     """
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withPluginClasspath()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')

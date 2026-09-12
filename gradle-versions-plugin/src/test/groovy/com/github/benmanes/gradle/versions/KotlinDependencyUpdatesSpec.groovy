@@ -52,7 +52,7 @@ final class KotlinDependencyUpdatesSpec extends Specification {
     testProjectDir.newFile('gradle.properties') << "kotlin_version = $DECLARED_KOTLIN_VERSION"
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -101,7 +101,7 @@ final class KotlinDependencyUpdatesSpec extends Specification {
     testProjectDir.newFile('gradle.properties') << "kotlin_version = $DECLARED_KOTLIN_VERSION"
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -132,7 +132,7 @@ final class KotlinDependencyUpdatesSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates', '--info')
       .withPluginClasspath()

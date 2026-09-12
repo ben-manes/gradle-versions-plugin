@@ -29,7 +29,7 @@ final class LegacyPluginIdSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .build()
@@ -54,7 +54,7 @@ final class LegacyPluginIdSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .build()
@@ -79,7 +79,7 @@ final class LegacyPluginIdSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .build()

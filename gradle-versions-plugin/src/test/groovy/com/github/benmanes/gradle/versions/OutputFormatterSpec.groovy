@@ -54,7 +54,7 @@ final class OutputFormatterSpec extends Specification {
         """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .build()
@@ -95,7 +95,7 @@ final class OutputFormatterSpec extends Specification {
         """.stripIndent()
 
     when:
-    def runner = GradleRunner.create()
+    def runner = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
 
@@ -134,7 +134,7 @@ final class OutputFormatterSpec extends Specification {
         """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -178,7 +178,7 @@ final class OutputFormatterSpec extends Specification {
         """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -238,7 +238,7 @@ final class OutputFormatterSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -372,7 +372,7 @@ final class OutputFormatterSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -482,7 +482,7 @@ final class OutputFormatterSpec extends Specification {
         """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -533,7 +533,7 @@ final class OutputFormatterSpec extends Specification {
         """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -624,7 +624,7 @@ Failed to determine the latest version for the following dependencies (use --inf
         """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -705,7 +705,7 @@ Failed to determine the latest version for the following dependencies (use --inf
         """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()

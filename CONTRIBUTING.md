@@ -6,8 +6,9 @@ Fork the repository, branch from `master`, and open a pull request back
 against `master`.
 
 - Every push to the pull request runs the
-  [build workflow](.github/workflows/build.yml) on JDK 8, 11 and 17. A change
-  touching only `README.md` or `CONTRIBUTING.md` skips it.
+  [build workflow](.github/workflows/build.yml), which runs the suite on JDK
+  8, 11, 17, 21 and 25. A change touching only `README.md` or
+  `CONTRIBUTING.md` skips it.
 - Reference the issue a change addresses in the commit summary and in the
   pull request body, so the merge closes it:
 
@@ -32,13 +33,32 @@ How a pull request lands:
 
 ## Building and testing
 
-- `./gradlew build` compiles the plugin and runs its Spock specs, including
-  the functional tests that drive real Gradle builds through TestKit.
+- `./gradlew build` compiles the plugin and runs its Spock specs, including the
+  functional tests that drive real Gradle builds through TestKit, twice: on the
+  build's own JDK against the Gradle running the build, and on JDK 8 against
+  our minimum supported Gradle version.
+- `./gradlew test` alone is the fast loop while developing.
+  `./gradlew testOnAllJdks` runs the suite on JDK 8, 11, 17, 21 and 25, as the
+  build workflow does, and `testOn8` through `testOn25` run it on one JDK.
+  `testOn25` runs `test`, which already runs on JDK 25. On JDK 8 and 11 the
+  suite runs against our minimum supported Gradle version.
+- `--tests` filters only the test task just before it, so repeat it after each
+  one:
+
+  ```bash
+  ./gradlew test --tests '*ConstraintsSpec' testOn8 --tests '*ConstraintsSpec'
+  ```
+
+- The daemon runs on the JDK named in `gradle/gradle-daemon-jvm.properties`,
+  which `./gradlew` downloads where no such toolchain is installed, so the
+  launcher itself only has to be Java 8 or newer. The older JDKs the suite runs
+  on are found the same way: install them, or let Gradle fetch them.
 - On Windows, `gradlew.bat` stands in for `./gradlew` throughout.
 - The plugin targets Java 8 bytecode: it runs in the Gradle daemon's process,
-  and our minimum supported Gradle version of 8.4 still supports Java 8. A
-  change that needs a newer API needs a guard, and raising the target means
-  raising the minimum Gradle first.
+  and our minimum supported Gradle version of 8.4 still supports Java 8. The
+  compiler is held to the Java 8 API as well as to its bytecode, and to the
+  Gradle 8.4 API, so a newer API fails to compile rather than failing at runtime
+  on an older daemon. Raising the target means raising the minimum Gradle first.
 - To try a change against a real build, publish it under a version of its
   own and point the consumer at that:
 

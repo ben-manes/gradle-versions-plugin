@@ -65,7 +65,7 @@ final class BuildSrcAggregationSpec extends Specification {
   }
 
   private def run(String... arguments) {
-    return GradleRunner.create()
+    return TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments(arguments)
       .withPluginClasspath()

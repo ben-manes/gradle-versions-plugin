@@ -51,7 +51,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -91,7 +91,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -127,7 +127,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -155,7 +155,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -197,7 +197,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -238,7 +238,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -271,7 +271,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -312,7 +312,7 @@ final class ConstraintsSpec extends Specification {
     testProjectDir.newFile('middle/leaf/build.gradle') << "apply plugin: 'java'"
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -354,7 +354,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -398,7 +398,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -441,7 +441,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -492,7 +492,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -537,7 +537,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -605,7 +605,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -665,7 +665,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -725,7 +725,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -788,7 +788,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -859,7 +859,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates', '--info')
       .withGradleVersion(CONFLICT_THROWS_GRADLE)
@@ -917,7 +917,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -957,7 +957,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -1016,7 +1016,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -1072,7 +1072,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -1145,7 +1145,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates', '--info', '--no-parallel')
       .withPluginClasspath()
@@ -1187,7 +1187,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates', '-DoutputFormatter=json,xml')
       .withPluginClasspath()
@@ -1256,7 +1256,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -1317,7 +1317,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -1376,7 +1376,7 @@ final class ConstraintsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()

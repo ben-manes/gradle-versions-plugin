@@ -75,7 +75,7 @@ final class RejectVersionIfSpec extends Specification {
     buildFile = writeBuildFile("candidate.version.toLowerCase().contains('-zzz')")
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -95,7 +95,7 @@ final class RejectVersionIfSpec extends Specification {
     buildFile = writeBuildFile('metadata == null')
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -114,7 +114,7 @@ final class RejectVersionIfSpec extends Specification {
     buildFile = writeBuildFile("s -> s.candidate.version.toLowerCase().contains('-zzz')")
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -143,7 +143,7 @@ final class RejectVersionIfSpec extends Specification {
       ''')
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -176,7 +176,7 @@ final class RejectVersionIfSpec extends Specification {
       ''')
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -216,7 +216,7 @@ final class RejectVersionIfSpec extends Specification {
       ''')
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -256,7 +256,7 @@ final class RejectVersionIfSpec extends Specification {
       ''')
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -286,7 +286,7 @@ final class RejectVersionIfSpec extends Specification {
       ''')
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -323,7 +323,7 @@ final class RejectVersionIfSpec extends Specification {
       ''')
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -353,7 +353,7 @@ final class RejectVersionIfSpec extends Specification {
       ''')
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -397,7 +397,7 @@ final class RejectVersionIfSpec extends Specification {
       ''')
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -416,7 +416,7 @@ final class RejectVersionIfSpec extends Specification {
     buildFile = writeBuildFile('candidate.version == noSuchProperty')
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()

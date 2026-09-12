@@ -70,7 +70,7 @@ final class DifferentGradleVersionsSpec extends Specification {
     // configuration role that emitted it was dropped in 8.11, and the copies are the only
     // deprecation the plugin produces, so later versions run with warnings fatal.
     // https://github.com/ben-manes/gradle-versions-plugin/issues/749
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates', '-S', "--warning-mode=$warningMode")
@@ -124,7 +124,7 @@ final class DifferentGradleVersionsSpec extends Specification {
         """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion('8.4') // the running version must be behind the release channels
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
@@ -250,7 +250,7 @@ final class DifferentGradleVersionsSpec extends Specification {
     // so the lookups must be exempt from verification. Gradle 8.7 and later re-report a failure
     // recorded during those lookups at the next artifact access, which is the plugin's own
     // aggregation configuration.
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
@@ -293,7 +293,7 @@ final class DifferentGradleVersionsSpec extends Specification {
         """.stripIndent()
 
     when: 'the oldest release that needs the exemption runs it, so every JVM leg covers this'
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion('8.14.4')
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
@@ -333,7 +333,7 @@ final class DifferentGradleVersionsSpec extends Specification {
     testProjectDir.newFolder("gradle")
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates', '--configuration-cache')
       .build()

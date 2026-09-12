@@ -95,7 +95,7 @@ final class AggregationConfigurationCacheSpec extends Specification {
   }
 
   private GradleRunner runner(List<String> arguments) {
-    return GradleRunner.create()
+    return TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments(arguments)
       .withPluginClasspath()

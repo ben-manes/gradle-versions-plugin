@@ -65,7 +65,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
   }
 
   private def runOn(String gradleVersion, String... options) {
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments(['dependencyUpdates'] + options.toList())
       .withGradleVersion(gradleVersion)
@@ -76,7 +76,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
   }
 
   private def run(String... options) {
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments(['dependencyUpdates'] + options.toList())
       .withPluginClasspath()
@@ -763,7 +763,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withGradleVersion(gradleVersion)

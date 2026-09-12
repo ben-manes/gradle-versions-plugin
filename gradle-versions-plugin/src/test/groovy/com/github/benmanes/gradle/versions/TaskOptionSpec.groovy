@@ -77,7 +77,7 @@ final class TaskOptionSpec extends Specification {
   }
 
   private def run(String... arguments) {
-    return GradleRunner.create()
+    return TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments(arguments)
       .withPluginClasspath()
@@ -647,12 +647,12 @@ final class TaskOptionSpec extends Specification {
       """.stripIndent()
 
     when: 'the option turns the check on, and its --no- counterpart turns it off again'
-    def on = GradleRunner.create()
+    def on = TestKitRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates', '--check-constraints', '--no-check-for-gradle-update')
       .build()
-    def off = GradleRunner.create()
+    def off = TestKitRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates', '--no-check-constraints', '--no-check-for-gradle-update')

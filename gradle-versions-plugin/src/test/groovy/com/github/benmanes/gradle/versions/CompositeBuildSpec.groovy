@@ -28,7 +28,7 @@ final class CompositeBuildSpec extends Specification {
   }
 
   private def run(String... arguments) {
-    return GradleRunner.create()
+    return TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments(arguments)
       .withPluginClasspath()
@@ -303,7 +303,7 @@ final class CompositeBuildSpec extends Specification {
     compositeUsingConfigureOnDemand()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion(GradleVersions.CURRENT)
       .withProjectDir(testProjectDir.root)
       .withArguments(':dependencyUpdates', '--configure-on-demand', '--parallel',
@@ -638,7 +638,7 @@ final class CompositeBuildSpec extends Specification {
     aggregatedIncludedBuild("dependencyUpdatesAggregation 'com.example:child:1.0'")
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
@@ -1556,7 +1556,7 @@ final class CompositeBuildSpec extends Specification {
     includedBuild('child')
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
@@ -1634,7 +1634,7 @@ final class CompositeBuildSpec extends Specification {
     )
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion(GradleVersions.CURRENT)
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates', ':child:dependencyUpdates',

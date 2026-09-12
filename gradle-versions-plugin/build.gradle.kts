@@ -22,6 +22,70 @@ configurations.compileOnlyApi {
   dependencies.removeIf { it is FileCollectionDependency }
 }
 
+// Some specs load Gradle in process, and the Gradle running this build does not start below JDK 17.
+// The specs are compiled a second time against the oldest supported release for the older JDKs, so
+// that both the in-process specs and the TestKit specs run against that release there.
+val minimumGradleTest =
+  sourceSets.create("minimumGradleTest") {
+    groovy.setSrcDirs(listOf("src/test/groovy"))
+    resources.setSrcDirs(listOf("src/test/resources"))
+    compileClasspath += sourceSets.main.get().output
+    runtimeClasspath += sourceSets.main.get().output
+  }
+
+configurations.named(minimumGradleTest.implementationConfigurationName) {
+  extendsFrom(configurations.implementation.get())
+}
+
+// Groovy 3 fails on the class files of the JDK this build runs on.
+tasks.named<GroovyCompile>(minimumGradleTest.getCompileTaskName("groovy")) {
+  javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(8)) })
+}
+
+// The wrapper runs on the newest JDK, so the older ones are reached through toolchains: the test
+// worker forks on the named JDK and the TestKit daemons follow it. `test` stays on the build JVM as
+// the fast loop, and `check` runs JDK 8 on the oldest supported Gradle as well, the opposite corner.
+val testOnAllJdks =
+  tasks.register("testOnAllJdks") {
+    description = "Runs the test suite on every JDK the plugin supports."
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    dependsOn(tasks.test)
+  }
+
+// `test` already runs on the build JVM, so the task named for that JDK runs `test` instead of a
+// second copy of the suite.
+val buildJdk = JavaVersion.current().majorVersion
+tasks.register("testOn$buildJdk") {
+  description = "Runs the test suite on JDK $buildJdk, the JDK the build runs on."
+  group = LifecycleBasePlugin.VERIFICATION_GROUP
+  dependsOn(tasks.test)
+}
+
+listOf(8, 11, 17, 21).forEach { jdk ->
+  val testOnJdk =
+    tasks.register<Test>("testOn$jdk") {
+      description = "Runs the test suite on JDK $jdk."
+      group = LifecycleBasePlugin.VERIFICATION_GROUP
+      javaLauncher.set(
+        javaToolchains.launcherFor {
+          languageVersion.set(JavaLanguageVersion.of(jdk))
+        },
+      )
+      val specs = if (jdk < 17) minimumGradleTest else sourceSets.test.get()
+      testClassesDirs = specs.output.classesDirs
+      classpath = specs.runtimeClasspath
+      // The specs that name no release of their own drive the oldest supported release here too.
+      if (jdk < 17) {
+        systemProperty("testGradleVersion", libs.versions.gradle.minimum.get())
+      }
+    }
+  testOnAllJdks.configure { dependsOn(testOnJdk) }
+}
+
+tasks.check {
+  dependsOn("testOn8")
+}
+
 dependencies {
   compileOnly(libs.gradle.api.minimum)
   compileOnly(libs.groovy.minimum)
@@ -35,6 +99,14 @@ dependencies {
   testImplementation(libs.kotlin.reflect)
   testImplementation(libs.spock) { exclude(module = "groovy-all") }
   testRuntimeOnly(libs.junit.platform.launcher)
+
+  "minimumGradleTestImplementation"(libs.gradle.api.minimum)
+  "minimumGradleTestImplementation"(libs.gradle.test.kit.minimum)
+  "minimumGradleTestImplementation"(libs.groovy.minimum)
+  "minimumGradleTestImplementation"(libs.kotlin.reflect)
+  "minimumGradleTestImplementation"(libs.spock.groovy.minimum) { exclude(module = "groovy-all") }
+  "minimumGradleTestRuntimeOnly"(libs.junit.platform.launcher)
+  "minimumGradleTestRuntimeOnly"(files(tasks.named("pluginUnderTestMetadata")))
 }
 
 gradlePlugin {
