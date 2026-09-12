@@ -7,6 +7,7 @@ import groovy.xml.XmlParser
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
+import spock.lang.IgnoreIf
 import spock.lang.Issue
 import spock.lang.Requires
 import spock.lang.Specification
@@ -630,8 +631,7 @@ final class CompositeBuildSpec extends Specification {
 
   // The results are published as the graph edges rather than as the files the aggregate collected,
   // which Gradle 9 will not resolve for a consumer without a lock on the included build.
-  // Gradle 9 requires JVM 17.
-  @Requires({ jvm.java17Compatible })
+  @IgnoreIf({ !GradleVersions.drivenBy(data.gradleVersion) })
   @Unroll
   def 'Aggregates every project of an included build on Gradle #gradleVersion'() {
     given:
@@ -1531,8 +1531,7 @@ final class CompositeBuildSpec extends Specification {
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
   }
 
-  // Gradle 9 requires JVM 17.
-  @Requires({ jvm.java17Compatible })
+  @IgnoreIf({ !GradleVersions.drivenBy(data.gradleVersion) })
   @Unroll
   def 'Reports the updates of a composite build on Gradle #gradleVersion'() {
     given:

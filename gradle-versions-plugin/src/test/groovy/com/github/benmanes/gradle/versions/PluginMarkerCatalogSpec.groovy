@@ -5,6 +5,7 @@ import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
+import spock.lang.IgnoreIf
 import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -69,6 +70,7 @@ final class PluginMarkerCatalogSpec extends Specification {
     return runner.build()
   }
 
+  @IgnoreIf({ data.gradleVersion != 'current' && !GradleVersions.drivenBy(data.gradleVersion) })
   @Unroll
   def 'a catalog plugin alias with a strictly range bounds the marker on Gradle #gradleVersion'() {
     given:

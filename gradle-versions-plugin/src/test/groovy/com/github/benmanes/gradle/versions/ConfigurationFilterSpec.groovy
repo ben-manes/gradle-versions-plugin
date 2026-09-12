@@ -6,6 +6,7 @@ import groovy.json.JsonSlurper
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 
 /**
@@ -14,6 +15,13 @@ import spock.lang.Specification
  * report entry shows.
  */
 final class ConfigurationFilterSpec extends Specification {
+  /**
+   * The last release on which a plugin may add to a build script's own classpath while the plugin
+   * under test resolves a copy of it, which is the only way a buildscript entry is contributed
+   * rather than declared.
+   */
+  private static final String BUILDSCRIPT_CONTRIBUTION_GRADLE = '8.4'
+
   @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
   private String mavenRepoUrl
 
@@ -67,6 +75,15 @@ final class ConfigurationFilterSpec extends Specification {
           checkForGradleUpdate = false
         }
       """.stripIndent()
+  }
+
+  private def runOn(String gradleVersion, List<String> arguments) {
+    return GradleRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments(arguments)
+      .withGradleVersion(gradleVersion)
+      .withPluginClasspath()
+      .build()
   }
 
   private def run(List<String> arguments) {
@@ -365,6 +382,7 @@ final class ConfigurationFilterSpec extends Specification {
     !result.output.contains("declared in the 'tool' configuration")
   }
 
+  @IgnoreIf({ !GradleVersions.drivenBy(BUILDSCRIPT_CONTRIBUTION_GRADLE) })
   def 'Leaves out a buildscript entry when the filter rejects the name it shows'() {
     given:
     testProjectDir.newFile('build.gradle') <<
@@ -407,7 +425,7 @@ final class ConfigurationFilterSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = run(['dependencyUpdates'])
+    def result = runOn(BUILDSCRIPT_CONTRIBUTION_GRADLE, ['dependencyUpdates'])
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS

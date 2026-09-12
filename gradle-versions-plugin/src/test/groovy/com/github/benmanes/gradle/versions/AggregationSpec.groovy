@@ -6,6 +6,7 @@ import groovy.json.JsonSlurper
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
+import spock.lang.IgnoreIf
 import spock.lang.Issue
 import spock.lang.Requires
 import spock.lang.Specification
@@ -111,8 +112,7 @@ final class AggregationSpec extends Specification {
     !second.output.contains('The dependency updates report is missing')
   }
 
-  // Gradle 9 requires JVM 17.
-  @Requires({ jvm.java17Compatible })
+  @IgnoreIf({ !GradleVersions.drivenBy(data.gradleVersion) })
   @Unroll
   def 'Aggregates in parallel on Gradle #gradleVersion'() {
     when:
@@ -496,7 +496,7 @@ final class AggregationSpec extends Specification {
           def resolutionResult = results.get().incoming.resolutionResult
           doLast {
             resolutionResult.allDependencies.each {
-              println "GRAPHEDGE \${it.class.simpleName} \${it.requested}"
+              println "GRAPHEDGE \${it.class.simpleName} \${it.requested.projectPath}"
             }
           }
         }
@@ -509,8 +509,8 @@ final class AggregationSpec extends Specification {
     result.task(':dumpAggregationGraph').outcome == SUCCESS
     // Both projects are edges of the graph, so that the absence of a traversal below them is the
     // property under test rather than an empty graph.
-    result.output.contains('GRAPHEDGE DefaultResolvedDependencyResult project :app')
-    result.output.contains('GRAPHEDGE DefaultResolvedDependencyResult project :lib')
+    result.output.contains('GRAPHEDGE DefaultResolvedDependencyResult :app')
+    result.output.contains('GRAPHEDGE DefaultResolvedDependencyResult :lib')
     !result.output.contains('UnresolvedDependencyResult')
   }
 }

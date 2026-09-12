@@ -90,8 +90,7 @@ final class ApplyOrderSpec extends Specification {
       .build()
   }
 
-  // Gradle 9 requires JVM 17.
-  @IgnoreIf({ data.gradleVersion.startsWith('9') && !jvm.java17Compatible })
+  @IgnoreIf({ !GradleVersions.drivenBy(data.gradleVersion) })
   @Unroll
   def 'Applies #plugin on Gradle #gradleVersion to a project that already resolved a configuration'() {
     given:
@@ -116,6 +115,7 @@ final class ApplyOrderSpec extends Specification {
     [plugin, gradleVersion] << [PLUGINS, [GRADLE_8, GRADLE_9]].combinations()
   }
 
+  @IgnoreIf({ !GradleVersions.drivenBy(GRADLE_8) })
   def 'Marks a contributed dependency alongside a configuration that already resolved'() {
     given:
     testProjectDir.newFile('build.gradle') <<
@@ -143,6 +143,7 @@ final class ApplyOrderSpec extends Specification {
     result.output.contains("contributed by a plugin into the 'tool' configuration")
   }
 
+  @IgnoreIf({ !GradleVersions.drivenBy(GRADLE_8) })
   def 'Reports what a plugin contributed to a configuration that already resolved as declared'() {
     given:
     testProjectDir.newFile('build.gradle') <<

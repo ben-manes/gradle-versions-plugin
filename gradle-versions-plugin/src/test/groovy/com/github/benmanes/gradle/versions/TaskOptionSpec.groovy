@@ -618,7 +618,7 @@ final class TaskOptionSpec extends Specification {
   }
 
   @Unroll
-  @IgnoreIf({ data.gradleVersion.startsWith('9') && !jvm.java17Compatible })
+  @IgnoreIf({ !GradleVersions.drivenBy(data.gradleVersion) })
   def 'Binds the options under Gradle #gradleVersion'() {
     given: 'the plugin on the buildscript classpath, so a pinned Gradle runs it'
     def classpath = PluginClasspath.asFilesArgument()

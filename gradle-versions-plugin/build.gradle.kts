@@ -15,8 +15,16 @@ plugins {
 group = properties["GROUP"].toString()
 version = properties["VERSION_NAME"].toString()
 
+// The plugin runs in every Gradle from the oldest supported release on, so it compiles against that
+// release's API in place of the API of the Gradle running this build, which `java-gradle-plugin`
+// adds. A call into a newer API then fails to compile instead of failing at runtime on an older Gradle.
+configurations.compileOnlyApi {
+  dependencies.removeIf { it is FileCollectionDependency }
+}
+
 dependencies {
-  implementation(localGroovy())
+  compileOnly(libs.gradle.api.minimum)
+  compileOnly(libs.groovy.minimum)
   implementation(platform(libs.kotlin.bom))
   implementation(libs.kotlin.stdlib)
   implementation(libs.okhttp)
@@ -26,6 +34,7 @@ dependencies {
   testImplementation(gradleTestKit())
   testImplementation(libs.kotlin.reflect)
   testImplementation(libs.spock) { exclude(module = "groovy-all") }
+  testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 gradlePlugin {

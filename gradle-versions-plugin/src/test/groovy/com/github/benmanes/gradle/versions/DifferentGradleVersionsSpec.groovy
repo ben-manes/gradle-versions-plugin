@@ -25,7 +25,8 @@ final class DifferentGradleVersionsSpec extends Specification {
   }
 
   // On JVMs below 17, Gradle 8.11+ emits its own deprecation for running on that JVM, so the
-  // rows with warnings fatal only run on Java 17, and Gradle 9 requires it anyway.
+  // rows with warnings fatal only run on Java 17.
+  @IgnoreIf({ !GradleVersions.drivenBy(data.gradleVersion) })
   @IgnoreIf({ data.warningMode == 'fail' && !jvm.java17Compatible })
   @Unroll
   def 'dependencyUpdates task completes without errors with Gradle #gradleVersion'() {
@@ -92,6 +93,7 @@ final class DifferentGradleVersionsSpec extends Specification {
     GradleVersions.CURRENT | 'fail'
   }
 
+  @IgnoreIf({ !GradleVersions.drivenBy('8.4') })
   @Unroll
   def 'dependencyUpdates task uses specified release channel with Gradle #gradleReleaseChannel'() {
     given:
@@ -141,8 +143,7 @@ final class DifferentGradleVersionsSpec extends Specification {
     ]
   }
 
-  // Gradle 9 requires JVM 17 to run, so that row is left out on the older legs of the matrix.
-  @IgnoreIf({ data.needsJava17 && !jvm.java17Compatible })
+  @IgnoreIf({ !GradleVersions.drivenBy(data.gradleVersion) })
   @Unroll
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1095')
   def 'dependencyUpdates task works with dependency verification enabled on Gradle #gradleVersion'() {
@@ -261,13 +262,10 @@ final class DifferentGradleVersionsSpec extends Specification {
 
     where:
     // 8.6 is the last release that passes without the exemption; every later one needs it.
-    gradleVersion          | needsJava17
-    '8.6'                  | false
-    '8.7'                  | false
-    '8.14.4'               | false
-    GradleVersions.CURRENT | true
+    gradleVersion << ['8.6', '8.7', '8.14.4', GradleVersions.CURRENT]
   }
 
+  @IgnoreIf({ !GradleVersions.drivenBy('8.14.4') })
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1095')
   def 'dependencyUpdates task leaves the verification opt out alone where the build has no metadata'() {
     given: 'a build with no verification metadata, which verifies nothing'

@@ -389,6 +389,8 @@ final class SkippedConfigurationSpec extends Specification {
   def 'The HTML report keeps a project beside the configuration it skipped'() {
     given:
     testProjectDir.newFile('settings.gradle') << "include 'app', 'lib'"
+    testProjectDir.newFolder('app')
+    testProjectDir.newFolder('lib')
     testProjectDir.newFile('build.gradle') <<
       """
         plugins {

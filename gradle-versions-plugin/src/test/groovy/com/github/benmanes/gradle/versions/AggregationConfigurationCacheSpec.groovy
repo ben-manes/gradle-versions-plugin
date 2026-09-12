@@ -377,10 +377,10 @@ final class AggregationConfigurationCacheSpec extends Specification {
     then:
     // Gradle strips the owner, delegate and this of a serialized closure, so a custom formatter may
     // read only its result, its own locals and fully qualified types.
-    store.output.contains('Cannot reference a Gradle script object from a Groovy closure')
-    // The entry is stored before the task fails, so every later build reuses the failing formatter.
-    hit.output.contains('Reusing configuration cache')
-    hit.output.contains('Cannot reference a Gradle script object from a Groovy closure')
+    store.output.contains('a Gradle script object from a Groovy closure')
+    // Gradle 8 reuses the entry stored before the task failed, and Gradle 9 discards it and
+    // calculates the task graph again, so every later build fails on the same formatter either way.
+    hit.output.contains('a Gradle script object from a Groovy closure')
   }
 
   def 'Formats with a custom outputFormatter closure that captured a local'() {
@@ -482,7 +482,9 @@ final class AggregationConfigurationCacheSpec extends Specification {
 
     when:
     new File(testProjectDir.root, 'build/dependencyUpdates/partials').deleteDir()
-    def hit = run(ARGUMENTS)
+    // The deletion is made from this JVM rather than by the build, so the daemon's virtual file
+    // system can miss it and report the producers up to date against a partial that is gone.
+    def hit = run(ARGUMENTS + '--no-watch-fs')
 
     then:
     // The recorder runs inside the component-selection rule while the producer's task input is
