@@ -414,7 +414,7 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
 
 ```groovy
 tasks.named("dependencyUpdates").configure {
-  filterConfigurations {
+  filterConfigurations = {
     it.name == "runtimeClasspath" || it.name == "compileClasspath"
   }
 }
@@ -460,7 +460,7 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
 
 ```groovy
 tasks.named("dependencyUpdates").configure {
-  filterDeclaredConfigurations { it != "jacocoAnt" }
+  filterDeclaredConfigurations = { it != "jacocoAnt" }
 }
 ```
 
@@ -539,7 +539,7 @@ def isKgpInternal = { String configurationName ->
 }
 
 tasks.named("dependencyUpdates").configure {
-  filterConfigurations { !isKgpInternal(it.name) }
+  filterConfigurations = { !isKgpInternal(it.name) }
 }
 ```
 
@@ -595,7 +595,7 @@ def agpInternal = [
 ]
 
 tasks.named("dependencyUpdates").configure {
-  filterConfigurations {
+  filterConfigurations = {
     !agpInternal.contains(it.name) &&
       !it.name.startsWith("unified-test-platform-")
   }
