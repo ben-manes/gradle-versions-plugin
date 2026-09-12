@@ -425,11 +425,8 @@ tasks.named("dependencyUpdates").configure {
 A dependency is left out of the report once every configuration that reaches
 it is rejected, and so is everything reachable only through a rejected
 configuration—rejecting `compileClasspath` removes the build's own
-dependencies too. Reach for this filter when a whole configuration is noise,
-such as the classpaths a plugin fills for its own tooling, at versions the
-build never chose. The [Kotlin Gradle Plugin](#kotlin-gradle-plugin) and
-[Android Gradle Plugin](#android-gradle-plugin) sections below give ready
-sets.
+dependencies too. Reach for this filter when a whole configuration is noise
+and does not need to be resolved at all.
 
 Rejecting a configuration also skips its version lookups. A dependency's list
 of versions is fetched once for each repository, however many configurations
@@ -481,9 +478,14 @@ rejection removes the attribution line rather than the dependency.
 
 ###### Choosing between them
 
-Both filters silence a tooling configuration like the KGP and AGP sets
-below. Prefer `filterConfigurations` there, since a rejected configuration is
-never resolved. The two differ when the name an entry shows is not one the task
+The classpaths a plugin fills for its own tooling, at versions the build never
+chose, can be left out with either filter. The [Kotlin Gradle Plugin](#kotlin-gradle-plugin)
+and [Android Gradle Plugin](#android-gradle-plugin) sets below are written for
+`filterDeclaredConfigurations`, because a rule set on the task that writes the
+report is also applied to the entries merged from included builds (see
+[Composite builds](#composite-builds)). `filterConfigurations` has to be
+declared in each build that resolves, and a rejected configuration is never
+resolved. The two differ when the name an entry shows is not one the task
 checks (see [The `dependencyUpdates` task](#the-dependencyupdates-task)): a
 declarable configuration read through a resolvable classpath that extends it, and
 `implementation` with a plugin's contribution in it, both show a name that
@@ -507,20 +509,17 @@ family by prefix; at KGP 2.4.10:
 ```kotlin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
-fun isKgpInternal(configurationName: String): Boolean {
-  val kgpInternalConfigurations = setOf(
-    "kotlinCompilerClasspath",
-    "kotlinBuildToolsApiClasspath",
-    "kotlinAbiValidationCompatClasspath",
-    "kotlinKlibCommonizerClasspath",
-  )
-  return configurationName in kgpInternalConfigurations ||
-    (configurationName.startsWith("kotlinCompilerPluginClasspath") &&
-      configurationName != "kotlinCompilerPluginClasspath")
-}
-
 tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
-  filterConfigurations = Spec<Configuration> { !isKgpInternal(it.name) }
+  filterDeclaredConfigurations = Spec<String> { name ->
+    val isKgpInternal = name in setOf(
+      "kotlinCompilerClasspath",
+      "kotlinBuildToolsApiClasspath",
+      "kotlinAbiValidationCompatClasspath",
+      "kotlinKlibCommonizerClasspath",
+    ) || (name.startsWith("kotlinCompilerPluginClasspath") &&
+      name != "kotlinCompilerPluginClasspath")
+    !isKgpInternal
+  }
 }
 ```
 
@@ -530,33 +529,29 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
 <summary>Groovy</summary>
 
 ```groovy
-def isKgpInternal = { String configurationName ->
-  def kgpInternalConfigurations = [
-    "kotlinCompilerClasspath",
-    "kotlinBuildToolsApiClasspath",
-    "kotlinAbiValidationCompatClasspath",
-    "kotlinKlibCommonizerClasspath",
-  ]
-  return kgpInternalConfigurations.contains(configurationName) ||
-    (configurationName.startsWith("kotlinCompilerPluginClasspath") &&
-      configurationName != "kotlinCompilerPluginClasspath")
-}
-
 tasks.named("dependencyUpdates").configure {
-  filterConfigurations = { !isKgpInternal(it.name) }
+  filterDeclaredConfigurations = { String name ->
+    def isKgpInternal = name in [
+      "kotlinCompilerClasspath",
+      "kotlinBuildToolsApiClasspath",
+      "kotlinAbiValidationCompatClasspath",
+      "kotlinKlibCommonizerClasspath",
+    ] || (name.startsWith("kotlinCompilerPluginClasspath") &&
+      name != "kotlinCompilerPluginClasspath")
+    !isKgpInternal
+  }
 }
 ```
 
 </details>
 
-The prefix stops short of the unsuffixed `kotlinCompilerPluginClasspath`,
-which is still checked, and stays narrower than dropping everything that
-starts with `kotlin`. A compiler plugin the build itself declares resolves
-through these same suffixed classpaths and is filtered with them. Its Gradle
-plugin's marker is still reported, so a version shared between the two stays
-visible, but a compiler plugin versioned apart from its Gradle plugin is left
-out with nothing in its place—keep the classpath it resolves through if you
-declare one.
+The prefix stops short of the unsuffixed `kotlinCompilerPluginClasspath`, and
+stays narrower than dropping everything that starts with `kotlin`. A compiler
+plugin declared in one of the suffixed classpaths is left out along with them.
+Its Gradle plugin's marker is still reported, so a version shared between the
+two stays visible, but a compiler plugin versioned apart from its Gradle plugin
+is left out with nothing in its place. Declared in the unsuffixed
+`kotlinCompilerPluginClasspath`, it stays in the report.
 
 ###### Android Gradle Plugin
 
@@ -573,15 +568,14 @@ releases, and no configuration a build fills itself starts with that prefix.
 ```kotlin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
-val agpInternal = setOf(
-  "androidLintTool",
-  "kotlinBuildToolsApiClasspath",
-  "kotlinCompilerClasspath",
-)
-
 tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
-  filterConfigurations = Spec<Configuration> {
-    it.name !in agpInternal && !it.name.startsWith("unified-test-platform-")
+  filterDeclaredConfigurations = Spec<String> { name ->
+    val isAgpInternal = name in setOf(
+      "androidLintTool",
+      "kotlinBuildToolsApiClasspath",
+      "kotlinCompilerClasspath",
+    ) || name.startsWith("unified-test-platform-")
+    !isAgpInternal
   }
 }
 ```
@@ -592,16 +586,14 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
 <summary>Groovy</summary>
 
 ```groovy
-def agpInternal = [
-  "androidLintTool",
-  "kotlinBuildToolsApiClasspath",
-  "kotlinCompilerClasspath",
-]
-
 tasks.named("dependencyUpdates").configure {
-  filterConfigurations = {
-    !agpInternal.contains(it.name) &&
-      !it.name.startsWith("unified-test-platform-")
+  filterDeclaredConfigurations = { String name ->
+    def isAgpInternal = name in [
+      "androidLintTool",
+      "kotlinBuildToolsApiClasspath",
+      "kotlinCompilerClasspath",
+    ] || name.startsWith("unified-test-platform-")
+    !isAgpInternal
   }
 }
 ```
@@ -2199,7 +2191,11 @@ The version accepted in the producing build is the one that build resolved.
 The settings that control what is resolved apply in the build that resolves it:
 `revision`, `filterConfigurations`, `checkConstraints`,
 `checkBuildEnvironmentConstraints` and `rejectOutOfBounds`. Declare those in
-each included build. The Gradle update check is
+each included build. The [Kotlin Gradle Plugin](#kotlin-gradle-plugin) and
+[Android Gradle Plugin](#android-gradle-plugin) sets are written for
+`filterDeclaredConfigurations` for this reason: a set declared once on the task
+that writes the report is applied to the entries merged from every included
+build. The Gradle update check is
 read from the report being asked for, so `checkForGradleUpdate` and
 `gradleReleaseChannel` set in a merged build do not reach it.
 
