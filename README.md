@@ -425,12 +425,16 @@ tasks.named("dependencyUpdates").configure {
 A dependency is left out of the report once every configuration that reaches
 it is rejected, and so is everything reachable only through a rejected
 configuration—rejecting `compileClasspath` removes the build's own
-dependencies too. Reach for this filter when a whole configuration is noise:
-a skipped configuration also costs no version lookups, which suits the
-classpaths a plugin fills for its own tooling, at versions the build never
-chose. The [Kotlin Gradle Plugin](#kotlin-gradle-plugin) and
+dependencies too. Reach for this filter when a whole configuration is noise,
+such as the classpaths a plugin fills for its own tooling, at versions the
+build never chose. The [Kotlin Gradle Plugin](#kotlin-gradle-plugin) and
 [Android Gradle Plugin](#android-gradle-plugin) sections below give ready
 sets.
+
+Rejecting a configuration also skips its version lookups. A dependency's list
+of versions is fetched once for each repository, however many configurations
+reach it, so that fetch is still made while any checked configuration reaches
+the dependency.
 
 ###### `filterDeclaredConfigurations`
 
@@ -478,10 +482,10 @@ rejection removes the attribution line rather than the dependency.
 ###### Choosing between them
 
 Both filters silence a tooling configuration like the KGP and AGP sets
-below; prefer `filterConfigurations` there, since it also skips the lookups.
-The two differ when the name an entry shows is not one the task checks (see
-[The `dependencyUpdates` task](#the-dependencyupdates-task)): a declarable
-configuration read through a resolvable classpath that extends it, and
+below. Prefer `filterConfigurations` there, since a rejected configuration is
+never resolved. The two differ when the name an entry shows is not one the task
+checks (see [The `dependencyUpdates` task](#the-dependencyupdates-task)): a
+declarable configuration read through a resolvable classpath that extends it, and
 `implementation` with a plugin's contribution in it, both show a name that
 `filterConfigurations` cannot match. `filterDeclaredConfigurations` matches
 the name shown, with no side effect on what is checked. Buildscript and
