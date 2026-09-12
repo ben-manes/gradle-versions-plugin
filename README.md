@@ -497,9 +497,10 @@ so neither property affects them; an entry a plugin contributes shows
 
 ###### Kotlin Gradle Plugin
 
-The Kotlin Gradle Plugin fills four fixed classpaths for its own tooling,
-plus one `kotlinCompilerPluginClasspath<SourceSet>` per source set—a [JVM
-test suite](https://docs.gradle.org/current/userguide/jvm_test_suite_plugin.html)
+The Kotlin Gradle Plugin fills four fixed classpaths for its own tooling, and a
+fifth in a project that applies the `signing` plugin. It also fills one
+`kotlinCompilerPluginClasspath<SourceSet>` per source set—a [JVM test
+suite](https://docs.gradle.org/current/userguide/jvm_test_suite_plugin.html)
 adds one too—so a list of names goes stale as the build grows. Match the
 family by prefix; at KGP 2.4.10:
 
@@ -516,6 +517,7 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
       "kotlinBuildToolsApiClasspath",
       "kotlinAbiValidationCompatClasspath",
       "kotlinKlibCommonizerClasspath",
+      "kotlinBouncyCastleConfiguration",
     ) || (name.startsWith("kotlinCompilerPluginClasspath") &&
       name != "kotlinCompilerPluginClasspath")
     !isKgpInternal
@@ -536,6 +538,7 @@ tasks.named("dependencyUpdates").configure {
       "kotlinBuildToolsApiClasspath",
       "kotlinAbiValidationCompatClasspath",
       "kotlinKlibCommonizerClasspath",
+      "kotlinBouncyCastleConfiguration",
     ] || (name.startsWith("kotlinCompilerPluginClasspath") &&
       name != "kotlinCompilerPluginClasspath")
     !isKgpInternal
