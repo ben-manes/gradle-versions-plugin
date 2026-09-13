@@ -58,7 +58,7 @@ final class ProjectEvaluator {
             status.configurations, project.path)
         }
       } catch (Exception e) {
-        project.logger.info("Skipping configuration ${project.path}:${configuration.name}", e)
+        project.logger.info("Skipping configuration ${project.absoluteProjectPath(configuration.name)}", e)
         return []
       }
     }

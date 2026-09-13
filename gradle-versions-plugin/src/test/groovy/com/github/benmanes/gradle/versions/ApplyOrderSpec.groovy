@@ -102,10 +102,9 @@ final class ApplyOrderSpec extends Specification {
     then:
     result.task(':help').outcome == SUCCESS
 
-    // A root project's path is ':', so its qualified configuration names read '::probe'.
     and: 'the skipped mark is logged rather than dropped in silence'
-    result.output.contains('Skipping the plugin mark for configuration ::probe')
-    result.output.contains('Skipping the plugin mark for configuration ::base')
+    result.output.contains('Skipping the plugin mark for configuration :probe')
+    result.output.contains('Skipping the plugin mark for configuration :base')
 
     and: 'this Gradle still refuses both, in the wordings the guard has to catch'
     result.output.contains(REFUSALS[gradleVersion].resolved)
@@ -175,7 +174,7 @@ final class ApplyOrderSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('Skipping the plugin mark for configuration ::tool')
+    result.output.contains('Skipping the plugin mark for configuration :tool')
 
     and: 'the attribution the mark carries is what giving it up costs'
     result.output.contains(' - com.google.guava:guava [15.0 -> 16.0]')
