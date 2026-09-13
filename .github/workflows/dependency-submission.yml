@@ -15,9 +15,6 @@ jobs:
       - name: Checkout Project
         uses: actions/checkout@v7
 
-      - name: Validate Gradle Wrapper
-        uses: gradle/wrapper-validation-action@v3
-
       - name: Configure JDK
         uses: actions/setup-java@v5
         with:
@@ -26,3 +23,5 @@ jobs:
 
       - name: Generate and submit dependency graph
         uses: gradle/actions/dependency-submission@v5
+        with:
+          validate-wrappers: true

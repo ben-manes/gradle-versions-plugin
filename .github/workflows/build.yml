@@ -40,9 +40,6 @@ jobs:
       - name: Checkout Project
         uses: actions/checkout@v7
 
-      - name: Validate Gradle Wrapper
-        uses: gradle/wrapper-validation-action@v3
-
       - name: Configure JDK
         uses: actions/setup-java@v5
         with:
@@ -87,9 +84,6 @@ jobs:
     steps:
       - name: Checkout Project
         uses: actions/checkout@v7
-
-      - name: Validate Gradle Wrapper
-        uses: gradle/wrapper-validation-action@v3
 
       # The examples are separate roots without the daemon criteria this build pins, so their
       # launcher is what the Gradle they run on starts with: 21 for the minimum, 25 for the wrapper.

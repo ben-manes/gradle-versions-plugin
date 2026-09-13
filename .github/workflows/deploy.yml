@@ -21,9 +21,6 @@ jobs:
             exit 1
           }
 
-      - name: Validate Gradle Wrapper
-        uses: gradle/wrapper-validation-action@v3
-
       - name: Configure JDK
         uses: actions/setup-java@v5
         with:
