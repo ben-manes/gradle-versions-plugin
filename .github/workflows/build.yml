@@ -50,7 +50,9 @@ jobs:
             25
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: enhanced
 
       - name: Run the suite on JDK ${{ matrix.java-version }}
         run: ./gradlew testOn${{ matrix.java-version }} -s
@@ -96,7 +98,9 @@ jobs:
             25
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: enhanced
 
       # The JDK 8 row of the matrix runs the leg that `check` adds.
       - name: Run build with caching enabled
@@ -123,7 +127,7 @@ jobs:
       # minimum supported release as well, on a JDK that release starts on.
       # https://github.com/ben-manes/gradle-versions-plugin/issues/941
       - name: Provision Gradle 8.4
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '8.4'
 

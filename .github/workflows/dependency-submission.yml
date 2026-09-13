@@ -22,6 +22,7 @@ jobs:
           java-version: 11
 
       - name: Generate and submit dependency graph
-        uses: gradle/actions/dependency-submission@v5
+        uses: gradle/actions/dependency-submission@v6
         with:
+          cache-provider: enhanced
           validate-wrappers: true
