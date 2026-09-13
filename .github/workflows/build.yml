@@ -41,7 +41,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Configure JDK
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: |
@@ -90,7 +90,7 @@ jobs:
       # The examples are separate roots without the daemon criteria this build pins, so their
       # launcher is what the Gradle they run on starts with: 21 for the minimum, 25 for the wrapper.
       - name: Configure JDK
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: |
