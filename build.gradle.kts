@@ -4,6 +4,7 @@ import org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED
 import org.gradle.api.tasks.testing.logging.TestLogEvent.PASSED
 import org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
@@ -46,6 +47,11 @@ subprojects {
       // The build runs on a JDK far newer than the target, so bound the API as well as the
       // bytecode. The JDK 8 matrix row used to give this by compiling on JDK 8 itself.
       freeCompilerArgs.add("-Xjdk-release=1.8")
+      // Kotlin code compiled against the plugin, such as a precompiled script plugin in buildSrc,
+      // is compiled by the Kotlin embedded in the running Gradle, which reads metadata at most one
+      // release newer than its own. Gradle 8.4 embeds Kotlin 1.9, so the language version is raised
+      // only with the oldest supported Gradle, despite the compiler's deprecation warning.
+      languageVersion.set(KOTLIN_2_0)
     }
   }
 
