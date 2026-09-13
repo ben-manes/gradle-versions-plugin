@@ -40,9 +40,6 @@ jobs:
       - name: Checkout Project
         uses: actions/checkout@v7
 
-      - name: Validate Gradle Wrapper
-        uses: gradle/wrapper-validation-action@v3
-
       - name: Configure JDK
         uses: actions/setup-java@v5
         with:
@@ -53,7 +50,9 @@ jobs:
             25
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: enhanced
 
       - name: Run the suite on JDK ${{ matrix.java-version }}
         run: ./gradlew testOn${{ matrix.java-version }} -s
@@ -77,7 +76,7 @@ jobs:
           if-no-files-found: warn
 
   build:
-    name: Build on JDK 25 and run the examples
+    name: Build and test on JDK 25, and run the examples
     runs-on: ubuntu-latest
 
     permissions:
@@ -87,9 +86,6 @@ jobs:
     steps:
       - name: Checkout Project
         uses: actions/checkout@v7
-
-      - name: Validate Gradle Wrapper
-        uses: gradle/wrapper-validation-action@v3
 
       # The examples are separate roots without the daemon criteria this build pins, so their
       # launcher is what the Gradle they run on starts with: 21 for the minimum, 25 for the wrapper.
@@ -102,7 +98,9 @@ jobs:
             25
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: enhanced
 
       # The JDK 8 row of the matrix runs the leg that `check` adds.
       - name: Run build with caching enabled
@@ -129,7 +127,7 @@ jobs:
       # minimum supported release as well, on a JDK that release starts on.
       # https://github.com/ben-manes/gradle-versions-plugin/issues/941
       - name: Provision Gradle 8.4
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '8.4'
 

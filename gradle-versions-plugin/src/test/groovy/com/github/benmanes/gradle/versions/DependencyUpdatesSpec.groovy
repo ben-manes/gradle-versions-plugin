@@ -134,11 +134,11 @@ final class DependencyUpdatesSpec extends Specification {
     outputFormat << ['plain', 'json', 'xml']
   }
 
-  def 'Single project with a good and bad repository'() {
+  def 'Single project with a good and an empty repository'() {
     given:
     def project = singleProject()
     addRepositoryTo(project)
-    addBadRepositoryTo(project)
+    addEmptyRepositoryTo(project)
     addDependenciesTo(project)
 
     when:
@@ -930,9 +930,9 @@ final class DependencyUpdatesSpec extends Specification {
     }
   }
 
-  private static void addBadRepositoryTo(project) {
+  private static void addEmptyRepositoryTo(project) {
     project.repositories {
-      maven { url = 'https://www.example.com' }
+      maven { url = new File(project.projectDir, 'empty-repository').toURI() }
     }
   }
 

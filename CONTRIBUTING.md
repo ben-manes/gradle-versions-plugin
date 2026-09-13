@@ -37,6 +37,9 @@ How a pull request lands:
   functional tests that drive real Gradle builds through TestKit, twice: on the
   build's own JDK against the Gradle running the build, and on JDK 8 against
   our minimum supported Gradle version.
+- The build cache is on. A test task is restored from the cache rather than
+  run again, in another worktree or after `clean` too, whenever its inputs
+  have not changed. `--rerun-tasks` runs it again.
 - `./gradlew test` alone is the fast loop while developing.
   `./gradlew testOnAllJdks` runs the suite on JDK 8, 11, 17, 21 and 25, as the
   build workflow does, and `testOn8` through `testOn25` run it on one JDK.

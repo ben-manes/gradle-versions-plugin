@@ -89,7 +89,9 @@ subprojects {
       events = setOf(PASSED, FAILED, SKIPPED)
     }
 
-    val maxWorkerCount = gradle.startParameter.maxWorkerCount
-    maxParallelForks = if (maxWorkerCount < 2) 1 else maxWorkerCount / 2
+    // A path relative to the project directory, which is the worker's working directory, so that
+    // the test task's inputs are the same in every checkout.
+    systemProperty("testKitPool", ".gradle/testkit/$name")
+    maxParallelForks = (gradle.startParameter.maxWorkerCount / 2).coerceIn(1, 4)
   }
 }

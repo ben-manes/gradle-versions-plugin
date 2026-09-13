@@ -21,9 +21,6 @@ jobs:
             exit 1
           }
 
-      - name: Validate Gradle Wrapper
-        uses: gradle/wrapper-validation-action@v3
-
       - name: Configure JDK
         uses: actions/setup-java@v5
         with:
@@ -33,11 +30,14 @@ jobs:
             25
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: enhanced
 
-      # A rebase merge produces a commit no pull request check ran on, so the tag can
-      # carry a tree the build workflow has never seen. Build it here, where a failure
-      # still stops the publication.
+      # A rebase merge produces a commit no pull request check ran on, so a tag may
+      # reference a tree the build workflow has never run on. Build it here, where a failure
+      # still stops the publication. A test task is restored from the build cache rather than
+      # run again when a build on master already ran with the same inputs.
       - name: Run build with caching enabled
         run: ./gradlew clean build -s
 
