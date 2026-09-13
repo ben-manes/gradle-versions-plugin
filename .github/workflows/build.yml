@@ -76,7 +76,7 @@ jobs:
           if-no-files-found: warn
 
   build:
-    name: Build on JDK 25 and run the examples
+    name: Build and test on JDK 25, and run the examples
     runs-on: ubuntu-latest
 
     permissions:
