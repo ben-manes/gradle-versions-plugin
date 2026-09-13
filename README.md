@@ -334,6 +334,7 @@ command line option, since no command line can express the logic.
 | [`checkForGradleUpdate`](#checkforgradleupdate) | `true`, `false` | `true` | `--[no-]check-for-gradle-update` |
 | [`checkConstraints`](#constraints) | `true`, `false` | `false` | `--[no-]check-constraints` |
 | [`checkBuildEnvironmentConstraints`](#constraints) | `true`, `false` | `false` | `--[no-]check-build-environment-constraints` |
+| [`checkEmbeddedKotlin`](#embedded-kotlin) | `true`, `false` | `false` | `--[no-]check-embedded-kotlin` |
 | [`filterConfigurations`](#filterconfigurations) | a `Spec<Configuration>` | every configuration | |
 | [`filterDeclaredConfigurations`](#filterdeclaredconfigurations) | a `Spec<String>` | every name | |
 | [`rejectOutOfBounds`](#respecting-declared-bounds) | `true`, `false` | `true` | `--[no-]reject-out-of-bounds` |
@@ -687,6 +688,58 @@ tasks.named("dependencyUpdates").configure {
 ```
 
 </details>
+
+##### Embedded Kotlin
+
+In a project that applies `kotlin-dsl` or `embedded-kotlin`, `kotlin-stdlib` and
+`kotlin-reflect` are added to the `embeddedKotlin` configuration at the Kotlin
+version embedded in Gradle, and `kotlin-scripting-compiler-embeddable` is added
+at the same version. Each Gradle release is also paired with one version of the
+`kotlin-dsl` plugins, and a later version is published for a later Gradle. Only
+a Gradle upgrade changes these versions, and that upgrade is printed on the
+Gradle row, so they are left out of the report.
+
+An entry is left out only at the version Gradle sets. A module is still reported
+at another version, where it is also declared or constrained in the build at the
+embedded version, on a buildscript classpath, and in a project that applies
+neither plugin. The `kotlin-dsl` plugins are left out at the paired version on a
+buildscript or settings classpath, including with `apply false`, and are
+reported where they are declared as a library dependency. The number of entries
+left out is printed at the end of the plain text report:
+
+```text
+4 entries set by Gradle's embedded Kotlin were left out. Run with --check-embedded-kotlin to see them.
+```
+
+Set `checkEmbeddedKotlin` to report them all:
+
+<details open>
+<summary>Kotlin</summary>
+
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  checkEmbeddedKotlin = true
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+```groovy
+tasks.named("dependencyUpdates").configure {
+  checkEmbeddedKotlin = true
+}
+```
+
+</details>
+
+The classpaths the Kotlin Gradle Plugin fills for its own tooling are at the
+embedded version too, and are still reported. The [Kotlin Gradle
+Plugin](#kotlin-gradle-plugin) filter leaves them out.
 
 #### Which versions it offers
 
@@ -2047,17 +2100,18 @@ The settings that control resolution (`revision`, `rejectVersionIf` or a full
 `resolutionStrategy`, `filterConfigurations`, `filterDeclaredConfigurations`,
 `checkConstraints`, `checkBuildEnvironmentConstraints`,
 `rejectOutOfBounds`, `rejectPreReleases`, `preReleaseVersionIf`, and
-`exemptFromBuiltInChecksIf`) are inherited from the nearest project up the
-hierarchy whose task set them. Configuring the root project's task therefore
-covers every project, unless a subproject configures its own (see [Task
+`exemptFromBuiltInChecksIf`), and `checkEmbeddedKotlin`, are inherited from the
+nearest project up the hierarchy whose task set them. Configuring the root
+project's task therefore covers every project, unless a subproject configures its own (see [Task
 properties](#task-properties)).
 
 An included build merged into the report (see [Composite
 builds](#composite-builds)) is covered by most of the same settings, applied at
 the report rather than inherited. `rejectVersionIf`, `resolutionStrategy`,
-`rejectPreReleases`, `preReleaseVersionIf`, `exemptFromBuiltInChecksIf` and
-`filterDeclaredConfigurations` set on, or inherited by, the task that writes the
-report are applied to the entries merged from it, so a composite is configured
+`rejectPreReleases`, `checkEmbeddedKotlin`, `preReleaseVersionIf`,
+`exemptFromBuiltInChecksIf` and `filterDeclaredConfigurations` set on, or
+inherited by, the task that writes the report are applied to the entries merged
+from it, so a composite is configured
 in one place, as a multi-project build is. The settings that control what is resolved
 are the exception: `revision`, `filterConfigurations`, `checkConstraints`,
 `checkBuildEnvironmentConstraints` and `rejectOutOfBounds` are read in the build
@@ -2493,6 +2547,20 @@ build is on and work upward. Each section migrates to the version covered by
 the section above it, and the topmost migrates to the current release.
 *Important*s are must-dos, *Tip*s are actions you should or may want to take,
 and *Note*s are things worth knowing that need no action.
+
+### v0.62.0
+
+In v0.63.0, the versions Gradle sets for its embedded Kotlin are left out of the
+report:
+
+> [!NOTE]
+> - `kotlin-stdlib`, `kotlin-reflect` and `kotlin-scripting-compiler-embeddable`
+>   at the embedded Kotlin version, where they are added by `kotlin-dsl` or
+>   `embedded-kotlin` rather than declared in the build, and the `kotlin-dsl`
+>   plugins at the version paired with the running Gradle on a buildscript or
+>   settings classpath, are no longer printed. Set `checkEmbeddedKotlin = true` to
+>   print them, or pass `--check-embedded-kotlin` for a single run (see
+>   [Embedded Kotlin](#embedded-kotlin)).
 
 ### v0.61.0
 

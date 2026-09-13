@@ -61,6 +61,12 @@ data class PartialStatus
      * out. Trails for the same reason as [platformProjects].
      */
     val preReleaseVersion: String? = null,
+    /**
+     * Whether Gradle sets this version for its embedded Kotlin in the observing project, left out of
+     * the report unless `checkEmbeddedKotlin` is set. Trails for the same reason as
+     * [platformProjects].
+     */
+    val embeddedKotlin: Boolean = false,
   ) {
     val coordinate: Coordinate
       get() = Coordinate(group, name, declaredVersion, userReason, divergentLatest)
@@ -194,6 +200,8 @@ data class PartialResult
     val skipped: List<SkippedInfo> = emptyList(),
     /** Every candidate version a dynamic query reached, as `group:name:version`. */
     val candidates: List<String> = emptyList(),
+    /** Whether the producer marked the statuses Gradle sets for its embedded Kotlin, false when older. */
+    val marksEmbeddedKotlin: Boolean = false,
   ) {
     fun toJson(): String = adapter.toJson(this)
 

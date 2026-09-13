@@ -44,7 +44,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
   /**
    * The settings as the producers resolved them, wired by the plugin from the shared settings so
-   * that they are read back as resolved rather than as configured on this project alone. All five
+   * that they are read back as resolved rather than as configured on this project alone. All six
    * are taken from one resolution, so a read cannot mix them. The convention covers a task the
    * plugin did not register, where only this project's own settings are known.
    */
@@ -79,6 +79,11 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
             settingOf(
               parameters.rejectPreReleasesFromCommandLine,
               parameters.rejectPreReleases ?: false,
+            ),
+          checkEmbeddedKotlin =
+            settingOf(
+              parameters.checkEmbeddedKotlinFromCommandLine,
+              parameters.checkEmbeddedKotlin ?: false,
             ),
         )
       },
@@ -344,6 +349,29 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
     parameters.rejectPreReleasesFromCommandLine = rejectPreReleases
   }
 
+  /**
+   * Whether the versions Gradle sets for its embedded Kotlin are reported: `kotlin-stdlib`,
+   * `kotlin-reflect` and `kotlin-scripting-compiler-embeddable` at the embedded Kotlin version, where
+   * they are added by `kotlin-dsl` or `embedded-kotlin` rather than declared in the build, and the
+   * `kotlin-dsl` plugins at the version paired with the running Gradle on a script classpath. Off by
+   * default, as only a Gradle upgrade changes them.
+   */
+  @get:Input
+  var checkEmbeddedKotlin: Boolean
+    get() = inherited.get().checkEmbeddedKotlin
+    set(value) {
+      parameters.checkEmbeddedKotlin = value
+    }
+
+  /** Reports the versions Gradle sets for its embedded Kotlin for this invocation alone. */
+  @Option(
+    option = "check-embedded-kotlin",
+    description = "Reports the versions Gradle sets for its embedded Kotlin.",
+  )
+  internal fun setCheckEmbeddedKotlinFromCommandLine(checkEmbeddedKotlin: Boolean) {
+    parameters.checkEmbeddedKotlinFromCommandLine = checkEmbeddedKotlin
+  }
+
   @Internal
   @Nullable
   @Transient
@@ -508,6 +536,15 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
           "release. Apply one version of the plugin across every project and included build.",
       )
     }
+    val unmarked = partials.filterNot { it.marksEmbeddedKotlin }
+    if (!checkEmbeddedKotlin && unmarked.isNotEmpty()) {
+      logger.warn(
+        "A partial result written by an older version of the plugin was read for " +
+          "${unmarked.map { it.projectPath }.sorted().joinToString(", ")}. The versions Gradle sets " +
+          "for its embedded Kotlin are reported there whatever checkEmbeddedKotlin is set to. Apply " +
+          "one version of the plugin across every project and included build.",
+      )
+    }
     val missing = aggregatedProjectPaths - partials.map { it.projectPath }.toSet()
     if (missing.isNotEmpty()) {
       logger.warn(
@@ -565,9 +602,23 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
         .flatMap { partial ->
           partial.buildscriptStatuses.map { it.copy(projectPath = partial.projectPath) }
         }.filter { declaredFilter.keeps(it) }
+    // Left out before merging, so that the status Gradle sets does not displace another project's
+    // declaration of the module with no version.
+    val reportsEmbeddedKotlin = checkEmbeddedKotlin
+    val reported = { status: PartialStatus -> reportsEmbeddedKotlin || !status.embeddedKotlin }
     val statuses =
-      mergeStatuses(reportRules.applyTo(projectRows, candidatesByProjectPath)) +
-        mergeStatuses(reportRules.applyTo(buildscriptRows, candidatesByProjectPath))
+      mergeStatuses(reportRules.applyTo(projectRows.filter(reported), candidatesByProjectPath)) +
+        mergeStatuses(reportRules.applyTo(buildscriptRows.filter(reported), candidatesByProjectPath))
+    // Counted by row rather than by status, as one project observes a module through each
+    // configuration that reaches it, and a row still printed for another project is not counted.
+    val printed = statuses.mapTo(HashSet()) { Triple(it.group, it.name, it.declaredVersion) }
+    val leftOutEmbeddedKotlin =
+      (projectRows + buildscriptRows)
+        .filterNot(reported)
+        .map { Triple(it.group, it.name, it.declaredVersion) }
+        .filterNot { it in printed }
+        .distinct()
+        .size
     val skipped =
       partials
         .flatMap { partial -> partial.skipped.map { SkippedConfiguration(partial.projectPath, it.name, it.reason) } }
@@ -576,7 +627,7 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
       statuses, projectPath, logger, revision, outputFormatter(), outputDirectory(), reportfileName,
       checkForGradleUpdate, gradleVersionsApiBaseUrl, gradleReleaseChannel, skipped,
       rejectPreReleases,
-    ).write()
+    ).also { it.leftOutEmbeddedKotlin = leftOutEmbeddedKotlin }.write()
   }
 
   /** Returns the report destination, resolved against the project directory as `project.file`. */

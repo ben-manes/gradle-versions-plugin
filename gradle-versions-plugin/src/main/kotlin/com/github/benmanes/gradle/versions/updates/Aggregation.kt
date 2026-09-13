@@ -280,6 +280,7 @@ internal class DependencyUpdatesParameters {
   var checkBuildEnvironmentConstraints: Boolean? = null
   var rejectOutOfBounds: Boolean? = null
   var rejectPreReleases: Boolean? = null
+  var checkEmbeddedKotlin: Boolean? = null
 
   /**
    * Set by the task's command line options. Read ahead of every configured value in the chain, so
@@ -289,6 +290,7 @@ internal class DependencyUpdatesParameters {
   var checkBuildEnvironmentConstraintsFromCommandLine: Boolean? = null
   var rejectOutOfBoundsFromCommandLine: Boolean? = null
   var rejectPreReleasesFromCommandLine: Boolean? = null
+  var checkEmbeddedKotlinFromCommandLine: Boolean? = null
 }
 
 /**
@@ -458,6 +460,11 @@ internal abstract class DependencyUpdatesParametersService :
           fromCommandLine = chain.firstNotNullOfOrNull { it.rejectPreReleasesFromCommandLine },
           configured = chain.firstNotNullOfOrNull { it.rejectPreReleases } ?: false,
         ),
+      checkEmbeddedKotlin =
+        settingOf(
+          fromCommandLine = chain.firstNotNullOfOrNull { it.checkEmbeddedKotlinFromCommandLine },
+          configured = chain.firstNotNullOfOrNull { it.checkEmbeddedKotlin } ?: false,
+        ),
     )
   }
 }
@@ -472,6 +479,7 @@ internal class InheritedSettings(
   val checkBuildEnvironmentConstraints: Boolean,
   val rejectOutOfBounds: Boolean,
   val rejectPreReleases: Boolean,
+  val checkEmbeddedKotlin: Boolean,
 )
 
 /** The settings that apply to a single project's producer. */
@@ -486,6 +494,7 @@ internal class ResolvedParameters(
   val checkBuildEnvironmentConstraints: Boolean,
   val rejectOutOfBounds: Boolean,
   val rejectPreReleases: Boolean,
+  val checkEmbeddedKotlin: Boolean,
 )
 
 /** Registers the per-project producers and wires their results into the accumulator task. */
@@ -499,7 +508,7 @@ internal fun registerAggregation(
   val path = project.path
   // Realized after every project is configured, as the producers' inputs are, so that the values
   // read back from the task are the ones the producers resolved with rather than only what is
-  // configured on this project. All five are taken from one resolution, so a read cannot mix a
+  // configured on this project. All six are taken from one resolution, so a read cannot mix a
   // stale value with a fresh one.
   val inherited =
     project.provider {
@@ -510,6 +519,7 @@ internal fun registerAggregation(
         checkBuildEnvironmentConstraints = resolved.checkBuildEnvironmentConstraints,
         rejectOutOfBounds = resolved.rejectOutOfBounds,
         rejectPreReleases = resolved.rejectPreReleases,
+        checkEmbeddedKotlin = resolved.checkEmbeddedKotlin,
       )
     }
   accumulator.configure { task ->
@@ -896,13 +906,20 @@ private fun registerProducer(
           // two calls above share this list and a configuration skipped by each would otherwise be
           // warned about twice.
           warnSkipped(project, skipped)
+          // Marked rather than left out here, so that `checkEmbeddedKotlin` is read from the task that
+          // writes the report, as it is for the entries merged from an included build.
+          val embeddedKotlin = EmbeddedKotlin.of(project)
+          val marked = { status: PartialStatus, scriptClasspath: Boolean ->
+            if (embeddedKotlin.pins(status, scriptClasspath)) status.copy(embeddedKotlin = true) else status
+          }
           PartialResult(
             PartialResult.FORMAT_VERSION,
             project.buildTreePath,
-            statuses,
-            buildscriptStatuses,
+            statuses.map { marked(it, false) },
+            buildscriptStatuses.map { marked(it, true) },
             skipped,
             candidates.toList(),
+            marksEmbeddedKotlin = true,
           ).toJson()
         },
       )
