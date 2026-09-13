@@ -164,14 +164,15 @@ final class AggregationSpec extends Specification {
     when:
     def result = run(['dependencyUpdates', '-DoutputFormatter=json', '-Drevision=release',
                       '--no-parallel'])
-    def report = new File(testProjectDir.root, 'build/dependencyUpdates/report.json').text
+    def report = new JsonSlurper()
+      .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     // Guava's whole 16.0 line is a milestone here, so under the release revision guava stays at 15.0.
     // A producer that resolved at the default revision instead would report 16.0 as the later version.
-    report.contains('"guava"')
-    !report.contains('16.0')
+    report.current.dependencies*.name.contains('guava')
+    !report.outdated.dependencies*.name.contains('guava')
   }
 
   def 'Aggregates sibling projects that share a group and name'() {

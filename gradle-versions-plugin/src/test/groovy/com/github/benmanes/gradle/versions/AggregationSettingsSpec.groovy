@@ -2,6 +2,7 @@ package com.github.benmanes.gradle.versions
 
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
+import groovy.json.JsonSlurper
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
@@ -78,13 +79,14 @@ final class AggregationSettingsSpec extends Specification {
 
     when:
     def result = run(['dependencyUpdates', '-DoutputFormatter=json', '--no-parallel'])
-    def report = new File(testProjectDir.root, 'build/dependencyUpdates/report.json').text
+    def report = new JsonSlurper()
+      .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     // The report holds guava at 15.0: the root afterEvaluate's rejectVersionIf reached it.
-    report.contains('"guava"')
-    !report.contains('16.0')
+    report.current.dependencies*.name.contains('guava')
+    !report.outdated.dependencies*.name.contains('guava')
   }
 
   def 'Honors an explicit subproject setting that equals the default over a non-default ancestor'() {
