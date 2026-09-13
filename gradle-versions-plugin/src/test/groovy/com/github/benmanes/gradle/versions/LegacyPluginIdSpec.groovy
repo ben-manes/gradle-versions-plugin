@@ -12,16 +12,7 @@ final class LegacyPluginIdSpec extends Specification {
   private String classpathString
 
   def 'setup'() {
-    def pluginClasspathResource = getClass().classLoader.getResource("plugin-classpath.txt")
-    if (pluginClasspathResource == null) {
-      throw new IllegalStateException(
-        "Did not find plugin classpath resource, run `testClasses` build task.")
-    }
-
-    classpathString = pluginClasspathResource.readLines()
-      .collect { it.replace('\\', '\\\\') } // escape backslashes in Windows paths
-      .collect { "'$it'" }
-      .join(", ")
+    classpathString = PluginClasspath.asFilesArgument()
   }
 
   def 'deprecated com.github id still works and warns'() {
@@ -38,7 +29,7 @@ final class LegacyPluginIdSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .build()
@@ -63,7 +54,7 @@ final class LegacyPluginIdSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .build()
@@ -88,7 +79,7 @@ final class LegacyPluginIdSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .build()

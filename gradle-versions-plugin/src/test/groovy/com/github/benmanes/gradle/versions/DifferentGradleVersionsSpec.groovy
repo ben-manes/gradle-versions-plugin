@@ -16,27 +16,17 @@ import spock.lang.Unroll
 final class DifferentGradleVersionsSpec extends Specification {
   @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
   private File buildFile
-  private List<File> pluginClasspath
   private String classpathString
   private String mavenRepoUrl
 
   def 'setup'() {
-    def pluginClasspathResource = getClass().classLoader.getResource("plugin-classpath.txt")
-    if (pluginClasspathResource == null) {
-      throw new IllegalStateException(
-        "Did not find plugin classpath resource, run `testClasses` build task.")
-    }
-
-    pluginClasspath = pluginClasspathResource.readLines().collect { new File(it) }
-    classpathString = pluginClasspath
-      .collect { it.absolutePath.replace('\\', '\\\\') } // escape backslashes in Windows paths
-      .collect { "'$it'" }
-      .join(", ")
+    classpathString = PluginClasspath.asFilesArgument()
     mavenRepoUrl = getClass().getResource('/maven/').toURI()
   }
 
   // On JVMs below 17, Gradle 8.11+ emits its own deprecation for running on that JVM, so the
-  // rows with warnings fatal only run on Java 17, and Gradle 9 requires it anyway.
+  // rows with warnings fatal only run on Java 17.
+  @IgnoreIf({ !GradleVersions.drivenBy(data.gradleVersion) })
   @IgnoreIf({ data.warningMode == 'fail' && !jvm.java17Compatible })
   @Unroll
   def 'dependencyUpdates task completes without errors with Gradle #gradleVersion'() {
@@ -80,7 +70,7 @@ final class DifferentGradleVersionsSpec extends Specification {
     // configuration role that emitted it was dropped in 8.11, and the copies are the only
     // deprecation the plugin produces, so later versions run with warnings fatal.
     // https://github.com/ben-manes/gradle-versions-plugin/issues/749
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates', '-S', "--warning-mode=$warningMode")
@@ -103,6 +93,7 @@ final class DifferentGradleVersionsSpec extends Specification {
     GradleVersions.CURRENT | 'fail'
   }
 
+  @IgnoreIf({ !GradleVersions.drivenBy('8.4') })
   @Unroll
   def 'dependencyUpdates task uses specified release channel with Gradle #gradleReleaseChannel'() {
     given:
@@ -133,7 +124,7 @@ final class DifferentGradleVersionsSpec extends Specification {
         """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion('8.4') // the running version must be behind the release channels
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
@@ -152,8 +143,7 @@ final class DifferentGradleVersionsSpec extends Specification {
     ]
   }
 
-  // Gradle 9 requires JVM 17 to run, so that row is left out on the older legs of the matrix.
-  @IgnoreIf({ data.needsJava17 && !jvm.java17Compatible })
+  @IgnoreIf({ !GradleVersions.drivenBy(data.gradleVersion) })
   @Unroll
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1095')
   def 'dependencyUpdates task works with dependency verification enabled on Gradle #gradleVersion'() {
@@ -260,7 +250,7 @@ final class DifferentGradleVersionsSpec extends Specification {
     // so the lookups must be exempt from verification. Gradle 8.7 and later re-report a failure
     // recorded during those lookups at the next artifact access, which is the plugin's own
     // aggregation configuration.
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
@@ -272,13 +262,10 @@ final class DifferentGradleVersionsSpec extends Specification {
 
     where:
     // 8.6 is the last release that passes without the exemption; every later one needs it.
-    gradleVersion          | needsJava17
-    '8.6'                  | false
-    '8.7'                  | false
-    '8.14.4'               | false
-    GradleVersions.CURRENT | true
+    gradleVersion << ['8.6', '8.7', '8.14.4', GradleVersions.CURRENT]
   }
 
+  @IgnoreIf({ !GradleVersions.drivenBy('8.14.4') })
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1095')
   def 'dependencyUpdates task leaves the verification opt out alone where the build has no metadata'() {
     given: 'a build with no verification metadata, which verifies nothing'
@@ -306,7 +293,7 @@ final class DifferentGradleVersionsSpec extends Specification {
         """.stripIndent()
 
     when: 'the oldest release that needs the exemption runs it, so every JVM leg covers this'
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion('8.14.4')
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
@@ -346,7 +333,7 @@ final class DifferentGradleVersionsSpec extends Specification {
     testProjectDir.newFolder("gradle")
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates', '--configuration-cache')
       .build()

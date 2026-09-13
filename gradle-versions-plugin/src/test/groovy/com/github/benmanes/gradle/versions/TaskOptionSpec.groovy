@@ -77,7 +77,7 @@ final class TaskOptionSpec extends Specification {
   }
 
   private def run(String... arguments) {
-    return GradleRunner.create()
+    return TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments(arguments)
       .withPluginClasspath()
@@ -555,8 +555,7 @@ final class TaskOptionSpec extends Specification {
 
   def 'Resolves an included build merged into the report with that build\'s own settings'() {
     given: 'one report merging an included build, each build applying the plugin'
-    def classpath = getClass().classLoader.getResource('plugin-classpath.txt').readLines()
-      .collect { it.replace('\\', '\\\\') }.collect { "'$it'" }.join(', ')
+    def classpath = PluginClasspath.asFilesArgument()
     testProjectDir.newFile('settings.gradle') << "includeBuild 'child'"
     rootBuildFile() <<
       """
@@ -619,11 +618,10 @@ final class TaskOptionSpec extends Specification {
   }
 
   @Unroll
-  @IgnoreIf({ data.gradleVersion.startsWith('9') && !jvm.java17Compatible })
+  @IgnoreIf({ !GradleVersions.drivenBy(data.gradleVersion) })
   def 'Binds the options under Gradle #gradleVersion'() {
     given: 'the plugin on the buildscript classpath, so a pinned Gradle runs it'
-    def classpath = getClass().classLoader.getResource('plugin-classpath.txt').readLines()
-      .collect { it.replace('\\', '\\\\') }.collect { "'$it'" }.join(', ')
+    def classpath = PluginClasspath.asFilesArgument()
     rootBuildFile() <<
       """
         buildscript {
@@ -649,12 +647,12 @@ final class TaskOptionSpec extends Specification {
       """.stripIndent()
 
     when: 'the option turns the check on, and its --no- counterpart turns it off again'
-    def on = GradleRunner.create()
+    def on = TestKitRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates', '--check-constraints', '--no-check-for-gradle-update')
       .build()
-    def off = GradleRunner.create()
+    def off = TestKitRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates', '--no-check-constraints', '--no-check-for-gradle-update')

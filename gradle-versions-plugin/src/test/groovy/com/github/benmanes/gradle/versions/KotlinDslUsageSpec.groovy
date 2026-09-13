@@ -40,7 +40,7 @@ final class KotlinDslUsageSpec extends Specification {
   }
 
   // Gradle 9 requires JVM 17.
-  @IgnoreIf({ data.gradleVersion.startsWith('9') && !jvm.java17Compatible })
+  @IgnoreIf({ !GradleVersions.drivenBy(data.gradleVersion) })
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/941')
   @Unroll
   def "user friendly kotlin-dsl with Gradle #gradleVersion"() {
@@ -64,7 +64,7 @@ final class KotlinDslUsageSpec extends Specification {
     '''
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion(gradleVersion)
       .withPluginClasspath()
       .withProjectDir(testProjectDir.root)
@@ -80,7 +80,7 @@ final class KotlinDslUsageSpec extends Specification {
   }
 
   // Gradle 9 requires JVM 17.
-  @IgnoreIf({ data.gradleVersion.startsWith('9') && !jvm.java17Compatible })
+  @IgnoreIf({ !GradleVersions.drivenBy(data.gradleVersion) })
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/941')
   @Unroll
   def "withModule takes an untyped kotlin-dsl lambda with Gradle #gradleVersion"() {
@@ -104,7 +104,7 @@ final class KotlinDslUsageSpec extends Specification {
     '''
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion(gradleVersion)
       .withPluginClasspath()
       .withProjectDir(testProjectDir.root)
@@ -134,7 +134,7 @@ final class KotlinDslUsageSpec extends Specification {
     '''
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withPluginClasspath()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
@@ -167,7 +167,7 @@ final class KotlinDslUsageSpec extends Specification {
     """
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withPluginClasspath()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')

@@ -69,7 +69,7 @@ final class IsolatedProjectsAggregationSpec extends Specification {
   }
 
   private def runWith(String task, List<String> arguments = []) {
-    return GradleRunner.create()
+    return TestKitRunner.create()
       .withGradleVersion(GradleVersions.CURRENT)
       .withProjectDir(testProjectDir.root)
       .withArguments([task, '-Dorg.gradle.isolated-projects=true',

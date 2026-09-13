@@ -6,6 +6,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 
 /**
  * Writes the dependency version statuses observed by a single project.
@@ -13,6 +14,7 @@ import org.gradle.api.tasks.TaskAction
  * The statuses are resolved while the input is realized, so the metadata read during resolution is
  * tracked as a configuration cache input and a newly published version invalidates the entry.
  */
+@DisableCachingByDefault(because = "Writes a string the configuration already resolved, so a cache saves no work")
 abstract class DependencyUpdatesPartialTask : DefaultTask() {
   @get:Input
   abstract val partialJson: Property<String>

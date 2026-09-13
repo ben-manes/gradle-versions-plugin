@@ -58,7 +58,7 @@ final class DivergentVersionsSpec extends Specification {
   }
 
   private def run(List<String> arguments) {
-    return GradleRunner.create()
+    return TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments(arguments)
       .withPluginClasspath()
@@ -431,14 +431,14 @@ final class DivergentVersionsSpec extends Specification {
   }
 
   // Gradle 9 requires JVM 17.
-  @IgnoreIf({ data.gradleVersion.startsWith('9') && !jvm.java17Compatible })
+  @IgnoreIf({ !GradleVersions.drivenBy(data.gradleVersion) })
   def 'Reports every row when a rule reading a script object reaches the report under Gradle #gradleVersion'() {
     given: 'the rule shape an aggregating report is documented to support, plus a subproject rule'
     writeSplitBuild(
       [':': "project.path == ':' && it.candidate.version == '3.1'", 'app': 'false', 'lib': 'false'])
 
     when:
-    def store = GradleRunner.create()
+    def store = TestKitRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
       .withArguments([':dependencyUpdates', '--no-parallel', '--configuration-cache'])

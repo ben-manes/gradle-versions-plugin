@@ -11,7 +11,7 @@ import spock.lang.Specification
 
 @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/948')
 final class KotlinMultiplatformAggregationSpec extends Specification {
-  private static final String KOTLIN_VERSION = '2.0.21'
+  private static final String KOTLIN_VERSION = '2.4.20'
   private static final List<String> ARGUMENTS = ['dependencyUpdates', '-DoutputFormatter=json']
 
   @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
@@ -68,7 +68,7 @@ final class KotlinMultiplatformAggregationSpec extends Specification {
   }
 
   private def run(List<String> arguments) {
-    return GradleRunner.create()
+    return TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments(arguments)
       .withPluginClasspath()

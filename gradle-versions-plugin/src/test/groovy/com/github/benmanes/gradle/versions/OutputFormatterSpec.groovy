@@ -13,23 +13,12 @@ import spock.lang.Specification
 final class OutputFormatterSpec extends Specification {
   @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
   private File buildFile
-  private List<File> pluginClasspath
   private String reportFolder
   private String classpathString
   private String mavenRepoUrl
 
   def 'setup'() {
-    def pluginClasspathResource = getClass().classLoader.getResource("plugin-classpath.txt")
-    if (pluginClasspathResource == null) {
-      throw new IllegalStateException(
-        "Did not find plugin classpath resource, run `testClasses` build task.")
-    }
-
-    pluginClasspath = pluginClasspathResource.readLines().collect { new File(it) }
-    classpathString = pluginClasspath
-      .collect { it.absolutePath.replace('\\', '\\\\') } // escape backslashes in Windows paths
-      .collect { "'$it'" }
-      .join(", ")
+    classpathString = PluginClasspath.asFilesArgument()
     reportFolder = "${testProjectDir.root.path.replaceAll("\\\\", '/')}/build/dependencyUpdates"
     mavenRepoUrl = getClass().getResource('/maven/').toURI()
   }
@@ -65,7 +54,7 @@ final class OutputFormatterSpec extends Specification {
         """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .build()
@@ -106,7 +95,7 @@ final class OutputFormatterSpec extends Specification {
         """.stripIndent()
 
     when:
-    def runner = GradleRunner.create()
+    def runner = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
 
@@ -145,7 +134,7 @@ final class OutputFormatterSpec extends Specification {
         """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -189,7 +178,7 @@ final class OutputFormatterSpec extends Specification {
         """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -249,7 +238,7 @@ final class OutputFormatterSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -383,7 +372,7 @@ final class OutputFormatterSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -493,7 +482,7 @@ final class OutputFormatterSpec extends Specification {
         """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -544,7 +533,7 @@ final class OutputFormatterSpec extends Specification {
         """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -635,7 +624,7 @@ Failed to determine the latest version for the following dependencies (use --inf
         """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
@@ -716,7 +705,7 @@ Failed to determine the latest version for the following dependencies (use --inf
         """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withPluginClasspath()

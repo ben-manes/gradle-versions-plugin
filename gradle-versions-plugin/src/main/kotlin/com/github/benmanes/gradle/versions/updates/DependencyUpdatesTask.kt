@@ -28,12 +28,14 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.options.Option
 import org.gradle.api.tasks.options.OptionValues
+import org.gradle.work.DisableCachingByDefault
 import java.io.File
 import javax.annotation.Nullable
 
 /**
  * A task that reports which dependencies have later versions.
  */
+@DisableCachingByDefault(because = "Reports the versions a repository publishes, which no input tracks")
 open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
   /** The settings the per-project producers read, kept here so that they are configured as one. */

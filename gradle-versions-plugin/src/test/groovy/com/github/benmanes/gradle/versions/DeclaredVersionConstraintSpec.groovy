@@ -18,6 +18,13 @@ import spock.lang.Unroll
  */
 @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/755')
 final class DeclaredVersionConstraintSpec extends Specification {
+  /**
+   * From Gradle 9 a build script's own {@code classpath} is the only configuration its
+   * {@code buildscript} block holds, so a second one, which the script classpath scenarios
+   * below declare their bound on to leave {@code classpath} resolvable, runs on Gradle 8 alone.
+   */
+  private static final String SCRIPT_CLASSPATH_GRADLE = '8.4'
+
   @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
   private String reportFolder
   private String mavenRepoUrl
@@ -28,15 +35,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
     reportFolder = "${testProjectDir.root.path.replaceAll('\\\\', '/')}/build/dependencyUpdates"
     mavenRepoUrl = getClass().getResource('/maven/').toURI()
 
-    def pluginClasspathResource = getClass().classLoader.getResource('plugin-classpath.txt')
-    if (pluginClasspathResource == null) {
-      throw new IllegalStateException(
-        'Did not find plugin classpath resource, run `testClasses` build task.')
-    }
-    classpathString = pluginClasspathResource.readLines()
-      .collect { it.replace('\\', '\\\\') }
-      .collect { "'$it'" }
-      .join(', ')
+    classpathString = PluginClasspath.asFilesArgument()
   }
 
   private void writeBuildFile(String declarations, String taskBody) {
@@ -65,8 +64,19 @@ final class DeclaredVersionConstraintSpec extends Specification {
       """.stripIndent()
   }
 
+  private def runOn(String gradleVersion, String... options) {
+    def result = TestKitRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments(['dependencyUpdates'] + options.toList())
+      .withGradleVersion(gradleVersion)
+      .withPluginClasspath()
+      .build()
+    assert result.task(':dependencyUpdates').outcome == SUCCESS
+    return result
+  }
+
   private def run(String... options) {
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments(['dependencyUpdates'] + options.toList())
       .withPluginClasspath()
@@ -477,6 +487,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
     report().outdated.dependencies[0].available.milestone == '3.1'
   }
 
+  @IgnoreIf({ !GradleVersions.drivenBy(SCRIPT_CLASSPATH_GRADLE) })
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/755')
   def 'a dynamic classpath bound is applied with no rule written for it'() {
     given: 'a classpath range nothing pushes past, and no rejectVersionIf rule'
@@ -505,13 +516,14 @@ final class DeclaredVersionConstraintSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = run()
+    def result = runOn(SCRIPT_CLASSPATH_GRADLE)
 
     then: 'the newest version inside the range, with 3.0 and 3.1 left out by default'
     result.output.contains(' - com.google.inject:guice:2.2')
     !result.output.contains('com.google.inject:guice [2.2 -> ')
   }
 
+  @IgnoreIf({ !GradleVersions.drivenBy(SCRIPT_CLASSPATH_GRADLE) })
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/755')
   def 'a script classpath does not report the version it resolved as a downgrade'() {
     given: 'a classpath range a transitive requires more than, so resolution rises above it'
@@ -551,13 +563,14 @@ final class DeclaredVersionConstraintSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = run()
+    def result = runOn(SCRIPT_CLASSPATH_GRADLE)
 
     then: 'the selected version is in bound even where the interval alone would exclude it'
     !result.output.contains('com.google.inject:guice [3.0 <- ')
     result.output.contains(' - com.google.inject:guice:3.0')
   }
 
+  @IgnoreIf({ !GradleVersions.drivenBy(SCRIPT_CLASSPATH_GRADLE) })
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/755')
   def 'a dynamic classpath bound the resolved version already exceeds does not hold the report'() {
     given: 'the same classpath range resolution rose above, with no rule to reject with'
@@ -591,12 +604,13 @@ final class DeclaredVersionConstraintSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = run()
+    def result = runOn(SCRIPT_CLASSPATH_GRADLE)
 
     then: 'a bound the resolved version already lies outside is not applied, so the upgrade is listed'
     result.output.contains('com.google.inject:guice [3.0 -> 7.0.0]')
   }
 
+  @IgnoreIf({ !GradleVersions.drivenBy(SCRIPT_CLASSPATH_GRADLE) })
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/755')
   def 'a merged script classpath row is bounded by the range its own build declared'() {
     given: 'an included build declaring a classpath range, merged into a report with a rule bounding it'
@@ -654,7 +668,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = run()
+    def result = runOn(SCRIPT_CLASSPATH_GRADLE)
 
     then: 'the merged row stops inside the range, as a row this build resolved itself does'
     result.output.contains(' - com.google.inject:guice:2.2')
@@ -711,7 +725,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
   // The bound is read with the parser dependency resolution uses, which Gradle does not publish, so
   // the ends of the supported range are pinned. The versions between them do not move it
   // independently of these two.
-  @IgnoreIf({ data.gradleVersion.startsWith('9') && !jvm.java17Compatible })
+  @IgnoreIf({ !GradleVersions.drivenBy(data.gradleVersion) })
   @Unroll
   def 'a declared range is read the same way on Gradle #gradleVersion'() {
     given:
@@ -749,7 +763,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
       .withGradleVersion(gradleVersion)
@@ -803,10 +817,9 @@ final class DeclaredVersionConstraintSpec extends Specification {
         rejectVersionIf {
           try {
             versionConstraint?.strictly('9.9')
-            println "PROBE-MUTATED"
-          } catch (Exception e) {
-            println "PROBE-REFUSED \${e.getClass().simpleName}"
+          } catch (Exception ignored) {
           }
+          println "PROBE-STRICT \${versionConstraint?.strictVersion}"
           return false
         }
       """)
@@ -814,9 +827,8 @@ final class DeclaredVersionConstraintSpec extends Specification {
     when:
     def result = run()
 
-    then: 'the mutation is refused, and the reported current version is the resolved one'
-    result.output.contains('PROBE-REFUSED')
-    !result.output.contains('PROBE-MUTATED')
+    then: 'the copy still reads as declared, and the reported current version is the resolved one'
+    result.output.contains('PROBE-STRICT [2.0, 3.1[')
     report().current.dependencies*.name == ['guice']
     report().current.dependencies[0].version == '3.0'
   }

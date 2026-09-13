@@ -7,6 +7,7 @@ import groovy.xml.XmlParser
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
+import spock.lang.IgnoreIf
 import spock.lang.Issue
 import spock.lang.Requires
 import spock.lang.Specification
@@ -22,20 +23,12 @@ final class CompositeBuildSpec extends Specification {
   private String mavenRepoUrl
 
   def 'setup'() {
-    def pluginClasspathResource = getClass().classLoader.getResource('plugin-classpath.txt')
-    if (pluginClasspathResource == null) {
-      throw new IllegalStateException(
-        'Did not find plugin classpath resource, run `testClasses` build task.')
-    }
-    classpathString = pluginClasspathResource.readLines()
-      .collect { it.replace('\\', '\\\\') } // escape backslashes in Windows paths
-      .collect { "'$it'" }
-      .join(', ')
+    classpathString = PluginClasspath.asFilesArgument()
     mavenRepoUrl = getClass().getResource('/maven/').toURI()
   }
 
   private def run(String... arguments) {
-    return GradleRunner.create()
+    return TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments(arguments)
       .withPluginClasspath()
@@ -310,7 +303,7 @@ final class CompositeBuildSpec extends Specification {
     compositeUsingConfigureOnDemand()
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion(GradleVersions.CURRENT)
       .withProjectDir(testProjectDir.root)
       .withArguments(':dependencyUpdates', '--configure-on-demand', '--parallel',
@@ -638,15 +631,14 @@ final class CompositeBuildSpec extends Specification {
 
   // The results are published as the graph edges rather than as the files the aggregate collected,
   // which Gradle 9 will not resolve for a consumer without a lock on the included build.
-  // Gradle 9 requires JVM 17.
-  @Requires({ jvm.java17Compatible })
+  @IgnoreIf({ !GradleVersions.drivenBy(data.gradleVersion) })
   @Unroll
   def 'Aggregates every project of an included build on Gradle #gradleVersion'() {
     given:
     aggregatedIncludedBuild("dependencyUpdatesAggregation 'com.example:child:1.0'")
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
@@ -1539,8 +1531,7 @@ final class CompositeBuildSpec extends Specification {
     result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
   }
 
-  // Gradle 9 requires JVM 17.
-  @Requires({ jvm.java17Compatible })
+  @IgnoreIf({ !GradleVersions.drivenBy(data.gradleVersion) })
   @Unroll
   def 'Reports the updates of a composite build on Gradle #gradleVersion'() {
     given:
@@ -1565,7 +1556,7 @@ final class CompositeBuildSpec extends Specification {
     includedBuild('child')
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion(gradleVersion)
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates')
@@ -1643,7 +1634,7 @@ final class CompositeBuildSpec extends Specification {
     )
 
     when:
-    def result = GradleRunner.create()
+    def result = TestKitRunner.create()
       .withGradleVersion(GradleVersions.CURRENT)
       .withProjectDir(testProjectDir.root)
       .withArguments('dependencyUpdates', ':child:dependencyUpdates',

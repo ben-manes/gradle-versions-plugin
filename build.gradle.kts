@@ -43,14 +43,15 @@ subprojects {
   tasks.withType<KotlinJvmCompile>().configureEach {
     compilerOptions {
       jvmTarget.set(JVM_1_8)
+      // The build runs on a JDK far newer than the target, so bound the API as well as the
+      // bytecode. The JDK 8 matrix row used to give this by compiling on JDK 8 itself.
+      freeCompilerArgs.add("-Xjdk-release=1.8")
     }
   }
 
   tasks.withType<JavaCompile>().configureEach {
-    sourceCompatibility = VERSION_1_8.toString()
-    targetCompatibility = VERSION_1_8.toString()
-
     options.apply {
+      release.set(VERSION_1_8.majorVersion.toInt())
       compilerArgs = compilerArgs +
         listOf(
           "-Xlint:all",

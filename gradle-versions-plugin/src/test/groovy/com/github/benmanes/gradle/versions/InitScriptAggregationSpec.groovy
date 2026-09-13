@@ -33,7 +33,7 @@ final class InitScriptAggregationSpec extends Specification {
     // Copied rather than read from the classpath that withPluginClasspath injects, so that the two
     // classpaths do not share a classloader, as an init script resolving the plugin for itself does
     // not share one with the build that applies it.
-    def classpath = GradleRunner.create().withPluginClasspath().pluginClasspath
+    def classpath = TestKitRunner.create().withPluginClasspath().pluginClasspath
       .findAll { it.exists() }
       .collect { copyOf(it) }
       .collect { "'${it.absolutePath.replace('\\', '/')}'" }
@@ -94,7 +94,7 @@ final class InitScriptAggregationSpec extends Specification {
   }
 
   private def run(String... arguments) {
-    return GradleRunner.create()
+    return TestKitRunner.create()
       .withGradleVersion(GradleVersions.CURRENT)
       .withProjectDir(testProjectDir.root)
       .withArguments(arguments)

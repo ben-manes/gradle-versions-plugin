@@ -34,7 +34,7 @@ final class SettingsClasspathSpec extends Specification {
   }
 
   private GradleRunner runner(String... arguments) {
-    return GradleRunner.create()
+    return TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments(['dependencyUpdates'] + arguments.toList())
       .withPluginClasspath()

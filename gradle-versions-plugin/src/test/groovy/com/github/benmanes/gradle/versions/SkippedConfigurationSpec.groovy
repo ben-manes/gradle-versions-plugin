@@ -23,7 +23,7 @@ final class SkippedConfigurationSpec extends Specification {
   }
 
   private def run(List<String> arguments) {
-    return GradleRunner.create()
+    return TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments(arguments)
       .withPluginClasspath()
@@ -389,6 +389,8 @@ final class SkippedConfigurationSpec extends Specification {
   def 'The HTML report keeps a project beside the configuration it skipped'() {
     given:
     testProjectDir.newFile('settings.gradle') << "include 'app', 'lib'"
+    testProjectDir.newFolder('app')
+    testProjectDir.newFolder('lib')
     testProjectDir.newFile('build.gradle') <<
       """
         plugins {
