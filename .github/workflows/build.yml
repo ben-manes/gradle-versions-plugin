@@ -66,7 +66,7 @@ jobs:
           files: '**/build/test-results/*/TEST-*.xml'
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: gradle-versions-plugin-${{ matrix.java-version }}-${{ github.workflow }}-${{ github.run_id }}
@@ -138,7 +138,7 @@ jobs:
           cd examples/kotlin/ && gradle dU && cd -
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: gradle-versions-plugin-${{ github.workflow }}-${{ github.run_id }}
