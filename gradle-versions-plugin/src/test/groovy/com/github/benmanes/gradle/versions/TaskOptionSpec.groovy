@@ -679,6 +679,8 @@ final class TaskOptionSpec extends Specification {
     output.contains('--check-constraints')
     output.contains('--no-check-constraints')
     output.contains('--check-build-environment-constraints')
+    output.contains('--check-embedded-kotlin')
+    output.contains('--no-check-embedded-kotlin')
     output.contains('--reject-pre-releases')
     output.contains('--no-reject-pre-releases')
     output.contains('--check-for-gradle-update')

@@ -81,6 +81,9 @@ class DependencyUpdatesReporter(
   /** The pre-release step of each row, absent where the pre-release check left nothing out. */
   val preReleaseByCurrent: Map<Coordinate, String> = emptyMap(),
 ) {
+  /** The number of entries left out because Gradle sets their versions for its embedded Kotlin. */
+  internal var leftOutEmbeddedKotlin: Int = 0
+
   @Deprecated("Use the constructor that includes the constraining platforms.")
   constructor(
     projectPath: String,
@@ -153,6 +156,7 @@ class DependencyUpdatesReporter(
           gradleReleaseChannel,
           logger.isInfoEnabled,
         )
+      plainTextReporter.leftOutEmbeddedKotlin = leftOutEmbeddedKotlin
       plainTextReporter.write(System.out, buildBaseObject())
     }
 
@@ -195,7 +199,10 @@ class DependencyUpdatesReporter(
       "json" -> JsonReporter(projectPath, revision, gradleReleaseChannel)
       "xml" -> XmlReporter(projectPath, revision, gradleReleaseChannel)
       "html" -> HtmlReporter(projectPath, revision, gradleReleaseChannel)
-      else -> PlainTextReporter(projectPath, revision, gradleReleaseChannel, logger.isInfoEnabled)
+      else ->
+        PlainTextReporter(projectPath, revision, gradleReleaseChannel, logger.isInfoEnabled).also {
+          it.leftOutEmbeddedKotlin = leftOutEmbeddedKotlin
+        }
     }
   }
 

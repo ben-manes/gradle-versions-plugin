@@ -229,6 +229,35 @@ final class PartialResultSpec extends Specification {
     decoded.statuses[0].platformConstraints == []
   }
 
+  def 'A partial from before the embedded Kotlin marks reads as unmarked'() {
+    given:
+    def json = '{"formatVersion":3,"projectPath":":","statuses":[{"group":"org.jetbrains.kotlin",' +
+      '"name":"kotlin-stdlib","declaredVersion":"2.4.0","latestVersion":"2.4.20"}],"buildscriptStatuses":[]}'
+
+    when:
+    def decoded = PartialResult.fromJson(json)
+
+    then:
+    !decoded.marksEmbeddedKotlin
+    !decoded.statuses[0].embeddedKotlin
+  }
+
+  def 'The embedded Kotlin marks survive the round trip'() {
+    given:
+    def result = PartialResult.fromJson(
+      '{"formatVersion":3,"projectPath":":","statuses":[{"group":"org.jetbrains.kotlin",' +
+        '"name":"kotlin-stdlib","declaredVersion":"2.4.0","latestVersion":"2.4.20","embeddedKotlin":true}],' +
+        '"buildscriptStatuses":[],"marksEmbeddedKotlin":true}')
+
+    when:
+    def decoded = PartialResult.fromJson(result.toJson())
+
+    then:
+    decoded == result
+    decoded.marksEmbeddedKotlin
+    decoded.statuses[0].embeddedKotlin
+  }
+
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/948')
   def 'Rejects a format version newer than this reader supports'() {
     given:
