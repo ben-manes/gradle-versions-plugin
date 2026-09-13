@@ -816,7 +816,17 @@ private fun registerProducer(
           val configurations =
             project.configurations
               .toList()
-              .filter { it.isCanBeResolved && parameters.filterConfigurations.isSatisfiedBy(it) }
+              .filter { it.isCanBeResolved }
+              .filter { configuration ->
+                parameters.filterConfigurations.isSatisfiedBy(configuration).also { checked ->
+                  if (!checked) {
+                    project.logger.info(
+                      "Not checking configuration ${project.absoluteProjectPath(configuration.name)}, " +
+                        "rejected by filterConfigurations",
+                    )
+                  }
+                }
+              }
           // The settings script's classpath contains the plugins its own plugins block declares,
           // which appear in no project's buildscript. It is reported once, from the project that
           // accumulates.

@@ -8,6 +8,7 @@ import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import spock.lang.IgnoreIf
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  * A specification for the configuration filters: {@code filterConfigurations} over the
@@ -143,6 +144,28 @@ final class ConfigurationFilterSpec extends Specification {
     !result.output.contains('com.google.guava:guava')
     // The rejection removes the entry rather than emptying the report.
     result.output.contains('com.google.inject:guice')
+  }
+
+  @Unroll
+  def 'Logs each configuration that filterConfigurations rejects at info'() {
+    given:
+    writeBuild(
+      """
+        apply plugin: 'java'
+
+        ${bucketConfigurations("filterConfigurations { it.name != 'toolClasspath' }")}
+      """.stripIndent())
+
+    when:
+    def result = run(['dependencyUpdates', '--info'] + arguments)
+    def logged = result.output.readLines().findAll { it.contains('rejected by filterConfigurations') }
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    logged == ["Not checking configuration :toolClasspath, rejected by filterConfigurations"]
+
+    where:
+    arguments << [[], ['--configuration-cache']]
   }
 
   def 'Keeps the entry when another resolvable configuration still reaches it'() {

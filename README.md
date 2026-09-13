@@ -426,7 +426,8 @@ A dependency is left out of the report once every configuration that reaches
 it is rejected, and so is everything reachable only through a rejected
 configuration—rejecting `compileClasspath` removes the build's own
 dependencies too. Reach for this filter when a whole configuration is noise
-and does not need to be resolved at all.
+and does not need to be resolved at all. Each configuration the filter rejects
+is logged at `--info`.
 
 Rejecting a configuration also skips its version lookups. A dependency's list
 of versions is fetched once for each repository, however many configurations
