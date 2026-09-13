@@ -792,7 +792,7 @@ private fun registerProducer(
         // another's resolution is still reported as unresolved, yet a default action on it is
         // rejected.
         project.logger.info(
-          "Skipping the plugin mark for configuration ${project.path}:${configuration.name}",
+          "Skipping the plugin mark for configuration ${project.absoluteProjectPath(configuration.name)}",
           e,
         )
       }
@@ -1024,7 +1024,7 @@ private fun statusesOf(
           generateSequence(e as Throwable) { it.cause }.take(MAX_FAILURE_CAUSES).joinToString("; ") { it.toString() }
         // The default-visible warning is grouped and emitted once the project's whole set of skipped
         // configurations is known, so only the stack trace is logged here.
-        project.logger.info("Skipping configuration ${project.path}:${configuration.name}", e)
+        project.logger.info("Skipping configuration ${project.absoluteProjectPath(configuration.name)}", e)
         skipped.add(SkippedInfo(configuration.name, reason))
         emptyList()
       }
