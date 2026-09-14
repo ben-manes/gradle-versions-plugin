@@ -119,7 +119,7 @@ final class DivergentVersionsSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains(' - com.google.inject:guice [3.0 -> 3.1]')
-    result.output.contains(' - com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains(' - com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.output.contains('     declared in :app, :lib')
     result.output.contains('     declared in root project')
   }
@@ -335,9 +335,9 @@ final class DivergentVersionsSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains(
-      " - com.google.inject:guice [2.0 -> 3.0]${nl}$GUICE_URL${nl}     declared in :app")
+      " - com.google.inject:guice [2.0 -> 2.2 -> 3.0]${nl}$GUICE_URL${nl}     declared in :app")
     result.output.contains(
-      " - com.google.inject:guice [2.0 -> 3.1]${nl}$GUICE_URL${nl}     declared in root project")
+      " - com.google.inject:guice [2.0 -> 2.2 -> 3.1]${nl}$GUICE_URL${nl}     declared in root project")
   }
 
   def 'Splits the rows into their own sections when only one is outdated'() {
@@ -357,7 +357,7 @@ final class DivergentVersionsSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains(" - com.google.inject:guice:2.0${nl}     declared in :app")
     result.output.contains(
-      " - com.google.inject:guice [2.0 -> 3.1]${nl}$GUICE_URL${nl}     declared in root project")
+      " - com.google.inject:guice [2.0 -> 2.2 -> 3.1]${nl}$GUICE_URL${nl}     declared in root project")
     jsonReport.current.dependencies*.projects == [[':app']]
     jsonReport.outdated.dependencies*.projects == [[':']]
     jsonReport.outdated.dependencies[0].available.milestone == '3.1'
@@ -375,7 +375,7 @@ final class DivergentVersionsSpec extends Specification {
 
     then: 'the root caps the rows of both subprojects, leaving nothing to attribute'
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains(' - com.google.inject:guice [2.0 -> 3.0]')
+    result.output.contains(' - com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
     result.output.count('com.google.inject:guice') == 1
     !result.output.contains('declared in')
   }
@@ -390,13 +390,13 @@ final class DivergentVersionsSpec extends Specification {
     def hit = run([':dependencyUpdates', '--no-parallel', '--configuration-cache'])
 
     then: 'the root caps the rows of both subprojects however the report reached its rules'
-    store.output.contains(' - com.google.inject:guice [2.0 -> 3.0]')
+    store.output.contains(' - com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
     store.output.count('com.google.inject:guice') == 1
     !store.output.contains('declared in')
 
     and:
     hit.output.contains('Reusing configuration cache')
-    hit.output.contains(' - com.google.inject:guice [2.0 -> 3.0]')
+    hit.output.contains(' - com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
     hit.output.count('com.google.inject:guice') == 1
     !hit.output.contains('declared in')
   }
@@ -477,12 +477,12 @@ final class DivergentVersionsSpec extends Specification {
 
     then: 'the root caps the rows of both subprojects, as it does without the cache'
     store.task(':dependencyUpdates').outcome == SUCCESS
-    store.output.contains(' - com.google.inject:guice [2.0 -> 3.0]')
+    store.output.contains(' - com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
     store.output.count('com.google.inject:guice') == 1
 
     and:
     hit.task(':dependencyUpdates').outcome == SUCCESS
-    hit.output.contains(' - com.google.inject:guice [2.0 -> 3.0]')
+    hit.output.contains(' - com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
     hit.output.count('com.google.inject:guice') == 1
   }
 
@@ -528,7 +528,7 @@ final class DivergentVersionsSpec extends Specification {
     def hit = run([':dependencyUpdates', '--no-parallel', '--configuration-cache'])
 
     then: 'the root still caps the rows a subproject registered its rule ahead of it for'
-    store.output.contains(' - com.google.inject:guice [2.0 -> 3.0]')
+    store.output.contains(' - com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
     store.output.count('com.google.inject:guice') == 1
     hit.output.contains('Reusing configuration cache')
     hit.output.count('com.google.inject:guice') == 1
@@ -583,7 +583,7 @@ final class DivergentVersionsSpec extends Specification {
     def hit = run([':dependencyUpdates', '--no-parallel', '--configuration-cache'])
 
     then: 'the rule set before the task was registered still marks the report above it'
-    store.output.contains(' - com.google.inject:guice [2.0 -> 3.0]')
+    store.output.contains(' - com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
     store.output.count('com.google.inject:guice') == 1
     hit.output.contains('Reusing configuration cache')
     hit.output.count('com.google.inject:guice') == 1
@@ -680,7 +680,7 @@ final class DivergentVersionsSpec extends Specification {
     result.output.contains(
       " - com.google.inject:guice:2.0${nl}" +
         "     constrained by the platform :platform in root project")
-    result.output.contains(" - com.google.inject:guice [2.0 -> 3.1]${nl}$GUICE_URL")
+    result.output.contains(" - com.google.inject:guice [2.0 -> 2.2 -> 3.1]${nl}$GUICE_URL")
   }
 
   def 'Keeps one row and no project names when the latest versions match'() {
@@ -692,7 +692,7 @@ final class DivergentVersionsSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains(' - com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains(' - com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.output.count('com.google.inject:guice') == 1
     !result.output.contains('declared in')
   }
@@ -731,7 +731,7 @@ final class DivergentVersionsSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.output.contains('com.google.inject:guice [3.0 -> 3.1]')
     // The resolvable configuration the second version was declared against is printed, which is where
     // it was declared rather than which project declared it.

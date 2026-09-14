@@ -83,7 +83,7 @@ final class ContributorAggregationSpec extends Specification {
     // Guards the flag itself: the property is a silent no-op on a Gradle whose spelling differs
     // (pre-9.7 uses org.gradle.unsafe.isolated-projects), which would pass the non-isolated branch.
     result.output.contains('Isolated Projects is an incubating feature.')
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     !result.output.contains('The dependency updates report is missing')
     // The contributor plugin registers no task with this name, so a bare invocation matches neither.
@@ -113,7 +113,7 @@ final class ContributorAggregationSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     // guice lives in the contributor-only :app project, so honoring 3.0 proves the reject reached it.
-    result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
   }
 
   def 'Aggregates once when a project applies both plugins'() {
@@ -145,7 +145,7 @@ final class ContributorAggregationSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     // A shared partial producer means the doubly-applied project is reported exactly once.
-    result.output.count('com.google.inject:guice [2.0 -> 3.1]') == 1
+    result.output.count('com.google.inject:guice [2.0 -> 2.2 -> 3.1]') == 1
   }
 
   def 'Aggregates by name without isolated projects'() {
@@ -154,7 +154,7 @@ final class ContributorAggregationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     result.task(':app:dependencyUpdates') == null
     result.task(':lib:dependencyUpdates') == null
@@ -171,7 +171,7 @@ final class ContributorAggregationSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('Configuration cache entry reused.')
     // The aggregated content must survive the cache hit, not just the task outcome.
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     !result.output.contains('The dependency updates report is missing')
   }
@@ -284,7 +284,7 @@ final class ContributorAggregationSpec extends Specification {
     result.output.contains('The dependency updates report is missing')
     result.output.contains('share a group and name')
     // Exactly one survives module conflict resolution; which one wins is not guaranteed.
-    def guiceLine = 'com.google.inject:guice [2.0 -> 3.1]'
+    def guiceLine = 'com.google.inject:guice [2.0 -> 2.2 -> 3.1]'
     def guavaLine = 'com.google.guava:guava [15.0 -> 16.0]'
     result.output.contains(guiceLine) != result.output.contains(guavaLine)
   }

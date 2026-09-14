@@ -58,7 +58,7 @@ final class ConstraintsSpec extends Specification {
       .build()
 
     then:
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
@@ -245,7 +245,7 @@ final class ConstraintsSpec extends Specification {
       .build()
 
     then:
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
@@ -448,7 +448,7 @@ final class ConstraintsSpec extends Specification {
       .build()
 
     then:
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.output.contains('a constraint reason')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
@@ -869,7 +869,7 @@ final class ConstraintsSpec extends Specification {
     then: 'the platform scan throwing does not sink the whole configuration'
     result.output.contains('Failed to resolve the platforms declared by')
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     !result.output.contains('Skipping configuration')
   }
 
@@ -924,7 +924,7 @@ final class ConstraintsSpec extends Specification {
       .build()
 
     then: 'the constrained row names the platform project holding the version'
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.output.contains('constrained by the platform :platform')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }

@@ -123,7 +123,7 @@ final class BuildSrcAggregationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     !result.output.contains('com.google.guava:guava')
   }
 }

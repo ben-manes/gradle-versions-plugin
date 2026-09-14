@@ -228,28 +228,28 @@ final class AggregationConfigurationCacheSpec extends Specification {
       ''',
     ]
     present << [
-      ['com.google.inject:guice [2.0 -> 3.0]'],
-      ['com.google.inject:guice [2.0 -> 3.0]'],
-      ['com.google.inject:guice [2.0 -> 3.1]'],
+      ['com.google.inject:guice [2.0 -> 2.2 -> 3.0]'],
+      ['com.google.inject:guice [2.0 -> 2.2 -> 3.0]'],
+      ['com.google.inject:guice [2.0 -> 2.2 -> 3.1]'],
       ['com.google.inject.extensions:guice-multibindings [2.0 -> 3.0]'],
       // The report names the revision and files the later version under it, so a hit that lost the
       // task's own settings would announce the default level and offer no version at all.
       ['The following dependencies have later release versions:',
-       'com.google.inject:guice [2.0 -> 3.1]'],
-      ['com.google.inject:guice [2.0 -> 3.1]'],
+       'com.google.inject:guice [2.0 -> 2.2 -> 3.1]'],
+      ['com.google.inject:guice [2.0 -> 2.2 -> 3.1]'],
       // The convention marks 3.1 a pre-release, so it is the step after the release it holds back.
-      ['com.google.inject:guice [2.0 -> 3.0 -> 3.1]'],
-      ['com.google.inject:guice [2.0 -> 3.1]'],
+      ['com.google.inject:guice [2.0 -> 2.2 -> 3.0 -> 3.1]'],
+      ['com.google.inject:guice [2.0 -> 2.2 -> 3.1]'],
     ]
     absent << [
-      ['com.google.inject:guice [2.0 -> 3.1]'],
-      ['com.google.inject:guice [2.0 -> 3.1]'],
+      ['com.google.inject:guice [2.0 -> 2.2 -> 3.1]'],
+      ['com.google.inject:guice [2.0 -> 2.2 -> 3.1]'],
       ['com.google.guava:guava'],
       [],
       ['The following dependencies have later milestone versions:'],
       ['org.apache.logging.log4j:log4j-core'],
-      ['com.google.inject:guice [2.0 -> 3.1]\n'],
-      ['com.google.inject:guice [2.0 -> 3.0]'],
+      ['com.google.inject:guice [2.0 -> 2.2 -> 3.1]\n'],
+      ['com.google.inject:guice [2.0 -> 2.2 -> 3.0]'],
     ]
   }
 
@@ -270,9 +270,9 @@ final class AggregationConfigurationCacheSpec extends Specification {
     def hit = run(ARGUMENTS)
 
     then: 'a report that merges in no other build never serializes the action, so the read still works'
-    store.output.contains('com.google.inject:guice [2.0 -> 3.0]')
+    store.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
     hit.output.contains('Reusing configuration cache')
-    hit.output.contains('com.google.inject:guice [2.0 -> 3.0]')
+    hit.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
   }
 
   def 'Keeps an exemption from the built-in checks across the cache'() {
@@ -337,8 +337,8 @@ final class AggregationConfigurationCacheSpec extends Specification {
     // The warning is logged from afterEvaluate, which a cache hit skips, though the strategy was
     // already applied to the partial results that the hit replays.
     !hit.output.contains('Remove the assignment operator')
-    store.output.contains('com.google.inject:guice [2.0 -> 3.0]')
-    hit.output.contains('com.google.inject:guice [2.0 -> 3.0]')
+    store.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
+    hit.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
   }
 
   def 'Formats with a custom outputFormatter on the store and on the cache hit'() {
@@ -478,7 +478,7 @@ final class AggregationConfigurationCacheSpec extends Specification {
     stored as Set == ['com.google.inject:guice:3.1', 'com.google.inject:guice:3.0',
                        'com.google.inject:guice:2.2', 'com.google.inject:guice:2.1',
                        'com.google.inject:guice:2.0', 'com.google.inject:guice:1.0'] as Set
-    store.output.contains('com.google.inject:guice [2.0 -> 3.0]')
+    store.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
 
     when:
     new File(testProjectDir.root, 'build/dependencyUpdates/partials').deleteDir()
@@ -562,11 +562,11 @@ final class AggregationConfigurationCacheSpec extends Specification {
     def republished = run(ARGUMENTS)
 
     then:
-    store.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    store.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     hit.output.contains('Reusing configuration cache')
-    hit.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    hit.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     // The metadata read while the producer resolves is a cache input, so no stale result is served.
     !republished.output.contains('Reusing configuration cache')
-    republished.output.contains('com.google.inject:guice [2.0 -> 3.2]')
+    republished.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.2]')
   }
 }

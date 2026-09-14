@@ -107,6 +107,8 @@ class XmlReporter(
     appendTextChild(document, available, "milestone", version.milestone)
     appendTextChild(document, available, "integration", version.integration)
     appendTextChild(document, available, "preRelease", version.preRelease)
+    appendTextChild(document, available, "patch", version.patch)
+    appendTextChild(document, available, "minor", version.minor)
   }
 
   private fun writeExceededSection(

@@ -66,7 +66,7 @@ final class AggregationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     !result.output.contains('The dependency updates report is missing')
   }
@@ -91,7 +91,7 @@ final class AggregationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     // Every project is aggregated automatically, so declaring one is redundant rather than
     // narrowing, and the redundant declaration must not report it twice.
     result.output.count('com.google.guava:guava [15.0 -> 16.0]') == 1
@@ -106,7 +106,7 @@ final class AggregationSpec extends Specification {
     first.task(':dependencyUpdates').outcome == SUCCESS
     second.task(':dependencyUpdates').outcome == SUCCESS
     second.output.contains('Reusing configuration cache')
-    second.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    second.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     second.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     // The expected paths are task state, so a cache hit must not degrade to a false warning.
     !second.output.contains('The dependency updates report is missing')
@@ -125,7 +125,7 @@ final class AggregationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
 
     where:
@@ -219,7 +219,7 @@ final class AggregationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     // Task-output wiring bypasses module conflict resolution, so no partial is evicted.
     !result.output.contains('The dependency updates report is missing')
@@ -273,7 +273,7 @@ final class AggregationSpec extends Specification {
 
     then:
     result.task(':app:dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
   }
 
   def 'Honors the configuration filter when the children evaluate first'() {
@@ -313,7 +313,7 @@ final class AggregationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     !result.output.contains('The dependency updates report is missing')
     !new File(testProjectDir.root, 'apps/build').exists()
     // The partial results are written under the project that aggregates them instead.
@@ -363,7 +363,7 @@ final class AggregationSpec extends Specification {
     !new File(testProjectDir.root, 'apps/build').exists()
     !new File(testProjectDir.root, 'apps/app-a/build/dependencyUpdates').exists()
     kept.exists()
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1040')
@@ -384,7 +384,7 @@ final class AggregationSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     partialsDir.list().length == 2
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     !result.output.contains('guava')
   }
 
@@ -416,7 +416,7 @@ final class AggregationSpec extends Specification {
     // The container project itself observes this dependency, so a producer skipped for the lack
     // of a build script would silently drop it from the report.
     result.output.contains('com.example:jvm-library [1.0 -> 2.0]')
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     !new File(testProjectDir.root, 'apps/build').exists()
   }
 

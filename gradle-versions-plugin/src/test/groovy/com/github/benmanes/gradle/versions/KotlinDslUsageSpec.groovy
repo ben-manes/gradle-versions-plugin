@@ -72,7 +72,7 @@ final class KotlinDslUsageSpec extends Specification {
       .build()
 
     then:
-    result.output.contains('''com.google.inject:guice [2.0 -> 3.0]''')
+    result.output.contains('''com.google.inject:guice [2.0 -> 2.2 -> 3.0]''')
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
@@ -112,7 +112,7 @@ final class KotlinDslUsageSpec extends Specification {
       .build()
 
     then:
-    result.output.contains('''com.google.inject:guice [2.0 -> 3.0]''')
+    result.output.contains('''com.google.inject:guice [2.0 -> 2.2 -> 3.0]''')
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
@@ -141,7 +141,7 @@ final class KotlinDslUsageSpec extends Specification {
       .build()
 
     then:
-    result.output.contains('''com.google.inject:guice [2.0 -> 3.0]''')
+    result.output.contains('''com.google.inject:guice [2.0 -> 2.2 -> 3.0]''')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
@@ -183,7 +183,7 @@ final class KotlinDslUsageSpec extends Specification {
       'outputFormatter { print("Custom report") }'
     ]
     expectedOutput << [
-      'com.google.inject:guice [2.0 -> 3.0]',
+      'com.google.inject:guice [2.0 -> 2.2 -> 3.0]',
       'Custom report'
     ]
   }

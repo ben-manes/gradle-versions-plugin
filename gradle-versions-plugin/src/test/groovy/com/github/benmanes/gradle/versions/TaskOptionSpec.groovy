@@ -92,7 +92,7 @@ final class TaskOptionSpec extends Specification {
     def result = run('dependencyUpdates', '--check-constraints')
 
     then:
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
@@ -104,7 +104,7 @@ final class TaskOptionSpec extends Specification {
     def result = run('dependencyUpdates', '--no-check-constraints')
 
     then:
-    !result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    !result.output.contains('com.google.inject:guice [2.0 -> ')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
@@ -379,7 +379,7 @@ final class TaskOptionSpec extends Specification {
     def result = run(':dependencyUpdates', '--check-constraints')
 
     then: 'the option applies to the subproject, which its own configured value would outrank'
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
@@ -422,8 +422,8 @@ final class TaskOptionSpec extends Specification {
 
     then:
     reused.output.contains('Reusing configuration cache')
-    reused.output.contains('com.google.inject:guice [2.0 -> 3.1]')
-    !off.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    reused.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
+    !off.output.contains('com.google.inject:guice [2.0 -> ')
   }
 
   def 'Resolves against the system property ahead of what is configured in the build'() {
@@ -549,7 +549,7 @@ final class TaskOptionSpec extends Specification {
     def result = run('dependencyUpdates', '--check-constraints', '--no-check-for-gradle-update')
 
     then:
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
@@ -659,8 +659,8 @@ final class TaskOptionSpec extends Specification {
       .build()
 
     then: 'the internal method the option binds to is reached at both ends of the range'
-    on.output.contains('com.google.inject:guice [2.0 -> 3.1]')
-    !off.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    on.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
+    !off.output.contains('com.google.inject:guice [2.0 -> ')
     on.task(':dependencyUpdates').outcome == SUCCESS
 
     where:

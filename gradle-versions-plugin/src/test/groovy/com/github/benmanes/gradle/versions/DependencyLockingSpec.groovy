@@ -50,7 +50,7 @@ final class DependencyLockingSpec extends Specification {
       .build()
 
     then:
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:

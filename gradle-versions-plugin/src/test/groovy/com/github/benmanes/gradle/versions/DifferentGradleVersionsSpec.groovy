@@ -77,7 +77,7 @@ final class DifferentGradleVersionsSpec extends Specification {
       .build()
 
     then:
-    result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:

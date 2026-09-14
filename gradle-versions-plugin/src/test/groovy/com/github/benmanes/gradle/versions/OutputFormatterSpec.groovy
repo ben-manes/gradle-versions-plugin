@@ -60,7 +60,7 @@ final class OutputFormatterSpec extends Specification {
       .build()
 
     then:
-    !result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
+    !result.output.contains('com.google.inject:guice [2.0 -> ')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
@@ -190,7 +190,7 @@ final class OutputFormatterSpec extends Specification {
     ------------------------------------------------------------
 
     The following dependencies have later milestone versions:
-     - com.google.inject:guice [2.0 -> 3.1]
+     - com.google.inject:guice [2.0 -> 2.2 -> 3.1]
          https://code.google.com/p/google-guice/
 
     Failed to compare versions for the following dependencies because they were declared without version:
@@ -293,7 +293,9 @@ final class OutputFormatterSpec extends Specification {
                         "release": null,
                         "milestone": "3.1",
                         "integration": null,
-                        "preRelease": null
+                        "preRelease": null,
+                        "patch": null,
+                        "minor": "2.2"
                     },
                     "userReason": null,
                     "version": "2.0",
@@ -395,6 +397,7 @@ final class OutputFormatterSpec extends Specification {
             <projectUrl>https://code.google.com/p/google-guice/</projectUrl>
             <available>
               <milestone>3.1</milestone>
+              <minor>2.2</minor>
             </available>
           </outdatedDependency>
         </dependencies>
@@ -554,7 +557,7 @@ The following dependencies exceed the version found at the milestone revision le
  - com.google.guava:guava-tests [99.0-SNAPSHOT <- 16.0-rc1]
 
 The following dependencies have later milestone versions:
- - com.google.inject:guice [2.0 -> 3.1]
+ - com.google.inject:guice [2.0 -> 2.2 -> 3.1]
      That's just the way it is
      https://code.google.com/p/google-guice/
  - com.google.inject.extensions:guice-multibindings [2.0 -> 3.0]
@@ -645,7 +648,7 @@ The following dependencies exceed the version found at the milestone revision le
  - com.google.guava:guava-tests [99.0-SNAPSHOT <- 16.0-rc1]
 
 The following dependencies have later milestone versions:
- - com.google.inject:guice [2.0 -> 3.1]
+ - com.google.inject:guice [2.0 -> 2.2 -> 3.1]
      That's just the way it is
      https://code.google.com/p/google-guice/
  - com.google.inject.extensions:guice-multibindings [2.0 -> 3.0]

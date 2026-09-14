@@ -92,7 +92,7 @@ final class SettingsPluginAggregationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     // The project plugin cannot register a producer in a project that does not apply it, so a
     // root-only project application omits the subprojects and warns. Applying from the settings
@@ -118,7 +118,7 @@ final class SettingsPluginAggregationSpec extends Specification {
     then:
     hit.task(':dependencyUpdates').outcome == SUCCESS
     hit.output.contains('Configuration cache entry reused')
-    hit.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    hit.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     hit.output.contains('com.google.guava:guava [15.0 -> 16.0]')
   }
 
@@ -157,7 +157,7 @@ final class SettingsPluginAggregationSpec extends Specification {
     then:
     // Only the root has the reporting task, so the bare name runs one task and one merged report.
     result.tasks.findAll { it.path.endsWith(':dependencyUpdates') }*.path == [':dependencyUpdates']
-    result.output.count('com.google.inject:guice [2.0 -> 3.1]') == 1
+    result.output.count('com.google.inject:guice [2.0 -> 2.2 -> 3.1]') == 1
     !result.output.contains('The dependency updates report is missing')
   }
 
@@ -181,7 +181,7 @@ final class SettingsPluginAggregationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     !result.output.contains('The dependency updates report is missing')
 
@@ -478,7 +478,7 @@ final class SettingsPluginAggregationSpec extends Specification {
     result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     !result.output.contains('The dependency updates report is missing')
     // A second producer for the project would report its modules twice.
-    result.output.count('com.google.inject:guice [2.0 -> 3.1]') == 1
+    result.output.count('com.google.inject:guice [2.0 -> 2.2 -> 3.1]') == 1
   }
 
   private String report() {

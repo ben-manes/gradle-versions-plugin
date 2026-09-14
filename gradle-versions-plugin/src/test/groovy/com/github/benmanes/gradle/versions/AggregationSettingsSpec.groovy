@@ -167,7 +167,7 @@ final class AggregationSettingsSpec extends Specification {
     result.task(':app:dependencyUpdates').outcome == SUCCESS
     // Half 1: app's own resolutionStrategy (rejecting 3.0) must win over the root's (rejecting
     // 3.1) -- if the root's rejection applied instead, guice would cap at 3.0, not 3.1.
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     // Half 2: app never touched checkConstraints, so it must still inherit the root's true --
     // app has no explicit guava dependency, only the constraint.
     result.output.contains('com.google.guava:guava')
@@ -205,7 +205,7 @@ final class AggregationSettingsSpec extends Specification {
     // Assigning the property must not clear it, or build logic guarding on "did anyone configure
     // this?" silently applies its own strategy over the user's.
     result.output.contains('readBack=true')
-    result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
   }
 
   def 'Prints the inherited revision in the header of a subproject report'() {

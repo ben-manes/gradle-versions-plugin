@@ -44,6 +44,16 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
+ * The modules a version tier queries: the declared version whose leading parts a candidate has to
+ * share, and the prefix selector that asks for those candidates, by module.
+ */
+private class TierQuery(
+  val tier: VersionTier,
+  val declaredVersions: Map<Coordinate.Key, String>,
+  val selectors: Map<Coordinate.Key, String>,
+)
+
+/**
  * Resolves the configuration to determine the version status of its dependencies.
  */
 class Resolver internal constructor(
@@ -183,13 +193,96 @@ class Resolver internal constructor(
     val latestConfiguration = createLatestConfiguration(configuration, revision, current, preReleases)
     val root = latestConfiguration.incoming.resolutionResult.root
     // The recording pass enriches the report rather than producing it, so a failure in it costs
-    // the candidate lists alone. Letting it throw would discard every status the first-accept walk
-    // above already resolved and report the whole configuration as skipped.
+    // the candidate lists, and with them the patch and minor versions, which are queried only where
+    // those lists hold a later version. Letting it throw would discard every status the
+    // first-accept walk above already resolved and report the whole configuration as skipped.
     runCatching { recordAllCandidates(configuration, current) }
       .onFailure { e ->
         project.logger.info("Skipping the recorded candidates of ${configuration.name}", e)
       }
-    return getStatus(current, root, preReleases)
+    val statuses = getStatus(current, root, preReleases)
+    resolveVersionTiers(configuration, revision, current, statuses)
+    return statuses
+  }
+
+  /**
+   * Sets the latest patch and the latest minor version on each status that has a later version.
+   * Where the latest version shares the parts of a tier, it is the latest of that tier as well.
+   * Otherwise the tier is resolved as the latest version is, through a copy of the configuration
+   * that queries a prefix selector such as `1.0.+`, so the build's own rules, the metadata and
+   * variant selection all apply to it, and the build's own resolution strategy is applied to each
+   * tier copy, so a rule with a side effect runs once more per queried tier. A tier is queried only
+   * where the recorded candidates hold a later version inside it that the prefix reaches, as a query
+   * that matches nothing costs a lookup and finds nothing.
+   * https://github.com/ben-manes/gradle-versions-plugin/issues/69
+   */
+  private fun resolveVersionTiers(
+    configuration: Configuration,
+    revision: String,
+    current: CurrentCoordinates,
+    statuses: Set<DependencyStatus>,
+  ) {
+    // Grouped rather than keyed, as a configuration can report one module twice: a Kotlin module the
+    // query copy inherits at its declared version beside its query.
+    val upgrades =
+      statuses
+        .filter { it.unresolved == null && versionComparator.compare(it.latestVersion, it.coordinate.version) > 0 }
+        .groupBy { it.coordinate.key }
+    if (upgrades.isEmpty()) {
+      return
+    }
+    // Partitioned by module once, since each module of each tier is looked up in the listing.
+    val listedVersions =
+      synchronized(candidates) { candidates.toList() }
+        .groupBy({ it.substringBeforeLast(':') }, { it.substringAfterLast(':') })
+    for (tier in listOf(VersionTier.PATCH, VersionTier.MINOR)) {
+      val declaredVersions = mutableMapOf<Coordinate.Key, String>()
+      val selectors = mutableMapOf<Coordinate.Key, String>()
+      for ((key, statusesOfKey) in upgrades) {
+        val status = statusesOfKey.first()
+        val declared = status.coordinate.version
+        // Null for a declared selector such as `1.+`, which reaches here as text where nothing
+        // resolved it, and which already selects every version in its tier.
+        val selector = VersionTiers.selector(declared, tier.parts) ?: continue
+        if (VersionTiers.shares(status.latestVersion, declared, tier.parts)) {
+          statusesOfKey.forEach { it.setTierVersion(tier, it.latestVersion) }
+          continue
+        }
+        val prefix = selector.dropLast(1)
+        val later =
+          listedVersions["${key.groupId}:${key.artifactId}"].orEmpty().any { version ->
+            version.startsWith(prefix) &&
+              VersionTiers.shares(version, declared, tier.parts) &&
+              versionComparator.compare(version, declared) > 0
+          }
+        if (later) {
+          declaredVersions[key] = declared
+          selectors[key] = selector
+        }
+      }
+      if (declaredVersions.isEmpty()) {
+        continue
+      }
+      val query = TierQuery(tier, declaredVersions, selectors)
+      val resolved = createLatestConfiguration(configuration, revision, current, ConcurrentHashMap(), query)
+      for (dependency in resolved.incoming.resolutionResult.root.dependencies) {
+        // The copy's constraints are cleared, so none is expected here; skipped as getStatus does.
+        if (dependency.isConstraint) {
+          continue
+        }
+        val moduleVersion = (dependency as? ResolvedDependencyResult)?.selected?.moduleVersion ?: continue
+        val version = moduleVersion.version
+        for (status in upgrades[Coordinate.from(moduleVersion).key].orEmpty()) {
+          // A rule that forces or substitutes a version can move the query outside its prefix.
+          if (VersionTiers.shares(version, status.coordinate.version, tier.parts) &&
+            versionComparator.compare(version, status.coordinate.version) > 0 &&
+            versionComparator.compare(version, status.latestVersion) <= 0
+          ) {
+            status.setTierVersion(tier, version)
+          }
+        }
+      }
+    }
   }
 
   /** Returns the version status of the configuration's dependencies. */
@@ -245,8 +338,10 @@ class Resolver internal constructor(
     revision: String,
     current: CurrentCoordinates,
     preReleases: MutableMap<Coordinate.Key, String>,
+    /** The version tier to query, null to query every module with `+`. */
+    tier: TierQuery? = null,
   ): Configuration {
-    val latest = queryDependencies(configuration, current)
+    val latest = queryDependencies(configuration, current, tier)
 
     val copy = configuration.copyRecursive().setTransitive(false)
 
@@ -300,6 +395,7 @@ class Resolver internal constructor(
     // versions being searched for.
     exemptFromDependencyVerification(copy)
 
+    tier?.let { addTierFilter(copy, it) }
     addDeclaredBoundFilter(copy, current.coordinates)
     addRevisionFilter(copy, revision, current.coordinates)
     addAttributes(copy, configuration)
@@ -310,16 +406,21 @@ class Resolver internal constructor(
     return copy
   }
 
-  /** Returns the `+` query dependencies used to resolve the configuration's latest versions. */
+  /**
+   * Returns the `+` query dependencies used to resolve the configuration's latest versions, or the
+   * prefix queries of the modules in [tier] alone where it is given.
+   */
   private fun queryDependencies(
     configuration: Configuration,
     current: CurrentCoordinates,
+    tier: TierQuery? = null,
   ): MutableList<Dependency> {
+    val tierSelectors = tier?.selectors
     val latest =
       configuration.allDependencies
         .filterIsInstance<ExternalDependency>()
-        .mapTo(mutableListOf()) { dependency ->
-          createQueryDependency(dependency as ModuleDependency, current.substitutions)
+        .mapNotNullTo(mutableListOf()) { dependency ->
+          createQueryDependency(dependency as ModuleDependency, current.substitutions, tierSelectors)
         }
 
     // Common use case for dependency constraints is a java-platform BOM project or to control
@@ -327,13 +428,13 @@ class Resolver internal constructor(
     if (supportsConstraints(configuration)) {
       for (dependency in configuration.allDependencyConstraints) {
         if (dependency !is DefaultProjectDependencyConstraint) {
-          latest.add(createQueryDependency(dependency))
+          createQueryDependency(dependency, tierSelectors)?.let { latest.add(it) }
         }
       }
     }
 
     for (source in current.platformSources) {
-      latest.add(createPlatformQueryDependency(source))
+      createPlatformQueryDependency(source, tierSelectors)?.let { latest.add(it) }
     }
     return latest
   }
@@ -408,7 +509,8 @@ class Resolver internal constructor(
   private fun createQueryDependency(
     dependency: ModuleDependency,
     substitutions: Map<Coordinate.Key, Coordinate.Key>,
-  ): Dependency {
+    tierSelectors: Map<Coordinate.Key, String>? = null,
+  ): Dependency? {
     // If no version was specified then it may be intended to be resolved by another plugin
     // (e.g. the dependency-management-plugin for BOMs) or is an explicit file (e.g. libs/*.jar).
     // In the case of another plugin we use "+" in the hope that the plugin will not restrict the
@@ -427,11 +529,13 @@ class Resolver internal constructor(
     // A rule that substitutes another module for this one applies to the query as well, which would
     // pin the latest version to the substitute. Ask for the substituted module instead, so
     // that the rule does not match and the query is answered for what the build actually resolves.
-    val substitute = substitutions[Coordinate.from(dependency as Dependency).key]
+    val key = Coordinate.from(dependency as Dependency).key
+    val substitute = substitutions[key]
+    val tierVersion = tierSelectors?.let { selectors -> selectors[substitute ?: key] ?: return null }
 
     // Format the query with an optional classifier and extension
     var query =
-      "${substitute?.groupId ?: dependency.group.orEmpty()}:${substitute?.artifactId ?: dependency.name}:$version"
+      "${substitute?.groupId ?: dependency.group.orEmpty()}:${substitute?.artifactId ?: dependency.name}:${tierVersion ?: version}"
     if (dependency.artifacts.isNotEmpty()) {
       dependency.artifacts.firstOrNull()?.classifier?.let { classifier ->
         query += ":$classifier"
@@ -451,9 +555,13 @@ class Resolver internal constructor(
   }
 
   /** Returns a platform dependency used for querying the latest version of a consumed platform. */
-  private fun createPlatformQueryDependency(coordinate: Coordinate): Dependency {
+  private fun createPlatformQueryDependency(
+    coordinate: Coordinate,
+    tierSelectors: Map<Coordinate.Key, String>? = null,
+  ): Dependency? {
+    val version = if (tierSelectors == null) "+" else tierSelectors[coordinate.key] ?: return null
     val dependency =
-      project.dependencies.create("${coordinate.groupId}:${coordinate.artifactId}:+") as ModuleDependency
+      project.dependencies.create("${coordinate.groupId}:${coordinate.artifactId}:$version") as ModuleDependency
     dependency.isTransitive = false
     dependency.attributes { attributes ->
       attributes.attribute(
@@ -465,9 +573,17 @@ class Resolver internal constructor(
   }
 
   /** Returns a variant of the provided dependency used for querying the latest version.  */
-  private fun createQueryDependency(dependency: DependencyConstraint): Dependency {
+  private fun createQueryDependency(
+    dependency: DependencyConstraint,
+    tierSelectors: Map<Coordinate.Key, String>? = null,
+  ): Dependency? {
     // If no version was specified then use "none" to pass it through.
-    val version = if (dependency.version == null) "none" else "+"
+    val version =
+      when {
+        tierSelectors != null -> tierSelectors[Coordinate.keyFrom(dependency)] ?: return null
+        dependency.version == null -> "none"
+        else -> "+"
+      }
     val nonTransitiveDependency =
       project.dependencies.create("${dependency.group.orEmpty()}:${dependency.name}:$version") as ModuleDependency
     nonTransitiveDependency.isTransitive = false
@@ -515,6 +631,29 @@ class Resolver internal constructor(
           val candidate = selection.candidate
           candidates.add("${candidate.group}:${candidate.module}:${candidate.version}")
           selection.reject("Recorded as a fact; rejected so the walk records every candidate")
+        }
+      }
+    }
+  }
+
+  /**
+   * Adds the filter that leaves out a candidate outside the queried tier, which the prefix selector
+   * matches as text. Registered ahead of the plugin's other filters, so the revision filter reads no
+   * metadata for such a candidate. A rule declared on the configuration itself is copied in ahead of
+   * every filter and runs first, so one that reads a candidate's metadata reads it for these too.
+   */
+  private fun addTierFilter(
+    configuration: Configuration,
+    query: TierQuery,
+  ) {
+    configuration.resolutionStrategy { strategy ->
+      strategy.componentSelection { rules ->
+        rules.all { selection ->
+          val candidate = selection.candidate
+          val declared = query.declaredVersions[Coordinate.Key(candidate.group, candidate.module)]
+          if (declared != null && !VersionTiers.shares(candidate.version, declared, query.tier.parts)) {
+            selection.reject("Outside the queried version tier")
+          }
         }
       }
     }

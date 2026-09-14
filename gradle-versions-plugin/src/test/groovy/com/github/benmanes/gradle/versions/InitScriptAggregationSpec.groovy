@@ -111,7 +111,7 @@ final class InitScriptAggregationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     !result.output.contains('The dependency updates report is missing')
   }
 
@@ -143,7 +143,7 @@ final class InitScriptAggregationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     // The copy that defers no longer publishes the settings classpath, so the copy that claimed the
     // build must still see what the settings script declared after its own beforeSettings ran.
     // https://github.com/ben-manes/gradle-versions-plugin/issues/367
@@ -178,7 +178,7 @@ final class InitScriptAggregationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     !result.output.contains('The dependency updates report is missing')
   }
 
@@ -193,7 +193,7 @@ final class InitScriptAggregationSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('Isolated Projects is an incubating feature.')
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     !result.output.contains('The dependency updates report is missing')
   }
 }

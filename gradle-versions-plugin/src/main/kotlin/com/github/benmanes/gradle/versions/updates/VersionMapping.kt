@@ -24,9 +24,24 @@ class VersionMapping(private val logger: Logger, statuses: List<PartialStatus>) 
    * did not.
    */
   val preReleaseByCurrent = hashMapOf<Coordinate, String>()
+
+  /**
+   * The latest version sharing the major and minor parts of each declared coordinate, absent where
+   * none is later or where the statuses that found one disagree on it. A project whose own rules
+   * reject a version is not offered it through a row shared with a project that found a lower one.
+   * A status that found none abstains rather than vetoing: a partial written by an older release, a
+   * candidate listing that failed and a variant selection that failed all report the same null as a
+   * tier with nothing in it.
+   */
+  val patchByCurrent = hashMapOf<Coordinate, String>()
+
+  /** The latest version sharing the major part of each declared coordinate, on the same terms. */
+  val minorByCurrent = hashMapOf<Coordinate, String>()
   private var comparator = makeVersionComparator()
 
   init {
+    val patchVotes = hashMapOf<Coordinate, MutableSet<String>>()
+    val minorVotes = hashMapOf<Coordinate, MutableSet<String>>()
     for (status in statuses) {
       current.add(status.coordinate)
       if (status.unresolved == null) {
@@ -36,17 +51,41 @@ class VersionMapping(private val logger: Logger, statuses: List<PartialStatus>) 
         if (previous == null || comparator.compare(previous.version, latestCoordinate.version) < 0) {
           latestByCurrent[status.coordinate] = latestCoordinate
         }
-        status.preReleaseVersion?.let { preRelease ->
-          val seen = preReleaseByCurrent[status.coordinate]
-          if (seen == null || comparator.compare(seen, preRelease) < 0) {
-            preReleaseByCurrent[status.coordinate] = preRelease
-          }
-        }
+        keepNewest(preReleaseByCurrent, status.coordinate, status.preReleaseVersion)
+        status.patchVersion?.let { patchVotes.getOrPut(status.coordinate) { hashSetOf() }.add(it) }
+        status.minorVersion?.let { minorVotes.getOrPut(status.coordinate) { hashSetOf() }.add(it) }
       } else {
         unresolved.add(status.coordinate)
       }
     }
+    keepAgreed(patchVotes, patchByCurrent)
+    keepAgreed(minorVotes, minorByCurrent)
     organize()
+  }
+
+  /** Records [version] for [coordinate] where it is newer than the one recorded for another project. */
+  private fun keepNewest(
+    versions: MutableMap<Coordinate, String>,
+    coordinate: Coordinate,
+    version: String?,
+  ) {
+    if (version == null) {
+      return
+    }
+    val seen = versions[coordinate]
+    if (seen == null || comparator.compare(seen, version) < 0) {
+      versions[coordinate] = version
+    }
+  }
+
+  /** Records the version of each coordinate that every status voting for one voted for. */
+  private fun keepAgreed(
+    votes: Map<Coordinate, Set<String>>,
+    versions: MutableMap<Coordinate, String>,
+  ) {
+    for ((coordinate, voted) in votes) {
+      voted.singleOrNull()?.let { versions[coordinate] = it }
+    }
   }
 
   /** Groups the dependencies into up-to-date, upgrades available, or downgrade buckets.  */

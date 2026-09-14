@@ -124,7 +124,7 @@ The report prints to the console and is written to
 The following dependencies have later milestone versions:
  - com.google.inject:guice [2.0 -> 7.0.0]
      https://github.com/google/guice
- - org.springframework.boot:spring-boot-dependencies [1.5.8.RELEASE -> 4.1.0]
+ - org.springframework.boot:spring-boot-dependencies [1.5.8.RELEASE -> 1.5.22.RELEASE -> 4.1.0]
      https://spring.io/projects/spring-boot
 
 Gradle release-candidate updates:
@@ -768,10 +768,40 @@ it from displacing the newest release under `release` and `milestone` is the
 version string rather than the revision (see [Filtering unstable
 versions](#filtering-unstable-versions)).
 
+##### Latest patch and minor versions
+
+Each row includes the latest patch and the latest minor version ahead of the
+latest version overall. The latest patch has the same major and minor parts as
+the version in use, and the latest minor version has the same major part:
+
+```
+The following dependencies have later milestone versions:
+ - com.example:library [1.10.18 -> 1.10.19 -> 1.11.5 -> 2.1.6]
+ - com.example:toolkit [2.7.5 -> 2.7.18 -> 3.5.4]
+```
+
+A version is printed only where it is later than the one before it, so `2.7.18`
+is printed once in the second row, as both the latest patch and the latest minor
+version. Gradle splits a version into parts at `.`, `-`, `_` and `+` and between
+digits and letters. The major part of `33.7.1-jre` is `33`, and the minor part
+is `7`. No patch version is printed for a version with a single numeric part,
+such as `5`, and neither is printed for a version that starts with a letter,
+such as `r09`, or for a dynamic version such as `1.+`.
+
+Both are resolved as the latest version is, so the revision, the pre-release
+check, the declared bound, every `rejectVersionIf` filter and any rule declared on
+the configuration apply to them. A version is left out of a row that several
+projects share when those projects resolve it differently; a project that found
+no version in a tier does not hold the others back.
+
+The JSON and XML reports include them as `available.patch` and
+`available.minor`, each present wherever one was found, even where it is the
+latest version as well.
+
 ##### Filtering unstable versions
 
 A row shows the newest release the resolution accepted, then the newest
-pre-release above it as a second step, each printed only where it is newer than
+pre-release above it as a further step, each printed only where it is newer than
 the step before it:
 
 ```
@@ -1473,11 +1503,11 @@ The following dependencies have later milestone versions:
      https://github.com/google/guice
  - com.google.inject.extensions:guice-multibindings [2.0 -> 4.2.3]
      https://github.com/google/guice
- - com.linecorp.armeria:armeria [0.90.0 -> 1.40.0]
+ - com.linecorp.armeria:armeria [0.90.0 -> 0.90.3 -> 0.99.9 -> 1.40.0]
      https://armeria.dev/
- - io.zipkin.brave:brave [5.7.0 -> 6.3.1]
+ - io.zipkin.brave:brave [5.7.0 -> 5.18.1 -> 6.3.1]
      https://github.com/openzipkin/brave/brave
- - org.springframework.boot:spring-boot-dependencies [1.5.8.RELEASE -> 4.1.0]
+ - org.springframework.boot:spring-boot-dependencies [1.5.8.RELEASE -> 1.5.22.RELEASE -> 4.1.0]
      https://spring.io/projects/spring-boot
 
 Failed to compare versions for the following dependencies because they were declared without version:
@@ -1545,7 +1575,9 @@ Alternatively, the report may be output to a structured file.
      "release": null,
      "milestone": "23.0",
      "integration": null,
-     "preRelease": null
+     "preRelease": null,
+     "patch": null,
+     "minor": null
     }
    },
    {
@@ -1558,7 +1590,9 @@ Alternatively, the report may be output to a structured file.
      "release": null,
      "milestone": "7.0.0",
      "integration": null,
-     "preRelease": null
+     "preRelease": null,
+     "patch": null,
+     "minor": null
     }
    },
    {
@@ -1571,7 +1605,9 @@ Alternatively, the report may be output to a structured file.
      "release": null,
      "milestone": "4.2.3",
      "integration": null,
-     "preRelease": null
+     "preRelease": null,
+     "patch": null,
+     "minor": null
     }
    },
    {
@@ -1584,7 +1620,9 @@ Alternatively, the report may be output to a structured file.
      "release": null,
      "milestone": "1.40.0",
      "integration": null,
-     "preRelease": null
+     "preRelease": null,
+     "patch": "0.90.3",
+     "minor": "0.99.9"
     }
    },
    {
@@ -1597,7 +1635,9 @@ Alternatively, the report may be output to a structured file.
      "release": null,
      "milestone": "6.3.1",
      "integration": null,
-     "preRelease": null
+     "preRelease": null,
+     "patch": null,
+     "minor": "5.18.1"
     }
    },
    {
@@ -1610,7 +1650,9 @@ Alternatively, the report may be output to a structured file.
      "release": null,
      "milestone": "4.1.0",
      "integration": null,
-     "preRelease": null
+     "preRelease": null,
+     "patch": "1.5.22.RELEASE",
+     "minor": "1.5.22.RELEASE"
     }
    }
   ]
@@ -1785,6 +1827,8 @@ Alternatively, the report may be output to a structured file.
                 <projectUrl>https://armeria.dev/</projectUrl>
                 <available>
                     <milestone>1.40.0</milestone>
+                    <patch>0.90.3</patch>
+                    <minor>0.99.9</minor>
                 </available>
             </outdatedDependency>
             <outdatedDependency>
@@ -1794,6 +1838,7 @@ Alternatively, the report may be output to a structured file.
                 <projectUrl>https://github.com/openzipkin/brave/brave</projectUrl>
                 <available>
                     <milestone>6.3.1</milestone>
+                    <minor>5.18.1</minor>
                 </available>
             </outdatedDependency>
             <outdatedDependency>
@@ -1803,6 +1848,8 @@ Alternatively, the report may be output to a structured file.
                 <projectUrl>https://spring.io/projects/spring-boot</projectUrl>
                 <available>
                     <milestone>4.1.0</milestone>
+                    <patch>1.5.22.RELEASE</patch>
+                    <minor>1.5.22.RELEASE</minor>
                 </available>
             </outdatedDependency>
         </dependencies>

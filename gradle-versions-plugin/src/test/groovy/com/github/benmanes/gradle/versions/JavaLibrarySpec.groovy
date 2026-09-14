@@ -45,7 +45,7 @@ final class JavaLibrarySpec extends Specification {
       .build()
 
     then:
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
@@ -79,7 +79,7 @@ final class JavaLibrarySpec extends Specification {
       .build()
 
     then:
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     // guice-consumer requires guice 3.0, and a transitive resolution would conflict-resolve to it
     // and report a current version no declaration sets. The copy resolves non-transitively when
     // every declared module has a version (issue #231), so the declared version stays current.
