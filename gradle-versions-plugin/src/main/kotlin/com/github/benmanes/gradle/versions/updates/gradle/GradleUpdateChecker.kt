@@ -88,9 +88,9 @@ class GradleUpdateChecker(
     private const val CLIENT_TIME_OUT = 15_000L
     private val client: OkHttpClient =
       OkHttpClient.Builder()
-        .connectTimeout(CLIENT_TIME_OUT, TimeUnit.SECONDS)
-        .writeTimeout(CLIENT_TIME_OUT, TimeUnit.SECONDS)
-        .readTimeout(CLIENT_TIME_OUT, TimeUnit.SECONDS)
+        .connectTimeout(CLIENT_TIME_OUT, TimeUnit.MILLISECONDS)
+        .writeTimeout(CLIENT_TIME_OUT, TimeUnit.MILLISECONDS)
+        .readTimeout(CLIENT_TIME_OUT, TimeUnit.MILLISECONDS)
         .build()
     private val moshi =
       Moshi.Builder()
