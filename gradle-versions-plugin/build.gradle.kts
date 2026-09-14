@@ -120,7 +120,7 @@ tasks.check {
 dependencies {
   compileOnly(libs.gradle.api.minimum)
   compileOnly(libs.groovy.minimum)
-  implementation(libs.kotlin.stdlib)
+  compileOnly(libs.kotlin.stdlib)
   implementation(libs.okhttp)
   implementation(libs.moshi)
 
