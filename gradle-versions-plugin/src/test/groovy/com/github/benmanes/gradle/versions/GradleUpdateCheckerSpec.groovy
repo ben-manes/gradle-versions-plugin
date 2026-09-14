@@ -46,7 +46,7 @@ final class GradleUpdateCheckerSpec extends Specification {
   }
 
   private GradleUpdateChecker check() {
-    return new GradleUpdateChecker(true, baseUrl(), 1_000L)
+    return new GradleUpdateChecker(true, baseUrl(), 1_000)
   }
 
   def 'a channel with a version is available and a channel without one is unavailable'() {
@@ -81,6 +81,23 @@ final class GradleUpdateCheckerSpec extends Specification {
     with(checker.currentGradleVersion as ReleaseStatus.Available) {
       gradleVersion == GradleVersion.version('9.9')
     }
+  }
+
+  def 'a channel that answers with an error is a failure'() {
+    given:
+    server.createContext('/current') { HttpExchange exchange ->
+      exchange.sendResponseHeaders(503, -1)
+      exchange.close()
+    }
+    serve('release-candidate', '{}')
+    serve('nightly', '{}')
+
+    when:
+    def checker = check()
+
+    then:
+    checker.currentGradleVersion instanceof ReleaseStatus.Failure
+    checker.releaseCandidateGradleVersion == ReleaseStatus.Unavailable.INSTANCE
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1119')

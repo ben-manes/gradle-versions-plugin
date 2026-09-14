@@ -2,11 +2,12 @@ package com.github.benmanes.gradle.versions.updates.gradle
 
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import okhttp3.OkHttpClient
-import okhttp3.Request
+import okio.buffer
+import okio.source
 import org.gradle.util.GradleVersion
+import java.net.HttpURLConnection
+import java.net.URI
 import java.util.EnumMap
-import java.util.concurrent.TimeUnit
 
 /**
  * Facade class that provides information about the running gradle version and the latest versions
@@ -19,8 +20,8 @@ import java.util.concurrent.TimeUnit
 class GradleUpdateChecker internal constructor(
   val enabled: Boolean,
   private val gradleVersionsApiBaseUrl: String,
-  /** The connect, read and write timeout of each request, in milliseconds. */
-  timeoutMillis: Long,
+  /** The connect and read timeout of each request, in milliseconds. */
+  timeoutMillis: Int,
 ) {
   constructor(
     enabled: Boolean = true,
@@ -92,43 +93,37 @@ class GradleUpdateChecker internal constructor(
       EnumMap<GradleReleaseChannel, ReleaseStatus>(
         GradleReleaseChannel::class.java,
       )
-    private const val CLIENT_TIME_OUT = 15_000L
-    private val sharedClient = OkHttpClient()
-    private val moshi =
+    private const val CLIENT_TIME_OUT = 15_000
+    private val versionSite =
       Moshi.Builder()
         .addLast(KotlinJsonAdapterFactory())
         .build()
+        .adapter(VersionSite::class.java)
 
-    /** Represents the XML from [gradleVersionsApiBaseUrl] */
+    /** Represents the JSON from [gradleVersionsApiBaseUrl] */
     private class VersionSite {
       var version: String? = null
     }
 
     private fun fetch(
       gradleVersionsApiBaseUrl: String,
-      timeoutMillis: Long,
+      timeoutMillis: Int,
     ) {
-      val client =
-        sharedClient.newBuilder()
-          .connectTimeout(timeoutMillis, TimeUnit.MILLISECONDS)
-          .writeTimeout(timeoutMillis, TimeUnit.MILLISECONDS)
-          .readTimeout(timeoutMillis, TimeUnit.MILLISECONDS)
-          .build()
       for (it in GradleReleaseChannel.values()) {
         try {
-          client.newCall(
-            Request.Builder()
-              .url(gradleVersionsApiBaseUrl + it.id)
-              .build(),
-          ).execute().use { response ->
-            response.body?.source()?.let { body ->
-              val version = moshi.adapter(VersionSite::class.java).fromJson(body)?.version.orEmpty()
-              if (version.isNotEmpty()) {
-                cacheMap[it] = ReleaseStatus.Available(GradleVersion.version(version))
-              } else {
-                cacheMap[it] = ReleaseStatus.Unavailable
-              }
+          val connection = URI(gradleVersionsApiBaseUrl + it.id).toURL().openConnection() as HttpURLConnection
+          connection.connectTimeout = timeoutMillis
+          connection.readTimeout = timeoutMillis
+          val version =
+            try {
+              connection.inputStream.source().buffer().use { body -> versionSite.fromJson(body)?.version.orEmpty() }
+            } finally {
+              connection.disconnect()
             }
+          if (version.isNotEmpty()) {
+            cacheMap[it] = ReleaseStatus.Available(GradleVersion.version(version))
+          } else {
+            cacheMap[it] = ReleaseStatus.Unavailable
           }
         } catch (e: Exception) {
           cacheMap[it] = ReleaseStatus.Failure(e.message.orEmpty())
