@@ -17,7 +17,6 @@ gradle-test-kit-minimum = { module = "dev.gradleplugins:gradle-test-kit", versio
 groovy-minimum = { module = "org.codehaus.groovy:groovy-all", version.ref = "groovy-minimum" }
 # Versionless, so that it tracks the JUnit platform that Spock's own bom pins.
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
-kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
 moshi = { module = "com.squareup.moshi:moshi-kotlin", version = "1.12.0" }

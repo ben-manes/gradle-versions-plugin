@@ -61,6 +61,31 @@ tasks.register("testOn$buildJdk") {
   dependsOn(tasks.test)
 }
 
+// A build resolves the plugin's dependencies from its published metadata, which TestKit's plugin
+// classpath leaves out, so a spec that needs them resolves the plugin from this repository instead.
+val pluginId = properties["PLUGIN_NAME"].toString()
+val pluginModule = "${project.group.toString().replace('.', '/')}/${project.name}"
+val pluginVersion = version.toString()
+val specsRepositoryDir = layout.buildDirectory.dir("specs-repository")
+val specsRepository =
+  tasks.register<Sync>("specsRepository") {
+    into(specsRepositoryDir)
+    into("$pluginModule/$pluginVersion") {
+      from(tasks.jar)
+      from(tasks.named("generatePomFileForPluginMavenPublication")) {
+        rename("pom-default\\.xml", "${project.name}-$pluginVersion.pom")
+      }
+      from(tasks.named("generateMetadataFileForPluginMavenPublication")) {
+        rename("module\\.json", "${project.name}-$pluginVersion.module")
+      }
+    }
+    into("${pluginId.replace('.', '/')}/$pluginId.gradle.plugin/$pluginVersion") {
+      from(tasks.named("generatePomFileForVersionsPluginPluginMarkerMavenPublication")) {
+        rename("pom-default\\.xml", "$pluginId.gradle.plugin-$pluginVersion.pom")
+      }
+    }
+  }
+
 listOf(8, 11, 17, 21).forEach { jdk ->
   val testOnJdk =
     tasks.register<Test>("testOn$jdk") {
@@ -78,6 +103,12 @@ listOf(8, 11, 17, 21).forEach { jdk ->
       if (jdk < 17) {
         systemProperty("testGradleVersion", libs.versions.gradle.minimum.get())
       }
+      // The specs that resolve the plugin from a repository run Gradle 8.4, which fails to start on the
+      // build JVM.
+      inputs.files(specsRepository).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("specsRepository")
+      systemProperty("specsRepository", specsRepositoryDir.get().asFile.relativeTo(projectDir).path)
+      systemProperty("pluginId", pluginId)
+      systemProperty("pluginVersion", pluginVersion)
     }
   testOnAllJdks.configure { dependsOn(testOnJdk) }
 }
@@ -89,8 +120,7 @@ tasks.check {
 dependencies {
   compileOnly(libs.gradle.api.minimum)
   compileOnly(libs.groovy.minimum)
-  implementation(platform(libs.kotlin.bom))
-  implementation(libs.kotlin.stdlib)
+  compileOnly(libs.kotlin.stdlib)
   implementation(libs.okhttp)
   implementation(libs.moshi)
 
