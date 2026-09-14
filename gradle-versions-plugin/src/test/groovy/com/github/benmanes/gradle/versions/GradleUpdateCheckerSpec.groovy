@@ -41,8 +41,12 @@ final class GradleUpdateCheckerSpec extends Specification {
     server.createContext("/${channel}") { HttpExchange exchange -> stalled.await() }
   }
 
+  private String baseUrl() {
+    return "http://${server.address.hostString}:${server.address.port}/"
+  }
+
   private GradleUpdateChecker check() {
-    return new GradleUpdateChecker(true, "http://${server.address.hostString}:${server.address.port}/")
+    return new GradleUpdateChecker(true, baseUrl(), 1_000L)
   }
 
   def 'a channel with a version is available and a channel without one is unavailable'() {
@@ -61,6 +65,21 @@ final class GradleUpdateCheckerSpec extends Specification {
     checker.releaseCandidateGradleVersion == ReleaseStatus.Unavailable.INSTANCE
     with(checker.nightlyGradleVersion as ReleaseStatus.Available) {
       gradleVersion == GradleVersion.version('9.10-20260913000000+0000')
+    }
+  }
+
+  def 'the public constructor checks with the default timeout'() {
+    given:
+    serve('current', '{"version":"9.9"}')
+    serve('release-candidate', '{}')
+    serve('nightly', '{}')
+
+    when:
+    def checker = new GradleUpdateChecker(true, baseUrl())
+
+    then:
+    with(checker.currentGradleVersion as ReleaseStatus.Available) {
+      gradleVersion == GradleVersion.version('9.9')
     }
   }
 

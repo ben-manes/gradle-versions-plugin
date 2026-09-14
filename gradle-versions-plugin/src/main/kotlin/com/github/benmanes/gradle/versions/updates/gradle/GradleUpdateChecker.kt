@@ -16,13 +16,20 @@ import java.util.concurrent.TimeUnit
  * @property enabled The check for Gradle updates was enabled and, if so, the versions were fetched.
  * @see GradleReleaseChannel
  */
-class GradleUpdateChecker(
-  val enabled: Boolean = true,
+class GradleUpdateChecker internal constructor(
+  val enabled: Boolean,
   private val gradleVersionsApiBaseUrl: String,
+  /** The connect, read and write timeout of each request, in milliseconds. */
+  timeoutMillis: Long,
 ) {
+  constructor(
+    enabled: Boolean = true,
+    gradleVersionsApiBaseUrl: String,
+  ) : this(enabled, gradleVersionsApiBaseUrl, CLIENT_TIME_OUT)
+
   init {
     if (enabled) {
-      fetch(gradleVersionsApiBaseUrl)
+      fetch(gradleVersionsApiBaseUrl, timeoutMillis)
     }
   }
 
@@ -86,12 +93,7 @@ class GradleUpdateChecker(
         GradleReleaseChannel::class.java,
       )
     private const val CLIENT_TIME_OUT = 15_000L
-    private val client: OkHttpClient =
-      OkHttpClient.Builder()
-        .connectTimeout(CLIENT_TIME_OUT, TimeUnit.MILLISECONDS)
-        .writeTimeout(CLIENT_TIME_OUT, TimeUnit.MILLISECONDS)
-        .readTimeout(CLIENT_TIME_OUT, TimeUnit.MILLISECONDS)
-        .build()
+    private val sharedClient = OkHttpClient()
     private val moshi =
       Moshi.Builder()
         .addLast(KotlinJsonAdapterFactory())
@@ -102,7 +104,16 @@ class GradleUpdateChecker(
       var version: String? = null
     }
 
-    private fun fetch(gradleVersionsApiBaseUrl: String) {
+    private fun fetch(
+      gradleVersionsApiBaseUrl: String,
+      timeoutMillis: Long,
+    ) {
+      val client =
+        sharedClient.newBuilder()
+          .connectTimeout(timeoutMillis, TimeUnit.MILLISECONDS)
+          .writeTimeout(timeoutMillis, TimeUnit.MILLISECONDS)
+          .readTimeout(timeoutMillis, TimeUnit.MILLISECONDS)
+          .build()
       for (it in GradleReleaseChannel.values()) {
         try {
           client.newCall(
