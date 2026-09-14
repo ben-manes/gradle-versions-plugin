@@ -95,7 +95,7 @@ final class DefaultConfigurationSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.task(':local:partialDependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     !result.output.contains('The dependency updates report is missing')
   }
 }

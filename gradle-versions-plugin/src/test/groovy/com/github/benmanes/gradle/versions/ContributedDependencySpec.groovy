@@ -577,7 +577,7 @@ final class ContributedDependencySpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains(
-      " - com.google.inject:guice [2.0 -> 3.1]${nl}     https://code.google.com/p/google-guice/" +
+      " - com.google.inject:guice [2.0 -> 2.2 -> 3.1]${nl}     https://code.google.com/p/google-guice/" +
         "${nl}     contributed by a plugin into the 'classpath' configuration")
     result.output.count('contributed by a plugin') == 1
   }
@@ -742,7 +742,7 @@ final class ContributedDependencySpec extends Specification {
     ------------------------------------------------------------
 
     The following dependencies have later milestone versions:
-     - com.google.inject:guice [2.0 -> 3.1]
+     - com.google.inject:guice [2.0 -> 2.2 -> 3.1]
          https://code.google.com/p/google-guice/
       """.stripIndent().replace('\r', '').replace('\n', System.lineSeparator())
     def jsonReport = new File(testProjectDir.root, 'build/dependencyUpdates/report.json')

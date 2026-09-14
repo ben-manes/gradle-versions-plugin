@@ -62,16 +62,16 @@ final class KotlinDependencyUpdatesSpec extends Specification {
     result.output.contains('The following dependencies have later milestone versions:')
     // The version on the classpath is the one the buildscript declares, not the applied plugin's.
     result.output.find(
-      / - org\.jetbrains\.kotlin:kotlin-gradle-plugin \[$DECLARED_KOTLIN_VERSION -> [2-9]\..*\]/)
+      / - org\.jetbrains\.kotlin:kotlin-gradle-plugin \[$DECLARED_KOTLIN_VERSION -> (?:\S+ -> )*[2-9]\..*\]/)
     !applyJvmPlugin ||
       result.output.find(
-        / - org\.jetbrains\.kotlin:kotlin-compiler-embeddable \[$APPLIED_KOTLIN_VERSION -> [2-9]\..*\]\n\s+https?:\/\/\S+\n\s+contributed by a plugin into the 'kotlinCompilerClasspath' configuration\n/)
+        / - org\.jetbrains\.kotlin:kotlin-compiler-embeddable \[$APPLIED_KOTLIN_VERSION -> (?:\S+ -> )*[2-9]\..*\]\n\s+https?:\/\/\S+\n\s+contributed by a plugin into the 'kotlinCompilerClasspath' configuration\n/)
     // Contributed via the plugin's own defaultDependencies action, unlike the classpath's own
     // kotlin-gradle-plugin. The Kotlin 2 plugin contributes kotlin-stdlib, where the Kotlin 1
     // plugin contributed kotlin-stdlib-jdk8.
     !applyJvmPlugin ||
       result.output.find(
-        / - org\.jetbrains\.kotlin:kotlin-stdlib \[$APPLIED_KOTLIN_VERSION -> [2-9]\..*\]\n\s+https?:\/\/\S+\n\s+contributed by a plugin into the 'api' configuration/)
+        / - org\.jetbrains\.kotlin:kotlin-stdlib \[$APPLIED_KOTLIN_VERSION -> (?:\S+ -> )*[2-9]\..*\]\n\s+https?:\/\/\S+\n\s+contributed by a plugin into the 'api' configuration/)
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:
@@ -108,7 +108,7 @@ final class KotlinDependencyUpdatesSpec extends Specification {
       .build()
 
     then:
-    result.output.find(/The following dependencies have later milestone versions:\n - org\.jetbrains\.kotlin:kotlin-gradle-plugin \[$DECLARED_KOTLIN_VERSION -> [2-9]\..*\]/)
+    result.output.find(/The following dependencies have later milestone versions:\n - org\.jetbrains\.kotlin:kotlin-gradle-plugin \[$DECLARED_KOTLIN_VERSION -> (?:\S+ -> )*[2-9]\..*\]/)
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
@@ -142,13 +142,13 @@ final class KotlinDependencyUpdatesSpec extends Specification {
     result.output.contains('The following dependencies have later milestone versions:')
     // The compiler and klib artifacts are contributed by the plugin's own defaultDependencies
     // action, while the scripting compiler is added eagerly.
-    result.output.find(/ - org\.jetbrains\.kotlin:kotlin-compiler-embeddable \[$APPLIED_KOTLIN_VERSION -> [2-9]\..*\]\n\s+https?:\/\/\S+\n\s+contributed by a plugin into the 'kotlinCompilerClasspath' configuration\n/)
-    result.output.find(/ - org\.jetbrains\.kotlin:kotlin-klib-commonizer-embeddable \[$APPLIED_KOTLIN_VERSION -> [2-9]\..*\]\n\s+https?:\/\/\S+\n\s+contributed by a plugin into the 'kotlinKlibCommonizerClasspath' configuration\n/)
-    result.output.find(/ - org\.jetbrains\.kotlin:kotlin-scripting-compiler-embeddable \[$APPLIED_KOTLIN_VERSION -> [2-9]\..*\]\n\s+https?:\/\/\S+\n\s+declared in the 'kotlinCompilerPluginClasspathMain' and 'kotlinCompilerPluginClasspathTest' configurations\n/)
+    result.output.find(/ - org\.jetbrains\.kotlin:kotlin-compiler-embeddable \[$APPLIED_KOTLIN_VERSION -> (?:\S+ -> )*[2-9]\..*\]\n\s+https?:\/\/\S+\n\s+contributed by a plugin into the 'kotlinCompilerClasspath' configuration\n/)
+    result.output.find(/ - org\.jetbrains\.kotlin:kotlin-klib-commonizer-embeddable \[$APPLIED_KOTLIN_VERSION -> (?:\S+ -> )*[2-9]\..*\]\n\s+https?:\/\/\S+\n\s+contributed by a plugin into the 'kotlinKlibCommonizerClasspath' configuration\n/)
+    result.output.find(/ - org\.jetbrains\.kotlin:kotlin-scripting-compiler-embeddable \[$APPLIED_KOTLIN_VERSION -> (?:\S+ -> )*[2-9]\..*\]\n\s+https?:\/\/\S+\n\s+declared in the 'kotlinCompilerPluginClasspathMain' and 'kotlinCompilerPluginClasspathTest' configurations\n/)
     // kotlin-stdlib is the build's own declaration, whether or not it names a version, so the
     // line after it is the next entry rather than an attribution.
-    result.output.find(/ - org\.jetbrains\.kotlin:kotlin-stdlib \[${explicitStdLibVersion ? DECLARED_KOTLIN_STD_VERSION : APPLIED_KOTLIN_VERSION} -> [2-9]\..*\]\n\s+https?:\/\/\S+\n(?!\s+contributed|\s+declared)/)
-    result.output.find(/ - org\.jetbrains\.kotlin\.jvm:org\.jetbrains\.kotlin\.jvm\.gradle\.plugin \[$APPLIED_KOTLIN_VERSION -> [2-9]\..*\]\n\s+https?:\/\/\S+\n/)
+    result.output.find(/ - org\.jetbrains\.kotlin:kotlin-stdlib \[${explicitStdLibVersion ? DECLARED_KOTLIN_STD_VERSION : APPLIED_KOTLIN_VERSION} -> (?:\S+ -> )*[2-9]\..*\]\n\s+https?:\/\/\S+\n(?!\s+contributed|\s+declared)/)
+    result.output.find(/ - org\.jetbrains\.kotlin\.jvm:org\.jetbrains\.kotlin\.jvm\.gradle\.plugin \[$APPLIED_KOTLIN_VERSION -> (?:\S+ -> )*[2-9]\..*\]\n\s+https?:\/\/\S+\n/)
     result.task(':dependencyUpdates').outcome == SUCCESS
 
     where:

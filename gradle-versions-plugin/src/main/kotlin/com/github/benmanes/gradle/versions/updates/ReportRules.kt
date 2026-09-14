@@ -41,6 +41,8 @@ internal class ReportRules(
   private val collector = CollectingComponentSelectionRules()
   private val currentHolder = mutableMapOf<Coordinate.Key, Coordinate>()
 
+  private val versionComparator = VersionMapping.versionComparator()
+
   /** The report's pre-release check, the built-in markers plus the convention added in its build. */
   private val isPreRelease: (String) -> Boolean = VersionStability.withConvention(preReleaseVersionIf)
 
@@ -54,8 +56,8 @@ internal class ReportRules(
 
   /**
    * Whether any rule is configured on this report. The action is executed once here rather than
-   * once per pass, so a rule with a side effect runs it as often as it would in the build that
-   * resolved with it.
+   * once per pass, so a rule with a side effect runs it no more often here than a producer does for
+   * one resolution of a configuration.
    */
   private val hasRules: Boolean =
     if (resolutionStrategy == null) {
@@ -124,7 +126,48 @@ internal class ReportRules(
     if (status.unresolved != null) {
       return status
     }
-    val rowKey = Coordinate.Key(status.group, status.name)
+    val current = holdCurrent(status)
+    // Read after the holder is filled, since a rule reads the version in use through it.
+    val rules = collector.rulesFor(status.group, status.name)
+    return keptTierSteps(applyToVerdict(status, current, rules, versionsByProjectPath), current, rules)
+  }
+
+  /**
+   * Returns [status] with the tier steps its producer recorded left out where this report would not
+   * print them: newer than the row's verdict once this report's rules have moved it, rejected by
+   * this report's revision or its own rules, or counted as a pre-release under its convention.
+   * Nothing is looked for in place of a step left out, as a version below it satisfied this
+   * report's rules alone and not the producer's.
+   */
+  private fun keptTierSteps(
+    status: PartialStatus,
+    current: Coordinate,
+    rules: List<Action<in ComponentSelection>>,
+  ): PartialStatus {
+    if (status.patchVersion == null && status.minorVersion == null) {
+      return status
+    }
+    if (status.unresolved != null) {
+      return status.copy(patchVersion = null, minorVersion = null)
+    }
+    val kept = { step: String? ->
+      step?.takeIf {
+        versionComparator.compare(it, status.latestVersion) <= 0 &&
+          keptAsStep(status, it, rules) &&
+          !rejectsPreRelease(current, RecordedComponentSelection(status.group, status.name, it))
+      }
+    }
+    val patch = kept(status.patchVersion)
+    val minor = kept(status.minorVersion)
+    return if (patch == status.patchVersion && minor == status.minorVersion) {
+      status
+    } else {
+      status.copy(patchVersion = patch, minorVersion = minor)
+    }
+  }
+
+  /** Returns the version in use of [status], held for the rules that read it through the wrapper. */
+  private fun holdCurrent(status: PartialStatus): Coordinate {
     val current =
       Coordinate(
         status.group,
@@ -140,10 +183,16 @@ internal class ReportRules(
     // https://github.com/ben-manes/gradle-versions-plugin/issues/755
     current.onScriptClasspath = status.onScriptClasspath
     currentHolder.clear()
-    currentHolder[rowKey] = current
-    // Read after the holder is filled, since a rule reads the version in use through it.
-    val rules = collector.rulesFor(status.group, status.name)
+    currentHolder[Coordinate.Key(status.group, status.name)] = current
+    return current
+  }
 
+  private fun applyToVerdict(
+    status: PartialStatus,
+    current: Coordinate,
+    rules: List<Action<in ComponentSelection>>,
+    versionsByProjectPath: Map<String, Map<String, List<String>>>,
+  ): PartialStatus {
     // The step a producer recorded sits above that producer's verdict, which the walk below starts
     // at and never rises above, so this report's revision and its own rules are applied to it here.
     // The producer answered under its own settings, which an including build may have set otherwise.

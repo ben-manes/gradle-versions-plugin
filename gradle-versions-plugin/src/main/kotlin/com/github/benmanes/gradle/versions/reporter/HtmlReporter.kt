@@ -4,6 +4,7 @@ import com.github.benmanes.gradle.versions.reporter.result.Dependency
 import com.github.benmanes.gradle.versions.reporter.result.DependencyOutdated
 import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.reporter.result.VersionAvailable
+import com.github.benmanes.gradle.versions.updates.VersionMapping
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.CURRENT
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.NIGHTLY
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
@@ -262,24 +263,27 @@ class HtmlReporter(
     return rows
   }
 
+  // One comparator for the report, rather than one per row: the parser behind it caches every
+  // version string it reads, for the life of the report.
+  private val versionComparator = VersionMapping.versionComparator()
+
   /**
-   * Returns the Latest Version cell, the newest version the resolution accepted followed by the
-   * pre-release step where a row has one. Each version is linked on its own rather than the pair
-   * being formatted as one, since [getVersionString] puts what it is given into a Sonatype url.
+   * Returns the Latest Version cell, the newest patch and the newest minor, then the newest version
+   * the resolution accepted, then the pre-release step, each printed only where it is newer than the
+   * one before it, as the plain text row prints them. Each version is linked on its own rather than
+   * the steps being formatted as one, since [getVersionString] puts what it is given into a Sonatype
+   * url.
    */
   private fun latestVersionCell(dependency: DependencyOutdated): String {
     val available = dependency.available
     val group = dependency.group.orEmpty()
     val name = dependency.name.orEmpty()
     val latest = getDisplayableVersion(available)
-    val cell = getVersionString(group, name, latest)
-    val preRelease = available.preRelease
-    return if (preRelease == null || preRelease == latest) {
-      cell
-    } else if (latest.isNullOrEmpty()) {
-      getVersionString(group, name, preRelease)
+    val steps = laterSteps(listOf(available.patch, available.minor, latest, available.preRelease), versionComparator)
+    return if (steps.isEmpty()) {
+      getVersionString(group, name, latest)
     } else {
-      cell + " -> " + getVersionString(group, name, preRelease)
+      steps.joinToString(" -> ") { getVersionString(group, name, it) }
     }
   }
 

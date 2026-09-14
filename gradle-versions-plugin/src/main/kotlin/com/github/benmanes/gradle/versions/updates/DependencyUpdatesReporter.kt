@@ -84,6 +84,16 @@ class DependencyUpdatesReporter(
   /** The number of entries left out because Gradle sets their versions for its embedded Kotlin. */
   internal var leftOutEmbeddedKotlin: Int = 0
 
+  /**
+   * The newest version sharing the major and minor parts of each row's version, where one is newer.
+   * Set after construction rather than through a constructor parameter, as `preReleaseByCurrent`
+   * is: a parameter added to the constructor replaces its signature, which a build may call.
+   */
+  internal var patchByCurrent: Map<Coordinate, String> = emptyMap()
+
+  /** The newest version sharing the major part of each row's version, where one is newer. */
+  internal var minorByCurrent: Map<Coordinate, String> = emptyMap()
+
   @Deprecated("Use the constructor that includes the constraining platforms.")
   constructor(
     projectPath: String,
@@ -379,11 +389,37 @@ class DependencyUpdatesReporter(
     // row this report put among the outdated ones.
     val laterVersion = latestFor(coordinate, key)?.takeIf { it != coordinate.version }
     val preRelease = preReleaseByCurrent[coordinate]
+    val patch = patchByCurrent[coordinate]
+    val minor = minorByCurrent[coordinate]
     val available =
       when (revision) {
-        "milestone" -> VersionAvailable(milestone = laterVersion, preRelease = preRelease)
-        "integration" -> VersionAvailable(integration = laterVersion, preRelease = preRelease)
-        else -> VersionAvailable(release = laterVersion, preRelease = preRelease)
+        "milestone" ->
+          VersionAvailable(
+            release = null,
+            milestone = laterVersion,
+            integration = null,
+            preRelease = preRelease,
+            patch = patch,
+            minor = minor,
+          )
+        "integration" ->
+          VersionAvailable(
+            release = null,
+            milestone = null,
+            integration = laterVersion,
+            preRelease = preRelease,
+            patch = patch,
+            minor = minor,
+          )
+        else ->
+          VersionAvailable(
+            release = laterVersion,
+            milestone = null,
+            integration = null,
+            preRelease = preRelease,
+            patch = patch,
+            minor = minor,
+          )
       }
     return DependencyOutdated(
       group = key["group"],
@@ -517,7 +553,10 @@ fun reporterFor(
     gradleReleaseChannel, versions.latestByCurrent, projectsByCoordinate, contributedCoordinates,
     configurationsByCoordinate, skipped, platformProjectsByCoordinate, constrainedByCoordinate,
     versions.preReleaseByCurrent,
-  )
+  ).also {
+    it.patchByCurrent = versions.patchByCurrent
+    it.minorByCurrent = versions.minorByCurrent
+  }
 }
 
 /** Returns the coordinates that only lazy actions contributed, with no project declaring them. */

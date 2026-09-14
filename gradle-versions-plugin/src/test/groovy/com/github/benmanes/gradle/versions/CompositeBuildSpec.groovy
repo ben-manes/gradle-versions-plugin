@@ -68,7 +68,7 @@ final class CompositeBuildSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
   }
 
   def 'Aggregates the updates of every project in a build that includes another build'() {
@@ -115,7 +115,7 @@ final class CompositeBuildSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
   }
 
@@ -157,7 +157,7 @@ final class CompositeBuildSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
   }
 
   @Unroll
@@ -249,7 +249,7 @@ final class CompositeBuildSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
 
     where:
     activation              | script
@@ -291,7 +291,7 @@ final class CompositeBuildSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
   }
 
   // Gradle 9 requires JVM 17. The guard that rejects the mutation is worded differently there,
@@ -313,7 +313,7 @@ final class CompositeBuildSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
   }
 
   def 'Reports the updates of an included build from the including build'() {
@@ -402,7 +402,7 @@ final class CompositeBuildSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.task(':child:dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
   }
 
@@ -993,7 +993,7 @@ final class CompositeBuildSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.example:external-bom [1.0 -> 2.0]')
     result.output.contains('imported by the platform :platforms\n')
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
@@ -1528,7 +1528,7 @@ final class CompositeBuildSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('Configuration cache entry reused.')
     // The report must survive the cache hit, not just the task outcome.
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
   }
 
   @IgnoreIf({ !GradleVersions.drivenBy(data.gradleVersion) })
@@ -1565,7 +1565,7 @@ final class CompositeBuildSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
 
     where:
     gradleVersion << ['9.0.0', GradleVersions.CURRENT]
@@ -1716,7 +1716,7 @@ final class CompositeBuildSpec extends Specification {
     then:
     result.task(':child:dependencyUpdates').outcome == SUCCESS
     result.output.contains(':child Project Dependency Updates')
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
 
     // The projects the completeness check expects are named the way the partial results stamp
@@ -1942,10 +1942,10 @@ final class CompositeBuildSpec extends Specification {
     def hit = run('dependencyUpdates', '--configuration-cache', '--no-parallel')
 
     then: 'the rule reaches a compiled class rather than the script, so the entry is stored and reused'
-    store.output.contains('com.google.inject:guice [2.0 -> 3.0]')
+    store.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
     !store.output.contains('Configuration cache entry discarded')
     hit.output.contains('Reusing configuration cache')
-    hit.output.contains('com.google.inject:guice [2.0 -> 3.0]')
+    hit.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
   }
 
   /**
@@ -2025,8 +2025,8 @@ final class CompositeBuildSpec extends Specification {
 
     then: "the outer's rule reaches the merged-in row, stopping it at 3.0 rather than the child's own 3.1"
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
-    !result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
+    !result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1058')
@@ -2067,8 +2067,8 @@ final class CompositeBuildSpec extends Specification {
 
     then: "the subproject's report reads the same inherited chain its producers resolve under"
     result.task(':app:dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
-    !result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
+    !result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1058')
@@ -2082,11 +2082,11 @@ final class CompositeBuildSpec extends Specification {
 
     then: "the rules are read from the serialized task, so both legs cap the row at 3.0"
     store.task(':dependencyUpdates').outcome == SUCCESS
-    store.output.contains('com.google.inject:guice [2.0 -> 3.0]')
-    !store.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    store.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
+    !store.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     hit.output.contains('Reusing configuration cache')
-    hit.output.contains('com.google.inject:guice [2.0 -> 3.0]')
-    !hit.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    hit.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
+    !hit.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1058')
@@ -2099,8 +2099,8 @@ final class CompositeBuildSpec extends Specification {
 
     then: 'the rules are applied, and the entry is discarded rather than the build failing to store it'
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
-    !result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
+    !result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.output.contains('Configuration cache entry discarded')
     result.output.contains('rejectVersionIf')
   }
@@ -2115,8 +2115,8 @@ final class CompositeBuildSpec extends Specification {
 
     then: 'the entry is discarded as it is for a rule reaching the script directly'
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
-    !result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
+    !result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.output.contains('reads a declaration from the build script')
     result.output.contains('Configuration cache entry discarded')
 
@@ -2137,11 +2137,11 @@ final class CompositeBuildSpec extends Specification {
     def hit = run('dependencyUpdates', '--configuration-cache', '--no-parallel')
 
     then: 'the entry is kept, so the report a Kotlin build caches today is not given up for the case above'
-    store.output.contains('com.google.inject:guice [2.0 -> 3.0]')
+    store.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
     !store.output.contains('Configuration cache entry discarded')
     hit.output.contains('Reusing configuration cache')
-    hit.output.contains('com.google.inject:guice [2.0 -> 3.0]')
-    !hit.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    hit.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
+    !hit.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1058')
@@ -2265,8 +2265,8 @@ final class CompositeBuildSpec extends Specification {
     def hit = run('dependencyUpdates', '--configuration-cache', '--no-parallel')
 
     then: 'a hook that runs after the project is evaluated still reaches the report'
-    [plain, store, hit].every { it.output.contains('com.google.inject:guice [2.0 -> 3.0]') }
-    [plain, store, hit].every { !it.output.contains('com.google.inject:guice [2.0 -> 3.1]') }
+    [plain, store, hit].every { it.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]') }
+    [plain, store, hit].every { !it.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]') }
 
     where:
     declared << ['the rule from a later hook', 'the coordinate from a later hook']
@@ -2326,7 +2326,7 @@ final class CompositeBuildSpec extends Specification {
     def result = run('dependencyUpdates')
 
     then: 'clearing the strategy clears what the report would have applied along with it'
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1058')
@@ -2393,7 +2393,7 @@ final class CompositeBuildSpec extends Specification {
     then: 'the rows stay as their own builds resolved them, and the reason is printed'
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('Every dependency is left as the build that resolved it reported it')
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1058')
@@ -2496,7 +2496,7 @@ final class CompositeBuildSpec extends Specification {
 
     then: "the child's own report is unaffected by a rule never registered in the outer"
     result.task(':child:dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1058')

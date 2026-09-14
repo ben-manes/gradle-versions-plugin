@@ -67,6 +67,15 @@ data class PartialStatus
      * [platformProjects].
      */
     val embeddedKotlin: Boolean = false,
+    /**
+     * The newest version sharing the major and minor parts of the declared one, null where none is
+     * newer than it or the declared version has no numeric minor part. Trails for the same reason
+     * as [platformProjects].
+     * https://github.com/ben-manes/gradle-versions-plugin/issues/69
+     */
+    val patchVersion: String? = null,
+    /** The newest version sharing the major part of the declared one, null on the same terms. */
+    val minorVersion: String? = null,
   ) {
     val coordinate: Coordinate
       get() = Coordinate(group, name, declaredVersion, userReason, divergentLatest)

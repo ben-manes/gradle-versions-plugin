@@ -12,6 +12,8 @@ buildscript {
   }
 }
 
+// Selects between the jre and android variants that guava 32.1.0 and later publish
+apply(plugin = "jvm-ecosystem")
 apply(plugin = "io.github.ben-manes.versions")
 
 repositories {

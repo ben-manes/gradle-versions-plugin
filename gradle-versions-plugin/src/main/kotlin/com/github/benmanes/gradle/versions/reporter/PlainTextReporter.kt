@@ -123,21 +123,13 @@ class PlainTextReporter
 
     /**
      * Returns the row's version steps joined by arrows, from the version in use through the newest
-     * the resolution accepted to the pre-release step, each printed only where it is newer than the
-     * one before it, as the Gradle row's release candidate is. Compared rather than deduplicated:
-     * `available[revision]` is blank for a revision outside the three the report knows, and a step
-     * equal to the one before it is not the only one that has nothing to add.
+     * patch and the newest minor to the newest the resolution accepted and the pre-release step,
+     * each printed only where it is newer than the one before it.
      */
     private fun breadcrumb(dependency: DependencyOutdated): String {
-      val steps = listOfNotNull(dependency.version, dependency.available[revision], dependency.available.preRelease)
-      val printed = mutableListOf<String>()
-      for (step in steps) {
-        if (step.isEmpty()) continue
-        if (printed.isEmpty() || versionComparator.compare(printed.last(), step) < 0) {
-          printed.add(step)
-        }
-      }
-      return printed.joinToString(" -> ")
+      val available = dependency.available
+      val steps = listOf(dependency.version, available.patch, available.minor, available[revision], available.preRelease)
+      return laterSteps(steps, versionComparator).joinToString(" -> ")
     }
 
     private fun writeUpgrades(

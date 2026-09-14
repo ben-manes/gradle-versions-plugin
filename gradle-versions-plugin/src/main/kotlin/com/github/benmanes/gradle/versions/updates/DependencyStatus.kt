@@ -21,6 +21,14 @@ class DependencyStatus {
   /** The newest candidate left out by the pre-release check, null when none was left out. */
   val preReleaseVersion: String?
 
+  /** The latest version sharing the major and minor parts of the declared one, null where none is later. */
+  internal var patchVersion: String? = null
+    private set
+
+  /** The latest version sharing the major part of the declared one, null where none is later. */
+  internal var minorVersion: String? = null
+    private set
+
   @JvmOverloads
   constructor(
     coordinate: Coordinate,
@@ -52,6 +60,17 @@ class DependencyStatus {
     this.contributed = contributed
     this.configurations = configurations
     this.preReleaseVersion = null
+  }
+
+  /** Sets the latest version of [tier]. */
+  internal fun setTierVersion(
+    tier: VersionTier,
+    version: String,
+  ) {
+    when (tier) {
+      VersionTier.PATCH -> patchVersion = version
+      VersionTier.MINOR -> minorVersion = version
+    }
   }
 
   fun getLatestCoordinate(): Coordinate {
@@ -99,6 +118,8 @@ class DependencyStatus {
       platformConstraints = coordinate.platformVersionConstraints.map { it.toConstraintInfo() },
       onScriptClasspath = coordinate.onScriptClasspath,
       preReleaseVersion = preReleaseVersion,
+      patchVersion = patchVersion,
+      minorVersion = minorVersion,
     )
   }
 

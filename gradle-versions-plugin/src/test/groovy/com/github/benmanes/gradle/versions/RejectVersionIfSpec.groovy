@@ -294,7 +294,7 @@ final class RejectVersionIfSpec extends Specification {
 
     then: 'the reset escape hatch wins, so nothing is rejected'
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
   }
 
   def 'the deprecated resolutionStrategy property assignment replaces a previously registered rejectVersionIf'() {

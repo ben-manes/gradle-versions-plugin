@@ -84,7 +84,7 @@ final class IsolatedProjectsAggregationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
     !result.output.contains('The dependency updates report is missing')
   }
@@ -105,7 +105,7 @@ final class IsolatedProjectsAggregationSpec extends Specification {
     !new File(testProjectDir.root, 'build/dependencyUpdates/partial.json').exists()
     !new File(testProjectDir.root, 'app/build/dependencyUpdates/partial.json').exists()
     !new File(testProjectDir.root, 'lib/build/dependencyUpdates/partial.json').exists()
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     result.output.contains('com.google.guava:guava [15.0 -> 16.0]')
   }
 
@@ -125,7 +125,7 @@ final class IsolatedProjectsAggregationSpec extends Specification {
     // which the file's location does not matter. Its own producer falls back to its build directory.
     new File(testProjectDir.root, 'app/build/dependencyUpdates/partial.json').exists()
     !new File(testProjectDir.root, 'build/dependencyUpdates/partials').exists()
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
   }
 
   def 'Honors the root task settings in every projects producer'() {
@@ -148,7 +148,7 @@ final class IsolatedProjectsAggregationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
   }
 
   def 'Honors the root task settings applied from its own afterEvaluate'() {
@@ -171,7 +171,7 @@ final class IsolatedProjectsAggregationSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
     // Isolated projects configures the projects in parallel, but a producer's input is realized
     // once the work graph is assembled, so a setting made this late still reaches the resolution.
-    result.output.contains('com.google.inject:guice [2.0 -> 3.0]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.0]')
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/440')
@@ -232,7 +232,7 @@ final class IsolatedProjectsAggregationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     // Isolated projects lets the root discover the project paths but not register a task in them,
     // so a project without the plugin publishes nothing to aggregate and is called out instead.
     // Registering the producers from a settings plugin is the only fix, which is a change to how

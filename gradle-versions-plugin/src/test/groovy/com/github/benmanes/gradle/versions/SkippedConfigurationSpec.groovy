@@ -330,7 +330,7 @@ final class SkippedConfigurationSpec extends Specification {
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
 
     def json = new JsonSlurper().parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
     json.skipped.count == 6

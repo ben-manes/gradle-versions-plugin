@@ -70,7 +70,7 @@ final class UnresolvedReasonSpec extends Specification {
     then:
     // The project declares no repository of its own, so a report that predicted resolvability from
     // `project.repositories` would drop this build's whole report rather than the row it earns.
-    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     !result.output.contains('Failed to determine the latest version')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }

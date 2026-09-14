@@ -607,7 +607,7 @@ final class DeclaredVersionConstraintSpec extends Specification {
     def result = runOn(SCRIPT_CLASSPATH_GRADLE)
 
     then: 'a bound the resolved version already lies outside is not applied, so the upgrade is listed'
-    result.output.contains('com.google.inject:guice [3.0 -> 7.0.0]')
+    result.output.contains('com.google.inject:guice [3.0 -> 3.1 -> 7.0.0]')
   }
 
   @IgnoreIf({ !GradleVersions.drivenBy(SCRIPT_CLASSPATH_GRADLE) })
