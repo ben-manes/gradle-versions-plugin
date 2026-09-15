@@ -427,7 +427,10 @@ class Resolver internal constructor(
     // version of transitive dependency.
     if (supportsConstraints(configuration)) {
       for (dependency in configuration.allDependencyConstraints) {
-        if (dependency !is DefaultProjectDependencyConstraint) {
+        // A constraint without a version is queried only where a current version was resolved for it.
+        if (dependency !is DefaultProjectDependencyConstraint &&
+          (dependency.version != null || Coordinate.keyFrom(dependency) in current.coordinates)
+        ) {
           createQueryDependency(dependency, tierSelectors)?.let { latest.add(it) }
         }
       }
@@ -577,13 +580,7 @@ class Resolver internal constructor(
     dependency: DependencyConstraint,
     tierSelectors: Map<Coordinate.Key, String>? = null,
   ): Dependency? {
-    // If no version was specified then use "none" to pass it through.
-    val version =
-      when {
-        tierSelectors != null -> tierSelectors[Coordinate.keyFrom(dependency)] ?: return null
-        dependency.version == null -> "none"
-        else -> "+"
-      }
+    val version = if (tierSelectors == null) "+" else tierSelectors[Coordinate.keyFrom(dependency)] ?: return null
     val nonTransitiveDependency =
       project.dependencies.create("${dependency.group.orEmpty()}:${dependency.name}:$version") as ModuleDependency
     nonTransitiveDependency.isTransitive = false
@@ -827,6 +824,17 @@ class Resolver internal constructor(
     exemptFromDependencyVerification(copy)
 
     disableAutoTargetJvm(copy)
+
+    // A constraint declared without a version enters the resolution result only once a dependency
+    // reaches its module, so each one is added as a versionless dependency and reported at the
+    // version resolved for it, as a versionless dependency is. It is non-transitive, so the modules
+    // it depends on stay out of the graph.
+    val versionlessConstraintKeys = getVersionlessConstraintKeys(configuration)
+    for (key in versionlessConstraintKeys) {
+      val query = project.dependencies.create("${key.groupId}:${key.artifactId}") as ModuleDependency
+      query.isTransitive = false
+      copy.dependencies.add(query)
+    }
     val root = copy.incoming.resolutionResult.root
     val platformConstraints = getPlatformConstraints(copy.incoming.resolutionResult, versionedKeys(configuration))
 
@@ -844,7 +852,10 @@ class Resolver internal constructor(
         is UnresolvedDependencyResult -> {
           (dependency.attempted as? ModuleComponentSelector)?.let { selector ->
             val key = Coordinate.Key(selector.group, selector.module)
-            declared[key]?.let { coordinates.put(key, it) }
+            // A versionless constraint that nothing sets a version for has no version to update.
+            if (key !in versionlessConstraintKeys) {
+              declared[key]?.let { coordinates.put(key, it) }
+            }
           }
         }
       }
@@ -855,7 +866,8 @@ class Resolver internal constructor(
         val coordinate = Coordinate.from(constraint)
         // Only add a constraint to the report if there is no dependency matching it, this means it
         // is targeting a transitive dependency or is part of a platform.
-        if (!coordinates.containsKey(coordinate.key)) {
+        // A versionless one is reported only where its query above resolved.
+        if (constraint.version != null && !coordinates.containsKey(coordinate.key)) {
           declared[coordinate.key]?.let { coordinates.put(coordinate.key, it) }
         }
       }
@@ -1130,6 +1142,22 @@ class Resolver internal constructor(
     getResolvableDependencies(configuration)
       .filterNot { it.version == "none" }
       .mapTo(hashSetOf()) { it.key }
+
+  /**
+   * Returns the modules constrained without a version, leaving out any also declared as a dependency,
+   * which is resolved and reported on its own.
+   */
+  private fun getVersionlessConstraintKeys(configuration: Configuration): Set<Coordinate.Key> {
+    if (!supportsConstraints(configuration)) {
+      return emptySet()
+    }
+    val dependencyKeys =
+      configuration.allDependencies.filterIsInstance<ExternalDependency>().mapTo(hashSetOf()) { Coordinate.keyFrom(it) }
+    return configuration.allDependencyConstraints
+      .filter { it !is DefaultProjectDependencyConstraint && it.version == null }
+      .mapTo(hashSetOf()) { Coordinate.keyFrom(it) }
+      .minus(dependencyKeys)
+  }
 
   /** Returns the modules that a resolution rule substituted for a declared one, by declared key. */
   private fun getSubstitutions(
