@@ -28,11 +28,8 @@ class GradleUpdateChecker internal constructor(
     gradleVersionsApiBaseUrl: String,
   ) : this(enabled, gradleVersionsApiBaseUrl, CLIENT_TIME_OUT)
 
-  init {
-    if (enabled) {
-      fetch(gradleVersionsApiBaseUrl, timeoutMillis)
-    }
-  }
+  private val releases: Map<GradleReleaseChannel, ReleaseStatus> =
+    if (enabled) fetch(gradleVersionsApiBaseUrl, timeoutMillis) else emptyMap()
 
   /**
    * @return An instance of [ReleaseStatus.Available] containing a [GradleVersion]
@@ -47,7 +44,7 @@ class GradleUpdateChecker internal constructor(
    * on the "current" gradle release channel.
    */
   fun getCurrentGradleVersion(): ReleaseStatus? {
-    return cacheMap[GradleReleaseChannel.CURRENT]
+    return releases[GradleReleaseChannel.CURRENT]
   }
 
   /**
@@ -55,7 +52,7 @@ class GradleUpdateChecker internal constructor(
    * on the "release-candidate" gradle release channel.
    */
   fun getReleaseCandidateGradleVersion(): ReleaseStatus? {
-    return cacheMap[GradleReleaseChannel.RELEASE_CANDIDATE]
+    return releases[GradleReleaseChannel.RELEASE_CANDIDATE]
   }
 
   /**
@@ -63,7 +60,7 @@ class GradleUpdateChecker internal constructor(
    * on the "nightly" gradle release channel.
    */
   fun getNightlyGradleVersion(): ReleaseStatus? {
-    return cacheMap[GradleReleaseChannel.NIGHTLY]
+    return releases[GradleReleaseChannel.NIGHTLY]
   }
 
   /**
@@ -89,10 +86,6 @@ class GradleUpdateChecker internal constructor(
   }
 
   companion object {
-    private val cacheMap =
-      EnumMap<GradleReleaseChannel, ReleaseStatus>(
-        GradleReleaseChannel::class.java,
-      )
     private const val CLIENT_TIME_OUT = 15_000
     private val versionSite =
       Moshi.Builder()
@@ -108,7 +101,8 @@ class GradleUpdateChecker internal constructor(
     private fun fetch(
       gradleVersionsApiBaseUrl: String,
       timeoutMillis: Int,
-    ) {
+    ): Map<GradleReleaseChannel, ReleaseStatus> {
+      val releases = EnumMap<GradleReleaseChannel, ReleaseStatus>(GradleReleaseChannel::class.java)
       for (it in GradleReleaseChannel.values()) {
         try {
           val connection = URI(gradleVersionsApiBaseUrl + it.id).toURL().openConnection() as HttpURLConnection
@@ -121,14 +115,15 @@ class GradleUpdateChecker internal constructor(
               connection.disconnect()
             }
           if (version.isNotEmpty()) {
-            cacheMap[it] = ReleaseStatus.Available(GradleVersion.version(version))
+            releases[it] = ReleaseStatus.Available(GradleVersion.version(version))
           } else {
-            cacheMap[it] = ReleaseStatus.Unavailable
+            releases[it] = ReleaseStatus.Unavailable
           }
         } catch (e: Exception) {
-          cacheMap[it] = ReleaseStatus.Failure(e.message.orEmpty())
+          releases[it] = ReleaseStatus.Failure(e.message.orEmpty())
         }
       }
+      return releases
     }
   }
 }
