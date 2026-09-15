@@ -67,10 +67,13 @@ private fun configurationsLabel(names: List<String>): String {
  * it, then a declaration, then the plugin that contributed it. Only a module declared without a
  * version can be constrained by a platform, so a declaration displaced by that line would point at
  * a spot in the build script with no version in it. Which line a row qualifies for is decided where
- * the statuses are assembled; the order below settles only which one wins.
+ * the statuses are assembled; the order below settles only which one wins. The [projects] default to
+ * the dependency's own, which a row of the file reports lists only for a divergent version.
  */
-internal fun sourceLabel(dependency: Dependency): String? {
-  val projects = dependency.projects
+internal fun sourceLabel(
+  dependency: Dependency,
+  projects: List<String>? = dependency.projects,
+): String? {
   val platforms = dependency.platformProjects?.takeIf { it.isNotEmpty() }
   if (platforms != null) {
     val noun = if (platforms.size == 1) "platform" else "platforms"
