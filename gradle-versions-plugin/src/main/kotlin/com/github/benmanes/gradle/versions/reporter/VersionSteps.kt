@@ -1,5 +1,24 @@
 package com.github.benmanes.gradle.versions.reporter
 
+import com.github.benmanes.gradle.versions.reporter.result.DependencyOutdated
+
+/**
+ * Returns the row's version steps, from the version in use through the newest patch and the newest
+ * minor to the newest the resolution accepted and the pre-release step, each kept only where it is
+ * newer than the one before it.
+ */
+internal fun laterSteps(
+  dependency: DependencyOutdated,
+  revision: String,
+  versionComparator: Comparator<String>,
+): List<String> {
+  val available = dependency.available
+  return laterSteps(
+    listOf(dependency.version, available.patch, available.minor, available[revision], available.preRelease),
+    versionComparator,
+  )
+}
+
 /**
  * Returns the steps of a row's version path in order, each kept only where it is newer than the
  * one kept before it, as the Gradle row's release candidate is. Compared rather than deduplicated,

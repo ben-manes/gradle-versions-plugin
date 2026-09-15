@@ -121,15 +121,9 @@ class PlainTextReporter
       }
     }
 
-    /**
-     * Returns the row's version steps joined by arrows, from the version in use through the newest
-     * patch and the newest minor to the newest the resolution accepted and the pre-release step,
-     * each printed only where it is newer than the one before it.
-     */
+    /** Returns the row's version steps joined by arrows. */
     private fun breadcrumb(dependency: DependencyOutdated): String {
-      val available = dependency.available
-      val steps = listOf(dependency.version, available.patch, available.minor, available[revision], available.preRelease)
-      return laterSteps(steps, versionComparator).joinToString(" -> ")
+      return laterSteps(dependency, revision, versionComparator).joinToString(" -> ")
     }
 
     private fun writeUpgrades(

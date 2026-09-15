@@ -9,8 +9,8 @@ import org.gradle.api.Action
  */
 sealed interface OutputFormatterArgument {
   /**
-   * A string representing one of the built-in output formatters (i.e. "json", "text", "html" or
-   * "xml"), or a comma-separated list with a combination of them (e.g. "json,text").
+   * A string representing one of the built-in output formatters (i.e. "json", "text", "html", "xml"
+   * or "problems"), or a comma-separated list with a combination of them (e.g. "json,text").
    */
   class BuiltIn(val formatterNames: String) : OutputFormatterArgument
 

@@ -343,7 +343,7 @@ command line option, since no command line can express the logic.
 | [`preReleaseVersionIf`](#filtering-unstable-versions) | a predicate over a version string | nothing added | |
 | [`exemptFromBuiltInChecksIf`](#filtering-unstable-versions) | a predicate over the candidate | nothing exempt | |
 | [`rejectVersionIf`](#filtering-unstable-versions) | a predicate over the candidate | nothing rejected | |
-| [`outputFormatter`](#report-format) | `text`, `json`, `xml`, `html`, a comma separated list of those, or a `Reporter` | `text` | `--output-formatter` |
+| [`outputFormatter`](#report-format) | `text`, `json`, `xml`, `html`, `problems`, a comma separated list of those, or a `Reporter` | `text` | `--output-formatter` |
 | [`outputDir`](#outputdir) | a directory path | `<buildDirectory>/dependencyUpdates` | `--output-dir` |
 | [`reportfileName`](#reportfilename) | a file name, without the extension | `report` | `--report-file-name` |
 | [`gradleVersionsApiBaseUrl`](#gradle-versions-api-base-url) | a URL | `https://services.gradle.org/versions/` | `--gradle-versions-api-base-url` |
@@ -1440,7 +1440,7 @@ is `dependencyUpdates` under the project's build directory, which is
 
 The report file's name, without an extension. Each formatter supplies its own,
 so `report` becomes `report.txt`, `report.json`, `report.xml` or `report.html`.
-Naming more than one formatter writes one file per format, all sharing this
+Naming more than one file format writes one file per format, all sharing this
 name.
 
 ##### Report format
@@ -1452,12 +1452,26 @@ following values are supported:
 * `"json"`: format output file as json text
 * `"xml"`: format output file as xml text, can be used by other plugins (e.g. sonar)
 * `"html"`: format output file as html
+* `"problems"`: report each outdated dependency to Gradle's
+  [Problems API](https://docs.gradle.org/current/userguide/reporting_problems.html) rather than to a file
 * `Closure`: will be called with the result of the dependency update analysis
   (from Kotlin, use the `outputFormatter(Action<Result>)` function instead)
 
+The `problems` format adds each outdated dependency to Gradle's problems report,
+`build/reports/problems/problems-report.html`. Each problem is labeled with the
+versions printed in its row of the plain text report, and an upgrade to each of
+those later versions is listed as a solution. The lines printed under the row are
+included as the problem's details: the `because` reason, the project URL, and
+where the dependency comes from. In a report of more than one project, the
+projects that declare the dependency are always listed there, not only where
+their versions differ. The problems are printed on the console under
+`--warning-mode all`. The Problems API is incubating and needs Gradle 8.13 or
+later, so on an older Gradle the format is skipped with a message at the info log
+level.
+
 The console summary is printed at the lifecycle log level, so `--quiet` suppresses
-it. The report file is still written; read it, or drop `--quiet`, if a script was
-piping the console output.
+it. A file format's report is still written; read it, or drop `--quiet`, if a
+script was piping the console output.
 
 You can also set multiple output formats using comma as the separator:
 

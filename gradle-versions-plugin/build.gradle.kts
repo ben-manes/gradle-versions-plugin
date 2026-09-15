@@ -22,6 +22,30 @@ configurations.compileOnlyApi {
   dependencies.removeIf { it is FileCollectionDependency }
 }
 
+// The Problems API is newer than the oldest supported release, so the class that reports to it is
+// compiled against the API of the Gradle running this build, and the plugin creates it only on a
+// release that has the API.
+val problems = sourceSets.create("problems")
+
+// Declared a friend of the main source set rather than associated with it, as an association would
+// add the newer API to the main source set's compile classpath as well.
+tasks.compileKotlin {
+  friendPaths.from(problems.output.classesDirs)
+}
+
+tasks.jar {
+  from(problems.output)
+}
+
+// Matched by name, as the publishing plugin registers the sources jar after this script runs.
+tasks.withType<Jar>().matching { it.name == "sourcesJar" }.configureEach {
+  from(problems.allSource)
+}
+
+tasks.pluginUnderTestMetadata {
+  pluginClasspath.from(problems.output)
+}
+
 // Some specs load Gradle in process, and the Gradle running this build does not start below JDK 17.
 // The specs are compiled a second time against the oldest supported release for the older JDKs, so
 // that both the in-process specs and the TestKit specs run against that release there.
@@ -30,7 +54,7 @@ val minimumGradleTest =
     groovy.setSrcDirs(listOf("src/test/groovy"))
     resources.setSrcDirs(listOf("src/test/resources"))
     compileClasspath += sourceSets.main.get().output
-    runtimeClasspath += sourceSets.main.get().output
+    runtimeClasspath += sourceSets.main.get().output + problems.output
   }
 
 configurations.named(minimumGradleTest.implementationConfigurationName) {
@@ -122,6 +146,11 @@ dependencies {
   compileOnly(libs.groovy.minimum)
   compileOnly(libs.kotlin.stdlib)
   implementation(libs.moshi)
+
+  compileOnly(problems.output)
+  testRuntimeOnly(problems.output)
+  "problemsCompileOnly"(gradleApi())
+  "problemsCompileOnly"(libs.kotlin.stdlib)
 
   testImplementation(localGroovy())
   testImplementation(gradleTestKit())
