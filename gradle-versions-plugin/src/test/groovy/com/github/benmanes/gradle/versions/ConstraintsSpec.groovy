@@ -138,6 +138,218 @@ final class ConstraintsSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
+  def 'Reports a versionless constraint at the version its platform supplies'() {
+    given: 'a platform that imports a bom and constrains a module the bom versions'
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-platform'
+          id 'io.github.ben-manes.versions'
+        }
+
+        javaPlatform {
+          allowDependencies()
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          api platform('com.example:external-bom:1.0')
+          constraints {
+            api 'com.google.inject:guice'
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = TestKitRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then: 'the constraint is reported at the bom version rather than as a failed lookup'
+    result.output.contains('com.google.inject:guice:2.0\n     constrained by the platform com.example:external-bom\n')
+    !result.output.contains('Failed to determine the latest version')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  def 'Leaves out a versionless constraint that no platform versions'() {
+    given:
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          constraints {
+            api 'com.google.inject:guice'
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = TestKitRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then:
+    result.output.contains('No dependencies found.')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  def 'Reports a versionless constraint at the version a library raises it to'() {
+    given: 'the bom sets guice to 2.0 and the library requires 3.0'
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          api platform('com.example:external-bom:1.0')
+          api 'com.example:guice-consumer:1.0'
+          constraints {
+            api 'com.google.inject:guice'
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = TestKitRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then:
+    result.output.contains('com.google.inject:guice [3.0 -> 3.1]')
+    !result.output.contains('Failed to determine the latest version')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  def 'Reports a constraint with only a preferred version at that version'() {
+    given:
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          constraints {
+            api('com.google.inject:guice') {
+              version {
+                prefer '2.0'
+              }
+            }
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = TestKitRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then:
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
+    !result.output.contains('Failed to determine the latest version')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  def 'Reports a dependency at its declared version beside a versionless constraint on it'() {
+    given:
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          api platform('com.example:external-bom:1.0')
+          api 'com.google.inject:guice:2.2'
+          constraints {
+            api 'com.google.inject:guice'
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = TestKitRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then:
+    result.output.contains('com.google.inject:guice [2.2 -> 3.1]')
+    !result.output.contains('Failed to determine the latest version')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
   def 'Do not show updates for a constraint that gradle added itself'() {
     given:
     ExpandoMetaClass.disableGlobally()
