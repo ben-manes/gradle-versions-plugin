@@ -52,6 +52,7 @@ Plugin](https://www.mojohaus.org/versions-maven-plugin).
 - [Samples](#samples)
 - [Compatibility](#compatibility)
 - [Migrating from prior versions](#migrating-from-prior-versions)
+  - [v0.62.0](#v0620)
   - [v0.61.0](#v0610)
   - [v0.60.0](#v0600)
   - [v0.59.0](#v0590)
@@ -2597,8 +2598,30 @@ and *Note*s are things worth knowing that need no action.
 
 ### v0.62.0
 
-In v0.63.0, the versions Gradle sets for its embedded Kotlin are left out of the
-report:
+In v0.63.0, the latest patch and minor versions are printed in each row, OkHttp
+is no longer on the buildscript classpath, and the versions Gradle sets for its
+embedded Kotlin are left out of the report:
+
+> [!IMPORTANT]
+> - A row in the plain text report can now include the latest patch and minor
+>   versions between the current version and the latest one, as
+>   `[1.10.18 -> 1.10.19 -> 1.11.5 -> 2.1.6]`. The versions in a row are not
+>   labeled, so a tool that reads a version by its position in the row has to
+>   read `available` from the JSON or XML report instead (see [Latest patch and
+>   minor versions](#latest-patch-and-minor-versions)).
+> - OkHttp is no longer on the buildscript classpath of a build that applies
+>   the plugin. Where OkHttp classes are used in a build script, OkHttp now has
+>   to be declared on its buildscript classpath.
+
+> [!TIP]
+> - The [Kotlin Gradle Plugin](#kotlin-gradle-plugin) and [Android Gradle
+>   Plugin](#android-gradle-plugin) filters are now written for
+>   `filterDeclaredConfigurations`. A rule set on the task that writes the
+>   report is applied to the entries merged from included builds as well, but
+>   `filterConfigurations` has to be declared in each build (see [Choosing
+>   between them](#choosing-between-them)). `kotlinBouncyCastleConfiguration`
+>   was added to the Kotlin set, since it is filled in a project that applies
+>   the `signing` plugin.
 
 > [!NOTE]
 > - `kotlin-stdlib`, `kotlin-reflect` and `kotlin-scripting-compiler-embeddable`
@@ -2608,6 +2631,12 @@ report:
 >   settings classpath, are no longer printed. Set `checkEmbeddedKotlin = true` to
 >   print them, or pass `--check-embedded-kotlin` for a single run (see
 >   [Embedded Kotlin](#embedded-kotlin)).
+> - The latest patch and minor versions are resolved as the latest version is,
+>   so a `rejectVersionIf` filter or `componentSelection` rule is called again
+>   for each of them.
+> - Credentials from a registered `java.net.Authenticator` are now sent with the
+>   Gradle update check to a host that responds with a 401, or a proxy that
+>   responds with a 407. A redirect to another scheme is no longer followed.
 
 ### v0.61.0
 
