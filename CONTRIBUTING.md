@@ -133,7 +133,7 @@ How a pull request lands:
 For maintainers. Releases are published to the [Gradle Plugin
 Portal](https://plugins.gradle.org/plugin/io.github.ben-manes.versions) by the
 [deploy workflow](.github/workflows/deploy.yml). Dispatching it at a tag is the
-whole release: it builds that tag, runs `publishPlugins` against it, waits for
+whole release: it tests that tag, runs `publishPlugins` against it, waits for
 the portal to serve the new version, and only then publishes the drafted
 release. Each step gates the one after it, so a failure stops short of
 notifying watchers.
@@ -226,11 +226,10 @@ Always create the GitHub release as a draft:
      seconds to register. It exits non-zero when the run fails.
    - The workflow refuses a ref whose `VERSION_NAME` does not match the tag,
      so a dispatch that forgets `--ref` fails instead of publishing `master`.
-   - It builds the tag, which is where the release gets its test run. The bump
-     lands by rebase, so the pull request's checks ran on a commit the tag does
-     not carry, and a commit touching only `README.md` or `CONTRIBUTING.md`
-     merged after them triggers no build workflow at all. A failure here leaves
-     the portal untouched: fix `master`, move the tag, and dispatch again.
+   - It runs the [build workflow](.github/workflows/build.yml) on the tag
+     before publishing, which runs the suite on every supported JDK and runs
+     the examples. Nothing is published after a failure here: fix `master`,
+     move the tag, and dispatch again.
    - It waits up to ten minutes for the portal to serve the version, since the
      portal takes a few minutes to index what `publishPlugins` uploaded.
    - It publishes the release last, which is what notifies watchers. A run that

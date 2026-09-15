@@ -4,11 +4,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  publish:
+  verify:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout Project
@@ -20,6 +17,26 @@ jobs:
             echo "::error::Refusing to publish: ref '${GITHUB_REF_NAME}' does not match $(grep ^VERSION_NAME= gradle.properties)"
             exit 1
           }
+
+  # The tag is tested here before publishing. The build of `master` may still be running when a
+  # release is dispatched, and no build runs for a change to only `README.md` or `CONTRIBUTING.md`.
+  build:
+    needs: verify
+    uses: ./.github/workflows/build.yml
+    permissions:
+      checks: write
+      pull-requests: write
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@v7
 
       - name: Configure JDK
         uses: actions/setup-java@v6
@@ -33,13 +50,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
         with:
           cache-provider: enhanced
-
-      # A rebase merge produces a commit no pull request check ran on, so a tag may
-      # reference a tree the build workflow has never run on. Build it here, where a failure
-      # still stops the publication. A test task is restored from the build cache rather than
-      # run again when a build on master already ran with the same inputs.
-      - name: Run build with caching enabled
-        run: ./gradlew clean build -s
 
       - name: Publish
         env:
