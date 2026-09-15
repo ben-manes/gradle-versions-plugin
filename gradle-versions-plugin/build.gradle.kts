@@ -121,7 +121,6 @@ dependencies {
   compileOnly(libs.gradle.api.minimum)
   compileOnly(libs.groovy.minimum)
   compileOnly(libs.kotlin.stdlib)
-  implementation(libs.okhttp)
   implementation(libs.moshi)
 
   testImplementation(localGroovy())
