@@ -291,6 +291,7 @@ final class AggregationSettingsSpec extends Specification {
     // so each row is printed only when its own inherited check applied. The getters must agree.
     result.output.contains('com.google.guava:guava')
     result.output.contains('backport-util-concurrent:backport-util-concurrent')
+    !result.output.contains('log4j-core')
     result.output.contains('readBack=true,true')
   }
 }
