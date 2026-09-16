@@ -618,8 +618,11 @@ If you
 transitive dependency versions with a `constraints` block, you can enable
 checking of constraints by specifying the `checkConstraints` attribute of the
 `dependencyUpdates` task. If you want to check external constraints (defined in
-init scripts or by Gradle itself) you can do so by specifying the
+init scripts or on a script classpath) you can do so by specifying the
 `checkBuildEnvironmentConstraints` attribute of the `dependencyUpdates` task.
+The `log4j-core` constraint that Gradle adds to every script classpath, and to
+the Scala plugin's `zinc` configuration, is not reported, as it cannot be
+changed in the build.
 
 The attribute covers the constraints a project declares, on its own
 configurations or on ones they extend. A project applying the

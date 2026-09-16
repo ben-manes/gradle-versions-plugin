@@ -461,13 +461,26 @@ final class ConstraintsSpec extends Specification {
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
-  def "Show updates for a dependencies constraint in init scripts"() {
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1128')
+  def 'Do not show updates for the constraint gradle adds to the buildscript when checking the build environment'() {
     given:
     def mavenRepoUrl = getClass().getResource('/maven/').toURI()
     ExpandoMetaClass.disableGlobally()
     buildFile = testProjectDir.newFile('build.gradle.kts')
     buildFile <<
       """
+        buildscript {
+            repositories {
+                maven {
+                    url = uri("${mavenRepoUrl}")
+                }
+            }
+            dependencies {
+                constraints {
+                    classpath("com.google.guava:guava:15.0")
+                }
+            }
+        }
         plugins {
             java
             id("io.github.ben-manes.versions")
@@ -489,17 +502,154 @@ final class ConstraintsSpec extends Specification {
       .withPluginClasspath()
       .build()
 
-    then:
-    result.output.contains('org.apache.logging.log4j:log4j-core [2.17.1 -> ')
+    then: 'the buildscript is checked, as its declared constraint is reported'
+    result.output.contains('com.google.guava:guava [15.0 -> ')
+    !result.output.contains('log4j-core')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1128')
+  def 'Show updates for the same constraint declared on a project configuration'() {
+    given:
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          constraints {
+            api('org.apache.logging.log4j:log4j-core') {
+              version {
+                require '2.17.1'
+                reject '[2.0, 2.17.1)'
+              }
+            }
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = TestKitRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then: 'the fixture tops out at 2.17.0, so the constraint is reported in the exceed section'
+    result.output.contains('org.apache.logging.log4j:log4j-core [2.17.1 <- 2.17.0]')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1128')
+  def 'Do not show updates for the same constraint declared on the buildscript'() {
+    given:
+    // A constraint declared with the same values on a script classpath is merged into Gradle's,
+    // which compares constraints by content, so there is nothing to report for it.
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        buildscript {
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+          dependencies {
+            constraints {
+              classpath 'com.google.guava:guava:15.0'
+              classpath('org.apache.logging.log4j:log4j-core') {
+                version {
+                  require '2.17.1'
+                  reject '[2.0, 2.17.1)'
+                }
+              }
+            }
+          }
+        }
+
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkBuildEnvironmentConstraints = true
+        }
+      """.stripIndent()
+
+    when:
+    def result = TestKitRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then: 'the buildscript is checked, as its other declared constraint is reported'
+    result.output.contains('com.google.guava:guava [15.0 -> ')
+    !result.output.contains('log4j-core')
+    result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1128')
+  def 'Do not show updates for the constraint gradle adds to the scala zinc configuration'() {
+    given:
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        plugins {
+          id 'scala'
+          id 'io.github.ben-manes.versions'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          constraints {
+            zinc 'com.google.guava:guava:15.0'
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = TestKitRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then: 'the zinc configuration is checked, as its declared constraint is reported'
+    result.output.contains('com.google.guava:guava [15.0 -> ')
+    !result.output.contains('log4j-core')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/756')
   def "Skip the buildscript of a project that declares no repository"() {
     given:
-    // Gradle constrains every project's buildscript classpath to its own log4j version. Neither
-    // the empty middle project nor the leaf declares a repository to resolve that against, so
-    // only the root, whose plugins block supplies the plugin management repositories, resolves it.
+    // A constraint is declared on the leaf's buildscript classpath with no repository to resolve it
+    // against, and no repository is declared in the empty middle project either, so only the root's
+    // buildscript classpath is resolved.
     testProjectDir.newFile('settings.gradle') << "include 'middle:leaf'"
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
@@ -508,6 +658,11 @@ final class ConstraintsSpec extends Specification {
           repositories {
             maven {
               url '${mavenRepoUrl}'
+            }
+          }
+          dependencies {
+            constraints {
+              classpath 'com.google.guava:guava:15.0'
             }
           }
         }
@@ -521,7 +676,18 @@ final class ConstraintsSpec extends Specification {
         }
       """.stripIndent()
     testProjectDir.newFolder('middle', 'leaf')
-    testProjectDir.newFile('middle/leaf/build.gradle') << "apply plugin: 'java'"
+    testProjectDir.newFile('middle/leaf/build.gradle') <<
+      """
+        buildscript {
+          dependencies {
+            constraints {
+              classpath 'com.google.guava:guava:15.0'
+            }
+          }
+        }
+
+        apply plugin: 'java'
+      """.stripIndent()
 
     when:
     def result = TestKitRunner.create()
@@ -531,7 +697,7 @@ final class ConstraintsSpec extends Specification {
       .build()
 
     then:
-    result.output.contains('org.apache.logging.log4j:log4j-core [2.17.1 -> ')
+    result.output.contains('com.google.guava:guava [15.0 -> ')
     !result.output.contains('Failed to determine the latest version')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
@@ -540,9 +706,7 @@ final class ConstraintsSpec extends Specification {
   def "Keep the buildscript of a root whose repositories come from plugin management"() {
     given:
     // The plugin management repositories land in the root's buildscript repositories, so a root
-    // that takes its plugins from a plugins block alone is queried rather than skipped. The fixture
-    // tops out at 2.17.0, below the 2.17.1 that Gradle constrains its classpath to, so the entry
-    // is reported in the exceed section, which is only printed when the query actually ran.
+    // that declares no buildscript repository of its own is queried rather than skipped.
     testProjectDir.newFile('settings.gradle') <<
       """
         pluginManagement {
@@ -556,6 +720,14 @@ final class ConstraintsSpec extends Specification {
     buildFile = testProjectDir.newFile('build.gradle')
     buildFile <<
       """
+        buildscript {
+          dependencies {
+            constraints {
+              classpath 'com.google.guava:guava:15.0'
+            }
+          }
+        }
+
         plugins {
           id 'io.github.ben-manes.versions'
         }
@@ -573,7 +745,7 @@ final class ConstraintsSpec extends Specification {
       .build()
 
     then:
-    result.output.contains('org.apache.logging.log4j:log4j-core [2.17.1 <- 2.17.0]')
+    result.output.contains('com.google.guava:guava [15.0 -> ')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
@@ -604,6 +776,11 @@ final class ConstraintsSpec extends Specification {
               url '${emptyRepo}'
             }
           }
+          dependencies {
+            constraints {
+              classpath 'com.google.guava:guava:15.0'
+            }
+          }
         }
 
         apply plugin: 'java'
@@ -618,7 +795,7 @@ final class ConstraintsSpec extends Specification {
 
     then:
     result.output.contains('Failed to determine the latest version')
-    result.output.contains('org.apache.logging.log4j:log4j-core')
+    result.output.contains('com.google.guava:guava')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 

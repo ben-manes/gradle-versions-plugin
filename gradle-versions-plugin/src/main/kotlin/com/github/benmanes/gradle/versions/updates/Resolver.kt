@@ -426,7 +426,7 @@ class Resolver internal constructor(
     // Common use case for dependency constraints is a java-platform BOM project or to control
     // version of transitive dependency.
     if (supportsConstraints(configuration)) {
-      for (dependency in configuration.allDependencyConstraints) {
+      for (dependency in reportedConstraints(configuration)) {
         // A constraint without a version is queried only where a current version was resolved for it.
         if (dependency !is DefaultProjectDependencyConstraint &&
           (dependency.version != null || Coordinate.keyFrom(dependency) in current.coordinates)
@@ -861,8 +861,8 @@ class Resolver internal constructor(
       }
     }
 
-    if (supportsConstraints(copy)) {
-      for (constraint in copy.allDependencyConstraints) {
+    if (supportsConstraints(configuration)) {
+      for (constraint in reportedConstraints(configuration)) {
         val coordinate = Coordinate.from(constraint)
         // Only add a constraint to the report if there is no dependency matching it, this means it
         // is targeting a transitive dependency or is part of a platform.
@@ -1153,7 +1153,7 @@ class Resolver internal constructor(
     }
     val dependencyKeys =
       configuration.allDependencies.filterIsInstance<ExternalDependency>().mapTo(hashSetOf()) { Coordinate.keyFrom(it) }
-    return configuration.allDependencyConstraints
+    return reportedConstraints(configuration)
       .filter { it !is DefaultProjectDependencyConstraint && it.version == null }
       .mapTo(hashSetOf()) { Coordinate.keyFrom(it) }
       .minus(dependencyKeys)
@@ -1303,7 +1303,16 @@ class Resolver internal constructor(
   }
 
   private fun supportsConstraints(configuration: Configuration): Boolean {
-    return checkConstraints && !configuration.allDependencyConstraints.isNullOrEmpty()
+    return checkConstraints && reportedConstraints(configuration).isNotEmpty()
+  }
+
+  // https://github.com/ben-manes/gradle-versions-plugin/issues/1128
+  // Gradle constrains every script classpath, and the Scala plugin's zinc configuration, to a
+  // log4j-core with its security fixes. That constraint cannot be changed in the build, so it is
+  // left out of the report.
+  private fun reportedConstraints(configuration: Configuration): List<DependencyConstraint> {
+    val constrainedByGradle = containerOf(configuration) !== project.configurations || configuration.name == "zinc"
+    return configuration.allDependencyConstraints.filterNot { constrainedByGradle && isGradleLog4jConstraint(it) }
   }
 
   private fun getResolvableDependencies(configuration: Configuration): List<Coordinate> {
@@ -1316,7 +1325,7 @@ class Resolver internal constructor(
         }
 
     if (supportsConstraints(configuration)) {
-      configuration.allDependencyConstraints.forEach { dependencyConstraint ->
+      reportedConstraints(configuration).forEach { dependencyConstraint ->
         coordinates.add(Coordinate.from(dependencyConstraint))
       }
     }
@@ -1339,6 +1348,33 @@ class Resolver internal constructor(
     private val PROJECT_PROPERTY = Regex("""\$\{project\.(groupId|artifactId|version)}""")
     private val ABSOLUTE_URL = Regex("""^[a-zA-Z][a-zA-Z0-9+.-]*://""")
     private val DESUGARED_CATEGORY = Attribute.of(Category.CATEGORY_ATTRIBUTE.name, String::class.java)
+
+    /**
+     * The version Gradle requires of log4j-core where it constrains it, and the range it rejects,
+     * read from the Gradle running the build since a direct reference is inlined at compile time.
+     * The values of the first Gradle to add the constraint are used where it no longer exposes them.
+     */
+    private val gradleLog4jVersions: Pair<String, String> by lazy {
+      val className = "org.gradle.internal.logging.util.Log4jBannedVersion"
+      try {
+        val bannedVersion = Class.forName(className)
+        Pair(
+          bannedVersion.getField("LOG4J2_CORE_REQUIRED_VERSION").get(null) as String,
+          bannedVersion.getField("LOG4J2_CORE_VULNERABLE_VERSION_RANGE").get(null) as String,
+        )
+      } catch (e: ReflectiveOperationException) {
+        Pair("2.17.1", "[2.0, 2.17.1)")
+      } catch (e: LinkageError) {
+        Pair("2.17.1", "[2.0, 2.17.1)")
+      }
+    }
+
+    /** Whether the constraint is the one Gradle adds to every script classpath and to `zinc`. */
+    private fun isGradleLog4jConstraint(constraint: DependencyConstraint): Boolean =
+      constraint.group == "org.apache.logging.log4j" &&
+        constraint.name == "log4j-core" &&
+        constraint.versionConstraint.requiredVersion == gradleLog4jVersions.first &&
+        constraint.versionConstraint.rejectedVersions == listOf(gradleLog4jVersions.second)
 
     /** Whether the category is that of a regular or enforced platform. */
     private fun isPlatformCategory(category: String?): Boolean =

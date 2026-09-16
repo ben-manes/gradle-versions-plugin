@@ -849,9 +849,9 @@ private fun registerProducer(
               null
             }
           // A project that declares no buildscript repository has nothing to resolve its script
-          // classpath against, so querying it can only fail. Gradle constrains every classpath to
-          // its own log4j version, which such a project would otherwise report as unresolvable.
-          // The settings classpath is kept either way, as it resolves against its own repositories.
+          // classpath against, so querying it can only fail, and anything on it would be reported as
+          // unresolvable. The settings classpath is kept either way, as it resolves against its own
+          // repositories.
           // https://github.com/ben-manes/gradle-versions-plugin/issues/756
           val ownConfigurations =
             if (project.buildscript.repositories.isEmpty()) {
