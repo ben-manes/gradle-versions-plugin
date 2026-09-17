@@ -343,7 +343,7 @@ command line option, since no command line can express the logic.
 | [`preReleaseVersionIf`](#filtering-unstable-versions) | a predicate over a version string | nothing added | |
 | [`exemptFromBuiltInChecksIf`](#filtering-unstable-versions) | a predicate over the candidate | nothing exempt | |
 | [`rejectVersionIf`](#filtering-unstable-versions) | a predicate over the candidate | nothing rejected | |
-| [`outputFormatter`](#report-format) | `text`, `json`, `xml`, `html`, `problems`, a comma separated list of those, or a `Reporter` | `text` | `--output-formatter` |
+| [`outputFormatter`](#report-format) | `plain`, `json`, `xml`, `html`, `problems`, a comma separated list of those, or a `Reporter` | `plain` | `--output-formatter` |
 | [`outputDir`](#outputdir) | a directory path | `<buildDirectory>/dependencyUpdates` | `--output-dir` |
 | [`reportfileName`](#reportfilename) | a file name, without the extension | `report` | `--report-file-name` |
 | [`gradleVersionsApiBaseUrl`](#gradle-versions-api-base-url) | a URL | `https://services.gradle.org/versions/` | `--gradle-versions-api-base-url` |
@@ -1448,7 +1448,7 @@ name.
 The task property `outputFormatter` controls the report output format. The
 following values are supported:
 
-* `"plain"`: format output file as plain text (default)
+* `"plain"`: format output file as plain text (default), also accepted as `"text"`
 * `"json"`: format output file as json text
 * `"xml"`: format output file as xml text, can be used by other plugins (e.g. sonar)
 * `"html"`: format output file as html
