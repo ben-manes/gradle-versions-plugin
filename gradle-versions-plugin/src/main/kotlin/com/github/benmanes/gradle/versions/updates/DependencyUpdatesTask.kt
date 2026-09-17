@@ -186,9 +186,9 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
 
   /**
    * Sets an output formatting for the task result. It can either be a [String] referencing one of
-   * the existing output formatters (i.e. "text", "xml", "json", "html" or "problems"), a [String]
+   * the existing output formatters (i.e. "plain", "json", "xml", "html", or "problems"), a [String]
    * containing a comma-separated list with any combination of the existing output formatters (e.g.
-   * "xml,json"), or a [Reporter]/a [Closure] with a custom output formatting implementation.
+   * "json,xml"), or a [Reporter]/a [Closure] with a custom output formatting implementation.
    *
    * Use the [outputFormatter] function as an alternative to set a custom output formatting using
    * the trailing closure/lambda syntax.
