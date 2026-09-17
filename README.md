@@ -1464,10 +1464,10 @@ those later versions is listed as a solution. The lines printed under the row ar
 included as the problem's details: the `because` reason, the project URL, and
 where the dependency comes from. In a report of more than one project, the
 projects that declare the dependency are always listed there, not only where
-their versions differ. The problems are printed on the console under
-`--warning-mode all`. The Problems API is incubating and needs Gradle 8.13 or
-later, so on an older Gradle the format is skipped with a message at the info log
-level.
+their versions differ. On Gradle 9.3 or later, the problems are also printed on
+the console under `--warning-mode all`. The Problems API is incubating and needs
+Gradle 8.13 or later, so on an older Gradle the format is skipped with a message
+at the info log level.
 
 The console summary is printed at the lifecycle log level, so `--quiet` suppresses
 it. A file format's report is still written; read it, or drop `--quiet`, if a
