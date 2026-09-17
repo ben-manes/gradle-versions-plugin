@@ -283,10 +283,17 @@ class DependencyUpdatesReporter(
       "json" -> JsonReporter(projectPath, revision, gradleReleaseChannel)
       "xml" -> XmlReporter(projectPath, revision, gradleReleaseChannel)
       "html" -> HtmlReporter(projectPath, revision, gradleReleaseChannel)
-      else ->
+      else -> {
+        if (formatterOriginal.trim() !in setOf("plain", "text")) {
+          logger.warn(
+            "Unknown output formatter '${formatterOriginal.trim()}'. Writing the plain text report instead. " +
+              "The built-in formatters are 'plain', 'json', 'xml', 'html', and 'problems'.",
+          )
+        }
         PlainTextReporter(projectPath, revision, gradleReleaseChannel, logger.isInfoEnabled).also {
           it.leftOutEmbeddedKotlin = leftOutEmbeddedKotlin
         }
+      }
     }
   }
 

@@ -9,6 +9,7 @@ import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import spock.lang.Issue
 import spock.lang.Specification
+import spock.lang.Unroll
 
 final class OutputFormatterSpec extends Specification {
   @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
@@ -143,6 +144,59 @@ final class OutputFormatterSpec extends Specification {
     then:
     reportFile.exists()
     result.task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  @Unroll
+  def 'outputFormatter #formatter - warns only for a name that is not a built-in formatter'() {
+    given:
+    def reportFile = new File(reportFolder, "report.txt")
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'java'
+        apply plugin: 'io.github.ben-manes.versions'
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation 'com.google.inject:guice:2.0'
+        }
+
+        dependencyUpdates {
+          outputFormatter = '${formatter}'
+          checkForGradleUpdate = false // future proof tests from breaking
+        }
+        """.stripIndent()
+
+    when:
+    def result = TestKitRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .build()
+
+    then:
+    reportFile.exists()
+    result.output.contains("Unknown output formatter 'Problems'") == warned
+    result.output.contains('Unknown output formatter') == warned
+    result.task(':dependencyUpdates').outcome == SUCCESS
+
+    where:
+    formatter       || warned
+    'Problems'      || true
+    'json,Problems' || true
+    'plain'         || false
+    'text'          || false
   }
 
   def 'outputFormatter plain - outputs text output'() {
