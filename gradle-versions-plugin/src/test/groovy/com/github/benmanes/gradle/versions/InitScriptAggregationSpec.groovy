@@ -11,6 +11,7 @@ import org.junit.rules.TemporaryFolder
 import spock.lang.Issue
 import spock.lang.Requires
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  * An init script injects the plugin into every build, so it reaches builds that apply the plugin
@@ -25,7 +26,7 @@ final class InitScriptAggregationSpec extends Specification {
   @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
   @Rule final TemporaryFolder initScriptDir = new TemporaryFolder()
   private String mavenRepoUrl
-  private File initScript
+  private Map<String, File> initScripts
 
   def 'setup'() {
     mavenRepoUrl = getClass().getResource('/maven/').toURI()
@@ -38,19 +39,32 @@ final class InitScriptAggregationSpec extends Specification {
       .collect { copyOf(it) }
       .collect { "'${it.absolutePath.replace('\\', '/')}'" }
       .join(', ')
-    initScript = initScriptDir.newFile('versions.init.gradle')
-    initScript <<
-      """
-        initscript {
-          dependencies {
-            classpath files(${classpath})
+    // The init script in the README, and the earlier beforeSettings one that builds may still run.
+    initScripts = [
+      settingsEvaluated: """
+        settingsEvaluated { settings ->
+          if (!settings.pluginManager.hasPlugin('io.github.ben-manes.versions.settings')) {
+            settings.pluginManager.apply(com.github.benmanes.gradle.versions.VersionsSettingsPlugin)
           }
         }
-
+      """,
+      beforeSettings: """
         beforeSettings { settings ->
           settings.pluginManager.apply(com.github.benmanes.gradle.versions.VersionsSettingsPlugin)
         }
-      """.stripIndent()
+      """,
+    ].collectEntries { name, body ->
+      def script = initScriptDir.newFile("${name}.init.gradle")
+      script <<
+        """
+          initscript {
+            dependencies {
+              classpath files(${classpath})
+            }
+          }
+        """.stripIndent() + body.stripIndent()
+      [(name): script]
+    }
 
     testProjectDir.newFolder('app')
     testProjectDir.newFile('app/build.gradle') <<
@@ -102,20 +116,25 @@ final class InitScriptAggregationSpec extends Specification {
       .build()
   }
 
-  def 'Reports every project when only the init script applies the plugin'() {
+  @Unroll
+  def 'Reports every project when only an init script from #recipe applies the plugin'() {
     given:
     testProjectDir.newFile('settings.gradle') << "include 'app'"
 
     when:
-    def result = run('dependencyUpdates', '--init-script', initScript.absolutePath)
+    def result = run('dependencyUpdates', '--init-script', initScripts[recipe].absolutePath)
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     !result.output.contains('The dependency updates report is missing')
+
+    where:
+    recipe << ['settingsEvaluated', 'beforeSettings']
   }
 
-  def 'Reports when the settings script applies the plugin the init script already applied'() {
+  @Unroll
+  def 'Reports when the settings script applies the plugin and an init script from #recipe runs'() {
     given:
     testProjectDir.newFile('settings.gradle') <<
       """
@@ -139,7 +158,7 @@ final class InitScriptAggregationSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = run('dependencyUpdates', '--init-script', initScript.absolutePath)
+    def result = run('dependencyUpdates', '--init-script', initScripts[recipe].absolutePath)
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
@@ -150,9 +169,13 @@ final class InitScriptAggregationSpec extends Specification {
     result.output.contains(
       'com.example.settings-demo:com.example.settings-demo.gradle.plugin [1.0 -> 2.0]')
     !result.output.contains('The dependency updates report is missing')
+
+    where:
+    recipe << ['settingsEvaluated', 'beforeSettings']
   }
 
-  def 'Reports when a project applies the contributor plugin the init script already applied'() {
+  @Unroll
+  def 'Reports when a project applies the contributor plugin and an init script from #recipe runs'() {
     given:
     testProjectDir.newFile('settings.gradle') << "include 'app'"
     new File(testProjectDir.root, 'app/build.gradle').text =
@@ -174,20 +197,24 @@ final class InitScriptAggregationSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = run('dependencyUpdates', '--init-script', initScript.absolutePath)
+    def result = run('dependencyUpdates', '--init-script', initScripts[recipe].absolutePath)
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     !result.output.contains('The dependency updates report is missing')
+
+    where:
+    recipe << ['settingsEvaluated', 'beforeSettings']
   }
 
-  def 'Reports under isolated projects when only the init script applies the plugin'() {
+  @Unroll
+  def 'Reports under isolated projects when only an init script from #recipe applies the plugin'() {
     given:
     testProjectDir.newFile('settings.gradle') << "include 'app'"
 
     when:
-    def result = run('dependencyUpdates', '--init-script', initScript.absolutePath,
+    def result = run('dependencyUpdates', '--init-script', initScripts[recipe].absolutePath,
       '-Dorg.gradle.isolated-projects=true', '--configuration-cache', '--parallel')
 
     then:
@@ -195,5 +222,36 @@ final class InitScriptAggregationSpec extends Specification {
     result.output.contains('Isolated Projects is an incubating feature.')
     result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
     !result.output.contains('The dependency updates report is missing')
+
+    where:
+    recipe << ['settingsEvaluated', 'beforeSettings']
+  }
+
+  def 'Configures the task by type when the settings script applies the plugin'() {
+    given:
+    testProjectDir.newFile('settings.gradle') <<
+      """
+        plugins {
+          id 'io.github.ben-manes.versions.settings'
+        }
+
+        include 'app'
+      """.stripIndent()
+    testProjectDir.newFile('build.gradle') <<
+      """
+        import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+        tasks.withType(DependencyUpdatesTask).configureEach {
+          rejectVersionIf { it.candidate.version.startsWith('3') }
+        }
+      """.stripIndent()
+
+    when:
+    def result = run('dependencyUpdates', '--init-script', initScripts.settingsEvaluated.absolutePath)
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2]')
+    !result.output.contains('3.1')
   }
 }

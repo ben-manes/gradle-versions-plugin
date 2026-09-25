@@ -2502,7 +2502,8 @@ subprojects.
 You can also transparently add the plugin to every Gradle project that you run
 via a
 [Gradle init script](https://docs.gradle.org/current/userguide/init_scripts.html).
-Apply the settings plugin from `beforeSettings`, which covers every project of
+Apply the settings plugin once the settings script has been evaluated, and only
+if the settings script hasn't applied it already. This covers every project of
 the build and works under isolated projects (see [Isolated
 projects](#isolated-projects)). A `dependencyUpdates` task is registered in
 every build that runs, so an included build is reported without being modified
@@ -2526,8 +2527,10 @@ initscript {
   }
 }
 
-gradle.beforeSettings(Action<Settings> {
-  pluginManager.apply(VersionsSettingsPlugin::class.java)
+gradle.settingsEvaluated(Action<Settings> {
+  if (!pluginManager.hasPlugin("io.github.ben-manes.versions.settings")) {
+    pluginManager.apply(VersionsSettingsPlugin::class.java)
+  }
 })
 
 gradle.rootProject(Action<Project> {
@@ -2557,8 +2560,10 @@ initscript {
   }
 }
 
-beforeSettings { settings ->
-  settings.pluginManager.apply(VersionsSettingsPlugin)
+settingsEvaluated { settings ->
+  if (!settings.pluginManager.hasPlugin('io.github.ben-manes.versions.settings')) {
+    settings.pluginManager.apply(VersionsSettingsPlugin)
+  }
 }
 
 gradle.rootProject {
@@ -2573,14 +2578,90 @@ gradle.rootProject {
 A script has no implicit import for the plugin's types, so the imports at the
 top of these snippets are required to reference them by their simple names.
 
-An init script resolves the plugin on a classpath of its own, so a build that
-applies the plugin itself ends up with a second copy of it. An init script runs
-before the build's own scripts, so its copy is the one that registers the task
-and the build's copy does nothing, which leaves such a build working as it did.
-For the same reason the plugin is absent from the project's own classpath, so a
-`plugins` block that requests it alongside an init script needs a version,
-unlike one in a build whose settings script applies the settings plugin (see
-[Other ways to apply the plugin](#other-ways-to-apply-the-plugin)).
+The task configuration in the init script is applied only where the plugin isn't
+applied in the build itself. Where the settings plugin is applied in the
+settings script, configure the task in the build's own scripts, as usual.
+
+#### `io.github.ben-manes.versions` applied in the root project
+
+The init script runs before the root build script's `plugins` block, so there is
+a second copy of the plugin. The task is registered by the init script's copy,
+and configuring it by type fails in most builds:
+
+<details open>
+<summary>Kotlin</summary>
+
+"build.gradle.kts":
+```kotlin
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+plugins {
+  id("io.github.ben-manes.versions") version "$version"
+}
+
+// Fails with "is not a subclass of the given type"
+tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+  revision = "release"
+}
+
+// Matches no task, so the configuration is not applied
+tasks.withType<DependencyUpdatesTask>().configureEach {
+  revision = "release"
+}
+```
+
+</details>
+
+<details>
+<summary>Groovy</summary>
+
+"build.gradle":
+```groovy
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
+plugins {
+  id "io.github.ben-manes.versions" version "$version"
+}
+
+// Works, since the type isn't referenced
+tasks.named("dependencyUpdates").configure {
+  revision = 'release'
+}
+
+// Matches no task, so the configuration is not applied
+tasks.withType(DependencyUpdatesTask).configureEach {
+  revision = 'release'
+}
+```
+
+</details>
+
+To fix it, move the plugin to the settings script:
+
+1. Remove `io.github.ben-manes.versions` from the root build script's `plugins`
+   block.
+2. Apply the settings plugin in the settings script (see [Applying the
+   plugin](#applying-the-plugin)).
+
+   "settings.gradle.kts":
+   ```kotlin
+   plugins {
+     id("io.github.ben-manes.versions.settings") version "$version"
+   }
+   ```
+
+   "settings.gradle":
+   ```groovy
+   plugins {
+     id "io.github.ben-manes.versions.settings" version "$version"
+   }
+   ```
+
+3. Leave the task configuration in the root build script as it is. The init
+   script now skips the build, so the task and the root build script share one
+   copy of `DependencyUpdatesTask`.
+
+Where the settings plugin can't be used, run the build without the init script.
 
 ## Samples
 
@@ -2923,7 +3004,7 @@ In v0.57.0 the settings plugin can be applied from an init script:
 > An init script that applies `VersionsPlugin` to `allprojects` reports per
 > project rather than once, omits the plugins that the settings script declares,
 > and fails under isolated projects. Apply the settings plugin from
-> `beforeSettings` instead (see
+> `settingsEvaluated` instead (see
 > [Initialization script](#initialization-script)).
 
 ### v0.55.0
