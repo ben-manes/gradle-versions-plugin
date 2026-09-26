@@ -32,8 +32,8 @@ subprojects {
   tasks.withType<Jar>().configureEach {
     manifest {
       attributes(
-        "Implementation-Title" to properties["POM_NAME"].toString(),
-        "Implementation-Version" to properties["VERSION_NAME"].toString(),
+        "Implementation-Title" to project.property("POM_NAME").toString(),
+        "Implementation-Version" to project.property("VERSION_NAME").toString(),
         "Built-By" to System.getProperty("user.name"),
         "Built-JDK" to System.getProperty("java.version"),
         "Built-Gradle" to gradle.gradleVersion,
