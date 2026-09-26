@@ -12,8 +12,8 @@ plugins {
   groovy
 }
 
-group = properties["GROUP"].toString()
-version = properties["VERSION_NAME"].toString()
+group = property("GROUP").toString()
+version = property("VERSION_NAME").toString()
 
 // The plugin runs in every Gradle from the oldest supported release on, so it compiles against that
 // release's API in place of the API of the Gradle running this build, which `java-gradle-plugin`
@@ -87,7 +87,7 @@ tasks.register("testOn$buildJdk") {
 
 // A build resolves the plugin's dependencies from its published metadata, which TestKit's plugin
 // classpath leaves out, so a spec that needs them resolves the plugin from this repository instead.
-val pluginId = properties["PLUGIN_NAME"].toString()
+val pluginId = property("PLUGIN_NAME").toString()
 val pluginModule = "${project.group.toString().replace('.', '/')}/${project.name}"
 val pluginVersion = version.toString()
 val specsRepositoryDir = layout.buildDirectory.dir("specs-repository")
@@ -168,14 +168,14 @@ dependencies {
 }
 
 gradlePlugin {
-  website.set(properties["POM_URL"].toString())
-  vcsUrl.set(properties["POM_SCM_URL"].toString())
+  website.set(property("POM_URL").toString())
+  vcsUrl.set(property("POM_SCM_URL").toString())
   plugins {
     create("versionsPlugin") {
-      id = properties["PLUGIN_NAME"].toString()
-      implementationClass = properties["PLUGIN_NAME_CLASS"].toString()
-      displayName = properties["POM_NAME"].toString()
-      description = properties["POM_DESCRIPTION"].toString()
+      id = property("PLUGIN_NAME").toString()
+      implementationClass = property("PLUGIN_NAME_CLASS").toString()
+      displayName = property("POM_NAME").toString()
+      description = property("POM_DESCRIPTION").toString()
       tags.set(listOf("dependencies", "versions", "updates"))
       compatibility {
         features {
@@ -185,10 +185,10 @@ gradlePlugin {
       }
     }
     create("legacyVersionsPlugin") {
-      id = properties["PLUGIN_LEGACY_NAME"].toString()
-      implementationClass = properties["PLUGIN_LEGACY_NAME_CLASS"].toString()
-      displayName = properties["POM_LEGACY_NAME"].toString()
-      description = properties["POM_LEGACY_DESCRIPTION"].toString()
+      id = property("PLUGIN_LEGACY_NAME").toString()
+      implementationClass = property("PLUGIN_LEGACY_NAME_CLASS").toString()
+      displayName = property("POM_LEGACY_NAME").toString()
+      description = property("POM_LEGACY_DESCRIPTION").toString()
       tags.set(listOf("dependencies", "versions", "updates"))
       compatibility {
         features {
@@ -198,10 +198,10 @@ gradlePlugin {
       }
     }
     create("versionsContributorPlugin") {
-      id = properties["PLUGIN_CONTRIBUTOR_NAME"].toString()
-      implementationClass = properties["PLUGIN_CONTRIBUTOR_NAME_CLASS"].toString()
-      displayName = properties["POM_CONTRIBUTOR_NAME"].toString()
-      description = properties["POM_CONTRIBUTOR_DESCRIPTION"].toString()
+      id = property("PLUGIN_CONTRIBUTOR_NAME").toString()
+      implementationClass = property("PLUGIN_CONTRIBUTOR_NAME_CLASS").toString()
+      displayName = property("POM_CONTRIBUTOR_NAME").toString()
+      description = property("POM_CONTRIBUTOR_DESCRIPTION").toString()
       tags.set(listOf("dependencies", "versions", "updates"))
       compatibility {
         features {
@@ -211,10 +211,10 @@ gradlePlugin {
       }
     }
     create("versionsSettingsPlugin") {
-      id = properties["PLUGIN_SETTINGS_NAME"].toString()
-      implementationClass = properties["PLUGIN_SETTINGS_NAME_CLASS"].toString()
-      displayName = properties["POM_SETTINGS_NAME"].toString()
-      description = properties["POM_SETTINGS_DESCRIPTION"].toString()
+      id = property("PLUGIN_SETTINGS_NAME").toString()
+      implementationClass = property("PLUGIN_SETTINGS_NAME_CLASS").toString()
+      displayName = property("POM_SETTINGS_NAME").toString()
+      description = property("POM_SETTINGS_DESCRIPTION").toString()
       tags.set(listOf("dependencies", "versions", "updates"))
       compatibility {
         features {
