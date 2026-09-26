@@ -9,7 +9,7 @@ import spock.util.environment.Jvm
  */
 final class GradleVersions {
   /** The latest Gradle release, which every spec that exercises the Gradle 9 line runs against. */
-  static final String CURRENT = '9.7.1'
+  static final String CURRENT = '9.8.0'
 
   private static final GradleVersion GRADLE_9 = GradleVersion.version('9.0')
   private static final GradleVersion FIRST_ON_JAVA_25 = GradleVersion.version('9.1.0')
