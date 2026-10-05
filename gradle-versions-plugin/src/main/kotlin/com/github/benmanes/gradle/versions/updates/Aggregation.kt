@@ -773,6 +773,8 @@ private fun partialFileName(path: String): String {
   return "$name-${Integer.toHexString(path.hashCode())}.json"
 }
 
+private const val DESTINATION_PROPERTY = "com.github.benmanes.gradle.versions.partialDestination"
+
 /**
  * A project's producer task and the file it writes.
  *
@@ -796,11 +798,13 @@ private fun registerProducer(
 ): Producer {
   val tasks = project.tasks
   if (tasks.names.contains(PARTIAL_TASK_NAME)) {
-    // Registered by another copy of the plugin, whose destination only the task itself carries, so
-    // it is created here while the project is still being configured rather than left for whichever
-    // thread queries the artifacts first.
-    val existing = tasks.named(PARTIAL_TASK_NAME, DependencyUpdatesPartialTask::class.java)
-    return Producer(existing, existing.get().outputFile)
+    // Reached when the plugin is applied to a project that the root already aggregates. The
+    // destination is read from the project rather than the task, which reading would create.
+    @Suppress("UNCHECKED_CAST")
+    return Producer(
+      tasks.named(PARTIAL_TASK_NAME, DependencyUpdatesPartialTask::class.java),
+      project.extensions.extraProperties.get(DESTINATION_PROPERTY) as Provider<RegularFile>,
+    )
   }
   // Read here so that the destination below captures these rather than the project, which the
   // configuration cache cannot serialize.
@@ -840,9 +844,14 @@ private fun registerProducer(
       // aggregates, as one that only contributes to another build's report, keeps its own.
       service.get().partialsDirectory?.get()?.file(partialFileName(path)) ?: ownFile.get()
     }
+  project.extensions.extraProperties.set(DESTINATION_PROPERTY, destination)
   val partial =
     tasks.register(PARTIAL_TASK_NAME, DependencyUpdatesPartialTask::class.java) { task ->
-      task.outputFile.convention(destination)
+      // The destination is what the project publishes, so a task that wrote anywhere else would
+      // leave the report reading a file that was never written. It is set rather than left as a
+      // convention, as an action on the container that precedes this one may have set another.
+      task.outputFile.set(destination)
+      task.outputFile.disallowChanges()
       task.partialJson.set(
         // Realized after every project has been evaluated, so that the settings are read as last
         // configured and the container contains the configurations that late plugins added.

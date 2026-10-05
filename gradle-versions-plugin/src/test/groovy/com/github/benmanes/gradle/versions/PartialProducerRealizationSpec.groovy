@@ -73,4 +73,63 @@ final class PartialProducerRealizationSpec extends Specification {
     result.output.contains('PUBLISHED_FILES: 5')
     result.output.contains('REALIZED_BY_ARTIFACT_QUERY: []')
   }
+
+  def 'Applying the plugin to an aggregated project does not create the producer'() {
+    given:
+    new File(testProjectDir.root, 'build.gradle') <<
+      """
+        subprojects { apply plugin: 'io.github.ben-manes.versions' }
+      """.stripIndent()
+
+    when:
+    def result = run('help')
+
+    then:
+    result.output.contains('PUBLISHED_FILES: 5')
+    result.output.contains('REALIZED_BY_ARTIFACT_QUERY: []')
+  }
+
+  def 'A producer cannot be pointed away from the file that its project publishes'() {
+    given:
+    new File(testProjectDir.root, 'app/build.gradle') <<
+      """
+        tasks.named('partialDependencyUpdates') {
+          outputFile = layout.buildDirectory.file('custom.json')
+        }
+      """.stripIndent()
+
+    when:
+    def result = TestKitRunner.create()
+      .withGradleVersion(GradleVersions.CURRENT)
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates')
+      .withPluginClasspath()
+      .buildAndFail()
+
+    then:
+    result.output.contains("property 'outputFile' cannot be changed any further")
+  }
+
+  def 'A producer writes the file that its project publishes whatever was set beforehand'() {
+    given:
+    // An action on the container that precedes the registration runs ahead of the one that the
+    // task was registered with.
+    new File(testProjectDir.root, 'build.gradle').text =
+      "plugins { id 'io.github.ben-manes.versions' apply false }"
+    new File(testProjectDir.root, 'app/build.gradle') <<
+      """
+        tasks.configureEach {
+          if (it.name == 'partialDependencyUpdates') {
+            it.outputFile = layout.buildDirectory.file('custom.json')
+          }
+        }
+        apply plugin: 'io.github.ben-manes.versions'
+      """.stripIndent()
+
+    when:
+    run(':app:dependencyUpdates')
+
+    then:
+    !new File(testProjectDir.root, 'app/build/custom.json').exists()
+  }
 }
