@@ -3,6 +3,7 @@ package com.github.benmanes.gradle.versions.updates
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentFilter
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.withoutEnforcedPlatformStrictly
 import groovy.xml.XmlSlurper
 import groovy.xml.slurpersupport.GPathResult
 import groovy.xml.slurpersupport.NodeChildren
@@ -1049,7 +1050,10 @@ class Resolver internal constructor(
               moduleVersion.name,
               moduleVersion.version,
               userReason = null,
-              versionConstraint = requested?.versionConstraint,
+              versionConstraint =
+                requested?.versionConstraint?.let {
+                  if (isEnforcedPlatform(dependency.resolvedVariant)) withoutEnforcedPlatformStrictly(it) else it
+                },
             ),
           )
           if (importer != null) {
@@ -1384,12 +1388,13 @@ class Resolver internal constructor(
      * Whether the variant is a platform's. A local project's variant has the typed [Category]
      * attribute while a published module's is desugared to a string, so both forms are read.
      */
-    private fun isPlatform(variant: ResolvedVariantResult): Boolean {
-      val category =
-        variant.attributes.getAttribute(Category.CATEGORY_ATTRIBUTE)?.name
-          ?: variant.attributes.getAttribute(DESUGARED_CATEGORY)
-      return isPlatformCategory(category)
-    }
+    private fun isPlatform(variant: ResolvedVariantResult): Boolean = isPlatformCategory(categoryOf(variant))
+
+    private fun isEnforcedPlatform(variant: ResolvedVariantResult): Boolean = categoryOf(variant) == Category.ENFORCED_PLATFORM
+
+    private fun categoryOf(variant: ResolvedVariantResult): String? =
+      variant.attributes.getAttribute(Category.CATEGORY_ATTRIBUTE)?.name
+        ?: variant.attributes.getAttribute(DESUGARED_CATEGORY)
 
     /**
      * Whether the dependency declares a platform. A declaration created by `platform(...)` or

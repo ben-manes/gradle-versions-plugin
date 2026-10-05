@@ -1250,6 +1250,67 @@ final class CompositeBuildSpec extends Specification {
     boms[0].platformProjects == [':platform-a']
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1141')
+  def 'Reports a later version of an enforcedPlatform that an included build platform imports'() {
+    given:
+    testProjectDir.newFile('settings.gradle') << "includeBuild 'platforms'"
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'java-library'
+          id 'io.github.ben-manes.versions'
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation platform('com.example:platforms:1.0')
+          implementation 'com.google.inject:guice'
+        }
+
+        tasks.dependencyUpdates {
+          checkConstraints = true
+        }
+      """.stripIndent()
+    includedBuild(
+      'platforms',
+      """
+        plugins {
+          id 'java-platform'
+        }
+
+        group = 'com.example'
+        version = '1.0'
+
+        javaPlatform {
+          allowDependencies()
+        }
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          api enforcedPlatform('com.example:external-bom:1.0')
+        }
+      """.stripIndent(),
+    )
+
+    when:
+    def result = run('dependencyUpdates')
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.example:external-bom [1.0 -> 2.0]')
+    result.output.contains('imported by the platform :platforms\n')
+  }
+
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
   def 'Skips the platform scan when the imported platform cannot be resolved'() {
     given:

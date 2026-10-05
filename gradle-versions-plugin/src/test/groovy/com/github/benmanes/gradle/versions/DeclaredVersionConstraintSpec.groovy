@@ -859,7 +859,10 @@ final class DeclaredVersionConstraintSpec extends Specification {
     result.output.contains('constraint=null')
   }
 
-  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
+  @Issue([
+    'https://github.com/ben-manes/gradle-versions-plugin/issues/402',
+    'https://github.com/ben-manes/gradle-versions-plugin/issues/1141',
+  ])
   @Unroll
   def 'a module the platform supplies the version for is bounded by the platform, #label'() {
     given: 'log4j-core is declared with no version and its version comes from the platform'
@@ -883,14 +886,104 @@ final class DeclaredVersionConstraintSpec extends Specification {
     !report().outdated.dependencies*.name.contains('log4j-core')
 
     and: 'a platform declared as an external module still reports its own available upgrade'
-    (platformReportsOwnUpgrade
-      ? report().outdated.dependencies*.name.contains('log4j')
-      : !report().outdated.dependencies*.name.contains('log4j'))
+    report().outdated.dependencies*.name.contains('log4j')
 
     where:
-    platform                                                    | platformReportsOwnUpgrade | label
-    "platform('org.apache.logging.log4j:log4j:2.16.0')"         | true                       | 'platform()'
-    "enforcedPlatform('org.apache.logging.log4j:log4j:2.16.0')" | false                      | 'enforcedPlatform()'
+    platform                                                    | label
+    "platform('org.apache.logging.log4j:log4j:2.16.0')"         | 'platform()'
+    "enforcedPlatform('org.apache.logging.log4j:log4j:2.16.0')" | 'enforcedPlatform()'
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1141')
+  def 'a range declared on an enforcedPlatform still bounds the platform'() {
+    given: 'the platform resolves to 2.16.0, and 2.17.0 is outside the range'
+    writeBuildFile(
+      """
+        api enforcedPlatform('org.apache.logging.log4j:log4j:[2.16.0, 2.17.0[')
+        api 'org.apache.logging.log4j:log4j-core'
+      """,
+      '')
+
+    when:
+    run()
+
+    then: 'the platform is reported as current'
+    report().current.dependencies*.name.contains('log4j')
+    !report().outdated.dependencies*.name.contains('log4j')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1141')
+  def 'the strictly Gradle adds for an enforcedPlatform is left out of the constraint a rule reads'() {
+    given:
+    writeBuildFile(
+      "api enforcedPlatform('org.apache.logging.log4j:log4j:2.16.0')",
+      """
+        rejectVersionIf {
+          println "PROBE \${candidate.module} strict='\${versionConstraint?.strictVersion}' " +
+            "required='\${versionConstraint?.requiredVersion}'"
+          return false
+        }
+      """)
+
+    when:
+    def result = run()
+
+    then:
+    result.output.contains("PROBE log4j strict='' required='2.16.0'")
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1141')
+  def 'an exact strictly written on an enforcedPlatform is left out as the one Gradle adds is'() {
+    given: 'a strictly at the version declared, which reads the same as the one Gradle adds'
+    writeBuildFile(
+      """
+        api(enforcedPlatform('org.apache.logging.log4j:log4j:2.16.0')) {
+          version {
+            strictly '2.16.0'
+          }
+        }
+      """,
+      '')
+
+    when:
+    run()
+
+    then:
+    report().outdated.dependencies*.name.contains('log4j')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1141')
+  def 'an exact strictly written on a platform still bounds the platform'() {
+    given:
+    writeBuildFile(
+      """
+        api(platform('org.apache.logging.log4j:log4j')) {
+          version {
+            strictly '2.16.0'
+          }
+        }
+      """,
+      '')
+
+    when:
+    run()
+
+    then:
+    report().current.dependencies*.name.contains('log4j')
+    !report().outdated.dependencies*.name.contains('log4j')
+  }
+
+  @IgnoreIf({ !GradleVersions.drivenBy('8.4') })
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1141')
+  def 'a later version of an enforcedPlatform is reported on Gradle 8.4'() {
+    given:
+    writeBuildFile("api enforcedPlatform('org.apache.logging.log4j:log4j:2.16.0')", '')
+
+    when:
+    runOn('8.4')
+
+    then:
+    report().outdated.dependencies*.name.contains('log4j')
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/402')
