@@ -4,6 +4,7 @@ import com.github.benmanes.gradle.versions.updates.VersionMapping
 import com.github.benmanes.gradle.versions.updates.VersionStability
 import org.gradle.api.artifacts.ComponentSelection
 import org.gradle.api.artifacts.VersionConstraint
+import org.gradle.api.internal.artifacts.dependencies.DefaultImmutableVersionConstraint
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionComparator
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionSelectorScheme
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
@@ -137,6 +138,16 @@ ComponentSelectionWithCurrent{
 }
 
 /**
+ * Returns the constraint without the `strictly` that `enforcedPlatform(...)` adds at the version
+ * declared, so that a later version of the platform is still reported, as it is for
+ * `platform(...)`. A `strictly` written as a range is kept.
+ *
+ * https://github.com/ben-manes/gradle-versions-plugin/issues/1141
+ */
+internal fun withoutEnforcedPlatformStrictly(constraint: VersionConstraint): VersionConstraint? =
+  DeclaredBound.withoutExactStrictly(constraint)
+
+/**
  * Reads a declared selector with the parser dependency resolution itself uses, as Gradle publishes
  * no API for it; https://github.com/gradle/gradle/issues/13748 asks for one and remains open, and
  * its own worked example is this. A release that moves the parser, or a selector text it rejects
@@ -224,6 +235,23 @@ private object DeclaredBound {
       true
     }
   }
+
+  fun withoutExactStrictly(constraint: VersionConstraint): VersionConstraint? =
+    try {
+      val strict = constraint.strictVersion
+      if (strict.isEmpty() || isSelectorText(strict)) {
+        constraint
+      } else {
+        DefaultImmutableVersionConstraint.of(
+          constraint.preferredVersion,
+          constraint.requiredVersion,
+          "",
+          constraint.rejectedVersions,
+        )
+      }
+    } catch (e: LinkageError) {
+      null
+    }
 
   /**
    * Whether the text is a selector rather than a version, which is what a constraint reported with

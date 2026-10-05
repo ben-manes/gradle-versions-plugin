@@ -1,5 +1,6 @@
 package com.github.benmanes.gradle.versions.updates
 
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.withoutEnforcedPlatformStrictly
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyConstraint
 import org.gradle.api.artifacts.ExternalDependency
@@ -9,6 +10,7 @@ import org.gradle.api.artifacts.ModuleVersionSelector
 import org.gradle.api.artifacts.VersionConstraint
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.attributes.Category
 import org.gradle.api.internal.artifacts.dependencies.DefaultImmutableVersionConstraint
 import java.util.Objects
 
@@ -234,7 +236,7 @@ class Coordinate(
         dependency.name,
         dependency.version,
         dependency.reason,
-        dependency.versionConstraint,
+        declaredConstraint(dependency),
       )
     }
 
@@ -261,8 +263,14 @@ class Coordinate(
         dependency.name,
         dependency.version,
         dependency.reason,
-        (dependency as? ExternalDependency)?.versionConstraint,
+        declaredConstraint(dependency),
       )
+    }
+
+    private fun declaredConstraint(dependency: Dependency): VersionConstraint? {
+      val constraint = (dependency as? ExternalDependency)?.versionConstraint ?: return null
+      val category = dependency.attributes.getAttribute(Category.CATEGORY_ATTRIBUTE)?.name
+      return if (category == Category.ENFORCED_PLATFORM) withoutEnforcedPlatformStrictly(constraint) else constraint
     }
 
     fun keyFrom(selector: ModuleVersionSelector): Key {

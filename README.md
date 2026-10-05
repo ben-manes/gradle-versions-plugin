@@ -1299,9 +1299,10 @@ The bound is deliberately narrow:
   whichever platform supplied it.
 - Only a platform bounds. A constraint in an ordinary library's module
   metadata supplies a version without bounding the report.
-- Gradle turns an `enforcedPlatform`'s own version into a `strictly`, so the
-  rule bounds the platform itself at that version and a newer BOM stops being
-  offered; a plain `platform` keeps its own upgrade line.
+- The `strictly` that Gradle adds for an `enforcedPlatform`, at the version
+  declared, does not bound the platform itself, and is left out of
+  `versionConstraint`. Later versions of the BOM are listed as they are for a
+  plain `platform`. A range declared on an `enforcedPlatform` still bounds it.
 
 Three things to know before writing a rule against a declared bound. Rejecting
 every candidate for a module, including the version it currently resolves to,
