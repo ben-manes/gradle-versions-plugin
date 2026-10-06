@@ -700,8 +700,10 @@ internal fun registerAggregation(
     }
     // Wired from the producer rather than read back as this project's own variant, which the
     // aggregation no longer includes.
-    val partial = registerProducer(project, service)
-    accumulator.configure { task -> task.partialResults.from(partial.flatMap { it.outputFile }) }
+    val producer = registerProducer(project, service)
+    accumulator.configure { task ->
+      task.partialResults.from(producer.task.flatMap { it.outputFile })
+    }
   } else {
     // Swept only here, as the artifacts are the only record of the projects under isolated
     // projects and they omit the ones that conflict resolution merges away, whose own report is
@@ -728,13 +730,16 @@ internal fun registerAggregation(
         // producer itself and so needs no channel to reach it.
         // https://github.com/ben-manes/gradle-versions-plugin/issues/1040
         val outputFile = partialsDirectory.map { it.file(partialFileName(aggregated.path)) }
-        val partial = registerProducer(aggregated, service, outputFile)
+        val producer = registerProducer(aggregated, service, outputFile)
         val legacy = aggregated.layout.buildDirectory.file("dependencyUpdates/partial.json")
         if (aggregated != project) {
-          publishable.from(partial.flatMap { it.outputFile })
+          // The destination is published rather than the task's output, so that resolving these
+          // files does not create the task. See the comment on Producer.
+          publishable.from(producer.destination)
+          publishable.builtBy(producer.task)
         }
         accumulator.configure { task ->
-          task.partialResults.from(partial.flatMap { it.outputFile })
+          task.partialResults.from(producer.task.flatMap { it.outputFile })
           task.legacyPartials.from(legacy)
         }
       }
@@ -744,7 +749,7 @@ internal fun registerAggregation(
 
 /** Registers the task and outgoing variant that publish a single project's statuses. */
 internal fun registerProducer(project: Project): TaskProvider<DependencyUpdatesPartialTask> =
-  registerProducer(project, parametersService(project.gradle))
+  registerProducer(project, parametersService(project.gradle)).task
 
 /** Publishes the settings script's classpath to the project that accumulates the report. */
 internal fun publishSettingsClasspath(
@@ -768,14 +773,38 @@ private fun partialFileName(path: String): String {
   return "$name-${Integer.toHexString(path.hashCode())}.json"
 }
 
+private const val DESTINATION_PROPERTY = "com.github.benmanes.gradle.versions.partialDestination"
+
+/**
+ * A project's producer task and the file it writes.
+ *
+ * The destination is held apart from the task so that what the project publishes reads where the
+ * result will be written without creating the task. An outgoing artifact backed by
+ * `task.flatMap { it.outputFile }` creates the task on the first query, and Gradle queries a
+ * configuration's artifacts during the tooling model phase, one thread per project and in parallel
+ * under `org.gradle.tooling.parallel`, so two threads race to create the same task and the IDE sync
+ * fails. Reading the destination is a pure read whatever thread asks.
+ * https://github.com/ben-manes/gradle-versions-plugin/issues/1135
+ */
+private class Producer(
+  val task: TaskProvider<DependencyUpdatesPartialTask>,
+  val destination: Provider<RegularFile>,
+)
+
 private fun registerProducer(
   project: Project,
   service: Provider<DependencyUpdatesParametersService>,
   outputFile: Provider<RegularFile>? = null,
-): TaskProvider<DependencyUpdatesPartialTask> {
+): Producer {
   val tasks = project.tasks
   if (tasks.names.contains(PARTIAL_TASK_NAME)) {
-    return tasks.named(PARTIAL_TASK_NAME, DependencyUpdatesPartialTask::class.java)
+    // Reached when the plugin is applied to a project that the root already aggregates. The
+    // destination is read from the project rather than the task, which reading would create.
+    @Suppress("UNCHECKED_CAST")
+    return Producer(
+      tasks.named(PARTIAL_TASK_NAME, DependencyUpdatesPartialTask::class.java),
+      project.extensions.extraProperties.get(DESTINATION_PROPERTY) as Provider<RegularFile>,
+    )
   }
   // Read here so that the destination below captures these rather than the project, which the
   // configuration cache cannot serialize.
@@ -808,16 +837,21 @@ private fun registerProducer(
       }
     }
   }
+  val destination =
+    outputFile ?: project.provider {
+      // Realized once every project is configured, so the destination is read whatever order the
+      // projects that publish and consume it were configured in. A build where no project
+      // aggregates, as one that only contributes to another build's report, keeps its own.
+      service.get().partialsDirectory?.get()?.file(partialFileName(path)) ?: ownFile.get()
+    }
+  project.extensions.extraProperties.set(DESTINATION_PROPERTY, destination)
   val partial =
     tasks.register(PARTIAL_TASK_NAME, DependencyUpdatesPartialTask::class.java) { task ->
-      task.outputFile.convention(
-        outputFile ?: project.provider {
-          // Realized once every project is configured, so the destination is read whatever order
-          // the projects that publish and consume it were configured in. A build where no project
-          // aggregates, as one that only contributes to another build's report, keeps its own.
-          service.get().partialsDirectory?.get()?.file(partialFileName(path)) ?: ownFile.get()
-        },
-      )
+      // The destination is what the project publishes, so a task that wrote anywhere else would
+      // leave the report reading a file that was never written. It is set rather than left as a
+      // convention, as an action on the container that precedes this one may have set another.
+      task.outputFile.set(destination)
+      task.outputFile.disallowChanges()
       task.partialJson.set(
         // Realized after every project has been evaluated, so that the settings are read as last
         // configured and the container contains the configurations that late plugins added.
@@ -928,12 +962,13 @@ private fun registerProducer(
 
   // Published once the project is configured, as whether it can have a variant at all depends on
   // the configurations that its plugins and build script create.
+  val producer = Producer(partial, destination)
   if (project.state.executed) {
-    publishResults(project, partial)
+    publishResults(project, producer)
   } else {
-    project.afterEvaluate { evaluated -> publishResults(evaluated, partial) }
+    project.afterEvaluate { evaluated -> publishResults(evaluated, producer) }
   }
-  return partial
+  return producer
 }
 
 /**
@@ -953,7 +988,7 @@ private fun registerProducer(
  */
 private fun publishResults(
   project: Project,
-  partial: TaskProvider<DependencyUpdatesPartialTask>,
+  producer: Producer,
 ) {
   val configurations = project.configurations
   val fallback = configurations.findByName(Dependency.DEFAULT_CONFIGURATION)
@@ -975,7 +1010,11 @@ private fun publishResults(
         )
       }
     }
-    configuration.outgoing.artifact(partial.flatMap { it.outputFile })
+    // The destination is published rather than the task's output, so that a query of this
+    // variant's artifacts does not create the task. See the comment on Producer.
+    configuration.outgoing.artifact(producer.destination) { artifact ->
+      artifact.builtBy(producer.task)
+    }
   }
 }
 
