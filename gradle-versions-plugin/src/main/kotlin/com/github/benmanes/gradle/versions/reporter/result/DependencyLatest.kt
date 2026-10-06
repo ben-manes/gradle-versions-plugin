@@ -45,7 +45,16 @@ data class DependencyLatest
       platformProjects: List<String>? = this.platformProjects,
     ): DependencyLatest =
       copy(
-        group, name, version, projectUrl, userReason, latest, projects, contributed,
-        configurations, platformProjects, constrainedBy,
+        group,
+        name,
+        version,
+        projectUrl,
+        userReason,
+        latest,
+        projects,
+        contributed,
+        configurations,
+        platformProjects,
+        constrainedBy,
       )
   }

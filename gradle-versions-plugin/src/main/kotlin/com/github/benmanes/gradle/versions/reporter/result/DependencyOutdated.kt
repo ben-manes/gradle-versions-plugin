@@ -51,7 +51,16 @@ data class DependencyOutdated
       platformProjects: List<String>? = this.platformProjects,
     ): DependencyOutdated =
       copy(
-        group, name, version, projectUrl, userReason, available, projects, contributed,
-        configurations, platformProjects, constrainedBy,
+        group,
+        name,
+        version,
+        projectUrl,
+        userReason,
+        available,
+        projects,
+        contributed,
+        configurations,
+        platformProjects,
+        constrainedBy,
       )
   }

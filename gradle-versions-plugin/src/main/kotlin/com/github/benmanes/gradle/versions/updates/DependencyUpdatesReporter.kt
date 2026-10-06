@@ -134,11 +134,30 @@ class DependencyUpdatesReporter(
     skipped: List<SkippedConfiguration> = emptyList(),
     platformProjectsByCoordinate: Map<Coordinate, List<String>> = emptyMap(),
   ) : this(
-    projectPath, logger, revision, outputFormatterArgument, outputDirectory, reportfileName,
-    currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions,
-    undeclared, unresolved, projectUrls, gradleUpdateChecker, gradleReleaseChannel,
-    latestByCurrent, projectsByCoordinate, contributedCoordinates, configurationsByCoordinate,
-    skipped, platformProjectsByCoordinate, emptyMap(), emptyMap(),
+    projectPath,
+    logger,
+    revision,
+    outputFormatterArgument,
+    outputDirectory,
+    reportfileName,
+    currentVersions,
+    latestVersions,
+    upToDateVersions,
+    downgradeVersions,
+    upgradeVersions,
+    undeclared,
+    unresolved,
+    projectUrls,
+    gradleUpdateChecker,
+    gradleReleaseChannel,
+    latestByCurrent,
+    projectsByCoordinate,
+    contributedCoordinates,
+    configurationsByCoordinate,
+    skipped,
+    platformProjectsByCoordinate,
+    emptyMap(),
+    emptyMap(),
   )
 
   @Deprecated("Use the constructor that includes the skipped configurations.")
@@ -164,11 +183,30 @@ class DependencyUpdatesReporter(
     contributedCoordinates: Set<Coordinate> = emptySet(),
     configurationsByCoordinate: Map<Coordinate, List<String>> = emptyMap(),
   ) : this(
-    projectPath, logger, revision, outputFormatterArgument, outputDirectory, reportfileName,
-    currentVersions, latestVersions, upToDateVersions, downgradeVersions, upgradeVersions,
-    undeclared, unresolved, projectUrls, gradleUpdateChecker, gradleReleaseChannel,
-    latestByCurrent, projectsByCoordinate, contributedCoordinates, configurationsByCoordinate,
-    emptyList(), emptyMap(), emptyMap(), emptyMap(),
+    projectPath,
+    logger,
+    revision,
+    outputFormatterArgument,
+    outputDirectory,
+    reportfileName,
+    currentVersions,
+    latestVersions,
+    upToDateVersions,
+    downgradeVersions,
+    upgradeVersions,
+    undeclared,
+    unresolved,
+    projectUrls,
+    gradleUpdateChecker,
+    gradleReleaseChannel,
+    latestByCurrent,
+    projectsByCoordinate,
+    contributedCoordinates,
+    configurationsByCoordinate,
+    emptyList(),
+    emptyMap(),
+    emptyMap(),
+    emptyMap(),
   )
 
   @Synchronized
@@ -278,8 +316,8 @@ class DependencyUpdatesReporter(
     logger.warn("The problems report is incomplete, as this Gradle's Problems API is not supported", e)
   }
 
-  private fun getOutputReporter(formatterOriginal: String): Reporter {
-    return when (formatterOriginal.trim()) {
+  private fun getOutputReporter(formatterOriginal: String): Reporter =
+    when (formatterOriginal.trim()) {
       "json" -> JsonReporter(projectPath, revision, gradleReleaseChannel)
       "xml" -> XmlReporter(projectPath, revision, gradleReleaseChannel)
       "html" -> HtmlReporter(projectPath, revision, gradleReleaseChannel)
@@ -295,7 +333,6 @@ class DependencyUpdatesReporter(
         }
       }
     }
-  }
 
   private fun buildBaseObject(): Result {
     val sortedCurrent = buildCurrentGroup()
@@ -364,43 +401,38 @@ class DependencyUpdatesReporter(
     )
   }
 
-  private fun buildCurrentGroup(): MutableSet<Dependency> {
-    return sortByGroupAndName(upToDateVersions)
+  private fun buildCurrentGroup(): MutableSet<Dependency> =
+    sortByGroupAndName(upToDateVersions)
       .map { dep -> buildDependency(dep.value, strippedKey(dep.key)) }
       .toSortedSet()
-  }
 
-  private fun buildOutdatedGroup(): MutableSet<DependencyOutdated> {
-    return sortByGroupAndName(upgradeVersions)
+  private fun buildOutdatedGroup(): MutableSet<DependencyOutdated> =
+    sortByGroupAndName(upgradeVersions)
       .map { dep -> buildOutdatedDependency(dep.value, strippedKey(dep.key)) }
       .toSortedSet()
-  }
 
-  private fun buildExceededGroup(): MutableSet<DependencyLatest> {
-    return sortByGroupAndName(downgradeVersions)
+  private fun buildExceededGroup(): MutableSet<DependencyLatest> =
+    sortByGroupAndName(downgradeVersions)
       .map { dep -> buildExceededDependency(dep.value, strippedKey(dep.key)) }
       .toSortedSet()
-  }
 
-  private fun buildUndeclaredGroup(): MutableSet<Dependency> {
-    return undeclared
+  private fun buildUndeclaredGroup(): MutableSet<Dependency> =
+    undeclared
       .map { coordinate ->
         Dependency(coordinate.groupId, coordinate.artifactId)
       }.toSortedSet()
-  }
 
-  private fun buildUnresolvedGroup(): MutableSet<DependencyUnresolved> {
-    return unresolved
+  private fun buildUnresolvedGroup(): MutableSet<DependencyUnresolved> =
+    unresolved
       .sortedWith { a, b -> compareKeys(keyOf(a), keyOf(b)) }
       .map { dep -> buildUnresolvedDependency(dep) }
       .toSortedSet() as TreeSet<DependencyUnresolved>
-  }
 
   private fun buildDependency(
     coordinate: Coordinate,
     key: Map<String, String>,
-  ): Dependency {
-    return Dependency(
+  ): Dependency =
+    Dependency(
       group = key["group"],
       name = key["name"],
       version = coordinate.version,
@@ -412,13 +444,12 @@ class DependencyUpdatesReporter(
       platformProjects = platformProjectsByCoordinate[coordinate],
       constrainedBy = constrainedByCoordinate[coordinate],
     )
-  }
 
   private fun buildExceededDependency(
     coordinate: Coordinate,
     key: Map<String, String>,
-  ): DependencyLatest {
-    return DependencyLatest(
+  ): DependencyLatest =
+    DependencyLatest(
       group = key["group"],
       name = key["name"],
       version = coordinate.version,
@@ -431,7 +462,6 @@ class DependencyUpdatesReporter(
       platformProjects = platformProjectsByCoordinate[coordinate],
       constrainedBy = constrainedByCoordinate[coordinate],
     )
-  }
 
   /** Returns true when the coordinate was only contributed by a plugin, otherwise null. */
   private fun contributedFlag(coordinate: Coordinate): Boolean? = if (coordinate in contributedCoordinates) true else null
@@ -440,9 +470,7 @@ class DependencyUpdatesReporter(
   private fun latestFor(
     coordinate: Coordinate,
     key: Map<String, String>,
-  ): String? {
-    return (latestByCurrent[coordinate] ?: latestVersions[key])?.version
-  }
+  ): String? = (latestByCurrent[coordinate] ?: latestVersions[key])?.version
 
   private fun buildUnresolvedDependency(info: UnresolvedInfo): DependencyUnresolved {
     val declared = Coordinate(info.selectorGroup, info.selectorName, info.declaredVersion)
@@ -534,8 +562,8 @@ class DependencyUpdatesReporter(
       unresolvedGroup: DependenciesGroup<DependencyUnresolved>,
       gradleUpdateResults: GradleUpdateResults,
       skippedGroup: SkippedConfigurationsGroup,
-    ): Result {
-      return Result(
+    ): Result =
+      Result(
         count = count,
         current = currentGroup,
         outdated = outdatedGroup,
@@ -545,33 +573,27 @@ class DependencyUpdatesReporter(
         gradle = gradleUpdateResults,
         skipped = skippedGroup,
       )
-    }
 
-    private fun <T : Dependency> buildDependenciesGroup(dependencies: MutableSet<T>): DependenciesGroup<T> {
-      return DependenciesGroup(dependencies.size, dependencies)
-    }
+    private fun <T : Dependency> buildDependenciesGroup(dependencies: MutableSet<T>): DependenciesGroup<T> =
+      DependenciesGroup(dependencies.size, dependencies)
 
-    private fun sortByGroupAndName(dependencies: Map<Map<String, String>, Coordinate>): Map<Map<String, String>, Coordinate> {
-      return dependencies.toSortedMap { a, b ->
+    private fun sortByGroupAndName(dependencies: Map<Map<String, String>, Coordinate>): Map<Map<String, String>, Coordinate> =
+      dependencies.toSortedMap { a, b ->
         compareKeys(a, b)
       }
-    }
 
     /** Compares the dependency keys. */
     private fun compareKeys(
       a: Map<String, String>,
       b: Map<String, String>,
-    ): Int {
-      return if (a["group"] == b["group"]) {
+    ): Int =
+      if (a["group"] == b["group"]) {
         a["name"].orEmpty().compareTo(b["name"].orEmpty())
       } else {
         a["group"].orEmpty().compareTo(b["group"].orEmpty())
       }
-    }
 
-    private fun keyOf(info: UnresolvedInfo): Map<String, String> {
-      return mapOf("group" to info.selectorGroup, "name" to info.selectorName)
-    }
+    private fun keyOf(info: UnresolvedInfo): Map<String, String> = mapOf("group" to info.selectorGroup, "name" to info.selectorName)
   }
 }
 
@@ -628,11 +650,29 @@ fun reporterFor(
   val gradleUpdateChecker = GradleUpdateChecker(checkForGradleUpdate, gradleVersionsApiBaseUrl)
 
   return DependencyUpdatesReporter(
-    projectPath, logger, revision, outputFormatterArgument, outputDir,
-    reportfileName, currentVersions, latestVersions, upToDateVersions, downgradeVersions,
-    upgradeVersions, versions.undeclared, unresolved, projectUrls, gradleUpdateChecker,
-    gradleReleaseChannel, versions.latestByCurrent, projectsByCoordinate, contributedCoordinates,
-    configurationsByCoordinate, skipped, platformProjectsByCoordinate, constrainedByCoordinate,
+    projectPath,
+    logger,
+    revision,
+    outputFormatterArgument,
+    outputDir,
+    reportfileName,
+    currentVersions,
+    latestVersions,
+    upToDateVersions,
+    downgradeVersions,
+    upgradeVersions,
+    versions.undeclared,
+    unresolved,
+    projectUrls,
+    gradleUpdateChecker,
+    gradleReleaseChannel,
+    versions.latestByCurrent,
+    projectsByCoordinate,
+    contributedCoordinates,
+    configurationsByCoordinate,
+    skipped,
+    platformProjectsByCoordinate,
+    constrainedByCoordinate,
     versions.preReleaseByCurrent,
   ).also {
     it.patchByCurrent = versions.patchByCurrent
@@ -667,7 +707,11 @@ private fun contributedCoordinates(
 }
 
 /** One module at one declared version, which a split leaves as several coordinates. */
-private data class Declaration(val group: String, val name: String, val declaredVersion: String) {
+private data class Declaration(
+  val group: String,
+  val name: String,
+  val declaredVersion: String,
+) {
   constructor(status: PartialStatus) : this(status.group, status.name, status.declaredVersion)
 }
 
@@ -721,7 +765,9 @@ private fun platformProjectsByCoordinate(
       }
       val declaringStatuses =
         group.filter {
-          it.platformProjects.isEmpty() && it.constrainedBy.isEmpty() && !it.contributed &&
+          it.platformProjects.isEmpty() &&
+            it.constrainedBy.isEmpty() &&
+            !it.contributed &&
             it.projectPath !in importers
         }
       if (declaringStatuses.isNotEmpty()) {
@@ -753,7 +799,9 @@ private fun constrainedByCoordinate(
       }
       val declaringStatuses =
         group.filter {
-          it.constrainedBy.isEmpty() && it.platformProjects.isEmpty() && !it.contributed &&
+          it.constrainedBy.isEmpty() &&
+            it.platformProjects.isEmpty() &&
+            !it.contributed &&
             it.projectPath !in sources
         }
       if (declaringStatuses.isNotEmpty()) {

@@ -104,8 +104,19 @@ data class PartialStatus
       projectPath: String? = this.projectPath,
     ): PartialStatus =
       copy(
-        group, name, declaredVersion, userReason, latestVersion, projectUrl, unresolved, contributed,
-        configurations, projectPath, platformProjects, constrainedBy, splitByLatest,
+        group,
+        name,
+        declaredVersion,
+        userReason,
+        latestVersion,
+        projectUrl,
+        unresolved,
+        contributed,
+        configurations,
+        projectPath,
+        platformProjects,
+        constrainedBy,
+        splitByLatest,
       )
 
     /**
@@ -126,8 +137,19 @@ data class PartialStatus
       platformProjects: List<String> = this.platformProjects,
     ): PartialStatus =
       copy(
-        group, name, declaredVersion, userReason, latestVersion, projectUrl, unresolved, contributed,
-        configurations, projectPath, platformProjects, constrainedBy, splitByLatest,
+        group,
+        name,
+        declaredVersion,
+        userReason,
+        latestVersion,
+        projectUrl,
+        unresolved,
+        contributed,
+        configurations,
+        projectPath,
+        platformProjects,
+        constrainedBy,
+        splitByLatest,
       )
 
     /**
@@ -149,8 +171,19 @@ data class PartialStatus
       constrainedBy: List<String> = this.constrainedBy,
     ): PartialStatus =
       copy(
-        group, name, declaredVersion, userReason, latestVersion, projectUrl, unresolved, contributed,
-        configurations, projectPath, platformProjects, constrainedBy, splitByLatest,
+        group,
+        name,
+        declaredVersion,
+        userReason,
+        latestVersion,
+        projectUrl,
+        unresolved,
+        contributed,
+        configurations,
+        projectPath,
+        platformProjects,
+        constrainedBy,
+        splitByLatest,
       )
 
     /**
@@ -173,8 +206,20 @@ data class PartialStatus
       splitByLatest: Boolean = this.splitByLatest,
     ): PartialStatus =
       copy(
-        group, name, declaredVersion, userReason, latestVersion, projectUrl, unresolved, contributed,
-        configurations, projectPath, platformProjects, constrainedBy, splitByLatest, constraint,
+        group,
+        name,
+        declaredVersion,
+        userReason,
+        latestVersion,
+        projectUrl,
+        unresolved,
+        contributed,
+        configurations,
+        projectPath,
+        platformProjects,
+        constrainedBy,
+        splitByLatest,
+        constraint,
         platformConstraints,
       )
   }
@@ -239,7 +284,8 @@ data class PartialResult
       const val FORMAT_VERSION: Int = 3
 
       private val adapter =
-        Moshi.Builder()
+        Moshi
+          .Builder()
           .addLast(KotlinJsonAdapterFactory())
           .build()
           .adapter(PartialResult::class.java)

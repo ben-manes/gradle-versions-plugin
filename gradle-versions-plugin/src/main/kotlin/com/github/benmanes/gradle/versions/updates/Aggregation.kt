@@ -301,8 +301,7 @@ internal class DependencyUpdatesParameters {
  * that resolve with them. The realization is ordered after every project is configured, so the
  * settings are read live rather than copied at any earlier moment.
  */
-internal abstract class DependencyUpdatesParametersService :
-  BuildService<BuildServiceParameters.None> {
+internal abstract class DependencyUpdatesParametersService : BuildService<BuildServiceParameters.None> {
   private val byPath = ConcurrentHashMap<String, DependencyUpdatesParameters>()
 
   /**
@@ -993,7 +992,8 @@ private fun publishResults(
   val configurations = project.configurations
   val fallback = configurations.findByName(Dependency.DEFAULT_CONFIGURATION)
   val publishesByFallback =
-    fallback != null && fallback.isCanBeConsumed &&
+    fallback != null &&
+      fallback.isCanBeConsumed &&
       configurations.none { it.isCanBeConsumed && it.attributes.keySet().isNotEmpty() }
 
   configurations.consumable(ELEMENTS_CONFIGURATION) { configuration ->
@@ -1077,14 +1077,15 @@ private fun statusesOf(
       try {
         // Discounted after resolving, since resolving is what runs the default actions that fill
         // a configuration where every dependency came from a plugin.
-        resolver.resolve(configuration, parameters.revision, nameDeclaringConfiguration, scriptClasspaths) {
-          declaredKeys.getValue(configuration) - keysOf(configuration, filledByPlugin)
-        }.filter { status ->
-          // A status with no configuration name on it, as an ordinary declaration's is, is
-          // kept whatever the filter rejects.
-          status.configurations.isEmpty() ||
-            status.configurations.any { parameters.filterDeclaredConfigurations.isSatisfiedBy(it) }
-        }.map { it.toPartialStatus() }
+        resolver
+          .resolve(configuration, parameters.revision, nameDeclaringConfiguration, scriptClasspaths) {
+            declaredKeys.getValue(configuration) - keysOf(configuration, filledByPlugin)
+          }.filter { status ->
+            // A status with no configuration name on it, as an ordinary declaration's is, is
+            // kept whatever the filter rejects.
+            status.configurations.isEmpty() ||
+              status.configurations.any { parameters.filterDeclaredConfigurations.isSatisfiedBy(it) }
+          }.map { it.toPartialStatus() }
       } catch (e: Exception) {
         val reason =
           generateSequence(e as Throwable) { it.cause }.take(MAX_FAILURE_CAUSES).joinToString("; ") { it.toString() }

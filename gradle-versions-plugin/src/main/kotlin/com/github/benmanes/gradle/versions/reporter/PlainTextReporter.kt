@@ -64,9 +64,7 @@ class PlainTextReporter
       writeGradleUpdates(printStream, result)
     }
 
-    override fun getFileExtension(): String {
-      return "txt"
-    }
+    override fun getFileExtension(): String = "txt"
 
     private fun writeHeader(printStream: OutputStream) {
       printStream.println()
@@ -122,9 +120,8 @@ class PlainTextReporter
     }
 
     /** Returns the row's version steps joined by arrows. */
-    private fun breadcrumb(dependency: DependencyOutdated): String {
-      return laterSteps(dependency, revision, versionComparator).joinToString(" -> ")
-    }
+    private fun breadcrumb(dependency: DependencyOutdated): String =
+      laterSteps(dependency, revision, versionComparator).joinToString(" -> ")
 
     private fun writeUpgrades(
       printStream: OutputStream,
@@ -292,8 +289,6 @@ class PlainTextReporter
 
     companion object {
       /** Returns the dependency key as a stringified label. */
-      private fun label(dependency: Dependency): String {
-        return "${dependency.group.orEmpty()}:${dependency.name}"
-      }
+      private fun label(dependency: Dependency): String = "${dependency.group.orEmpty()}:${dependency.name}"
     }
   }

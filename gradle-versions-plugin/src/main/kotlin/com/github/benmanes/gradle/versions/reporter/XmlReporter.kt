@@ -270,7 +270,5 @@ class XmlReporter(
     }
   }
 
-  override fun getFileExtension(): String {
-    return "xml"
-  }
+  override fun getFileExtension(): String = "xml"
 }

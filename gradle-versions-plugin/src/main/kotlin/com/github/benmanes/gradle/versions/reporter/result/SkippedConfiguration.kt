@@ -6,9 +6,7 @@ data class SkippedConfiguration(
   val name: String,
   val reason: String,
 ) : Comparable<SkippedConfiguration> {
-  override fun compareTo(other: SkippedConfiguration): Int {
-    return compareValuesBy(this, other, { it.project }, { it.name }, { it.reason })
-  }
+  override fun compareTo(other: SkippedConfiguration): Int = compareValuesBy(this, other, { it.project }, { it.name }, { it.reason })
 }
 
 /**

@@ -12,7 +12,8 @@ private class RecordedModuleComponentIdentifier(
   private val group: String,
   private val module: String,
   private val version: String,
-) : ModuleComponentIdentifier, ModuleIdentifier {
+) : ModuleComponentIdentifier,
+  ModuleIdentifier {
   override fun getGroup(): String = group
 
   override fun getModule(): String = module

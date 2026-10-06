@@ -73,14 +73,13 @@ class DependencyStatus {
     }
   }
 
-  fun getLatestCoordinate(): Coordinate {
-    return Coordinate(
+  fun getLatestCoordinate(): Coordinate =
+    Coordinate(
       coordinate.groupId,
       coordinate.artifactId,
       latestVersion,
       coordinate.userReason,
     )
-  }
 
   /** Returns the serializable projection of this status. */
   fun toPartialStatus(): PartialStatus {

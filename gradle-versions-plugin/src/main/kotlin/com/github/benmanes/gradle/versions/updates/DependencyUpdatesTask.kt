@@ -631,8 +631,17 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
         .flatMap { partial -> partial.skipped.map { SkippedConfiguration(partial.projectPath, it.name, it.reason) } }
 
     reporterFor(
-      statuses, projectPath, logger, revision, outputFormatter(), outputDirectory(), reportfileName,
-      checkForGradleUpdate, gradleVersionsApiBaseUrl, gradleReleaseChannel, skipped,
+      statuses,
+      projectPath,
+      logger,
+      revision,
+      outputFormatter(),
+      outputDirectory(),
+      reportfileName,
+      checkForGradleUpdate,
+      gradleVersionsApiBaseUrl,
+      gradleReleaseChannel,
+      skipped,
       rejectPreReleases,
     ).also {
       it.leftOutEmbeddedKotlin = leftOutEmbeddedKotlin
@@ -744,10 +753,9 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
   }
 
   /** Returns the outputDir format. */
-  private fun outputFormatter(): OutputFormatterArgument {
-    return namedOutputFormatter()?.let { OutputFormatterArgument.BuiltIn(it) }
+  private fun outputFormatter(): OutputFormatterArgument =
+    namedOutputFormatter()?.let { OutputFormatterArgument.BuiltIn(it) }
       ?: outputFormatterArgument
-  }
 
   /** Sets the report's format for this invocation alone, as a comma separated list of names. */
   @Option(

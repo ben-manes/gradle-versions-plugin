@@ -43,8 +43,8 @@ open class Dependency
      * The separator is one a build tree path cannot contain, so that ["a", "b"] and ["a,b"] are not
      * compared as one list.
      */
-    override fun compareTo(other: Dependency): Int {
-      return compareValuesBy(
+    override fun compareTo(other: Dependency): Int =
+      compareValuesBy(
         this,
         other,
         { it.group },
@@ -54,5 +54,4 @@ open class Dependency
         { it.userReason },
         { it.projects?.joinToString("\u0000") },
       )
-    }
   }

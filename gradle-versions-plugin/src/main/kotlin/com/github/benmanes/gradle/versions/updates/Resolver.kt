@@ -677,7 +677,8 @@ class Resolver internal constructor(
             (metadata == null) ||
               ((revision == "release") && (metadata.status == "release")) ||
               ((revision == "milestone") && (metadata.status != "integration")) ||
-              (revision == "integration") || (selection.candidate.version == "none") ||
+              (revision == "integration") ||
+              (selection.candidate.version == "none") ||
               isCurrent
           if (!accepted) {
             selection.reject("Component status ${metadata?.status} rejected by revision $revision")
@@ -1306,9 +1307,8 @@ class Resolver internal constructor(
     }
   }
 
-  private fun supportsConstraints(configuration: Configuration): Boolean {
-    return checkConstraints && reportedConstraints(configuration).isNotEmpty()
-  }
+  private fun supportsConstraints(configuration: Configuration): Boolean =
+    checkConstraints && reportedConstraints(configuration).isNotEmpty()
 
   // https://github.com/ben-manes/gradle-versions-plugin/issues/1128
   // Gradle constrains every script classpath, and the Scala plugin's zinc configuration, to a

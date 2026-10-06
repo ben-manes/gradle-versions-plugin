@@ -36,11 +36,10 @@ class VersionAvailable
      * the three levels, which is where the report files the version it found for such a revision.
      * Reading back an empty string there left every reporter printing a row with no version at all.
      */
-    operator fun get(revision: String): String? {
-      return when (revision) {
+    operator fun get(revision: String): String? =
+      when (revision) {
         "milestone" -> milestone
         "integration" -> integration
         else -> release
       }
-    }
   }

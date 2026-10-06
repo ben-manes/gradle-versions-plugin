@@ -299,9 +299,7 @@ class HtmlReporter(
     return versionAvailable.release
   }
 
-  override fun getFileExtension(): String {
-    return "html"
-  }
+  override fun getFileExtension(): String = "html"
 
   companion object {
     private const val HEADER = """
@@ -513,9 +511,8 @@ class HtmlReporter(
     /** Escapes text placed into an HTML element, which a resolution exception's message is not. */
     private fun escapeHtml(text: String): String = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
-    private fun getGradleUrl(): String {
-      return "<p>For information about Gradle releases click <a target=\"_blank\" href=\"https://gradle.org/releases/\">here</a>.</p>"
-    }
+    private fun getGradleUrl(): String =
+      "<p>For information about Gradle releases click <a target=\"_blank\" href=\"https://gradle.org/releases/\">here</a>.</p>"
 
     private fun getGradleVersionUrl(version: String?): String {
       if (version == null) {
