@@ -857,11 +857,12 @@ final class CompositeBuildSpec extends Specification {
 
     when:
     def result = run('dependencyUpdates')
+    def nl = System.lineSeparator()
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.example:external-bom [1.0 -> 2.0]')
-    result.output.contains('imported by the platform :platforms\n')
+    result.output.contains("imported by the platform :platforms${nl}")
     // A platform that only a library's metadata drags in is not one the build imported.
     !result.output.contains('com.example:dragged-bom')
   }
@@ -988,11 +989,12 @@ final class CompositeBuildSpec extends Specification {
 
     when:
     def result = run('dependencyUpdates')
+    def nl = System.lineSeparator()
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.example:external-bom [1.0 -> 2.0]')
-    result.output.contains('imported by the platform :platforms\n')
+    result.output.contains("imported by the platform :platforms${nl}")
     result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
   }
 
@@ -1304,11 +1306,12 @@ final class CompositeBuildSpec extends Specification {
 
     when:
     def result = run('dependencyUpdates')
+    def nl = System.lineSeparator()
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.example:external-bom [1.0 -> 2.0]')
-    result.output.contains('imported by the platform :platforms\n')
+    result.output.contains("imported by the platform :platforms${nl}")
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
@@ -1498,11 +1501,12 @@ final class CompositeBuildSpec extends Specification {
 
     when:
     def result = run(':child:dependencyUpdates')
+    def nl = System.lineSeparator()
 
     then: 'the importer is named by its path in the build tree, not platform-a\'s path within child'
     result.task(':child:dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.example:external-bom [1.0 -> 2.0]')
-    result.output.contains('imported by the platform :child:platform-a\n')
+    result.output.contains("imported by the platform :child:platform-a${nl}")
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1070')
@@ -1551,11 +1555,12 @@ final class CompositeBuildSpec extends Specification {
 
     when:
     def result = run('dependencyUpdates')
+    def nl = System.lineSeparator()
 
     then: 'one merged row shows the platform-stated version and the update behind the drag'
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.example:external-bom [1.0 -> 2.0]')
-    result.output.contains('imported by the platform :platform-a\n')
+    result.output.contains("imported by the platform :platform-a${nl}")
     !result.output.contains('com.example:external-bom:2.0')
   }
 

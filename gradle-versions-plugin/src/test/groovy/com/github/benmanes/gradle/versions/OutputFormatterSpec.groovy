@@ -544,9 +544,10 @@ final class OutputFormatterSpec extends Specification {
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
       .build()
+    def nl = System.lineSeparator()
 
     then:
-    result.output.contains(' - com.github.ben-manes:unresolvable\n')
+    result.output.contains(" - com.github.ben-manes:unresolvable${nl}")
     !result.output.contains('unresolvable:none')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }

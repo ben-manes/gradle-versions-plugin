@@ -176,9 +176,10 @@ final class ConstraintsSpec extends Specification {
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
       .build()
+    def nl = System.lineSeparator()
 
     then: 'the constraint is reported at the bom version rather than as a failed lookup'
-    result.output.contains('com.google.inject:guice:2.0\n     constrained by the platform com.example:external-bom\n')
+    result.output.contains("com.google.inject:guice:2.0${nl}     constrained by the platform com.example:external-bom${nl}")
     !result.output.contains('Failed to determine the latest version')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
@@ -999,9 +1000,10 @@ final class ConstraintsSpec extends Specification {
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
       .build()
+    def nl = System.lineSeparator()
 
     then: 'the direct importer is named, not the first hop of the chain'
-    result.output.contains('imported by the platform :test-platform\n')
+    result.output.contains("imported by the platform :test-platform${nl}")
     !result.output.contains('the platform :app-platform')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
@@ -1059,9 +1061,10 @@ final class ConstraintsSpec extends Specification {
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
       .build()
+    def nl = System.lineSeparator()
 
     then:
-    result.output.contains('imported by the platforms :platform-a, :platform-b\n')
+    result.output.contains("imported by the platforms :platform-a, :platform-b${nl}")
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
@@ -1119,10 +1122,11 @@ final class ConstraintsSpec extends Specification {
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
       .build()
+    def nl = System.lineSeparator()
 
     then: 'the differing bound costs neither project its place in the attribution'
     result.output.contains('com.example:external-bom [1.0 -> 2.0]')
-    result.output.contains('imported by the platforms :platform-a, :platform-b\n')
+    result.output.contains("imported by the platforms :platform-a, :platform-b${nl}")
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
@@ -1182,12 +1186,13 @@ final class ConstraintsSpec extends Specification {
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
       .build()
+    def nl = System.lineSeparator()
 
     then: 'platform-a declares guava as a library, outranking the mark platform-b would otherwise carry'
     !result.output.contains('imported by the platform :platform-b')
     !result.output.contains('imported by the platform :platform-a')
     !result.output.contains('imported by the platforms')
-    result.output.contains('imported by the platform :platform-c\n')
+    result.output.contains("imported by the platform :platform-c${nl}")
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
@@ -1351,10 +1356,11 @@ final class ConstraintsSpec extends Specification {
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
       .build()
+    def nl = System.lineSeparator()
 
     then: 'the bom is named by its module, the version left to its own row'
     result.output.contains('com.google.inject:guice:2.0')
-    result.output.contains('constrained by the platform com.example:external-bom\n')
+    result.output.contains("constrained by the platform com.example:external-bom${nl}")
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
@@ -1466,10 +1472,11 @@ final class ConstraintsSpec extends Specification {
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
       .build()
+    def nl = System.lineSeparator()
 
     then: 'the bom row carries the importer and the constrained row carries the bom'
     result.output.contains('imported by the platform :platform')
-    result.output.contains('constrained by the platform com.example:external-bom\n')
+    result.output.contains("constrained by the platform com.example:external-bom${nl}")
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
 
@@ -1650,10 +1657,11 @@ final class ConstraintsSpec extends Specification {
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
       .build()
+    def nl = System.lineSeparator()
 
     then: 'the platform whose bound won still bounds the module, and is the only one named'
     result.output.contains(
-      ' - com.google.inject:guice:3.0\n     constrained by the platform :platform-high in root project')
+      " - com.google.inject:guice:3.0${nl}     constrained by the platform :platform-high in root project")
     !result.output.contains('constrained by the platforms')
 
     and: 'the upgrade past that bound is listed on the platform declaring it'
@@ -1770,10 +1778,11 @@ final class ConstraintsSpec extends Specification {
       .withArguments('dependencyUpdates')
       .withPluginClasspath()
       .build()
+    def nl = System.lineSeparator()
 
     then: 'the mark names a coordinate the bom row already carries the version for'
     result.output.contains('com.example:external-bom [1.0 -> 2.0]')
-    result.output.contains('constrained by the platform com.example:external-bom\n')
+    result.output.contains("constrained by the platform com.example:external-bom${nl}")
     !result.output.contains('com.example:external-bom:2.0')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }

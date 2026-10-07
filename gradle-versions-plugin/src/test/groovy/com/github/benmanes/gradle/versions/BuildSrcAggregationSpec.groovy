@@ -108,11 +108,12 @@ final class BuildSrcAggregationSpec extends Specification {
 
     when:
     def result = run(':buildSrc:dependencyUpdates')
+    def nl = System.lineSeparator()
 
     then:
     // The root's label is a prefix of the subproject's, so it is matched to the end of its line.
-    result.output.contains('declared in :buildSrc\n')
-    result.output.contains('declared in :buildSrc:logic\n')
+    result.output.contains("declared in :buildSrc${nl}")
+    result.output.contains("declared in :buildSrc:logic${nl}")
     !result.output.contains('declared in root project')
     !result.output.contains('The dependency updates report is missing')
   }
