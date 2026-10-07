@@ -5,7 +5,6 @@ plugins {
   alias(libs.plugins.dokka)
   alias(libs.plugins.ktlint)
   alias(libs.plugins.plugin.publish)
-  alias(libs.plugins.versions)
   id("maven-publish") // For publishing the plugin to mavenLocal()
   `java-gradle-plugin`
   `java-library`
