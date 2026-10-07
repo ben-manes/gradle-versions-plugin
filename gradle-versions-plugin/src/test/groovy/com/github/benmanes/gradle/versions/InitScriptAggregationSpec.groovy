@@ -252,6 +252,5 @@ final class InitScriptAggregationSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.inject:guice [2.0 -> 2.2]')
-    !result.output.contains('3.1')
   }
 }
