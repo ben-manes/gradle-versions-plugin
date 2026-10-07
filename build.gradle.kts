@@ -12,7 +12,6 @@ plugins {
   alias(libs.plugins.dokka) apply false
   alias(libs.plugins.ktlint)
   alias(libs.plugins.plugin.publish) apply false
-  alias(libs.plugins.versions)
   `java-gradle-plugin`
   `java-library`
   groovy
