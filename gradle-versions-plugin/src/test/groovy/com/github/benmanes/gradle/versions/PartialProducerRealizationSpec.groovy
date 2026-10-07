@@ -124,12 +124,18 @@ final class PartialProducerRealizationSpec extends Specification {
           }
         }
         apply plugin: 'io.github.ben-manes.versions'
+
+        gradle.projectsEvaluated {
+          println "PUBLISHED_FILE: " + configurations.dependencyUpdatesElements.artifacts.files.singleFile
+        }
       """.stripIndent()
 
     when:
-    run(':app:dependencyUpdates')
+    def result = run(':app:dependencyUpdates')
 
     then:
+    def published = (result.output =~ /PUBLISHED_FILE: (.*)/)[0][1].trim()
+    new File(published).exists()
     !new File(testProjectDir.root, 'app/build/custom.json').exists()
   }
 }
