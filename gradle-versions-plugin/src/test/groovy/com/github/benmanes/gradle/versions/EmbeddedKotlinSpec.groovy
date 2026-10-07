@@ -388,7 +388,7 @@ final class EmbeddedKotlinSpec extends Specification {
     def output = report()
 
     then:
-    output =~ /(?m)^ - org\.jetbrains\.kotlin:kotlin-stdlib:\S+\n\s+Could not/
+    output =~ /(?m)^ - org\.jetbrains\.kotlin:kotlin-stdlib:\S+\R\s+Could not/
   }
 
   def 'a subproject report inherits the setting from the root task'() {
@@ -459,7 +459,7 @@ final class EmbeddedKotlinSpec extends Specification {
 
   /** Returns the embedded Kotlin version, read from the row of a compiler plugin `kotlin-dsl` applies. */
   private static String embeddedKotlinVersion(String output) {
-    def matcher = output =~ /(?m)^ - org\.jetbrains\.kotlin:kotlin-sam-with-receiver-compiler-plugin-embeddable(?: \[|:)([^ \]\n]+)/
+    def matcher = output =~ /(?m)^ - org\.jetbrains\.kotlin:kotlin-sam-with-receiver-compiler-plugin-embeddable(?: \[|:)([^ \]\r\n]+)/
     assert matcher.find()
     return matcher.group(1)
   }

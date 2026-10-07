@@ -248,7 +248,7 @@ final class AggregationConfigurationCacheSpec extends Specification {
       [],
       ['The following dependencies have later milestone versions:'],
       ['org.apache.logging.log4j:log4j-core'],
-      ['com.google.inject:guice [2.0 -> 2.2 -> 3.1]\n'],
+      ["com.google.inject:guice [2.0 -> 2.2 -> 3.1]${System.lineSeparator()}"],
       ['com.google.inject:guice [2.0 -> 2.2 -> 3.0]'],
     ]
   }
