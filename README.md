@@ -52,6 +52,7 @@ Plugin](https://www.mojohaus.org/versions-maven-plugin).
 - [Samples](#samples)
 - [Compatibility](#compatibility)
 - [Migrating from prior versions](#migrating-from-prior-versions)
+  - [v0.64.0](#v0640)
   - [v0.62.0](#v0620)
   - [v0.61.0](#v0610)
   - [v0.60.0](#v0600)
@@ -2694,6 +2695,18 @@ build is on and work upward. Each section migrates to the version covered by
 the section above it, and the topmost migrates to the current release.
 *Important*s are must-dos, *Tip*s are actions you should or may want to take,
 and *Note*s are things worth knowing that need no action.
+
+### v0.64.0
+
+In v0.65.0, later versions of an `enforcedPlatform` are reported:
+
+> [!NOTE]
+> An `enforcedPlatform` is no longer reported as up to date when a later version
+> of it is available. The `strictly` that Gradle adds at the version declared is
+> left out of `versionConstraint`, so `strictVersion` is empty there in a
+> `rejectVersionIf` filter or `componentSelection` rule. A range declared on an
+> `enforcedPlatform` still bounds it (see [Respecting declared
+> bounds](#respecting-declared-bounds)).
 
 ### v0.62.0
 
