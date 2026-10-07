@@ -70,9 +70,7 @@ class GradleUpdateResult(
    * a valid [GradleVersion]. This may be the case when a [GradleUpdateResult]
    * represents a failure.
    */
-  override fun compareTo(other: GradleUpdateResult): Int {
-    return comparator.compare(this, other)
-  }
+  override fun compareTo(other: GradleUpdateResult): Int = comparator.compare(this, other)
 
   companion object {
     /**

@@ -7,7 +7,10 @@ import org.gradle.api.logging.Logger
 /**
  * A mapping of which versions are out of date, up to date, undeclared, or exceed the latest found.
  */
-class VersionMapping(private val logger: Logger, statuses: List<PartialStatus>) {
+class VersionMapping(
+  private val logger: Logger,
+  statuses: List<PartialStatus>,
+) {
   val downgrade = sortedSetOf<Coordinate>()
   val upToDate = sortedSetOf<Coordinate>()
   val upgrade = sortedSetOf<Coordinate>()

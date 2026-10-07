@@ -124,8 +124,8 @@ class ComponentSelectionWithCurrent internal constructor(
    */
   fun isOutOfDeclaredBounds(): Boolean = isUpgradeOutOfDeclaredBounds
 
-  override fun toString(): String {
-    return """\
+  override fun toString(): String =
+    """\
 ComponentSelectionWithCurrent{
     group="${candidate.group.orEmpty()}",
     module="${candidate.module}",
@@ -134,7 +134,6 @@ ComponentSelectionWithCurrent{
     versionConstraint="$versionConstraint",
     platformVersionConstraints="$platformVersionConstraints",
 }"""
-  }
 }
 
 /**

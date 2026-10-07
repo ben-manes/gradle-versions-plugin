@@ -35,33 +35,25 @@ class GradleUpdateChecker internal constructor(
    * @return An instance of [ReleaseStatus.Available] containing a [GradleVersion]
    * representing the version of the running gradle instance
    */
-  fun getRunningGradleVersion(): ReleaseStatus.Available {
-    return ReleaseStatus.Available(GradleVersion.current())
-  }
+  fun getRunningGradleVersion(): ReleaseStatus.Available = ReleaseStatus.Available(GradleVersion.current())
 
   /**
    * @return An instance of [ReleaseStatus] explaining the update check for the latest version
    * on the "current" gradle release channel.
    */
-  fun getCurrentGradleVersion(): ReleaseStatus? {
-    return releases[GradleReleaseChannel.CURRENT]
-  }
+  fun getCurrentGradleVersion(): ReleaseStatus? = releases[GradleReleaseChannel.CURRENT]
 
   /**
    * @return An instance of [ReleaseStatus] explaining the update check for the latest version
    * on the "release-candidate" gradle release channel.
    */
-  fun getReleaseCandidateGradleVersion(): ReleaseStatus? {
-    return releases[GradleReleaseChannel.RELEASE_CANDIDATE]
-  }
+  fun getReleaseCandidateGradleVersion(): ReleaseStatus? = releases[GradleReleaseChannel.RELEASE_CANDIDATE]
 
   /**
    * @return An instance of [ReleaseStatus] explaining the update check for the latest version
    * on the "nightly" gradle release channel.
    */
-  fun getNightlyGradleVersion(): ReleaseStatus? {
-    return releases[GradleReleaseChannel.NIGHTLY]
-  }
+  fun getNightlyGradleVersion(): ReleaseStatus? = releases[GradleReleaseChannel.NIGHTLY]
 
   /**
    * Abstract class representing the possible states of a release channel after an update check.
@@ -88,7 +80,8 @@ class GradleUpdateChecker internal constructor(
   companion object {
     private const val CLIENT_TIME_OUT = 15_000
     private val versionSite =
-      Moshi.Builder()
+      Moshi
+        .Builder()
         .addLast(KotlinJsonAdapterFactory())
         .build()
         .adapter(VersionSite::class.java)

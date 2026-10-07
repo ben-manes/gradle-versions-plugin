@@ -85,19 +85,17 @@ class ResolutionStrategyWithCurrent private constructor(
     return this
   }
 
-  fun componentSelection(closure: Closure<*>): ResolutionStrategyWithCurrent {
-    return componentSelection {
+  fun componentSelection(closure: Closure<*>): ResolutionStrategyWithCurrent =
+    componentSelection {
       closure.delegate = it
       closure.call(it)
     }
-  }
 
-  private fun getComponentSelectionNonDelegate(): ComponentSelectionRulesWithCurrent {
-    return ComponentSelectionRulesWithCurrent(
+  private fun getComponentSelectionNonDelegate(): ComponentSelectionRulesWithCurrent =
+    ComponentSelectionRulesWithCurrent(
       componentSelectionRules,
       currentCoordinates,
       onDeprecatedBoundRead,
       isPreRelease,
     )
-  }
 }

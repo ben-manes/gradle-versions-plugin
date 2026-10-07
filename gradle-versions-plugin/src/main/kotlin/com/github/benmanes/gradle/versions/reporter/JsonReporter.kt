@@ -42,13 +42,12 @@ class JsonReporter(
     printStream.println(json)
   }
 
-  override fun getFileExtension(): String {
-    return "json"
-  }
+  override fun getFileExtension(): String = "json"
 
   companion object {
     private val moshi =
-      Moshi.Builder()
+      Moshi
+        .Builder()
         .add(AbsentWhenNullAdapter())
         .addLast(KotlinJsonAdapterFactory())
         .build()

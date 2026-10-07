@@ -112,7 +112,8 @@ internal class EmbeddedKotlin(
     ): Set<String> {
       val (gradle, build) =
         project.configurations.toList().partition {
-          it.name == EMBEDDED_KOTLIN_CONFIGURATION || it.name == PLUGINS_BLOCKS_CONFIGURATION ||
+          it.name == EMBEDDED_KOTLIN_CONFIGURATION ||
+            it.name == PLUGINS_BLOCKS_CONFIGURATION ||
             it.name.startsWith(COMPILER_PLUGIN_CLASSPATHS)
         }
       val declaredByGradle =

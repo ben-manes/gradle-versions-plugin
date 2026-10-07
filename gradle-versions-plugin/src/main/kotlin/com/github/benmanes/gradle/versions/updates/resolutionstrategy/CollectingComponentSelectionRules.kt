@@ -21,7 +21,10 @@ import org.gradle.model.internal.type.ModelType
  * the interface and would answer correctly if ever called directly.
  */
 internal class CollectingComponentSelectionRules : ComponentSelectionRules {
-  private data class Rule(val moduleId: Any?, val action: Action<in ComponentSelection>)
+  private data class Rule(
+    val moduleId: Any?,
+    val action: Action<in ComponentSelection>,
+  )
 
   private val rules = mutableListOf<Rule>()
 

@@ -168,22 +168,19 @@ class Coordinate(
     this.constrainedBy = constrainedBy
   }
 
-  override fun toString(): String {
-    return "$groupId:$artifactId:$version"
-  }
+  override fun toString(): String = "$groupId:$artifactId:$version"
 
   // The split marker is compared as a string rather than as a version. It is here to keep the
   // ordering consistent with equals, which a sorted set requires, and the order it imposes among
   // the rows of one declared version is never the order the report prints them in.
-  override fun compareTo(other: Coordinate): Int {
-    return compareValuesBy(
+  override fun compareTo(other: Coordinate): Int =
+    compareValuesBy(
       this,
       other,
       { it.key },
       { it.version },
       { it.divergentLatest.orEmpty() },
     )
-  }
 
   // Previous implementation did not include "userReason"
   override fun equals(other: Any?): Boolean {
@@ -214,31 +211,30 @@ class Coordinate(
         constraint.preferredVersion == version
   }
 
-  data class Key(val groupId: String, val artifactId: String) : Comparable<Key> {
-    override fun toString(): String {
-      return "$groupId:$artifactId"
-    }
+  data class Key(
+    val groupId: String,
+    val artifactId: String,
+  ) : Comparable<Key> {
+    override fun toString(): String = "$groupId:$artifactId"
 
-    override fun compareTo(other: Key): Int {
-      return compareValuesBy(
+    override fun compareTo(other: Key): Int =
+      compareValuesBy(
         this,
         other,
         { it.groupId },
         { it.artifactId },
       )
-    }
   }
 
   companion object {
-    fun from(dependency: ExternalModuleDependency): Coordinate {
-      return Coordinate(
+    fun from(dependency: ExternalModuleDependency): Coordinate =
+      Coordinate(
         dependency.group,
         dependency.name,
         dependency.version,
         dependency.reason,
         declaredConstraint(dependency),
       )
-    }
 
     // A dependency constraint reaches this overload as well, and unlike a bare selector it declares
     // a version constraint and a reason of its own.
@@ -253,19 +249,16 @@ class Coordinate(
       )
     }
 
-    fun from(identifier: ModuleVersionIdentifier): Coordinate {
-      return Coordinate(identifier.group, identifier.name, identifier.version)
-    }
+    fun from(identifier: ModuleVersionIdentifier): Coordinate = Coordinate(identifier.group, identifier.name, identifier.version)
 
-    fun from(dependency: Dependency): Coordinate {
-      return Coordinate(
+    fun from(dependency: Dependency): Coordinate =
+      Coordinate(
         dependency.group,
         dependency.name,
         dependency.version,
         dependency.reason,
         declaredConstraint(dependency),
       )
-    }
 
     private fun declaredConstraint(dependency: Dependency): VersionConstraint? {
       val constraint = (dependency as? ExternalDependency)?.versionConstraint ?: return null
@@ -273,9 +266,7 @@ class Coordinate(
       return if (category == Category.ENFORCED_PLATFORM) withoutEnforcedPlatformStrictly(constraint) else constraint
     }
 
-    fun keyFrom(selector: ModuleVersionSelector): Key {
-      return Key(selector.group, selector.name)
-    }
+    fun keyFrom(selector: ModuleVersionSelector): Key = Key(selector.group, selector.name)
 
     fun from(
       identifier: ModuleVersionIdentifier,
@@ -319,12 +310,8 @@ class Coordinate(
       )
     }
 
-    fun from(identifier: ModuleComponentIdentifier): Coordinate {
-      return Coordinate(identifier.group, identifier.module, identifier.version)
-    }
+    fun from(identifier: ModuleComponentIdentifier): Coordinate = Coordinate(identifier.group, identifier.module, identifier.version)
 
-    fun from(selector: ModuleComponentSelector): Coordinate {
-      return Coordinate(selector.group, selector.module, selector.version)
-    }
+    fun from(selector: ModuleComponentSelector): Coordinate = Coordinate(selector.group, selector.module, selector.version)
   }
 }

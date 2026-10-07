@@ -32,7 +32,16 @@ data class DependencyUnresolved
       platformProjects: List<String>? = this.platformProjects,
     ): DependencyUnresolved =
       copy(
-        group, name, version, projectUrl, userReason, reason, projects, contributed,
-        configurations, platformProjects, constrainedBy,
+        group,
+        name,
+        version,
+        projectUrl,
+        userReason,
+        reason,
+        projects,
+        contributed,
+        configurations,
+        platformProjects,
+        constrainedBy,
       )
   }

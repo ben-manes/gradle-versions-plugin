@@ -28,8 +28,25 @@ internal object VersionStability {
    */
   private val MARKERS =
     listOf(
-      "alpha", "beta", "canary", "candidate", "cr", "dev", "draft", "ea", "eap", "experimental",
-      "milestone", "nightly", "pr", "pre", "preview", "rc", "snap", "snapshot", "unstable",
+      "alpha",
+      "beta",
+      "canary",
+      "candidate",
+      "cr",
+      "dev",
+      "draft",
+      "ea",
+      "eap",
+      "experimental",
+      "milestone",
+      "nightly",
+      "pr",
+      "pre",
+      "preview",
+      "rc",
+      "snap",
+      "snapshot",
+      "unstable",
     )
 
   // A marker may follow a separator or a digit, as in `3.2.0rc2`. The one-letter `m` of `3.0-M1`
