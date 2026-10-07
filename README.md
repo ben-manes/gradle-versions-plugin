@@ -2579,9 +2579,9 @@ gradle.rootProject {
 A script has no implicit import for the plugin's types, so the imports at the
 top of these snippets are required to reference them by their simple names.
 
-The task configuration in the init script is applied only where the plugin isn't
-applied in the build itself. Where the settings plugin is applied in the
-settings script, configure the task in the build's own scripts, as usual.
+The task configuration in the init script is applied only where the settings
+plugin isn't applied in the settings script. Where it is, configure the task in
+the build's own scripts, as usual.
 
 #### `io.github.ben-manes.versions` applied in the root project
 
