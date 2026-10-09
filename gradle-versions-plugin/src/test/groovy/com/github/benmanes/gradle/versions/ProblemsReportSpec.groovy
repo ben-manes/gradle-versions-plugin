@@ -325,6 +325,23 @@ final class ProblemsReportSpec extends Specification {
     'release-candidate' || ['999.0', '999.1-rc-1']   | ['999.0, the latest release', '999.1-rc-1, the latest release candidate']
   }
 
+  @IgnoreIf({ !GradleVersions.drivenBy(GradleVersions.CURRENT) })
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1150')
+  def 'The problems are reported beside the plain text report by default'() {
+    given:
+    writeBuild("implementation 'com.example:tiered-widget:1.0.1'")
+    def buildFile = new File(testProjectDir.root, 'build.gradle')
+    buildFile.text = buildFile.text.replace("outputFormatter = 'problems'", '')
+
+    when:
+    def result = run(GradleVersions.CURRENT, ['dependencyUpdates', '--warning-mode', 'all'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.count('Problem found: Outdated dependency') == 1
+    new File(testProjectDir.root, 'build/dependencyUpdates/report.txt').exists()
+  }
+
   @IgnoreIf({ !GradleVersions.drivenBy('8.4') })
   def 'The problems are skipped on a Gradle release without the Problems API'() {
     given:

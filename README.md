@@ -347,7 +347,7 @@ command line option, since no command line can express the logic.
 | [`preReleaseVersionIf`](#filtering-unstable-versions) | a predicate over a version string | nothing added | |
 | [`exemptFromBuiltInChecksIf`](#filtering-unstable-versions) | a predicate over the candidate | nothing exempt | |
 | [`rejectVersionIf`](#filtering-unstable-versions) | a predicate over the candidate | nothing rejected | |
-| [`outputFormatter`](#report-format) | `plain`, `json`, `xml`, `html`, `problems`, a comma separated list of those, or a `Reporter` | `plain` | `--output-formatter` |
+| [`outputFormatter`](#report-format) | `plain`, `json`, `xml`, `html`, `problems`, a comma separated list of those, or a `Reporter` | `plain,problems` | `--output-formatter` |
 | [`outputDir`](#outputdir) | a directory path | `<buildDirectory>/dependencyUpdates` | `--output-dir` |
 | [`reportfileName`](#reportfilename) | a file name, without the extension | `report` | `--report-file-name` |
 | [`gradleVersionsApiBaseUrl`](#gradle-versions-api-base-url) | a URL | `https://services.gradle.org/versions/` | `--gradle-versions-api-base-url` |
@@ -1454,7 +1454,7 @@ name.
 The task property `outputFormatter` controls the report output format. The
 following values are supported:
 
-* `"plain"`: format output file as plain text (default), also accepted as `"text"`
+* `"plain"`: format output file as plain text, also accepted as `"text"`
 * `"json"`: format output file as json text
 * `"xml"`: format output file as xml text, can be used by other plugins (e.g. sonar)
 * `"html"`: format output file as html
@@ -1462,6 +1462,11 @@ following values are supported:
   [Problems API](https://docs.gradle.org/current/userguide/reporting_problems.html) rather than to a file
 * `Closure`: will be called with the result of the dependency update analysis
   (from Kotlin, use the `outputFormatter(Action<Result>)` function instead)
+
+The default is `"plain,problems"`. The plain text report is the same with or
+without `problems`, but where a problem is reported, Gradle prints the location
+of its problems report at the end of the run. Set `outputFormatter = "plain"` to
+leave the problems out.
 
 The `problems` format adds each outdated dependency to Gradle's problems report,
 `build/reports/problems/problems-report.html`. Each problem is labeled with the
@@ -2735,10 +2740,14 @@ and `VersionsPlugin` in an init script:
 >   `VersionsSettingsPlugin` from `settingsEvaluated` (see [Initialization
 >   script](#initialization-script)). The earlier init script still works.
 
-In v0.66.0, the projects that declare a dependency are added to the JSON and XML
-reports:
+In v0.66.0, the default report format and the JSON and XML reports change:
 
 > [!NOTE]
+> - The default `outputFormatter` is now `plain,problems`. The plain text report
+>   is unchanged. Where a problem is reported, on Gradle 8.13 or later, Gradle
+>   prints the location of its problems report at the end of the run. Set
+>   `outputFormatter = "plain"` for the earlier behavior (see
+>   [Report format](#report-format)).
 > - In a report of more than one project, each dependency in the JSON and XML
 >   reports has a `declaringProjects` list of the projects that declare it.
 >   `projects` is unchanged, and is still present only where versions differ.
