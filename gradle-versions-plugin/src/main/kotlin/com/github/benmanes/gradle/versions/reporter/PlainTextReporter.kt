@@ -8,13 +8,14 @@ import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.C
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.NIGHTLY
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 import org.gradle.api.Project
+import org.gradle.api.logging.Logging
 import java.io.OutputStream
 
 /**
  * A plain text reporter for the dependency updates results.
  *
  * @property isInfoEnabled Whether the build already runs at the info level, so that the report does
- * not suggest enabling it.
+ * not suggest enabling it. Read from Gradle's logging where it is not passed.
  */
 class PlainTextReporter
   @JvmOverloads
@@ -22,7 +23,7 @@ class PlainTextReporter
     override val projectPath: String,
     override val revision: String,
     override val gradleReleaseChannel: String,
-    private val isInfoEnabled: Boolean = false,
+    private val isInfoEnabled: Boolean = Logging.getLogger(PlainTextReporter::class.java).isInfoEnabled,
   ) : AbstractReporter(projectPath, revision, gradleReleaseChannel) {
     /** The number of entries left out because Gradle sets their versions for its embedded Kotlin. */
     internal var leftOutEmbeddedKotlin: Int = 0
