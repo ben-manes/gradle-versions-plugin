@@ -19,7 +19,10 @@ import javax.inject.Inject
 open class ProblemsReporter
   @Inject
   constructor(private val objects: ObjectFactory) {
-    /** Reports each outdated dependency of the result as a problem. */
+    /**
+     * Reports each outdated dependency, each unresolved dependency, each reason configurations were
+     * skipped for, and a Gradle update as a problem.
+     */
     fun report(result: Result) {
       if (GradleVersion.current().baseVersion < GradleVersion.version("8.13")) {
         logger.info("The problems report was skipped, as it needs Gradle 8.13 or later")
@@ -54,6 +57,9 @@ open class ProblemsReporter
 private class ProblemFindings(private val problems: ProblemsApi) {
   fun report(result: Result) {
     reportOutdated(result)
+    reportUnresolved(result)
+    reportSkipped(result)
+    reportGradle(result)
   }
 
   private fun reportOutdated(result: Result) {
@@ -79,8 +85,9 @@ private class ProblemFindings(private val problems: ProblemsApi) {
           listOf(dependency.version, available.patch, available.minor, latest, available.preRelease),
           versionComparator,
         )
-      problems.reportOutdated(
+      problems.report(
         coordinate,
+        "Outdated dependency",
         "$coordinate [${steps.joinToString(" -> ")}]",
         // The lines printed under the row in the text report, in the same order.
         listOfNotNull(
@@ -91,5 +98,76 @@ private class ProblemFindings(private val problems: ProblemsApi) {
         steps.mapNotNull { version -> tiers[version]?.let { "Upgrade $coordinate to $version, $it" } },
       )
     }
+  }
+
+  private fun reportUnresolved(result: Result) {
+    for (dependency in result.unresolved.dependencies) {
+      val coordinate = "${dependency.group.orEmpty()}:${dependency.name}"
+      val version = dependency.version
+      val versionSuffix = if (version.isNullOrEmpty() || version == "none") "" else ":$version"
+      problems.report(
+        "unresolved:$coordinate",
+        "Unresolved dependency",
+        "$coordinate$versionSuffix",
+        // The lines printed under the row in the text report, in the same order.
+        listOfNotNull(
+          dependency.reason
+            .lineSequence()
+            .first()
+            .takeIf { it.isNotBlank() },
+          dependency.userReason,
+          dependency.projectUrl,
+        ).joinToString("\n").ifEmpty { null },
+      )
+    }
+  }
+
+  /**
+   * Reports the configurations skipped for one reason as one problem, as the text report groups
+   * them. Each reason has an id of its own, as Gradle keeps only the first 15 problems of an id.
+   */
+  private fun reportSkipped(result: Result) {
+    for ((reason, group) in result.skipped.configurations.groupBy { it.reason }) {
+      problems.report(
+        "skipped-configurations:${Integer.toHexString(reason.hashCode())}",
+        "Skipped configurations",
+        reason.lineSequence().first(),
+        group.joinToString("\n") { "'${it.name}' in ${projectsLabel(listOf(it.project))}" },
+      )
+    }
+  }
+
+  /**
+   * Reports the Gradle versions newer than the running one. An update on the release candidate or
+   * nightly channel is available in the result only where the report's release channel includes it.
+   */
+  private fun reportGradle(result: Result) {
+    val gradle = result.gradle
+    if (!gradle.enabled) {
+      return
+    }
+    var newest = GradleVersion.version(gradle.running.version)
+    val steps =
+      listOf(
+        gradle.current to "the latest release",
+        gradle.releaseCandidate to "the latest release candidate",
+        gradle.nightly to "the latest nightly",
+      ).filter { (update, _) ->
+        update.isUpdateAvailable &&
+          (GradleVersion.version(update.version) > newest).also { newer ->
+            if (newer) newest = GradleVersion.version(update.version)
+          }
+      }
+    if (steps.isEmpty()) {
+      return
+    }
+    val versions = listOf(gradle.running.version) + steps.map { it.first.version }
+    problems.report(
+      "gradle",
+      "Outdated Gradle",
+      "Gradle [${versions.joinToString(" -> ")}]",
+      null,
+      steps.map { (update, tier) -> "Upgrade Gradle to ${update.version}, $tier" },
+    )
   }
 }

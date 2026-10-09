@@ -1458,7 +1458,7 @@ following values are supported:
 * `"json"`: format output file as json text
 * `"xml"`: format output file as xml text, can be used by other plugins (e.g. sonar)
 * `"html"`: format output file as html
-* `"problems"`: report each outdated dependency to Gradle's
+* `"problems"`: report the findings to Gradle's
   [Problems API](https://docs.gradle.org/current/userguide/reporting_problems.html) rather than to a file
 * `Closure`: will be called with the result of the dependency update analysis
   (from Kotlin, use the `outputFormatter(Action<Result>)` function instead)
@@ -1470,7 +1470,17 @@ those later versions is listed as a solution. The lines printed under the row ar
 included as the problem's details: the `because` reason, the project URL, and
 where the dependency comes from. In a report of more than one project, the
 projects that declare the dependency are always listed there, not only where
-their versions differ. On Gradle 9.3 or later, the problems are also printed on
+their versions differ.
+
+A Gradle update is reported as a problem too, with an upgrade to each newer
+version on the `gradleReleaseChannel` as a solution. So is each unresolved
+dependency, and so are the configurations that could not be inspected, as one
+problem for each reason. Every problem is a warning, and a build run with
+`--warning-mode fail` still succeeds. Nothing is reported for the report's other
+two sections, the dependencies that exceed the latest version found and the ones
+declared without a version.
+
+On Gradle 9.3 or later, the problems are also printed on
 the console under `--warning-mode all`. The Problems API is incubating and needs
 Gradle 8.13 or later, so on an older Gradle the format is skipped with a message
 at the info log level.

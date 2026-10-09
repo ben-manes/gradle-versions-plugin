@@ -2,6 +2,8 @@ package com.github.benmanes.gradle.versions
 
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
+import com.sun.net.httpserver.HttpExchange
+import com.sun.net.httpserver.HttpServer
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import spock.lang.IgnoreIf
@@ -207,6 +209,117 @@ final class ProblemsReportSpec extends Specification {
     result.output.count('Problem found:') == 2
   }
 
+  @IgnoreIf({ !GradleVersions.drivenBy(GradleVersions.CURRENT) })
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1150')
+  def 'An unresolved dependency is reported as a problem'() {
+    given:
+    writeBuild("implementation 'com.github.ben-manes:unresolvable:1.0'")
+
+    when:
+    def result = run(GradleVersions.CURRENT, ['dependencyUpdates', '--warning-mode', 'all'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains(
+      """Problem found: Unresolved dependency (id: dependency-updates:unresolved:com.github.ben-manes:unresolvable)
+      |  com.github.ben-manes:unresolvable:1.0
+      |    Could not find any matches for com.github.ben-manes:unresolvable:+""".stripMargin())
+
+    and: 'a problem is not one of the warnings that the fail mode fails a build for'
+    run(GradleVersions.CURRENT, ['dependencyUpdates', '--warning-mode', 'fail'])
+      .task(':dependencyUpdates').outcome == SUCCESS
+  }
+
+  @IgnoreIf({ !GradleVersions.drivenBy(GradleVersions.CURRENT) })
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1150')
+  def 'The configurations skipped for one reason are reported as one problem'() {
+    given: 'a resolution strategy that throws for every configuration'
+    writeBuild("implementation 'com.example:tiered-widget:1.0.1'")
+    new File(testProjectDir.root, 'build.gradle') <<
+      """
+        dependencyUpdates.resolutionStrategy {
+          componentSelection { rules ->
+            rules.withModule('com.google.guava') { }
+          }
+        }
+      """.stripIndent()
+
+    when:
+    def result = run(GradleVersions.CURRENT, ['dependencyUpdates', '--warning-mode', 'all'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.count('Problem found: Skipped configurations (id: dependency-updates:skipped-configurations:') == 1
+    result.output.contains("    'compileClasspath' in root project")
+    result.output.contains("    'runtimeClasspath' in root project")
+  }
+
+  @IgnoreIf({ !GradleVersions.drivenBy(GradleVersions.CURRENT) })
+  def 'Each reason configurations are skipped for is reported past the number of problems Gradle keeps for one id'() {
+    given: 'a resolution strategy that throws a different reason for each configuration'
+    writeBuild("implementation 'com.example:tiered-widget:1.0.1'")
+    new File(testProjectDir.root, 'build.gradle') <<
+      """
+        def reasons = 0
+        dependencyUpdates.resolutionStrategy {
+          throw new IllegalStateException("reason \${reasons++}")
+        }
+      """.stripIndent()
+
+    when:
+    def result = run(GradleVersions.CURRENT,
+      ['dependencyUpdates', '--warning-mode', 'all', '-Dorg.gradle.internal.problem.summary.threshold=1'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.count('Problem found: Skipped configurations') > 1
+  }
+
+  @IgnoreIf({ !GradleVersions.drivenBy(GradleVersions.CURRENT) })
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1150')
+  @Unroll
+  def 'A Gradle update is reported as a problem on the #channel channel'() {
+    given: 'a versions API with a newer release, and a release candidate that the channel leaves out'
+    def server = HttpServer.create(new InetSocketAddress(InetAddress.loopbackAddress, 0), 0)
+    ['current': '999.0', 'release-candidate': '999.1-rc-1', 'nightly': '999.2-20260913000000+0000'].each { path, version ->
+      server.createContext("/${path}") { HttpExchange exchange ->
+        def bytes = "{\"version\":\"${version}\"}".getBytes('UTF-8')
+        exchange.sendResponseHeaders(200, bytes.length)
+        exchange.responseBody.withStream { it.write(bytes) }
+      }
+    }
+    server.start()
+    writeBuild("implementation 'com.google.inject.extensions:guice-multibindings:3.0'")
+    new File(testProjectDir.root, 'build.gradle') <<
+      """
+        dependencyUpdates {
+          checkForGradleUpdate = true
+          gradleReleaseChannel = '$channel'
+          gradleVersionsApiBaseUrl = 'http://${server.address.hostString}:${server.address.port}/'
+        }
+      """.stripIndent()
+
+    when:
+    def result = run(GradleVersions.CURRENT, ['dependencyUpdates', '--warning-mode', 'all'])
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains(
+      """Problem found: Outdated Gradle (id: dependency-updates:gradle)
+      |  Gradle [${GradleVersions.CURRENT} -> ${steps.join(' -> ')}]
+      |""".stripMargin())
+    solutions.every { result.output.contains("Upgrade Gradle to ${it}.") }
+    result.output.count('Upgrade Gradle to') == solutions.size()
+
+    cleanup:
+    server?.stop(0)
+
+    where:
+    channel             || steps                     | solutions
+    'current'           || ['999.0']                 | ['999.0, the latest release']
+    'release-candidate' || ['999.0', '999.1-rc-1']   | ['999.0, the latest release', '999.1-rc-1, the latest release candidate']
+  }
+
   @IgnoreIf({ !GradleVersions.drivenBy('8.4') })
   def 'The problems are skipped on a Gradle release without the Problems API'() {
     given:
@@ -231,7 +344,7 @@ final class ProblemsReportSpec extends Specification {
 
         repositories {
           maven {
-            url '${mavenRepoUrl}'
+            url = '${mavenRepoUrl}'
           }
         }
 
