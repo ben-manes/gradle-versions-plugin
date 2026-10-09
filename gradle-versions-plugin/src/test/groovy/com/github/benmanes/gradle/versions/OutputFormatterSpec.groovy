@@ -773,4 +773,60 @@ Failed to determine the latest version for the following dependencies (use --inf
     result.output.contains('Project Dependency Updates')
     result.task(':dependencyUpdates').outcome == SUCCESS
   }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1149')
+  @Unroll
+  def 'outputFormatter custom - a composed plain text reporter suggests --info only where it is off (#arguments)'() {
+    given:
+    buildFile = testProjectDir.newFile('build.gradle')
+    buildFile <<
+      """
+        import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
+
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'java'
+        apply plugin: 'io.github.ben-manes.versions'
+
+        repositories {
+          maven {
+            url '${mavenRepoUrl}'
+          }
+        }
+
+        dependencies {
+          implementation('com.github.ben-manes:unresolvable:1.0')
+        }
+
+        tasks.named('dependencyUpdates').configure {
+          def projectPath = project.path
+          def taskRevision = revision
+          def releaseChannel = gradleReleaseChannel
+
+          outputFormatter { result ->
+            new PlainTextReporter(projectPath, taskRevision, releaseChannel).write(System.out, result)
+          }
+          checkForGradleUpdate = false // future proof tests from breaking
+        }
+        """.stripIndent()
+
+    when:
+    def result = TestKitRunner.create()
+      .withProjectDir(testProjectDir.root)
+      .withArguments(['dependencyUpdates'] + arguments)
+      .withPluginClasspath()
+      .build()
+
+    then:
+    result.output.contains("Failed to determine the latest version for the following dependencies$hint:")
+
+    where:
+    arguments  | hint
+    []         | ' (use --info for details)'
+    ['--info'] | ''
+  }
 }
