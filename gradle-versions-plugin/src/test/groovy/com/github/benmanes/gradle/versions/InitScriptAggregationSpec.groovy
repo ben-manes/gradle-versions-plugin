@@ -23,6 +23,9 @@ import spock.lang.Unroll
 @Requires({ jvm.java17Compatible })
 @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1023')
 final class InitScriptAggregationSpec extends Specification {
+  private static final List<String> SETTINGS_SCRIPT_IDS =
+    ['io.github.ben-manes.versions', 'io.github.ben-manes.versions.settings']
+
   @Rule final TemporaryFolder testProjectDir = new TemporaryFolder()
   @Rule final TemporaryFolder initScriptDir = new TemporaryFolder()
   private String mavenRepoUrl
@@ -134,7 +137,7 @@ final class InitScriptAggregationSpec extends Specification {
   }
 
   @Unroll
-  def 'Reports when the settings script applies the plugin and an init script from #recipe runs'() {
+  def 'Reports when #pluginId is applied in the settings script and an init script from #recipe runs'() {
     given:
     testProjectDir.newFile('settings.gradle') <<
       """
@@ -151,7 +154,7 @@ final class InitScriptAggregationSpec extends Specification {
         }
 
         plugins {
-          id 'io.github.ben-manes.versions.settings'
+          id '${pluginId}'
         }
 
         include 'app'
@@ -171,7 +174,7 @@ final class InitScriptAggregationSpec extends Specification {
     !result.output.contains('The dependency updates report is missing')
 
     where:
-    recipe << ['settingsEvaluated', 'beforeSettings']
+    [recipe, pluginId] << [['settingsEvaluated', 'beforeSettings'], SETTINGS_SCRIPT_IDS].combinations()
   }
 
   @Unroll
@@ -227,12 +230,13 @@ final class InitScriptAggregationSpec extends Specification {
     recipe << ['settingsEvaluated', 'beforeSettings']
   }
 
-  def 'Configures the task by type when the settings script applies the plugin'() {
+  @Unroll
+  def 'Configures the task by type when #pluginId is applied in the settings script'() {
     given:
     testProjectDir.newFile('settings.gradle') <<
       """
         plugins {
-          id 'io.github.ben-manes.versions.settings'
+          id '${pluginId}'
         }
 
         include 'app'
@@ -252,5 +256,8 @@ final class InitScriptAggregationSpec extends Specification {
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.inject:guice [2.0 -> 2.2]')
+
+    where:
+    pluginId << SETTINGS_SCRIPT_IDS
   }
 }

@@ -1,24 +1,65 @@
 package com.github.benmanes.gradle.versions
 
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+import com.github.benmanes.gradle.versions.updates.publishSettingsClasspath
 import com.github.benmanes.gradle.versions.updates.registerAggregation
 import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.initialization.Settings
 import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.ExtensionAware
+import org.gradle.api.plugins.PluginAware
 import org.gradle.util.GradleVersion
 import org.xml.sax.SAXException
 import javax.xml.parsers.SAXParserFactory
 
 /**
- * Registers the plugin's tasks.
+ * Registers the plugin's tasks when applied to a project. When applied to a settings script, applies
+ * itself to the root project and [VersionsContributorPlugin] to every other project of the build,
+ * but not of an included build, and reports the versions of the plugins declared in the settings
+ * script.
  */
-class VersionsPlugin : Plugin<Project> {
-  override fun apply(project: Project) {
+class VersionsPlugin : Plugin<PluginAware> {
+  override fun apply(target: PluginAware) {
     requireMinimumGradleVersion("io.github.ben-manes.versions")
+    when (target) {
+      is Project -> applyTo(target)
+      is Settings -> applyTo(target)
+      else -> throw GradleException(
+        "The io.github.ben-manes.versions plugin must be applied in a settings script or a build script.",
+      )
+    }
+  }
+
+  private fun applyTo(settings: Settings) {
+    if (!claims(settings)) {
+      return
+    }
+
+    // The settings script's classpath contains the versions of the plugins that its own plugins
+    // block declares, which appear in no project's buildscript.
+    // https://github.com/ben-manes/gradle-versions-plugin/issues/367
+    publishSettingsClasspath(settings.gradle, settings.buildscript.configurations)
+
+    // Isolated projects isolates the action of gradle.lifecycle.beforeProject so that the state it
+    // captures cannot be shared between the projects it configures. This action captures nothing,
+    // so the older hook is equivalent and does not require Gradle 8.8. Capturing the settings or a
+    // field here would no longer be safe.
+    settings.gradle.beforeProject { project ->
+      // The reporting task is registered only in the root, so that invoking dependencyUpdates by
+      // name runs one task and writes one merged report rather than one per project.
+      if (project.path == ":") {
+        project.pluginManager.apply(VersionsPlugin::class.java)
+      } else {
+        project.pluginManager.apply(VersionsContributorPlugin::class.java)
+      }
+    }
+  }
+
+  private fun applyTo(project: Project) {
     if (!claims(project)) {
       return
     }

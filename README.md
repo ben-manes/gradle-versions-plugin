@@ -83,7 +83,7 @@ builds](#multi-project-builds)).
 "settings.gradle.kts":
 ```kotlin
 plugins {
-  id("io.github.ben-manes.versions.settings") version "$version"
+  id("io.github.ben-manes.versions") version "$version"
 }
 ```
 
@@ -95,11 +95,14 @@ plugins {
 "settings.gradle":
 ```groovy
 plugins {
-  id 'io.github.ben-manes.versions.settings' version '$version'
+  id 'io.github.ben-manes.versions' version '$version'
 }
 ```
 
 </details>
+
+The settings plugin's earlier ID, `io.github.ben-manes.versions.settings`, is
+still supported.
 
 > [!IMPORTANT]
 > Replace `$version` with the current release, shown in the badge at the top of
@@ -2381,8 +2384,9 @@ badge at the top of this page.
 > [!IMPORTANT]
 > When the settings plugin is also applied, request the per-project plugin
 > *without* a version—the settings plugin already puts it on every project's
-> classpath, and a versioned request fails to resolve. This includes a version
-> catalog alias, which always includes a version.
+> classpath. A versioned request, which includes a version catalog alias, fails
+> to resolve unless `io.github.ben-manes.versions` is applied in the settings
+> script with the same version.
 
 ### The `plugins` block
 
@@ -2648,14 +2652,14 @@ To fix it, move the plugin to the settings script:
    "settings.gradle.kts":
    ```kotlin
    plugins {
-     id("io.github.ben-manes.versions.settings") version "$version"
+     id("io.github.ben-manes.versions") version "$version"
    }
    ```
 
    "settings.gradle":
    ```groovy
    plugins {
-     id "io.github.ben-manes.versions.settings" version "$version"
+     id "io.github.ben-manes.versions" version "$version"
    }
    ```
 
@@ -2695,6 +2699,15 @@ build is on and work upward. Each section migrates to the version covered by
 the section above it, and the topmost migrates to the current release.
 *Important*s are must-dos, *Tip*s are actions you should or may want to take,
 and *Note*s are things worth knowing that need no action.
+
+### v0.65.0
+
+In v0.66.0, `io.github.ben-manes.versions` can be applied in a settings script:
+
+> [!TIP]
+> Replace `io.github.ben-manes.versions.settings` with
+> `io.github.ben-manes.versions` in the settings script (see [Applying the
+> plugin](#applying-the-plugin)). The earlier ID is still supported.
 
 ### v0.64.0
 
