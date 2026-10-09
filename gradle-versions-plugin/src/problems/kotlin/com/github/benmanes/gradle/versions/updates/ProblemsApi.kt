@@ -6,7 +6,7 @@ import org.gradle.api.problems.Problems
 import javax.inject.Inject
 
 /** Reports an outdated dependency to Gradle's Problems API, which is available from Gradle 8.13. */
-internal abstract class ProblemsReporter {
+internal abstract class ProblemsApi {
   @get:Inject
   abstract val problems: Problems
 

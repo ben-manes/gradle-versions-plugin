@@ -1475,6 +1475,22 @@ the console under `--warning-mode all`. The Problems API is incubating and needs
 Gradle 8.13 or later, so on an older Gradle the format is skipped with a message
 at the info log level.
 
+The same problems can be reported from a custom `outputFormatter`, after
+changing the result for example. Gradle's services are injected into
+`ProblemsReporter`, so create it with the project's `ObjectFactory`:
+
+```kotlin
+import com.github.benmanes.gradle.versions.reporter.ProblemsReporter
+
+tasks.dependencyUpdates {
+  val problemsReporter = objects.newInstance<ProblemsReporter>()
+  outputFormatter {
+    outdated.dependencies.removeIf { it.group == "com.example" }
+    problemsReporter.report(this)
+  }
+}
+```
+
 The console summary is printed at the lifecycle log level, so `--quiet` suppresses
 it. A file format's report is still written; read it, or drop `--quiet`, if a
 script was piping the console output.
