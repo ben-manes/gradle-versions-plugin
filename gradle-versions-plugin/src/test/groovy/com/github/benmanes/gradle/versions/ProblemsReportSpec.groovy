@@ -125,6 +125,72 @@ final class ProblemsReportSpec extends Specification {
   }
 
   @IgnoreIf({ !GradleVersions.drivenBy(GradleVersions.CURRENT) })
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1149')
+  @Unroll
+  def 'A ProblemsReporter created in a build script reports the result passed to it #description'() {
+    given: 'two subprojects, and a formatter that removes one dependency before reporting the rest'
+    testProjectDir.newFile('settings.gradle') << "include 'app', 'lib'"
+    testProjectDir.newFile('build.gradle') <<
+      """
+        import com.github.benmanes.gradle.versions.reporter.ProblemsReporter
+
+        plugins {
+          id 'io.github.ben-manes.versions'
+        }
+
+        subprojects {
+          apply plugin: 'java'
+
+          repositories {
+            maven {
+              url '${mavenRepoUrl}'
+            }
+          }
+
+          dependencies {
+            implementation 'com.google.inject:guice:2.0'
+            implementation 'com.example:tiered-widget:1.0.1'
+          }
+        }
+
+        def problemsReporter = objects.newInstance(ProblemsReporter)
+
+        dependencyUpdates {
+          checkForGradleUpdate = false
+          outputFormatter = { result ->
+            result.outdated.dependencies.removeIf { it.name == 'tiered-widget' }
+            problemsReporter.report(result)
+          }
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('app')
+    testProjectDir.newFolder('lib')
+
+    when: 'the revision is set by an option, which is applied after the task is configured'
+    def results = (1..2).collect {
+      run(GradleVersions.CURRENT, [':dependencyUpdates', '--revision', 'release', '--warning-mode', 'all'] + arguments)
+    }
+
+    then:
+    results.every { result ->
+      result.task(':dependencyUpdates').outcome == SUCCESS &&
+        result.output.contains(
+          """Problem found: Outdated dependency (id: dependency-updates:com.google.inject:guice)
+          |  com.google.inject:guice [2.0 -> 2.2 -> 3.1]
+          |    https://code.google.com/p/google-guice/
+          |    declared in :app, :lib
+          |    Possible solutions:""".stripMargin()) &&
+        result.output.count('Problem found:') == 1
+    }
+    results[1].output.contains('Configuration cache entry reused.') == reused
+
+    where:
+    description                     | arguments                 || reused
+    ''                              | []                        || false
+    'under the configuration cache' | ['--configuration-cache'] || true
+  }
+
+  @IgnoreIf({ !GradleVersions.drivenBy(GradleVersions.CURRENT) })
   def 'Each outdated dependency is reported past the number of problems Gradle keeps for one id'() {
     given: 'two outdated dependencies, with Gradle keeping one problem for each id'
     writeBuild("""

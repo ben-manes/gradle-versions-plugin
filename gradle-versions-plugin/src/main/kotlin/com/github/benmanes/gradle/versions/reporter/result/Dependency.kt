@@ -35,6 +35,14 @@ open class Dependency
     @AbsentWhenNull open val constrainedBy: List<String>? = null,
   ) : Comparable<Dependency> {
     /**
+     * The projects that declare the dependency, in a report of more than one project. A problem is
+     * where a build author acts, so every declaring project is listed in one, where [projects] is
+     * set only for a divergent version. Left out of the file reports, and of `copy`.
+     */
+    @Transient
+    internal var declaringProjects: List<String>? = null
+
+    /**
      * The projects are compared last, so that two rows of one declared version with different
      * latest versions are ordered apart. The report groups are sorted sets, and rows that compare
      * as equal are dropped from them rather than printed. The subclasses with a latest version
