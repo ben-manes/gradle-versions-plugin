@@ -383,6 +383,7 @@ final class OutputFormatterSpec extends Specification {
             ],
             "count": 0
         },
+        "leftOutEmbeddedKotlin": 0,
         "count": 2
     }
       """.stripIndent())
@@ -477,6 +478,7 @@ final class OutputFormatterSpec extends Specification {
         <count>0</count>
         <configurations/>
       </skipped>
+      <leftOutEmbeddedKotlin>0</leftOutEmbeddedKotlin>
       <gradle>
         <enabled>false</enabled>
         <running>
