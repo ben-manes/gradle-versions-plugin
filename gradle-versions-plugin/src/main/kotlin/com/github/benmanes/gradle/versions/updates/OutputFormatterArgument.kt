@@ -26,6 +26,6 @@ sealed interface OutputFormatterArgument {
   class CustomAction(val action: Action<Result>) : OutputFormatterArgument
 
   companion object {
-    val DEFAULT = BuiltIn(formatterNames = "text")
+    val DEFAULT = BuiltIn(formatterNames = "plain,problems")
   }
 }

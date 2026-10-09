@@ -257,7 +257,9 @@ class DependencyUpdatesReporter(
   private fun reportProblems() {
     val objects = objects
     if (objects == null) {
-      logger.warn("The problems report was skipped, as only the dependencyUpdates task writes it")
+      val message = "The problems report was skipped, as only the dependencyUpdates task writes it"
+      // Not a warning for the default, where the caller did not ask for the problems.
+      if (outputFormatterArgument === OutputFormatterArgument.DEFAULT) logger.info(message) else logger.warn(message)
       return
     }
     objects.newInstance(ProblemsReporter::class.java).report(buildBaseObject())
