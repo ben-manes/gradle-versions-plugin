@@ -49,6 +49,13 @@ final class ConstructorVisibilitySpec extends Specification {
     PartialResult.declaredMethods.any { it.name == 'copy' && it.parameterCount == 4 }
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1149')
+  def 'The Result arity v0.65.0 shipped is still callable beside the one with the embedded Kotlin count'() {
+    expect:
+    Result.declaredConstructors.any { it.parameterCount == 8 }
+    Result.declaredConstructors.any { it.parameterCount == 9 }
+  }
+
   def 'The reporter arity v0.61.0 shipped is still callable'() {
     expect:
     DependencyUpdatesReporter.declaredConstructors.any { it.parameterCount == 22 }

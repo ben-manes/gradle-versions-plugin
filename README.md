@@ -713,7 +713,8 @@ embedded version, on a buildscript classpath, and in a project that applies
 neither plugin. The `kotlin-dsl` plugins are left out at the paired version on a
 buildscript or settings classpath, including with `apply false`, and are
 reported where they are declared as a library dependency. The number of entries
-left out is printed at the end of the plain text report:
+left out is `leftOutEmbeddedKotlin` in the `Result` and in the JSON and XML
+reports, and is printed at the end of the plain text and HTML reports:
 
 ```text
 4 entries set by Gradle's embedded Kotlin were left out. Run with --check-embedded-kotlin to see them.
@@ -1778,7 +1779,8 @@ Alternatively, the report may be output to a structured file.
     "reason": "org.gradle.api.InvalidUserCodeException: Could not add a component selection rule for module 'com.google.guava'."
    }
   ]
- }
+ },
+ "leftOutEmbeddedKotlin": 0
 }
 ```
 
@@ -1942,6 +1944,7 @@ Searched in the following locations:
             </skippedConfiguration>
         </configurations>
     </skipped>
+    <leftOutEmbeddedKotlin>0</leftOutEmbeddedKotlin>
     <gradle>
         <enabled>true</enabled>
         <running>

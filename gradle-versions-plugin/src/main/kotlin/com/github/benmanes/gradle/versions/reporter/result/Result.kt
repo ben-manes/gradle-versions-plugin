@@ -15,6 +15,8 @@ import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
  * @property unresolved The unresolvable dependencies.
  * @property gradle Gradle release channels and respective update availability.
  * @property skipped The configurations whose dependencies could not be inspected, which [count] does not include.
+ * @property leftOutEmbeddedKotlin The number of entries left out because Gradle sets their versions for its
+ * embedded Kotlin, which [count] does not include.
  */
 class Result
   @JvmOverloads
@@ -27,4 +29,23 @@ class Result
     val unresolved: DependenciesGroup<DependencyUnresolved>,
     val gradle: GradleUpdateResults,
     val skipped: SkippedConfigurationsGroup = SkippedConfigurationsGroup(0),
-  )
+  ) {
+    var leftOutEmbeddedKotlin: Int = 0
+      private set
+
+    // A secondary constructor rather than a defaulted parameter, which would replace the
+    // constructor that a Kotlin caller leaving out `skipped` was compiled against.
+    constructor(
+      count: Int,
+      current: DependenciesGroup<Dependency>,
+      outdated: DependenciesGroup<DependencyOutdated>,
+      exceeded: DependenciesGroup<DependencyLatest>,
+      undeclared: DependenciesGroup<Dependency>,
+      unresolved: DependenciesGroup<DependencyUnresolved>,
+      gradle: GradleUpdateResults,
+      skipped: SkippedConfigurationsGroup,
+      leftOutEmbeddedKotlin: Int,
+    ) : this(count, current, outdated, exceeded, undeclared, unresolved, gradle, skipped) {
+      this.leftOutEmbeddedKotlin = leftOutEmbeddedKotlin
+    }
+  }

@@ -58,6 +58,9 @@ class HtmlReporter(
       writeUndeclared(printStream, result)
       writeUnresolved(printStream, result)
     }
+    leftOutEmbeddedKotlinLabel(result.leftOutEmbeddedKotlin)?.let {
+      printStream.println("<p>$it</p>")
+    }
     writeSkipped(printStream, result)
     writeGradleUpdates(printStream, result)
     printStream.println("</body>")

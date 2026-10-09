@@ -219,7 +219,6 @@ class DependencyUpdatesReporter(
           gradleReleaseChannel,
           logger.isInfoEnabled,
         )
-      plainTextReporter.leftOutEmbeddedKotlin = leftOutEmbeddedKotlin
       plainTextReporter.write(System.out, buildBaseObject())
     }
 
@@ -328,9 +327,7 @@ class DependencyUpdatesReporter(
               "The built-in formatters are 'plain', 'json', 'xml', 'html', and 'problems'.",
           )
         }
-        PlainTextReporter(projectPath, revision, gradleReleaseChannel, logger.isInfoEnabled).also {
-          it.leftOutEmbeddedKotlin = leftOutEmbeddedKotlin
-        }
+        PlainTextReporter(projectPath, revision, gradleReleaseChannel, logger.isInfoEnabled)
       }
     }
 
@@ -358,6 +355,7 @@ class DependencyUpdatesReporter(
       unresolvedGroup = buildDependenciesGroup(sortedUnresolved),
       gradleUpdateResults = buildGradleUpdateResults(),
       skippedGroup = SkippedConfigurationsGroup(sortedSkipped.size, sortedSkipped),
+      leftOutEmbeddedKotlin = leftOutEmbeddedKotlin,
     )
   }
 
@@ -562,6 +560,7 @@ class DependencyUpdatesReporter(
       unresolvedGroup: DependenciesGroup<DependencyUnresolved>,
       gradleUpdateResults: GradleUpdateResults,
       skippedGroup: SkippedConfigurationsGroup,
+      leftOutEmbeddedKotlin: Int,
     ): Result =
       Result(
         count = count,
@@ -572,6 +571,7 @@ class DependencyUpdatesReporter(
         unresolved = unresolvedGroup,
         gradle = gradleUpdateResults,
         skipped = skippedGroup,
+        leftOutEmbeddedKotlin = leftOutEmbeddedKotlin,
       )
 
     private fun <T : Dependency> buildDependenciesGroup(dependencies: MutableSet<T>): DependenciesGroup<T> =
