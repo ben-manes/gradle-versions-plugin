@@ -5,8 +5,10 @@ import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
 /**
  * The result of a dependency update analysis.
  *
+ * @param count Ignored. It is kept for callers of the constructors that took a stored count.
  * @property count The number of dependencies reported, counting one that appears in more than one
- * section once for each of them.
+ * section once for each of them. It is the sum of the five groups' counts, so it stays correct
+ * after a custom output formatter adds or removes a dependency.
  * @property current The up-to-date dependencies.
  * @property outdated The dependencies that can be updated.
  * @property exceeded The dependencies whose versions are newer than the ones that are available
@@ -21,7 +23,9 @@ import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
 class Result
   @JvmOverloads
   constructor(
-    val count: Int,
+    // Moshi writes a property without a backing field to the JSON report only when the primary
+    // constructor has a parameter of the same name, so this parameter has to stay.
+    @Suppress("UNUSED_PARAMETER") count: Int,
     val current: DependenciesGroup<Dependency>,
     val outdated: DependenciesGroup<DependencyOutdated>,
     val exceeded: DependenciesGroup<DependencyLatest>,
@@ -30,6 +34,9 @@ class Result
     val gradle: GradleUpdateResults,
     val skipped: SkippedConfigurationsGroup = SkippedConfigurationsGroup(0),
   ) {
+    val count: Int
+      get() = current.count + outdated.count + exceeded.count + undeclared.count + unresolved.count
+
     var leftOutEmbeddedKotlin: Int = 0
       private set
 

@@ -1506,6 +1506,9 @@ tasks.dependencyUpdates {
 }
 ```
 
+The counts in the `Result` and in each of its groups are read from the
+dependencies, so they stay correct after a change like this one.
+
 The console summary is printed at the lifecycle log level, so `--quiet` suppresses
 it. A file format's report is still written; read it, or drop `--quiet`, if a
 script was piping the console output.
@@ -2758,6 +2761,10 @@ In v0.66.0, the default report format and the JSON and XML reports change:
 >   constructs one of these while leaving an argument to its default has to be
 >   recompiled. A formatter that only reads the report, as the documented ones
 >   do, needs nothing.
+> - `count` in `Result` and in each `DependenciesGroup` is now read from the
+>   dependencies, so it stays correct after a custom `outputFormatter` adds or
+>   removes one. The `count` constructor arguments are still accepted for
+>   backwards compatibility, but they're ignored.
 
 ### v0.64.0
 
