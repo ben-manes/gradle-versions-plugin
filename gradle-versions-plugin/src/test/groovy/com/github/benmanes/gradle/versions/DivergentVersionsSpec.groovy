@@ -214,7 +214,7 @@ final class DivergentVersionsSpec extends Specification {
     !reportFile.text.contains('declared in')
   }
 
-  def 'Omits the projects key for a single version in the file reports'() {
+  def 'Omits the projects key for a single version in the file reports, where every declaring project is listed'() {
     given:
     writeBuild()
     testProjectDir.newFolder('app')
@@ -233,13 +233,19 @@ final class DivergentVersionsSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = run(['dependencyUpdates', '-DoutputFormatter=json', '--no-parallel'])
+    def result = run(['dependencyUpdates', '-DoutputFormatter=json,xml', '--no-parallel'])
     def report = new JsonSlurper()
       .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
+    def xmlReport = new XmlParser()
+      .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.xml'))
+    def rows = report.current.dependencies + report.outdated.dependencies
+    def xmlLists = xmlReport.depthFirst().findAll { it instanceof Node && it.name() == 'declaringProjects' }
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
-    (report.current.dependencies + report.outdated.dependencies).every { !it.containsKey('projects') }
+    rows.every { !it.containsKey('projects') }
+    rows.find { it.name == 'guava' }.declaringProjects == [':app', ':lib']
+    xmlLists.collect { it.project*.text() } == [[':app', ':lib']]
   }
 
   def 'Prints the projects in the file reports'() {

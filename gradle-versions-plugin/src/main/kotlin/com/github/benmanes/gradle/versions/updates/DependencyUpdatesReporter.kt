@@ -389,6 +389,7 @@ class DependencyUpdatesReporter(
       configurations = configurationsByCoordinate[coordinate],
       platformProjects = platformProjectsByCoordinate[coordinate],
       constrainedBy = constrainedByCoordinate[coordinate],
+      declaringProjects = declaringProjectsByCoordinate[coordinate],
     )
 
   private fun buildExceededDependency(
@@ -407,6 +408,7 @@ class DependencyUpdatesReporter(
       configurations = configurationsByCoordinate[coordinate],
       platformProjects = platformProjectsByCoordinate[coordinate],
       constrainedBy = constrainedByCoordinate[coordinate],
+      declaringProjects = declaringProjectsByCoordinate[coordinate],
     )
 
   /** Returns true when the coordinate was only contributed by a plugin, otherwise null. */
@@ -488,7 +490,8 @@ class DependencyUpdatesReporter(
       configurations = configurationsByCoordinate[coordinate],
       platformProjects = platformProjectsByCoordinate[coordinate],
       constrainedBy = constrainedByCoordinate[coordinate],
-    ).also { it.declaringProjects = declaringProjectsByCoordinate[coordinate] }
+      declaringProjects = declaringProjectsByCoordinate[coordinate],
+    )
   }
 
   companion object {

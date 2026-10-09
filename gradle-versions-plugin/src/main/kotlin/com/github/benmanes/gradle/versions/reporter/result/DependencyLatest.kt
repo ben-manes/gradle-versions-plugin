@@ -14,6 +14,7 @@ data class DependencyLatest
     @AbsentWhenNull override val configurations: List<String>? = null,
     @AbsentWhenNull override val platformProjects: List<String>? = null,
     @AbsentWhenNull override val constrainedBy: List<String>? = null,
+    @AbsentWhenNull override val declaringProjects: List<String>? = null,
   ) : Dependency() {
     /**
      * The latest version is compared after everything the base class compares, so that two entries
@@ -56,5 +57,37 @@ data class DependencyLatest
         configurations,
         platformProjects,
         constrainedBy,
+      )
+
+    /**
+     * Keeps the `copy` a release shipped callable, as the one above does, now that the declaring
+     * projects were added.
+     */
+    fun copy(
+      group: String? = this.group,
+      name: String? = this.name,
+      version: String? = this.version,
+      projectUrl: String? = this.projectUrl,
+      userReason: String? = this.userReason,
+      latest: String = this.latest,
+      projects: List<String>? = this.projects,
+      contributed: Boolean? = this.contributed,
+      configurations: List<String>? = this.configurations,
+      platformProjects: List<String>? = this.platformProjects,
+      constrainedBy: List<String>? = this.constrainedBy,
+    ): DependencyLatest =
+      copy(
+        group,
+        name,
+        version,
+        projectUrl,
+        userReason,
+        latest,
+        projects,
+        contributed,
+        configurations,
+        platformProjects,
+        constrainedBy,
+        declaringProjects,
       )
   }
