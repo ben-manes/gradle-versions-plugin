@@ -2735,6 +2735,21 @@ and `VersionsPlugin` in an init script:
 >   `VersionsSettingsPlugin` from `settingsEvaluated` (see [Initialization
 >   script](#initialization-script)). The earlier init script still works.
 
+In v0.66.0, the projects that declare a dependency are added to the JSON and XML
+reports:
+
+> [!NOTE]
+> - In a report of more than one project, each dependency in the JSON and XML
+>   reports has a `declaringProjects` list of the projects that declare it.
+>   `projects` is unchanged, and is still present only where versions differ.
+> - A `declaringProjects` argument was added to `Dependency`,
+>   `DependencyOutdated`, `DependencyLatest`, and `DependencyUnresolved`. Every
+>   constructor arity and every `copy` the last release shipped is still
+>   callable, so Java and Groovy callers are unaffected. Kotlin code that
+>   constructs one of these while leaving an argument to its default has to be
+>   recompiled. A formatter that only reads the report, as the documented ones
+>   do, needs nothing.
+
 ### v0.64.0
 
 In v0.65.0, later versions of an `enforcedPlatform` are reported:

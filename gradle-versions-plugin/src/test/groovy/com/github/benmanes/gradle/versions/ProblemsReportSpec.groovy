@@ -130,7 +130,7 @@ final class ProblemsReportSpec extends Specification {
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1149')
   @Unroll
   def 'A ProblemsReporter created in a build script reports the result passed to it #description'() {
-    given: 'two subprojects, and a formatter that removes one dependency before reporting the rest'
+    given: 'two subprojects, and a formatter that removes one dependency and copies the other'
     testProjectDir.newFile('settings.gradle') << "include 'app', 'lib'"
     testProjectDir.newFile('build.gradle') <<
       """
@@ -161,6 +161,10 @@ final class ProblemsReportSpec extends Specification {
           checkForGradleUpdate = false
           outputFormatter = { result ->
             result.outdated.dependencies.removeIf { it.name == 'tiered-widget' }
+            def row = result.outdated.dependencies.first()
+            result.outdated.dependencies.clear()
+            result.outdated.dependencies.add(row.copy(row.group, row.name, row.version, row.projectUrl,
+              'reviewed', row.available, row.projects, row.contributed, row.configurations, row.platformProjects))
             problemsReporter.report(result)
           }
         }
@@ -179,6 +183,7 @@ final class ProblemsReportSpec extends Specification {
         result.output.contains(
           """Problem found: Outdated dependency (id: dependency-updates:com.google.inject:guice)
           |  com.google.inject:guice [2.0 -> 2.2 -> 3.1]
+          |    reviewed
           |    https://code.google.com/p/google-guice/
           |    declared in :app, :lib
           |    Possible solutions:""".stripMargin()) &&
