@@ -50,6 +50,7 @@ class XmlReporter(
     writeUndeclaredSection(result, document, response)
     writeUnresolvedSection(result, document, response)
     writeSkippedSection(result, document, response)
+    appendTextChild(document, response, "leftOutEmbeddedKotlin", result.leftOutEmbeddedKotlin)
     writeGradle(result, document, response)
 
     val transformerFactory = TransformerFactory.newInstance()
@@ -252,6 +253,13 @@ class XmlReporter(
       dependencyElement.appendChild(element)
       for (constraint in constrainedBy) {
         appendTextChild(document, element, "constraint", constraint)
+      }
+    }
+    dependency.declaringProjects?.let { declaringProjects ->
+      val element = document.createElement("declaringProjects")
+      dependencyElement.appendChild(element)
+      for (project in declaringProjects) {
+        appendTextChild(document, element, "project", project)
       }
     }
     return dependencyElement

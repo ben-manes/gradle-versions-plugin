@@ -33,6 +33,12 @@ open class Dependency
      * and an external one by its module coordinate.
      */
     @AbsentWhenNull open val constrainedBy: List<String>? = null,
+    /**
+     * The projects that declare the dependency, by build tree path, in a report of more than one
+     * project. Every declaring project is listed, where [projects] is set only for a divergent
+     * version.
+     */
+    @AbsentWhenNull open val declaringProjects: List<String>? = null,
   ) : Comparable<Dependency> {
     /**
      * The projects are compared last, so that two rows of one declared version with different

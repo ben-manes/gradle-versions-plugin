@@ -8,13 +8,14 @@ import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.C
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.NIGHTLY
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 import org.gradle.api.Project
+import org.gradle.api.logging.Logging
 import java.io.OutputStream
 
 /**
  * A plain text reporter for the dependency updates results.
  *
  * @property isInfoEnabled Whether the build already runs at the info level, so that the report does
- * not suggest enabling it.
+ * not suggest enabling it. Read from Gradle's logging where it is not passed.
  */
 class PlainTextReporter
   @JvmOverloads
@@ -22,11 +23,8 @@ class PlainTextReporter
     override val projectPath: String,
     override val revision: String,
     override val gradleReleaseChannel: String,
-    private val isInfoEnabled: Boolean = false,
+    private val isInfoEnabled: Boolean = Logging.getLogger(PlainTextReporter::class.java).isInfoEnabled,
   ) : AbstractReporter(projectPath, revision, gradleReleaseChannel) {
-    /** The number of entries left out because Gradle sets their versions for its embedded Kotlin. */
-    internal var leftOutEmbeddedKotlin: Int = 0
-
     @Deprecated(
       "Use the constructor that takes the project's path.",
       ReplaceWith("PlainTextReporter(project.path, revision, gradleReleaseChannel)"),
@@ -59,7 +57,7 @@ class PlainTextReporter
         writeUnresolved(printStream, result)
       }
 
-      writeLeftOutEmbeddedKotlin(printStream)
+      writeLeftOutEmbeddedKotlin(printStream, result)
       writeSkipped(printStream, result)
       writeGradleUpdates(printStream, result)
     }
@@ -195,16 +193,13 @@ class PlainTextReporter
       }
     }
 
-    private fun writeLeftOutEmbeddedKotlin(printStream: OutputStream) {
-      if (leftOutEmbeddedKotlin > 0) {
-        val entries = if (leftOutEmbeddedKotlin == 1) "entry" else "entries"
-        val verb = if (leftOutEmbeddedKotlin == 1) "was" else "were"
-        val them = if (leftOutEmbeddedKotlin == 1) "it" else "them"
+    private fun writeLeftOutEmbeddedKotlin(
+      printStream: OutputStream,
+      result: Result,
+    ) {
+      leftOutEmbeddedKotlinLabel(result.leftOutEmbeddedKotlin)?.let {
         printStream.println()
-        printStream.println(
-          "$leftOutEmbeddedKotlin $entries set by Gradle's embedded Kotlin $verb left out. " +
-            "Run with --check-embedded-kotlin to see $them.",
-        )
+        printStream.println(it)
       }
     }
 

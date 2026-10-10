@@ -347,7 +347,7 @@ command line option, since no command line can express the logic.
 | [`preReleaseVersionIf`](#filtering-unstable-versions) | a predicate over a version string | nothing added | |
 | [`exemptFromBuiltInChecksIf`](#filtering-unstable-versions) | a predicate over the candidate | nothing exempt | |
 | [`rejectVersionIf`](#filtering-unstable-versions) | a predicate over the candidate | nothing rejected | |
-| [`outputFormatter`](#report-format) | `plain`, `json`, `xml`, `html`, `problems`, a comma separated list of those, or a `Reporter` | `plain` | `--output-formatter` |
+| [`outputFormatter`](#report-format) | `plain`, `json`, `xml`, `html`, `problems`, a comma separated list of those, or a `Reporter` | `plain,problems` | `--output-formatter` |
 | [`outputDir`](#outputdir) | a directory path | `<buildDirectory>/dependencyUpdates` | `--output-dir` |
 | [`reportfileName`](#reportfilename) | a file name, without the extension | `report` | `--report-file-name` |
 | [`gradleVersionsApiBaseUrl`](#gradle-versions-api-base-url) | a URL | `https://services.gradle.org/versions/` | `--gradle-versions-api-base-url` |
@@ -713,7 +713,8 @@ embedded version, on a buildscript classpath, and in a project that applies
 neither plugin. The `kotlin-dsl` plugins are left out at the paired version on a
 buildscript or settings classpath, including with `apply false`, and are
 reported where they are declared as a library dependency. The number of entries
-left out is printed at the end of the plain text report:
+left out is `leftOutEmbeddedKotlin` in the `Result` and in the JSON and XML
+reports, and is printed at the end of the plain text and HTML reports:
 
 ```text
 4 entries set by Gradle's embedded Kotlin were left out. Run with --check-embedded-kotlin to see them.
@@ -1453,14 +1454,19 @@ name.
 The task property `outputFormatter` controls the report output format. The
 following values are supported:
 
-* `"plain"`: format output file as plain text (default), also accepted as `"text"`
+* `"plain"`: format output file as plain text, also accepted as `"text"`
 * `"json"`: format output file as json text
 * `"xml"`: format output file as xml text, can be used by other plugins (e.g. sonar)
 * `"html"`: format output file as html
-* `"problems"`: report each outdated dependency to Gradle's
+* `"problems"`: report the findings to Gradle's
   [Problems API](https://docs.gradle.org/current/userguide/reporting_problems.html) rather than to a file
 * `Closure`: will be called with the result of the dependency update analysis
   (from Kotlin, use the `outputFormatter(Action<Result>)` function instead)
+
+The default is `"plain,problems"`. The plain text report is the same with or
+without `problems`, but where a problem is reported, Gradle prints the location
+of its problems report at the end of the run. Set `outputFormatter = "plain"` to
+leave the problems out.
 
 The `problems` format adds each outdated dependency to Gradle's problems report,
 `build/reports/problems/problems-report.html`. Each problem is labeled with the
@@ -1469,10 +1475,39 @@ those later versions is listed as a solution. The lines printed under the row ar
 included as the problem's details: the `because` reason, the project URL, and
 where the dependency comes from. In a report of more than one project, the
 projects that declare the dependency are always listed there, not only where
-their versions differ. On Gradle 9.3 or later, the problems are also printed on
+their versions differ.
+
+A Gradle update is reported as a problem too, with an upgrade to each newer
+version on the `gradleReleaseChannel` as a solution. So is each unresolved
+dependency, and so are the configurations that could not be inspected, as one
+problem for each reason. Every problem is a warning, and a build run with
+`--warning-mode fail` still succeeds. Nothing is reported for the report's other
+two sections, the dependencies that exceed the latest version found and the ones
+declared without a version.
+
+On Gradle 9.3 or later, the problems are also printed on
 the console under `--warning-mode all`. The Problems API is incubating and needs
 Gradle 8.13 or later, so on an older Gradle the format is skipped with a message
 at the info log level.
+
+The same problems can be reported from a custom `outputFormatter`, after
+changing the result for example. Gradle's services are injected into
+`ProblemsReporter`, so create it with the project's `ObjectFactory`:
+
+```kotlin
+import com.github.benmanes.gradle.versions.reporter.ProblemsReporter
+
+tasks.dependencyUpdates {
+  val problemsReporter = objects.newInstance<ProblemsReporter>()
+  outputFormatter {
+    outdated.dependencies.removeIf { it.group == "com.example" }
+    problemsReporter.report(this)
+  }
+}
+```
+
+The counts in the `Result` and in each of its groups are read from the
+dependencies, so they stay correct after a change like this one.
 
 The console summary is printed at the lifecycle log level, so `--quiet` suppresses
 it. A file format's report is still written; read it, or drop `--quiet`, if a
@@ -1778,7 +1813,8 @@ Alternatively, the report may be output to a structured file.
     "reason": "org.gradle.api.InvalidUserCodeException: Could not add a component selection rule for module 'com.google.guava'."
    }
   ]
- }
+ },
+ "leftOutEmbeddedKotlin": 0
 }
 ```
 
@@ -1942,6 +1978,7 @@ Searched in the following locations:
             </skippedConfiguration>
         </configurations>
     </skipped>
+    <leftOutEmbeddedKotlin>0</leftOutEmbeddedKotlin>
     <gradle>
         <enabled>true</enabled>
         <running>
@@ -2705,6 +2742,29 @@ and `VersionsPlugin` in an init script:
 > - Apply `VersionsPlugin` in an init script, in place of applying
 >   `VersionsSettingsPlugin` from `settingsEvaluated` (see [Initialization
 >   script](#initialization-script)). The earlier init script still works.
+
+In v0.66.0, the default report format and the JSON and XML reports change:
+
+> [!NOTE]
+> - The default `outputFormatter` is now `plain,problems`. The plain text report
+>   is unchanged. Where a problem is reported, on Gradle 8.13 or later, Gradle
+>   prints the location of its problems report at the end of the run. Set
+>   `outputFormatter = "plain"` for the earlier behavior (see
+>   [Report format](#report-format)).
+> - In a report of more than one project, each dependency in the JSON and XML
+>   reports has a `declaringProjects` list of the projects that declare it.
+>   `projects` is unchanged, and is still present only where versions differ.
+> - A `declaringProjects` argument was added to `Dependency`,
+>   `DependencyOutdated`, `DependencyLatest`, and `DependencyUnresolved`. Every
+>   constructor arity and every `copy` the last release shipped is still
+>   callable, so Java and Groovy callers are unaffected. Kotlin code that
+>   constructs one of these while leaving an argument to its default has to be
+>   recompiled. A formatter that only reads the report, as the documented ones
+>   do, needs nothing.
+> - `count` in `Result` and in each `DependenciesGroup` is now read from the
+>   dependencies, so it stays correct after a custom `outputFormatter` adds or
+>   removes one. The `count` constructor arguments are still accepted for
+>   backwards compatibility, but they're ignored.
 
 ### v0.64.0
 
