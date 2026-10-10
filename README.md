@@ -2508,8 +2508,9 @@ subprojects.
 You can also transparently add the plugin to every Gradle project that you run
 via a
 [Gradle init script](https://docs.gradle.org/current/userguide/init_scripts.html).
-Apply the settings plugin once the settings script has been evaluated, and only
-if the settings script hasn't applied it already. This covers every project of
+Apply `VersionsPlugin` in the init script. The settings plugin is then applied
+once the settings script has been evaluated, and only if the settings script
+hasn't applied it already. This covers every project of
 the build and works under isolated projects (see [Isolated
 projects](#isolated-projects)). A `dependencyUpdates` task is registered in
 every build that runs, so an included build is reported without being modified
@@ -2520,7 +2521,7 @@ every build that runs, so an included build is reported without being modified
 
 "$HOME/.gradle/init.d/add-versions-plugin.init.gradle.kts":
 ```kotlin
-import com.github.benmanes.gradle.versions.VersionsSettingsPlugin
+import com.github.benmanes.gradle.versions.VersionsPlugin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
 initscript {
@@ -2533,11 +2534,7 @@ initscript {
   }
 }
 
-gradle.settingsEvaluated(Action<Settings> {
-  if (!pluginManager.hasPlugin("io.github.ben-manes.versions.settings")) {
-    pluginManager.apply(VersionsSettingsPlugin::class.java)
-  }
-})
+apply<VersionsPlugin>()
 
 gradle.rootProject(Action<Project> {
   tasks.withType(DependencyUpdatesTask::class.java).configureEach {
@@ -2553,7 +2550,7 @@ gradle.rootProject(Action<Project> {
 
 "$HOME/.gradle/init.d/add-versions-plugin.gradle":
 ```groovy
-import com.github.benmanes.gradle.versions.VersionsSettingsPlugin
+import com.github.benmanes.gradle.versions.VersionsPlugin
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
 initscript {
@@ -2566,11 +2563,7 @@ initscript {
   }
 }
 
-settingsEvaluated { settings ->
-  if (!settings.pluginManager.hasPlugin('io.github.ben-manes.versions.settings')) {
-    settings.pluginManager.apply(VersionsSettingsPlugin)
-  }
-}
+apply plugin: VersionsPlugin
 
 gradle.rootProject {
   tasks.withType(DependencyUpdatesTask).configureEach {
@@ -2702,12 +2695,16 @@ and *Note*s are things worth knowing that need no action.
 
 ### v0.65.0
 
-In v0.66.0, `io.github.ben-manes.versions` can be applied in a settings script:
+In v0.66.0, `io.github.ben-manes.versions` can be applied in a settings script,
+and `VersionsPlugin` in an init script:
 
 > [!TIP]
-> Replace `io.github.ben-manes.versions.settings` with
-> `io.github.ben-manes.versions` in the settings script (see [Applying the
-> plugin](#applying-the-plugin)). The earlier ID is still supported.
+> - Replace `io.github.ben-manes.versions.settings` with
+>   `io.github.ben-manes.versions` in the settings script (see [Applying the
+>   plugin](#applying-the-plugin)). The earlier ID is still supported.
+> - Apply `VersionsPlugin` in an init script, in place of applying
+>   `VersionsSettingsPlugin` from `settingsEvaluated` (see [Initialization
+>   script](#initialization-script)). The earlier init script still works.
 
 ### v0.64.0
 

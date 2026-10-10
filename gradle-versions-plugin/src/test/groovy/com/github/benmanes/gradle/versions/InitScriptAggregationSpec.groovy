@@ -23,6 +23,7 @@ import spock.lang.Unroll
 @Requires({ jvm.java17Compatible })
 @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1023')
 final class InitScriptAggregationSpec extends Specification {
+  private static final List<String> RECIPES = ['versionsPlugin', 'settingsEvaluated', 'beforeSettings']
   private static final List<String> SETTINGS_SCRIPT_IDS =
     ['io.github.ben-manes.versions', 'io.github.ben-manes.versions.settings']
 
@@ -30,6 +31,7 @@ final class InitScriptAggregationSpec extends Specification {
   @Rule final TemporaryFolder initScriptDir = new TemporaryFolder()
   private String mavenRepoUrl
   private Map<String, File> initScripts
+  private File kotlinInitScript
 
   def 'setup'() {
     mavenRepoUrl = getClass().getResource('/maven/').toURI()
@@ -42,8 +44,11 @@ final class InitScriptAggregationSpec extends Specification {
       .collect { copyOf(it) }
       .collect { "'${it.absolutePath.replace('\\', '/')}'" }
       .join(', ')
-    // The init script in the README, and the earlier beforeSettings one that builds may still run.
+    // The init script in the README, and the two earlier ones that builds may still run.
     initScripts = [
+      versionsPlugin: """
+        apply plugin: com.github.benmanes.gradle.versions.VersionsPlugin
+      """,
       settingsEvaluated: """
         settingsEvaluated { settings ->
           if (!settings.pluginManager.hasPlugin('io.github.ben-manes.versions.settings')) {
@@ -68,6 +73,20 @@ final class InitScriptAggregationSpec extends Specification {
         """.stripIndent() + body.stripIndent()
       [(name): script]
     }
+
+    kotlinInitScript = initScriptDir.newFile('versionsPlugin.init.gradle.kts')
+    kotlinInitScript <<
+      """
+        import com.github.benmanes.gradle.versions.VersionsPlugin
+
+        initscript {
+          dependencies {
+            classpath(files(${classpath.replace("'", '"')}))
+          }
+        }
+
+        apply<VersionsPlugin>()
+      """.stripIndent()
 
     testProjectDir.newFolder('app')
     testProjectDir.newFile('app/build.gradle') <<
@@ -133,7 +152,20 @@ final class InitScriptAggregationSpec extends Specification {
     !result.output.contains('The dependency updates report is missing')
 
     where:
-    recipe << ['settingsEvaluated', 'beforeSettings']
+    recipe << RECIPES
+  }
+
+  def 'Reports every project when only a Kotlin init script applies the plugin'() {
+    given:
+    testProjectDir.newFile('settings.gradle') << "include 'app'"
+
+    when:
+    def result = run('dependencyUpdates', '--init-script', kotlinInitScript.absolutePath)
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
+    !result.output.contains('The dependency updates report is missing')
   }
 
   @Unroll
@@ -174,7 +206,36 @@ final class InitScriptAggregationSpec extends Specification {
     !result.output.contains('The dependency updates report is missing')
 
     where:
-    [recipe, pluginId] << [['settingsEvaluated', 'beforeSettings'], SETTINGS_SCRIPT_IDS].combinations()
+    [recipe, pluginId] << [RECIPES, SETTINGS_SCRIPT_IDS].combinations()
+  }
+
+  def 'Leaves a build to the settings plugin of a release that does not guard against a second copy'() {
+    given:
+    testProjectDir.newFile('settings.gradle') <<
+      """
+        pluginManagement {
+          repositories {
+            gradlePluginPortal()
+          }
+        }
+
+        plugins {
+          id 'io.github.ben-manes.versions.settings' version '0.56.0'
+        }
+
+        include 'app'
+      """.stripIndent()
+
+    when: 'the build resolves its own copy, so the classpath under test reaches the init script only'
+    def result = TestKitRunner.create()
+      .withGradleVersion(GradleVersions.CURRENT)
+      .withProjectDir(testProjectDir.root)
+      .withArguments('dependencyUpdates', '--init-script', initScripts.versionsPlugin.absolutePath)
+      .build()
+
+    then: 'the report is in the format of that release, which printed no later version in between'
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.google.inject:guice [2.0 -> 3.1]')
   }
 
   @Unroll
@@ -208,7 +269,7 @@ final class InitScriptAggregationSpec extends Specification {
     !result.output.contains('The dependency updates report is missing')
 
     where:
-    recipe << ['settingsEvaluated', 'beforeSettings']
+    recipe << RECIPES
   }
 
   @Unroll
@@ -227,11 +288,11 @@ final class InitScriptAggregationSpec extends Specification {
     !result.output.contains('The dependency updates report is missing')
 
     where:
-    recipe << ['settingsEvaluated', 'beforeSettings']
+    recipe << RECIPES
   }
 
   @Unroll
-  def 'Configures the task by type when #pluginId is applied in the settings script'() {
+  def 'Configures the task by type when #pluginId is applied in the settings script and an init script from #recipe runs'() {
     given:
     testProjectDir.newFile('settings.gradle') <<
       """
@@ -251,13 +312,13 @@ final class InitScriptAggregationSpec extends Specification {
       """.stripIndent()
 
     when:
-    def result = run('dependencyUpdates', '--init-script', initScripts.settingsEvaluated.absolutePath)
+    def result = run('dependencyUpdates', '--init-script', initScripts[recipe].absolutePath)
 
     then:
     result.task(':dependencyUpdates').outcome == SUCCESS
     result.output.contains('com.google.inject:guice [2.0 -> 2.2]')
 
     where:
-    pluginId << SETTINGS_SCRIPT_IDS
+    [recipe, pluginId] << [['versionsPlugin', 'settingsEvaluated'], SETTINGS_SCRIPT_IDS].combinations()
   }
 }

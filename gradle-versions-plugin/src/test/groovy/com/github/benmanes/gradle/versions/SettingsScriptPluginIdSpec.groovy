@@ -80,6 +80,39 @@ final class SettingsScriptPluginIdSpec extends Specification {
   }
 
   // Gradle 9 requires JVM 17.
+  @IgnoreIf({ !GradleVersions.drivenBy(data.gradleVersion) })
+  def 'Aggregates every project when VersionsPlugin is applied in an init script under Gradle #gradleVersion'() {
+    given:
+    testProjectDir.newFile('settings.gradle') << "include 'app'"
+    def initScript = testProjectDir.newFile('init.gradle')
+    initScript <<
+      """
+        initscript {
+          dependencies {
+            classpath files(${PluginClasspath.asFilesArgument()})
+          }
+        }
+
+        apply plugin: com.github.benmanes.gradle.versions.VersionsPlugin
+      """.stripIndent()
+
+    when:
+    def result = TestKitRunner.create()
+      .withGradleVersion(gradleVersion)
+      .withProjectDir(testProjectDir.root)
+      .withArguments(':dependencyUpdates', '--init-script', initScript.absolutePath)
+      .build()
+
+    then:
+    result.task(':dependencyUpdates').outcome == SUCCESS
+    result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
+    !result.output.contains('The dependency updates report is missing')
+
+    where:
+    gradleVersion << ['8.4', GradleVersions.CURRENT]
+  }
+
+  // Gradle 9 requires JVM 17.
   @IgnoreIf({ !GradleVersions.drivenBy(GradleVersions.CURRENT) })
   def 'Rejects the deprecated plugin id in a settings script'() {
     given:

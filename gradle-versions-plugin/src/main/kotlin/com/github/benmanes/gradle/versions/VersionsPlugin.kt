@@ -9,6 +9,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.initialization.Settings
+import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.ExtensionAware
 import org.gradle.api.plugins.PluginAware
@@ -17,7 +18,8 @@ import org.xml.sax.SAXException
 import javax.xml.parsers.SAXParserFactory
 
 /**
- * Registers the plugin's tasks when applied to a project. When applied to a settings script, applies
+ * Registers the plugin's tasks when applied to a project. When applied to a settings script, or to
+ * an init script once the settings script has been evaluated, applies
  * itself to the root project and [VersionsContributorPlugin] to every other project of the build,
  * but not of an included build, and reports the versions of the plugins declared in the settings
  * script.
@@ -28,8 +30,21 @@ class VersionsPlugin : Plugin<PluginAware> {
     when (target) {
       is Project -> applyTo(target)
       is Settings -> applyTo(target)
+      // An init script's classpath is separate from the build's, so the plugin is applied to the
+      // settings only once the settings script has had the chance to apply the build's copy. Before
+      // v0.66.0 that copy is registered under the settings plugin's id only, and the one in v0.56.0
+      // does not guard against a second copy.
+      is Gradle ->
+        target.settingsEvaluated { settings ->
+          val plugins = settings.pluginManager
+          if (!plugins.hasPlugin("io.github.ben-manes.versions") &&
+            !plugins.hasPlugin("io.github.ben-manes.versions.settings")
+          ) {
+            plugins.apply(VersionsPlugin::class.java)
+          }
+        }
       else -> throw GradleException(
-        "The io.github.ben-manes.versions plugin must be applied in a settings script or a build script.",
+        "The io.github.ben-manes.versions plugin cannot be applied to ${target.javaClass.name}.",
       )
     }
   }
