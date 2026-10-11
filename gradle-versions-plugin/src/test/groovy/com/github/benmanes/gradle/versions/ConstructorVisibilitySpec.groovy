@@ -7,6 +7,8 @@ import com.github.benmanes.gradle.versions.updates.PartialResult
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
 import kotlin.jvm.JvmClassMappingKt
 import kotlin.reflect.KVisibility
+import org.gradle.api.Project
+import org.gradle.api.plugins.PluginAware
 import spock.lang.Issue
 import spock.lang.Specification
 
@@ -52,5 +54,12 @@ final class ConstructorVisibilitySpec extends Specification {
   def 'The reporter arity v0.61.0 shipped is still callable'() {
     expect:
     DependencyUpdatesReporter.declaredConstructors.any { it.parameterCount == 22 }
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1151')
+  def 'The apply(Project) that v0.65.0 shipped is still callable beside the one for any target'() {
+    expect:
+    VersionsPlugin.declaredMethods.any { it.name == 'apply' && it.parameterTypes == [Project] as Class[] }
+    VersionsPlugin.declaredMethods.any { it.name == 'apply' && it.parameterTypes == [PluginAware] as Class[] }
   }
 }

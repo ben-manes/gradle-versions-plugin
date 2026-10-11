@@ -49,6 +49,9 @@ class VersionsPlugin : Plugin<PluginAware> {
     }
   }
 
+  /** Still callable by code compiled against a release in which the plugin was a `Plugin<Project>`. */
+  fun apply(project: Project) = apply(project as PluginAware)
+
   private fun applyTo(settings: Settings) {
     if (!claims(settings)) {
       return
