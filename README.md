@@ -2755,9 +2755,10 @@ In v0.66.0, the default report format and the JSON and XML reports change:
 > - The number of entries left out for Gradle's embedded Kotlin is written to
 >   the JSON and XML reports as a top-level `leftOutEmbeddedKotlin`, which is
 >   `0` where none is left out (see [Embedded Kotlin](#embedded-kotlin)).
-> - In a report of more than one project, each dependency in the JSON and XML
->   reports has a `declaringProjects` list of the projects that declare it.
->   `projects` is unchanged, and is still present only where versions differ.
+> - In a report of more than one project, each current, outdated, and exceeded
+>   dependency in the JSON and XML reports has a `declaringProjects` list of
+>   the projects that declare it. `projects` is unchanged, and is still present
+>   only where versions differ.
 > - A `declaringProjects` argument was added to `Dependency`,
 >   `DependencyOutdated`, `DependencyLatest`, and `DependencyUnresolved`. Every
 >   constructor arity and every `copy` the last release shipped is still

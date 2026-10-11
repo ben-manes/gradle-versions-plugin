@@ -36,7 +36,7 @@ open class Dependency
     /**
      * The projects that declare the dependency, by build tree path, in a report of more than one
      * project. Every declaring project is listed, where [projects] is set only for a divergent
-     * version.
+     * version. Not set for an unresolved dependency, or for one declared without a version.
      */
     @AbsentWhenNull open val declaringProjects: List<String>? = null,
   ) : Comparable<Dependency> {
