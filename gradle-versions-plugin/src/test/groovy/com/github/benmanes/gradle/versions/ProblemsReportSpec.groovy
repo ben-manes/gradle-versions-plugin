@@ -284,7 +284,7 @@ final class ProblemsReportSpec extends Specification {
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1150')
   @Unroll
   def 'A Gradle update is reported as a problem on the #channel channel'() {
-    given: 'a versions API with a newer release, and a release candidate that the channel leaves out'
+    given: 'a versions API with a newer release, release candidate, and nightly'
     def server = HttpServer.create(new InetSocketAddress(InetAddress.loopbackAddress, 0), 0)
     ['current': '999.0', 'release-candidate': '999.1-rc-1', 'nightly': '999.2-20260913000000+0000'].each { path, version ->
       server.createContext("/${path}") { HttpExchange exchange ->
@@ -323,6 +323,8 @@ final class ProblemsReportSpec extends Specification {
     channel             || steps                     | solutions
     'current'           || ['999.0']                 | ['999.0, the latest release']
     'release-candidate' || ['999.0', '999.1-rc-1']   | ['999.0, the latest release', '999.1-rc-1, the latest release candidate']
+    'nightly'           || ['999.0', '999.1-rc-1', '999.2-20260913000000+0000'] |
+      ['999.0, the latest release', '999.1-rc-1, the latest release candidate', '999.2-20260913000000+0000, the latest nightly']
   }
 
   @IgnoreIf({ !GradleVersions.drivenBy(GradleVersions.CURRENT) })
