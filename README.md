@@ -2748,9 +2748,13 @@ In v0.66.0, the default report format and the JSON and XML reports change:
 > [!NOTE]
 > - The default `outputFormatter` is now `plain,problems`. The plain text report
 >   is unchanged. Where a problem is reported, on Gradle 8.13 or later, Gradle
->   prints the location of its problems report at the end of the run. Set
->   `outputFormatter = "plain"` for the earlier behavior (see
->   [Report format](#report-format)).
+>   prints the location of its problems report at the end of the run. On Gradle
+>   9.3 or later, each problem is also printed on the console under
+>   `--warning-mode all`. Set `outputFormatter = "plain"` for the earlier
+>   behavior (see [Report format](#report-format)).
+> - The number of entries left out for Gradle's embedded Kotlin is written to
+>   the JSON and XML reports as a top-level `leftOutEmbeddedKotlin`, which is
+>   `0` where none is left out (see [Embedded Kotlin](#embedded-kotlin)).
 > - In a report of more than one project, each dependency in the JSON and XML
 >   reports has a `declaringProjects` list of the projects that declare it.
 >   `projects` is unchanged, and is still present only where versions differ.
