@@ -1,7 +1,7 @@
 [versions]
 # The oldest Gradle the plugin supports, and the Groovy that release bundles.
 gradle-minimum = "8.4"
-groovy-minimum = "3.0.17"
+groovy-minimum = "3.0.25"
 kotlin = "2.4.10"
 
 [plugins]
