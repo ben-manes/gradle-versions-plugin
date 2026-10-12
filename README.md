@@ -2769,7 +2769,8 @@ In v0.66.0, the default report format and the JSON and XML reports change:
 > - `count` in `Result` and in each `DependenciesGroup` is now read from the
 >   dependencies, so it stays correct after a custom `outputFormatter` adds or
 >   removes one. The `count` constructor arguments are still accepted for
->   backwards compatibility, but they're ignored.
+>   backwards compatibility and for the sake of Moshi serialization, but
+>   they're ignored.
 
 ### v0.64.0
 
