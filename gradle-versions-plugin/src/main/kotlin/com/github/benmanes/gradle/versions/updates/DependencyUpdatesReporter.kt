@@ -3,9 +3,9 @@ package com.github.benmanes.gradle.versions.updates
 import com.github.benmanes.gradle.versions.reporter.HtmlReporter
 import com.github.benmanes.gradle.versions.reporter.JsonReporter
 import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
+import com.github.benmanes.gradle.versions.reporter.ProblemsReporter
 import com.github.benmanes.gradle.versions.reporter.Reporter
 import com.github.benmanes.gradle.versions.reporter.XmlReporter
-import com.github.benmanes.gradle.versions.reporter.laterSteps
 import com.github.benmanes.gradle.versions.reporter.result.DependenciesGroup
 import com.github.benmanes.gradle.versions.reporter.result.Dependency
 import com.github.benmanes.gradle.versions.reporter.result.DependencyLatest
@@ -15,15 +15,12 @@ import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.reporter.result.SkippedConfiguration
 import com.github.benmanes.gradle.versions.reporter.result.SkippedConfigurationsGroup
 import com.github.benmanes.gradle.versions.reporter.result.VersionAvailable
-import com.github.benmanes.gradle.versions.reporter.sourceLabel
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateChecker
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResult
 import com.github.benmanes.gradle.versions.updates.gradle.GradleUpdateResults
 import org.gradle.api.logging.Logger
 import org.gradle.api.model.ObjectFactory
-import org.gradle.api.reflect.ObjectInstantiationException
-import org.gradle.util.GradleVersion
 import java.io.File
 import java.io.PrintStream
 import java.util.TreeSet
@@ -99,11 +96,7 @@ class DependencyUpdatesReporter(
   /** The newest version sharing the major part of each row's version, where one is newer. */
   internal var minorByCurrent: Map<Coordinate, String> = emptyMap()
 
-  /**
-   * The projects that declare each coordinate, in a report of more than one project. A problem is
-   * where a build author acts, so it includes every project, where a row of the file reports includes
-   * them only for a divergent version.
-   */
+  /** The projects that declare each coordinate, in a report of more than one project. */
   internal var declaringProjectsByCoordinate: Map<Coordinate, List<String>> = emptyMap()
 
   /** Creates the Problems API reporter, set by the task, as the `problems` formatter needs one. */
@@ -219,7 +212,6 @@ class DependencyUpdatesReporter(
           gradleReleaseChannel,
           logger.isInfoEnabled,
         )
-      plainTextReporter.leftOutEmbeddedKotlin = leftOutEmbeddedKotlin
       plainTextReporter.write(System.out, buildBaseObject())
     }
 
@@ -265,55 +257,12 @@ class DependencyUpdatesReporter(
   private fun reportProblems() {
     val objects = objects
     if (objects == null) {
-      logger.warn("The problems report was skipped, as only the dependencyUpdates task writes it")
+      val message = "The problems report was skipped, as only the dependencyUpdates task writes it"
+      // Not a warning for the default, where the caller did not ask for the problems.
+      if (outputFormatterArgument === OutputFormatterArgument.DEFAULT) logger.info(message) else logger.warn(message)
       return
     }
-    if (GradleVersion.current().baseVersion < GradleVersion.version("8.13")) {
-      logger.info("The problems report was skipped, as it needs Gradle 8.13 or later")
-      return
-    }
-    try {
-      val problems = objects.newInstance(ProblemsReporter::class.java)
-      val versionComparator = VersionMapping.versionComparator()
-      for ((key, current) in sortByGroupAndName(upgradeVersions)) {
-        val dependency = buildOutdatedDependency(current, strippedKey(key))
-        val coordinate = "${dependency.group}:${dependency.name}"
-        val available = dependency.available
-        // A version printed once for several tiers is described by the last of them, as the text
-        // report prints it once for each.
-        val tiers =
-          listOf(
-            available.patch to "the latest patch version",
-            available.minor to "the latest minor version",
-            available[revision] to "the latest version",
-            available.preRelease to "the latest pre-release",
-          ).filter { it.first != null }.toMap()
-        val steps = laterSteps(dependency, revision, versionComparator)
-        problems.reportOutdated(
-          coordinate,
-          "$coordinate [${steps.joinToString(" -> ")}]",
-          // The lines printed under the row in the text report, in the same order.
-          listOfNotNull(
-            dependency.userReason,
-            dependency.projectUrl,
-            sourceLabel(dependency, declaringProjectsByCoordinate[current] ?: dependency.projects),
-          ).joinToString("\n").ifEmpty { null },
-          steps.mapNotNull { version -> tiers[version]?.let { "Upgrade $coordinate to $version, $it" } },
-        )
-      }
-    } catch (e: ObjectInstantiationException) {
-      // The API is incubating, so a Gradle release that changes it loses the problems report
-      // rather than failing the build. A missing class is wrapped in this exception while the
-      // reporter is created, and thrown as is once it has been.
-      warnUnsupportedProblems(e)
-    } catch (e: LinkageError) {
-      warnUnsupportedProblems(e)
-    }
-  }
-
-  /** Warns that the problems report was cut short, which may be before or after its first problem. */
-  private fun warnUnsupportedProblems(e: Throwable) {
-    logger.warn("The problems report is incomplete, as this Gradle's Problems API is not supported", e)
+    objects.newInstance(ProblemsReporter::class.java).report(buildBaseObject())
   }
 
   private fun getOutputReporter(formatterOriginal: String): Reporter =
@@ -328,9 +277,7 @@ class DependencyUpdatesReporter(
               "The built-in formatters are 'plain', 'json', 'xml', 'html', and 'problems'.",
           )
         }
-        PlainTextReporter(projectPath, revision, gradleReleaseChannel, logger.isInfoEnabled).also {
-          it.leftOutEmbeddedKotlin = leftOutEmbeddedKotlin
-        }
+        PlainTextReporter(projectPath, revision, gradleReleaseChannel, logger.isInfoEnabled)
       }
     }
 
@@ -358,6 +305,7 @@ class DependencyUpdatesReporter(
       unresolvedGroup = buildDependenciesGroup(sortedUnresolved),
       gradleUpdateResults = buildGradleUpdateResults(),
       skippedGroup = SkippedConfigurationsGroup(sortedSkipped.size, sortedSkipped),
+      leftOutEmbeddedKotlin = leftOutEmbeddedKotlin,
     )
   }
 
@@ -443,6 +391,7 @@ class DependencyUpdatesReporter(
       configurations = configurationsByCoordinate[coordinate],
       platformProjects = platformProjectsByCoordinate[coordinate],
       constrainedBy = constrainedByCoordinate[coordinate],
+      declaringProjects = declaringProjectsByCoordinate[coordinate],
     )
 
   private fun buildExceededDependency(
@@ -461,6 +410,7 @@ class DependencyUpdatesReporter(
       configurations = configurationsByCoordinate[coordinate],
       platformProjects = platformProjectsByCoordinate[coordinate],
       constrainedBy = constrainedByCoordinate[coordinate],
+      declaringProjects = declaringProjectsByCoordinate[coordinate],
     )
 
   /** Returns true when the coordinate was only contributed by a plugin, otherwise null. */
@@ -542,6 +492,7 @@ class DependencyUpdatesReporter(
       configurations = configurationsByCoordinate[coordinate],
       platformProjects = platformProjectsByCoordinate[coordinate],
       constrainedBy = constrainedByCoordinate[coordinate],
+      declaringProjects = declaringProjectsByCoordinate[coordinate],
     )
   }
 
@@ -562,6 +513,7 @@ class DependencyUpdatesReporter(
       unresolvedGroup: DependenciesGroup<DependencyUnresolved>,
       gradleUpdateResults: GradleUpdateResults,
       skippedGroup: SkippedConfigurationsGroup,
+      leftOutEmbeddedKotlin: Int,
     ): Result =
       Result(
         count = count,
@@ -572,6 +524,7 @@ class DependencyUpdatesReporter(
         unresolved = unresolvedGroup,
         gradle = gradleUpdateResults,
         skipped = skippedGroup,
+        leftOutEmbeddedKotlin = leftOutEmbeddedKotlin,
       )
 
     private fun <T : Dependency> buildDependenciesGroup(dependencies: MutableSet<T>): DependenciesGroup<T> =

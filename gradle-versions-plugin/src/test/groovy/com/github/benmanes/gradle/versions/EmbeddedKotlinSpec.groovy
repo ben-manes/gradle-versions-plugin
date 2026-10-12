@@ -2,6 +2,7 @@ package com.github.benmanes.gradle.versions
 
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
+import groovy.json.JsonSlurper
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import spock.lang.Issue
@@ -66,6 +67,42 @@ final class EmbeddedKotlinSpec extends Specification {
     // A classpath the Kotlin Gradle Plugin fills for its own tooling is left to the configuration
     // filters.
     hasRow(output, 'org.jetbrains.kotlin:kotlin-sam-with-receiver-compiler-plugin-embeddable')
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1149')
+  def 'a plain text reporter created in a custom outputFormatter prints the number of entries left out'() {
+    given:
+    kotlinDslBuild('''
+      tasks.named<DependencyUpdatesTask>("dependencyUpdates") {
+        val projectPath = project.path
+        outputFormatter {
+          com.github.benmanes.gradle.versions.reporter.PlainTextReporter(projectPath, revision, gradleReleaseChannel)
+            .write(System.out, this)
+        }
+      }
+    ''')
+
+    when:
+    def output = report()
+
+    then:
+    output.contains("4 entries set by Gradle's embedded Kotlin were left out. Run with --check-embedded-kotlin to see them.")
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1149')
+  def 'the number of entries left out is in the JSON, XML, and HTML reports'() {
+    given:
+    kotlinDslBuild('tasks.named<DependencyUpdatesTask>("dependencyUpdates") { outputFormatter = "json,xml,html" }')
+
+    when:
+    report()
+    def reports = new File(testProjectDir.root, 'build/dependencyUpdates')
+
+    then:
+    new JsonSlurper().parse(new File(reports, 'report.json')).leftOutEmbeddedKotlin == 4
+    new File(reports, 'report.xml').text.contains('<leftOutEmbeddedKotlin>4</leftOutEmbeddedKotlin>')
+    new File(reports, 'report.html').text
+      .contains("<p>4 entries set by Gradle's embedded Kotlin were left out. Run with --check-embedded-kotlin to see them.</p>")
   }
 
   def 'the versions Gradle sets for embedded-kotlin are left out of the report'() {

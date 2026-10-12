@@ -25,6 +25,18 @@ fun OutputStream.println(s: String = "") {
   (this as PrintStream).println(s)
 }
 
+/** Returns the line for the entries left out for Gradle's embedded Kotlin, or null where there are none. */
+internal fun leftOutEmbeddedKotlinLabel(count: Int): String? {
+  if (count <= 0) {
+    return null
+  }
+  val entries = if (count == 1) "entry" else "entries"
+  val verb = if (count == 1) "was" else "were"
+  val them = if (count == 1) "it" else "them"
+  return "$count $entries set by Gradle's embedded Kotlin $verb left out. " +
+    "Run with --check-embedded-kotlin to see $them."
+}
+
 /** The number of names listed before a long list is elided in the human readable reports. */
 private const val MAX_LISTED_NAMES = 5
 
