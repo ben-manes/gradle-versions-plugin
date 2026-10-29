@@ -583,13 +583,7 @@ fun reporterFor(
   val platformProjectsByCoordinate = platformProjectsByCoordinate(split, logger)
   val constrainedByCoordinate = constrainedByCoordinate(split, logger)
   val unresolved = split.mapNotNullTo(mutableSetOf()) { it.unresolved }
-  val projectUrls =
-    split
-      .filter { !it.projectUrl.isNullOrEmpty() }
-      .associateBy(
-        { mapOf("group" to it.group, "name" to it.name) },
-        { it.projectUrl.toString() },
-      )
+  val projectUrls = projectUrlsOf(split)
 
   val currentVersions = toKeyedMap(versions.current)
   val latestVersions =
@@ -632,6 +626,21 @@ fun reporterFor(
     it.minorByCurrent = versions.minorByCurrent
     it.declaringProjectsByCoordinate = declaringProjects(split)
   }
+}
+
+/**
+ * Returns the project url of each module, read from the POM of the newest version it resolved to,
+ * the one its row reports, so that the url does not depend on the order the statuses arrive in.
+ * https://github.com/ben-manes/gradle-versions-plugin/issues/844
+ */
+private fun projectUrlsOf(statuses: List<PartialStatus>): Map<Map<String, String>, String> {
+  val byLatestVersion =
+    compareBy(VersionMapping.versionComparator()) { status: PartialStatus -> status.latestVersion }
+      .thenBy { it.projectUrl }
+  return statuses
+    .filter { !it.projectUrl.isNullOrEmpty() }
+    .groupBy { mapOf("group" to it.group, "name" to it.name) }
+    .mapValues { (_, statusesOfKey) -> statusesOfKey.maxWith(byLatestVersion).projectUrl.toString() }
 }
 
 /** Returns the coordinates that only lazy actions contributed, with no project declaring them. */
