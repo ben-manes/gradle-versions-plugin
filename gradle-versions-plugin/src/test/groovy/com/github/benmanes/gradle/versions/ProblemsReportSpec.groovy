@@ -44,7 +44,7 @@ final class ProblemsReportSpec extends Specification {
           |      1. Upgrade com.example:tiered-widget to 1.0.2, the latest patch version.
           |      2. Upgrade com.example:tiered-widget to 1.1.1, the latest minor version.
           |      3. Upgrade com.example:tiered-widget to 2.1.0, the latest version.
-          |      4. Upgrade com.example:tiered-widget to 2.2.0-rc1, the latest pre-release.""".stripMargin()) &&
+          |      4. Upgrade com.example:tiered-widget to 2.2.0-rc1, the latest pre-release.""".stripMargin().replace('\r', '').replace('\n', System.lineSeparator())) &&
         result.output.count('Problem found:') == 1
     }
     results[1].output.contains('Configuration cache entry reused.') == reused
@@ -123,7 +123,7 @@ final class ProblemsReportSpec extends Specification {
       |    kept for the spec
       |    https://code.google.com/p/google-guice/
       |    declared in :app, :lib
-      |    Possible solutions:""".stripMargin())
+      |    Possible solutions:""".stripMargin().replace('\r', '').replace('\n', System.lineSeparator()))
   }
 
   @IgnoreIf({ !GradleVersions.drivenBy(GradleVersions.CURRENT) })
@@ -186,7 +186,7 @@ final class ProblemsReportSpec extends Specification {
           |    reviewed
           |    https://code.google.com/p/google-guice/
           |    declared in :app, :lib
-          |    Possible solutions:""".stripMargin()) &&
+          |    Possible solutions:""".stripMargin().replace('\r', '').replace('\n', System.lineSeparator())) &&
         result.output.count('Problem found:') == 1
     }
     results[1].output.contains('Configuration cache entry reused.') == reused
@@ -228,7 +228,7 @@ final class ProblemsReportSpec extends Specification {
     result.output.contains(
       """Problem found: Unresolved dependency (id: dependency-updates:unresolved:com.github.ben-manes:unresolvable)
       |  com.github.ben-manes:unresolvable:1.0
-      |    Could not find any matches for com.github.ben-manes:unresolvable:+""".stripMargin())
+      |    Could not find any matches for com.github.ben-manes:unresolvable:+""".stripMargin().replace('\r', '').replace('\n', System.lineSeparator()))
 
     and: 'a problem is not one of the warnings that the fail mode fails a build for'
     run(GradleVersions.CURRENT, ['dependencyUpdates', '--warning-mode', 'fail'])
@@ -312,7 +312,7 @@ final class ProblemsReportSpec extends Specification {
     result.output.contains(
       """Problem found: Outdated Gradle (id: dependency-updates:gradle)
       |  Gradle [${GradleVersions.CURRENT} -> ${steps.join(' -> ')}]
-      |""".stripMargin())
+      |""".stripMargin().replace('\r', '').replace('\n', System.lineSeparator()))
     solutions.every { result.output.contains("Upgrade Gradle to ${it}.") }
     result.output.count('Upgrade Gradle to') == solutions.size()
 

@@ -7,8 +7,8 @@ against `master`.
 
 - Every push to the pull request runs the
   [build workflow](.github/workflows/build.yml), which runs the suite on JDK
-  8, 11, 17, 21 and 25. A change touching only `README.md` or
-  `CONTRIBUTING.md` skips it.
+  8, 11, 17, 21, and 25, and on Windows. A change touching only `README.md`
+  or `CONTRIBUTING.md` skips it.
 - Reference the issue a change addresses in the commit summary and in the
   pull request body, so the merge closes it:
 

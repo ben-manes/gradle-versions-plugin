@@ -94,7 +94,7 @@ private class ProblemFindings(private val problems: ProblemsApi) {
           dependency.userReason,
           dependency.projectUrl,
           sourceLabel(dependency, dependency.declaringProjects ?: dependency.projects),
-        ).joinToString("\n").ifEmpty { null },
+        ).joinToString(System.lineSeparator()).ifEmpty { null },
         steps.mapNotNull { version -> tiers[version]?.let { "Upgrade $coordinate to $version, $it" } },
       )
     }
@@ -117,7 +117,7 @@ private class ProblemFindings(private val problems: ProblemsApi) {
             .takeIf { it.isNotBlank() },
           dependency.userReason,
           dependency.projectUrl,
-        ).joinToString("\n").ifEmpty { null },
+        ).joinToString(System.lineSeparator()).ifEmpty { null },
       )
     }
   }
@@ -132,7 +132,7 @@ private class ProblemFindings(private val problems: ProblemsApi) {
         "skipped-configurations:${Integer.toHexString(reason.hashCode())}",
         "Skipped configurations",
         reason.lineSequence().first(),
-        group.joinToString("\n") { "'${it.name}' in ${projectsLabel(listOf(it.project))}" },
+        group.joinToString(System.lineSeparator()) { "'${it.name}' in ${projectsLabel(listOf(it.project))}" },
       )
     }
   }
