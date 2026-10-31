@@ -4,6 +4,7 @@ import static com.github.benmanes.gradle.versions.updates.DependencyUpdatesRepor
 import static com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel.RELEASE_CANDIDATE
 
 import com.github.benmanes.gradle.versions.reporter.result.Result
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesReporter
 import com.github.benmanes.gradle.versions.updates.OutputFormatterArgument
 import com.github.benmanes.gradle.versions.updates.PartialStatus
 import com.github.benmanes.gradle.versions.updates.UnresolvedInfo
@@ -30,13 +31,16 @@ final class ProjectUrlSpec extends Specification {
     return "${PROJECT_URL}#${version}"
   }
 
-  private static Result reportOf(List<PartialStatus> statuses) {
+  private static DependencyUpdatesReporter reporterOf(List<PartialStatus> statuses, Action<Result> outputFormatter) {
     def project = ProjectBuilder.builder().build()
-    def captured = null
-    def outputFormatter = [execute: { result -> captured = result }] as Action<Result>
-    reporterFor(statuses, project.path, project.logger, 'milestone',
+    return reporterFor(statuses, project.path, project.logger, 'milestone',
       new OutputFormatterArgument.CustomAction(outputFormatter), project.file('build'), 'report',
-      false, 'https://services.gradle.org/versions/', RELEASE_CANDIDATE.id).write()
+      false, 'https://services.gradle.org/versions/', RELEASE_CANDIDATE.id)
+  }
+
+  private static Result reportOf(List<PartialStatus> statuses) {
+    def captured = null
+    reporterOf(statuses, [execute: { result -> captured = result }] as Action<Result>).write()
     return captured
   }
 
@@ -98,7 +102,7 @@ final class ProjectUrlSpec extends Specification {
   def 'Reports no project url where the POM of the latest version has none'() {
     given: 'the later version is published without a url'
     def statuses = [
-      status('1.4.3', '1.6.2', null),
+      status('1.4.3', '1.6.2', missing),
       status('1.4.3', '1.4.3', urlOf('1.4.3')),
     ]
 
@@ -109,6 +113,25 @@ final class ProjectUrlSpec extends Specification {
     def outdated = result.outdated.dependencies
     outdated*.available*.milestone == ['1.6.2']
     outdated*.projectUrl == [null]
+
+    where:
+    [missing, reversed] << [[null, ''], [false, true]].combinations()
+  }
+
+  def 'Reports each up-to-date and exceeded row with the project url of its own latest version'() {
+    given: 'another declared version resolves to a later version'
+    def statuses = [
+      status('1.0', '3.1', urlOf('3.1'), ':app'),
+      status('2.0', '2.0', urlOf('2.0'), ':lib'),
+      status('3.0', '2.5', urlOf('2.5'), ':core'),
+    ]
+
+    when:
+    def result = reportOf(reversed ? statuses.reverse() : statuses)
+
+    then:
+    result.current.dependencies*.projectUrl == [urlOf('2.0')]
+    result.exceeded.dependencies*.projectUrl == [urlOf('2.5')]
 
     where:
     reversed << [false, true]
@@ -145,6 +168,67 @@ final class ProjectUrlSpec extends Specification {
 
     then:
     result.current.dependencies*.projectUrl == ['https://b.example']
+
+    where:
+    reversed << [false, true]
+  }
+
+  def 'Reports the project url of a version where only some of its statuses have one'() {
+    given: 'one repository serves the version without a url'
+    def statuses = [
+      status('1.6.2', '1.6.2', null),
+      status('1.6.2', '1.6.2', 'https://a.example'),
+    ]
+
+    when:
+    def result = reportOf(reversed ? statuses.reverse() : statuses)
+
+    then:
+    result.current.dependencies*.projectUrl == ['https://a.example']
+
+    where:
+    reversed << [false, true]
+  }
+
+  def 'Reports an unresolved row with the project url of the latest version of its module'() {
+    given: 'the rules reject every candidate for one project'
+    def rejected = new UnresolvedInfo('androidx.compose.ui', 'ui', '2.0', 'Rejected', '1.4.3')
+    def statuses = [
+      status('1.4.3', '1.6.2', urlOf('1.6.2'), ':app'),
+      status('1.4.3', 'none', urlOf('2.0'), ':lib', rejected),
+    ]
+
+    when:
+    def result = reportOf(reversed ? statuses.reverse() : statuses)
+
+    then:
+    result.unresolved.dependencies*.projectUrl == [urlOf('1.6.2')]
+
+    where:
+    reversed << [false, true]
+  }
+
+  def 'Reports the project url of the module from a reporter built through the public constructor'() {
+    given: 'two declared versions that resolve to different versions'
+    def statuses = [
+      status('1.0', '3.1', urlOf('3.1'), ':app'),
+      status('2.0', '3.0', urlOf('3.0'), ':lib'),
+    ]
+    def captured = null
+    def outputFormatter = [execute: { result -> captured = result }] as Action<Result>
+    def built = reporterOf(reversed ? statuses.reverse() : statuses, outputFormatter)
+
+    when:
+    new DependencyUpdatesReporter(built.projectPath, built.logger, built.revision,
+      new OutputFormatterArgument.CustomAction(outputFormatter), built.outputDirectory, built.reportfileName,
+      built.currentVersions, built.latestVersions, built.upToDateVersions, built.downgradeVersions,
+      built.upgradeVersions, built.undeclared, built.unresolved, built.projectUrls, built.gradleUpdateChecker,
+      built.gradleReleaseChannel, built.latestByCurrent, built.projectsByCoordinate, built.contributedCoordinates,
+      built.configurationsByCoordinate, built.skipped, built.platformProjectsByCoordinate,
+      built.constrainedByCoordinate, built.preReleaseByCurrent).write()
+
+    then:
+    captured.outdated.dependencies*.projectUrl == [urlOf('3.1'), urlOf('3.1')]
 
     where:
     reversed << [false, true]
