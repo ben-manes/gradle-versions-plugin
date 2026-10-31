@@ -49,7 +49,7 @@ class VersionMapping(
    * derived from the url of the version they rejected, by [ReportRules].
    * https://github.com/ben-manes/gradle-versions-plugin/issues/844
    */
-  val projectUrlByCurrent = hashMapOf<Coordinate, String>()
+  internal val projectUrlByCurrent = hashMapOf<Coordinate, String>()
   private var comparator = makeVersionComparator()
 
   init {
