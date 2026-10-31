@@ -193,8 +193,8 @@ Always create the GitHub release as a draft:
      issue and pull request numbers, then an alert for anything a build author
      has to act on or know about. Lines are not wrapped, since GitHub reflows
      them.
-   - Thank anyone outside the maintainers who reported or wrote a change, after
-     the numbers on its bullet.
+   - Thank anyone without write access to this repository who reported,
+     diagnosed, or wrote a change, after the numbers on its bullet.
    - Pick the alert by what the reader has to do, and order them as listed:
      - `> [!IMPORTANT]` for a step the reader must take, including one that
        applies only to builds using a particular feature.
