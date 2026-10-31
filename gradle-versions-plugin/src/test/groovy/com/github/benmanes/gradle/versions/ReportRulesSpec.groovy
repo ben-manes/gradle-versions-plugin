@@ -30,8 +30,9 @@ final class ReportRulesSpec extends Specification {
   }
 
   private static PartialStatus statusOf(
-    String group, String name, String declaredVersion, String latestVersion, String projectPath = ':') {
-    return new PartialStatus(group, name, declaredVersion, null, latestVersion, null, null, false, [], projectPath)
+    String group, String name, String declaredVersion, String latestVersion, String projectPath = ':',
+    String projectUrl = null) {
+    return new PartialStatus(group, name, declaredVersion, null, latestVersion, projectUrl, null, false, [], projectPath)
   }
 
   private static Action<ResolutionStrategyWithCurrent> rejecting(String rejectedVersion) {
@@ -533,5 +534,180 @@ final class ReportRulesSpec extends Specification {
 
     then: 'the check reads both versions, so nothing is held back'
     applied[0].latestVersion == '3.0-Beta1'
+  }
+
+  @Unroll
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/844')
+  def 'A row moved from #rejected to #moved with the project url #url is reported with #reported'() {
+    given:
+    def status = statusOf('com.example', 'widget', '0.1', rejected, ':', url)
+    def candidates = [':': ["com.example:widget:${rejected}".toString(), "com.example:widget:${moved}".toString()]]
+
+    when:
+    def applied = applyRules([status], candidates, rejecting(rejected))
+
+    then:
+    applied[0].latestVersion == moved
+    applied[0].projectUrl == reported
+
+    where:
+    rejected    | moved     | url                                       | reported
+    '1.7.0'     | '1.6.2'   | 'https://e.com/releases#1.7.0'            | 'https://e.com/releases#1.6.2'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/docs/1.7.0/index.html'     | 'https://e.com/docs/1.6.2/index.html'
+    '1.7.0'     | '1.6.2'   | 'https://github.com/o/r/tree/v1.7.0'      | 'https://github.com/o/r/tree/v1.6.2'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/1.7.0/a/1.7.0'             | 'https://e.com/1.6.2/a/1.6.2'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/releases#1.7'              | 'https://e.com/releases'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/releases#1_7_0'            | 'https://e.com/releases'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/docs/1.7.0/#1_7_0'         | 'https://e.com/docs/1.6.2/'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/docs/1.7.0/#1.7.0'         | 'https://e.com/docs/1.6.2/#1.6.2'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/releases#1.7.0/1_7_0'      | 'https://e.com/releases#1.7.0/1_7_0'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/#docs/1.7/1.7.0/guide'     | 'https://e.com/#docs/1.7/1.7.0/guide'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/#docs/1.7.0/guide'         | 'https://e.com/#docs/1.6.2/guide'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/releases#1.7.1'            | 'https://e.com/releases'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/releases#release-1.7'      | 'https://e.com/releases'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/docs/#/1.7.0/widget2'      | 'https://e.com/docs/#/1.6.2/widget2'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/docs?v=1.7.0#notes'        | 'https://e.com/docs?v=1.7.0#notes'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/guide#section-2'           | 'https://e.com/guide#section-2'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/guide#notes'               | 'https://e.com/guide#notes'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/docs/#/components/widget2' | 'https://e.com/docs/#/components/widget2'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/docs/#!/v1.7/widget2'      | 'https://e.com/docs/#!/v1.7/widget2'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/docs/1.7.0.1/'             | 'https://e.com/docs/1.7.0.1/'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/docs/1.7/index.html'       | 'https://e.com/docs/1.7/index.html'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/5.x-1.7/1.7.0/'            | 'https://e.com/5.x-1.7/1.7.0/'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/docs/1.7/1.7.0/#1.7.0'     | 'https://e.com/docs/1.7/1.7.0/#1.7.0'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/docs/1.7.0-rc1/'           | 'https://e.com/docs/1.7.0-rc1/'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/docs/1.7.0_1/'             | 'https://e.com/docs/1.7.0_1/'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/docs/1.7.0+b1/'            | 'https://e.com/docs/1.7.0+b1/'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/releases#1.7.0-rc1'        | 'https://e.com/releases'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/docs/1.7.0.html'           | 'https://e.com/docs/1.6.2.html'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/docs/#/1.7.0/1.7/x'        | 'https://e.com/docs/#/1.7.0/1.7/x'
+    '1.7.0'     | 'v1.6.2'  | 'https://github.com/o/r/tree/v1.7.0'      | 'https://github.com/o/r/tree/v1.6.2'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/plain'                     | 'https://e.com/plain'
+    '1.7.0'     | '1.6.2'   | 'https://1.7.0.e.com:1700/plain'          | 'https://1.7.0.e.com:1700/plain'
+    '1.7.0'     | '1.6.2'   | '//release-1.7.0.org/docs'                | '//release-1.7.0.org/docs'
+    '1.7.0'     | '1.6.2'   | 'scm:git:https://e.com/r.git#1.7.0'       | 'scm:git:https://e.com/r.git#1.7.0'
+    '1.7.0'     | '1.6.2'   | null                                      | null
+    '1.7.0'     | '1.6.2'   | ''                                        | ''
+    '5'         | '4'       | 'https://junit.org/junit5/'               | 'https://junit.org/junit5/'
+    '5'         | '4'       | 'https://release-5.org/docs'              | 'https://release-5.org/docs'
+    '5'         | '4'       | 'https://e.com/docs/5_1/'                 | 'https://e.com/docs/5_1/'
+    '5'         | '4'       | 'https://e.com/docs/1-5/'                 | 'https://e.com/docs/1-5/'
+    '5'         | '4'       | 'https://e.com/docs/1+5/'                 | 'https://e.com/docs/1+5/'
+    '1.7.0'     | '1.6.2'   | 'https://e.com/tags/1.7.0%2Bbuild/'       | 'https://e.com/tags/1.7.0%2Bbuild/'
+    '5'         | '4'       | 'https://e.com/releases#5_1'              | 'https://e.com/releases'
+    '5'         | '4'       | 'https://e.com/release-5/v5/'             | 'https://e.com/release-4/v4/'
+    '1.0'       | '0.9'     | 'https://e.com/v11.0/'                    | 'https://e.com/v11.0/'
+    '1.0+build' | '0.9'     | 'https://e.com/1.0+build/'                | 'https://e.com/0.9/'
+    '1.0+build' | '0.9'     | 'https://e.com/1.0xbuild/'                | 'https://e.com/1.0xbuild/'
+    '2.0'       | '1.0$1'   | 'HTTPS://e.com/2.0/'                      | 'HTTPS://e.com/1.0$1/'
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/844')
+  def 'The project url is kept on a row that stays at its verdict when only its pre-release step changes'() {
+    given: 'the step above the verdict is rejected, but the verdict itself is accepted'
+    def status = new PartialStatus('com.example', 'widget', '1.0', null, '3.0', 'https://example.com#1.2', null, false,
+      [], ':', [], [], false, null, [], false, '4.0-rc1')
+    def candidates = [':': ['com.example:widget:3.0', 'com.example:widget:2.0']]
+
+    when:
+    def applied = applyRules([status], candidates, rejecting('4.0-rc1'))
+
+    then:
+    applied[0].latestVersion == '3.0'
+    applied[0].preReleaseVersion == null
+    applied[0].projectUrl == 'https://example.com#1.2'
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/844')
+  def 'Each project url is kept on rows that stay at one verdict'() {
+    given: 'two repositories serve the verdict with different urls'
+    def first = statusOf('com.example', 'widget', '1.0', '3.0', ':app', 'https://a.example')
+    def second = statusOf('com.example', 'widget', '1.0', '3.0', ':lib', 'https://b.example')
+    def candidates = [':app': ['com.example:widget:3.0'], ':lib': ['com.example:widget:3.0']]
+
+    when:
+    def applied = applyRules([first, second], candidates, rejecting('2.0'))
+
+    then:
+    applied*.projectUrl == ['https://a.example', 'https://b.example']
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/844')
+  def 'The project url of the rejected version is kept on a row with every candidate rejected'() {
+    given:
+    def status = statusOf('com.example', 'widget', '1.0', '3.0', ':', 'https://example.com#3.0')
+    def candidates = [':': ['com.example:widget:3.0']]
+
+    when:
+    def applied = applyRules([status], candidates, rejecting('3.0'))
+
+    then:
+    applied[0].unresolved != null
+    applied[0].projectUrl == 'https://example.com#3.0'
+  }
+
+  @Unroll
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/844')
+  def 'A moved row is reported with the project url read for its version over a rewrite, reversed: #reversed'() {
+    given: 'another status resolved the version the row moves to, from a POM with a different url'
+    def moved = statusOf('com.example', 'widget', '1.0', '3.0', ':app', own)
+    def other = statusOf('com.example', 'widget', '1.5', '2.0', ':lib', 'https://archive.example')
+    def candidates = [':app': ['com.example:widget:3.0', 'com.example:widget:2.0'], ':lib': ['com.example:widget:2.0']]
+    def statuses = reversed ? [other, moved] : [moved, other]
+
+    when:
+    def applied = applyRules(statuses, candidates, rejecting('3.0'))
+
+    then:
+    applied.find { it.declaredVersion == '1.0' }.latestVersion == '2.0'
+    applied*.projectUrl == ['https://archive.example', 'https://archive.example']
+
+    where:
+    own                       | reversed
+    'https://example.com#3.0' | false
+    'https://example.com#3.0' | true
+    null                      | false
+    null                      | true
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/844')
+  def 'A moved row is reported with the project url read for its version when that status also moved'() {
+    given: 'the rule rejects 2.0 only for the row that resolved it'
+    def first = statusOf('com.example', 'widget', '1.0', '3.0', ':app', 'https://example.com#3.0')
+    def second = statusOf('com.example', 'widget', '1.5', '2.0', ':lib', 'https://archive.example')
+    def candidates = [':app': ['com.example:widget:3.0', 'com.example:widget:2.0'],
+                      ':lib': ['com.example:widget:2.0', 'com.example:widget:1.5']]
+    def strategy = { ResolutionStrategyWithCurrent rs ->
+      rs.componentSelection { rules ->
+        rules.all { selection ->
+          if (selection.candidate.version == '3.0' ||
+            (selection.candidate.version == '2.0' && selection.currentVersion == '1.5')) {
+            selection.reject('rejected by the test rule')
+          }
+        }
+      }
+    } as Action<ResolutionStrategyWithCurrent>
+
+    when:
+    def applied = applyRules([first, second], candidates, strategy)
+
+    then:
+    applied*.latestVersion == ['2.0', '1.5']
+    applied[0].projectUrl == 'https://archive.example'
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/844')
+  def 'The url of a moved row is rewritten where the only project url read for its version is empty'() {
+    given:
+    def moved = statusOf('com.example', 'widget', '1.0', '3.0', ':app', 'https://example.com#3.0')
+    def empty = statusOf('com.example', 'widget', '1.5', '2.0', ':lib', '')
+    def candidates = [':app': ['com.example:widget:3.0', 'com.example:widget:2.0'], ':lib': ['com.example:widget:2.0']]
+
+    when:
+    def applied = applyRules([moved, empty], candidates, rejecting('3.0'))
+
+    then:
+    applied[0].projectUrl == 'https://example.com#2.0'
+    applied[1].projectUrl == ''
   }
 }

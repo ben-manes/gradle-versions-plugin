@@ -45,7 +45,8 @@ class VersionMapping(
    * The project url read from the POM of each declared coordinate's latest version, absent where
    * that POM has none. Taken from a resolved status of that version, as [latestByCurrent] is, so
    * that a row is reported with the url of its own version rather than another row's, a failed
-   * resolution's, or an older one's.
+   * resolution's, or an older one's. A status that the report's rules moved may instead have a url
+   * derived from the url of the version they rejected, by [ReportRules].
    * https://github.com/ben-manes/gradle-versions-plugin/issues/844
    */
   val projectUrlByCurrent = hashMapOf<Coordinate, String>()

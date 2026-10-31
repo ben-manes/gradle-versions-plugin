@@ -13,6 +13,17 @@ import org.gradle.api.logging.Logger
 import org.gradle.api.specs.Spec
 
 /**
+ * Returns the url read for each version in [statuses], by group, name, and version, for
+ * [ReportRules.applyTo]. Where two statuses of a version have different urls, the one kept does not
+ * depend on the order they arrive in.
+ */
+internal fun urlByVersion(statuses: List<PartialStatus>): Map<Triple<String, String, String>, String> =
+  statuses
+    .filter { it.unresolved == null && !it.projectUrl.isNullOrEmpty() }
+    .groupBy({ Triple(it.group, it.name, it.latestVersion) }, { it.projectUrl.orEmpty() })
+    .mapValues { (_, urls) -> urls.max() }
+
+/**
  * Replays the aggregating build's own component-selection rules over each row's recorded
  * candidates, starting at the row's baked verdict (the first-accept walk's answer) and walking
  * older, never newer. The baked verdict is the ceiling: the revision filter, the
@@ -97,18 +108,34 @@ internal class ReportRules(
    * aggregating build's rules accept, reading the candidates from the partial for the row's
    * `projectPath`. A row absent from its partial's candidates (a `none`-version row, a file
    * dependency, an offline run, or a v1/v2 partial from an older release) is left at its baked
-   * verdict.
+   * verdict. A row moved to an earlier candidate is given the url read for that version where a
+   * status has one, as its own was read from the POM of the version rejected, and otherwise its own
+   * url with that version rewritten. The urls read are passed in for a report that applies this to
+   * more than one list of rows, since the url for a version can be on a row in another list.
+   * https://github.com/ben-manes/gradle-versions-plugin/issues/844
    */
+  @JvmOverloads
   fun applyTo(
     statuses: List<PartialStatus>,
     candidatesByProjectPath: Map<String, List<String>>,
+    urlsRead: Map<Triple<String, String, String>, String> = urlByVersion(statuses),
   ): List<PartialStatus> {
     if (!hasRules && !checksPreReleases) {
       return statuses
     }
     val versionsByProjectPath = candidatesByProjectPath.mapValues { (_, candidates) -> versionsByModule(candidates) }
     return try {
-      statuses.map { status -> applyToRow(status, versionsByProjectPath) }
+      statuses.map { status ->
+        val applied = applyToRow(status, versionsByProjectPath)
+        if (applied.unresolved != null || applied.latestVersion == status.latestVersion) {
+          applied
+        } else {
+          val urlRead = urlsRead[Triple(status.group, status.name, applied.latestVersion)]
+          applied.copy(
+            projectUrl = urlRead ?: status.projectUrl?.let { rewriteVersion(it, status.latestVersion, applied.latestVersion) },
+          )
+        }
+      }
     } catch (e: Exception) {
       // A rule body throws where registering it did not: a closure serialized into the
       // configuration cache without the build script it reads hits the missing method only once a
@@ -389,5 +416,40 @@ internal class ReportRules(
   private companion object {
     /** The reason a producer prints for the same rejection, so a row reads alike either way. */
     const val PRE_RELEASE_REASON = "Pre-release rejected by rejectPreReleases"
+
+    /** An http or https url as its origin, path, query, and fragment. Any other url is left alone. */
+    val URL_PARTS =
+      Regex("""^(https?://[^/?#]*)([^?#]*)(\?[^#]*)?(#.*)?$""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+
+    /** A number that may be a version, such as `1.7` or `1_7_0`, once the rejected one is removed. */
+    val VERSION_SHAPED = Regex("""\d[._-]\d""")
+
+    /**
+     * Returns [url], read from the POM of [rejected], for [version], whose POM is not read here. Only
+     * a whole token of [rejected] is rewritten, so `junit5`, `1.7.0.1`, and `1.7.0-rc1` are left
+     * alone. A url with another version-shaped number in its path is kept, since a rewrite could
+     * give a page that does not exist. A fragment with one is dropped, since that number belongs to
+     * another release, unless it is a client-side route, which is kept for the same reason as a path.
+     */
+    fun rewriteVersion(
+      url: String,
+      rejected: String,
+      version: String,
+    ): String {
+      val (origin, path, query, fragment) = URL_PARTS.matchEntire(url)?.destructured ?: return url
+      val token = Regex("""(?<![0-9A-Za-z.])(?<![0-9][_+-])(v?)${Regex.escape(rejected)}(?![0-9A-Za-z]|\.[0-9]|[_+%-][0-9A-Za-z])""")
+      val prefix = { match: MatchResult -> if (version.startsWith("v")) "" else match.groupValues[1] }
+      val swap = { text: String -> token.replace(text) { prefix(it) + version } }
+      if (VERSION_SHAPED.containsMatchIn(token.replace(path, ""))) {
+        return url
+      }
+      val newFragment =
+        when {
+          !VERSION_SHAPED.containsMatchIn(token.replace(fragment, "")) -> swap(fragment)
+          "/" in fragment || fragment.startsWith("#!") -> fragment
+          else -> ""
+        }
+      return origin + swap(path) + query + newFragment
+    }
   }
 }
