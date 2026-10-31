@@ -40,11 +40,26 @@ class VersionMapping(
 
   /** The latest version sharing the major part of each declared coordinate, on the same terms. */
   val minorByCurrent = hashMapOf<Coordinate, String>()
+
+  /**
+   * The project url read from the POM of each declared coordinate's latest version, absent where
+   * that POM has none. Taken from a resolved status of that version, as [latestByCurrent] is, so
+   * that a row is reported with the url of its own version rather than another row's, a failed
+   * resolution's, or an older one's.
+   * https://github.com/ben-manes/gradle-versions-plugin/issues/844
+   */
+  val projectUrlByCurrent = hashMapOf<Coordinate, String>()
   private var comparator = makeVersionComparator()
 
   init {
     val patchVotes = hashMapOf<Coordinate, MutableSet<String>>()
     val minorVotes = hashMapOf<Coordinate, MutableSet<String>>()
+    // Ties on the version are broken by the url, so that the one picked does not depend on the
+    // order the statuses arrive in.
+    val byLatestVersion =
+      compareBy(comparator) { status: PartialStatus -> status.latestVersion }
+        .thenBy(nullsFirst()) { it.projectUrl?.ifEmpty { null } }
+    val newestByCurrent = hashMapOf<Coordinate, PartialStatus>()
     for (status in statuses) {
       current.add(status.coordinate)
       if (status.unresolved == null) {
@@ -53,6 +68,10 @@ class VersionMapping(
         val previous = latestByCurrent[status.coordinate]
         if (previous == null || comparator.compare(previous.version, latestCoordinate.version) < 0) {
           latestByCurrent[status.coordinate] = latestCoordinate
+        }
+        val newest = newestByCurrent[status.coordinate]
+        if (newest == null || byLatestVersion.compare(newest, status) < 0) {
+          newestByCurrent[status.coordinate] = status
         }
         keepNewest(preReleaseByCurrent, status.coordinate, status.preReleaseVersion)
         status.patchVersion?.let { patchVotes.getOrPut(status.coordinate) { hashSetOf() }.add(it) }
@@ -63,6 +82,9 @@ class VersionMapping(
     }
     keepAgreed(patchVotes, patchByCurrent)
     keepAgreed(minorVotes, minorByCurrent)
+    for ((coordinate, status) in newestByCurrent) {
+      status.projectUrl?.ifEmpty { null }?.let { projectUrlByCurrent[coordinate] = it }
+    }
     organize()
   }
 

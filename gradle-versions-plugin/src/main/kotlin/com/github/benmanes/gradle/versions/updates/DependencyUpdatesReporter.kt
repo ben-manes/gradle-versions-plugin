@@ -99,6 +99,13 @@ class DependencyUpdatesReporter(
   /** The projects that declare each coordinate, in a report of more than one project. */
   internal var declaringProjectsByCoordinate: Map<Coordinate, List<String>> = emptyMap()
 
+  /**
+   * The project url of each row's latest version, absent where its POM has none. Null where the
+   * reporter was constructed without it, which leaves each row with its module's url from
+   * [projectUrls], as an unresolved row always is.
+   */
+  internal var projectUrlByCurrent: Map<Coordinate, String>? = null
+
   /** Creates the Problems API reporter, set by the task, as the `problems` formatter needs one. */
   internal var objects: ObjectFactory? = null
 
@@ -384,7 +391,7 @@ class DependencyUpdatesReporter(
       group = key["group"],
       name = key["name"],
       version = coordinate.version,
-      projectUrl = projectUrls[key],
+      projectUrl = projectUrlFor(coordinate, key),
       userReason = coordinate.userReason,
       projects = projectsByCoordinate[coordinate],
       contributed = contributedFlag(coordinate),
@@ -402,7 +409,7 @@ class DependencyUpdatesReporter(
       group = key["group"],
       name = key["name"],
       version = coordinate.version,
-      projectUrl = projectUrls[key],
+      projectUrl = projectUrlFor(coordinate, key),
       userReason = coordinate.userReason,
       latest = latestFor(coordinate, key).orEmpty(),
       projects = projectsByCoordinate[coordinate],
@@ -415,6 +422,12 @@ class DependencyUpdatesReporter(
 
   /** Returns true when the coordinate was only contributed by a plugin, otherwise null. */
   private fun contributedFlag(coordinate: Coordinate): Boolean? = if (coordinate in contributedCoordinates) true else null
+
+  /** Returns the project url of the row's latest version, or its module's where none were set. */
+  private fun projectUrlFor(
+    coordinate: Coordinate,
+    key: Map<String, String>,
+  ): String? = projectUrlByCurrent.let { if (it == null) projectUrls[key] else it[coordinate] }
 
   /** Returns the latest version found for the declared version, if it was paired with one. */
   private fun latestFor(
@@ -484,7 +497,7 @@ class DependencyUpdatesReporter(
       group = key["group"],
       name = key["name"],
       version = coordinate.version,
-      projectUrl = projectUrls[key],
+      projectUrl = projectUrlFor(coordinate, key),
       userReason = coordinate.userReason,
       available = available,
       projects = projectsByCoordinate[coordinate],
@@ -583,13 +596,7 @@ fun reporterFor(
   val platformProjectsByCoordinate = platformProjectsByCoordinate(split, logger)
   val constrainedByCoordinate = constrainedByCoordinate(split, logger)
   val unresolved = split.mapNotNullTo(mutableSetOf()) { it.unresolved }
-  val projectUrls =
-    split
-      .filter { !it.projectUrl.isNullOrEmpty() }
-      .associateBy(
-        { mapOf("group" to it.group, "name" to it.name) },
-        { it.projectUrl.toString() },
-      )
+  val projectUrls = projectUrlsOf(split)
 
   val currentVersions = toKeyedMap(versions.current)
   val latestVersions =
@@ -631,7 +638,23 @@ fun reporterFor(
     it.patchByCurrent = versions.patchByCurrent
     it.minorByCurrent = versions.minorByCurrent
     it.declaringProjectsByCoordinate = declaringProjects(split)
+    it.projectUrlByCurrent = versions.projectUrlByCurrent
   }
+}
+
+/**
+ * Returns the project url of each module, which an unresolved row is reported with, read from the
+ * newest version among its statuses so that the url does not depend on the order they arrive in.
+ * https://github.com/ben-manes/gradle-versions-plugin/issues/844
+ */
+private fun projectUrlsOf(statuses: List<PartialStatus>): Map<Map<String, String>, String> {
+  val byLatestVersion =
+    compareBy(VersionMapping.versionComparator()) { status: PartialStatus -> status.latestVersion }
+      .thenBy { it.projectUrl }
+  return statuses
+    .filter { !it.projectUrl.isNullOrEmpty() }
+    .groupBy { mapOf("group" to it.group, "name" to it.name) }
+    .mapValues { (_, statusesOfKey) -> statusesOfKey.maxWith(byLatestVersion).projectUrl.toString() }
 }
 
 /** Returns the coordinates that only lazy actions contributed, with no project declaring them. */
