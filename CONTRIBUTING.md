@@ -189,9 +189,12 @@ Always create the GitHub release as a draft:
    - `--verify-tag` aborts when the tag does not exist on GitHub. A typoed
      tag would otherwise become a real one, cut from `master`, the moment the
      draft publishes.
-   - `release-notes.md` is a scratch file: one bullet per change carrying its
-     issue and pull request numbers, then an alert for anything an existing
-     build has to react to. Lines are not wrapped, since GitHub reflows them.
+   - `release-notes.md` is a scratch file: one bullet per change, with its
+     issue and pull request numbers, then an alert for anything a build author
+     has to act on or know about. Lines are not wrapped, since GitHub reflows
+     them.
+   - Thank anyone outside the maintainers who reported or wrote a change, after
+     the numbers on its bullet.
    - Pick the alert by what the reader has to do, and order them as listed:
      - `> [!IMPORTANT]` for a step the reader must take, including one that
        applies only to builds using a particular feature.
@@ -201,7 +204,7 @@ Always create the GitHub release as a draft:
    - The text starts on the line after the marker, with no blank `>` between.
 
    ```markdown
-   * Fixed a pesky bug (#101, #104)
+   * Fixed a pesky bug (#101, #104; thanks @octocat)
    * Added an awesome feature (#102, #105)
 
    > [!IMPORTANT]
