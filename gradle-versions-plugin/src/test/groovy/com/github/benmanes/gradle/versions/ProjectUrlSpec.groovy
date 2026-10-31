@@ -7,8 +7,12 @@ import com.github.benmanes.gradle.versions.reporter.result.Result
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesReporter
 import com.github.benmanes.gradle.versions.updates.OutputFormatterArgument
 import com.github.benmanes.gradle.versions.updates.PartialStatus
+import com.github.benmanes.gradle.versions.updates.ReportRules
+import com.github.benmanes.gradle.versions.updates.ReportRulesKt
 import com.github.benmanes.gradle.versions.updates.UnresolvedInfo
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ResolutionStrategyWithCurrent
 import org.gradle.api.Action
+import org.gradle.api.logging.Logging
 import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Issue
 import spock.lang.Specification
@@ -185,6 +189,68 @@ final class ProjectUrlSpec extends Specification {
 
     then:
     result.current.dependencies*.projectUrl == ['https://a.example']
+
+    where:
+    reversed << [false, true]
+  }
+
+  def 'Reports a row moved by the report rules with the project url of its version, and its module url for a failed row'() {
+    given: 'one project resolves 1.7.0, resolving it fails in another, and the rules reject 1.7.0'
+    def failed = new UnresolvedInfo('androidx.compose.ui', 'ui', '1.4.3', 'Could not resolve', '1.4.3')
+    def statuses = [
+      status('1.4.3', '1.7.0', urlOf('1.7.0'), ':app'),
+      status('1.4.3', 'none', null, ':lib', failed),
+    ]
+    def rejecting = { ResolutionStrategyWithCurrent strategy ->
+      strategy.componentSelection { rules ->
+        rules.all { selection ->
+          if (selection.candidate.version == '1.7.0') {
+            selection.reject('rejected')
+          }
+        }
+      }
+    } as Action<ResolutionStrategyWithCurrent>
+    def rules = new ReportRules(rejecting, Logging.getLogger(ProjectUrlSpec), 'milestone', false, null, null)
+    def candidates = [':app': ['androidx.compose.ui:ui:1.7.0', 'androidx.compose.ui:ui:1.6.2']]
+
+    when:
+    def result = reportOf(rules.applyTo(reversed ? statuses.reverse() : statuses, candidates))
+
+    then:
+    result.outdated.dependencies*.available*.milestone == ['1.6.2']
+    result.outdated.dependencies*.projectUrl == [urlOf('1.6.2')]
+    result.unresolved.dependencies*.projectUrl == [urlOf('1.6.2')]
+
+    where:
+    reversed << [false, true]
+  }
+
+  def 'Reports a row moved by the report rules with the project url read for its version in another list of rows'() {
+    given: 'a moved row with a url that cannot be rewritten, and a row in the other list at the version it moves to'
+    def stale = 'https://e.com/client-5.7.x/5.7-alpha1/'
+    def real = 'https://e.com/client-5.6.x/5.6.2/'
+    def moved = status('5.0', '5.7-alpha1', stale, ':app')
+    def resolved = status('5.0', '5.6.2', real, ':app')
+    def rejecting = { ResolutionStrategyWithCurrent strategy ->
+      strategy.componentSelection { rules ->
+        rules.all { selection ->
+          if (selection.candidate.version == '5.7-alpha1') {
+            selection.reject('rejected')
+          }
+        }
+      }
+    } as Action<ResolutionStrategyWithCurrent>
+    def rules = new ReportRules(rejecting, Logging.getLogger(ProjectUrlSpec), 'milestone', false, null, null)
+    def candidates = [':app': ['androidx.compose.ui:ui:5.7-alpha1', 'androidx.compose.ui:ui:5.6.2']]
+    def urls = ReportRulesKt.urlByVersion([moved, resolved])
+    def lists = reversed ? [[resolved], [moved]] : [[moved], [resolved]]
+
+    when:
+    def result = reportOf(lists.collectMany { rules.applyTo(it, candidates, urls) })
+
+    then:
+    result.outdated.dependencies*.available*.milestone == ['5.6.2']
+    result.outdated.dependencies*.projectUrl == [real]
 
     where:
     reversed << [false, true]

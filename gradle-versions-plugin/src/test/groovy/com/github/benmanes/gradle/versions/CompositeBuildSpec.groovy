@@ -2095,6 +2095,92 @@ final class CompositeBuildSpec extends Specification {
     !result.output.contains('com.google.inject:guice [2.0 -> 2.2 -> 3.1]')
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/844')
+  def "A row moved by an including build's rule is reported with the url read for its version in the buildscript rows"() {
+    given: 'the project rows resolve 1.7.0, and the repository of the buildscript rows stops at 1.6.2'
+    def publish = { String repository, List<String> versions ->
+      def module = new File(testProjectDir.root, "${repository}/com/example/lines")
+      versions.each { version ->
+        def line = version.tokenize('.').take(2).join('.')
+        def directory = new File(module, version)
+        directory.mkdirs()
+        new File(directory, "lines-${version}.pom").text =
+          """<project><modelVersion>4.0.0</modelVersion><groupId>com.example</groupId><artifactId>lines</artifactId>
+            <version>${version}</version><packaging>pom</packaging>
+            <url>https://example.com/client-${line}.x/${version}/</url></project>"""
+      }
+      new File(module, 'maven-metadata.xml').text =
+        """<metadata><groupId>com.example</groupId><artifactId>lines</artifactId><versioning><versions>
+          ${versions.collect { "<version>${it}</version>" }.join()}</versions></versioning></metadata>"""
+      return new File(testProjectDir.root, repository).toURI()
+    }
+    def projectRepository = publish('project-repository', ['1.4.3', '1.6.2', '1.7.0'])
+    def buildscriptRepository = publish('buildscript-repository', ['1.4.3', '1.6.2'])
+    testProjectDir.newFile('settings.gradle') << "includeBuild 'child'"
+    testProjectDir.newFile('build.gradle') <<
+      """
+        plugins {
+          id 'io.github.ben-manes.versions'
+        }
+
+        dependencies {
+          dependencyUpdatesAggregation 'com.example:child:1.0'
+        }
+
+        tasks.named('dependencyUpdates').configure {
+          rejectVersionIf {
+            candidate.version == '1.7.0'
+          }
+        }
+      """.stripIndent()
+    testProjectDir.newFolder('child')
+    testProjectDir.newFile('child/settings.gradle') << "rootProject.name = 'child'"
+    testProjectDir.newFile('child/build.gradle') <<
+      """
+        buildscript {
+          repositories {
+            maven {
+              url '${buildscriptRepository}'
+            }
+          }
+          dependencies {
+            classpath files($classpathString)
+            classpath 'com.example:lines:1.4.3'
+          }
+        }
+
+        apply plugin: 'io.github.ben-manes.versions'
+
+        group = 'com.example'
+        version = '1.0'
+
+        repositories {
+          maven {
+            url '${projectRepository}'
+          }
+        }
+
+        configurations.create('tool') {
+          canBeResolved = true
+          canBeConsumed = false
+        }
+
+        dependencies {
+          tool 'com.example:lines:1.4.3'
+        }
+      """.stripIndent()
+
+    when:
+    run('dependencyUpdates', '-DoutputFormatter=json')
+    def jsonReport = new JsonSlurper()
+      .parse(new File(testProjectDir.root, 'build/dependencyUpdates/report.json'))
+
+    then:
+    def row = jsonReport.outdated.dependencies.find { it.name == 'lines' }
+    row.available.milestone == '1.6.2'
+    row.projectUrl == 'https://example.com/client-1.6.x/1.6.2/'
+  }
+
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1058')
   def "A rejectVersionIf inherited from an ancestor project governs a merged-in row"() {
     given: "the rule is declared on the root, while the subproject is what aggregates the child"

@@ -100,7 +100,7 @@ class DependencyUpdatesReporter(
   internal var declaringProjectsByCoordinate: Map<Coordinate, List<String>> = emptyMap()
 
   /**
-   * The project url of each row's latest version, absent where its POM has none. Null where the
+   * The project url of each row's latest version, absent where none is known. Null where the
    * reporter was constructed without it, which leaves each row with its module's url from
    * [projectUrls], as an unresolved row always is.
    */
