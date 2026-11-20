@@ -308,6 +308,12 @@ class Resolver internal constructor(
           val projectUrl = getProjectUrl(moduleVersion)
           val contributed = coord.key in current.contributedKeys
           val configurations = current.contributedConfigurations[coord.key].orEmpty()
+          // Repositories are walked separately, so the pre-release recorded in one can be older than
+          // the latest version found in another.
+          val preRelease =
+            preReleases[coord.key]?.takeIf { step ->
+              versionComparator.compare(step, resolvedCoordinate.version) > 0
+            }
           result.add(
             DependencyStatus(
               coord,
@@ -315,7 +321,7 @@ class Resolver internal constructor(
               projectUrl,
               contributed,
               configurations,
-              preReleases[coord.key],
+              preRelease,
             ),
           )
         }
@@ -398,6 +404,7 @@ class Resolver internal constructor(
 
     tier?.let { addTierFilter(copy, it) }
     addDeclaredBoundFilter(copy, current.coordinates)
+    addSupersededPreReleaseFilter(copy, current.coordinates, preReleases)
     addRevisionFilter(copy, revision, current.coordinates)
     addAttributes(copy, configuration)
     addCustomResolutionStrategy(copy, current.coordinates)
@@ -723,6 +730,43 @@ class Resolver internal constructor(
   }
 
   /**
+   * Rejects a pre-release that cannot become the step before the revision filter fetches its
+   * metadata. [addPreReleaseFilter] would reject it anyway, but a repository with only pre-releases
+   * would otherwise cost a metadata request for every version it lists. Gradle before 8.14.2
+   * fetches the metadata for attribute matching before running the rules, so it saves nothing there.
+   * The exemption is checked last because a user predicate may read the metadata.
+   */
+  private fun addSupersededPreReleaseFilter(
+    configuration: Configuration,
+    currentCoordinates: Map<Coordinate.Key, Coordinate>,
+    preReleases: Map<Coordinate.Key, String>,
+  ) {
+    configuration.resolutionStrategy { inner ->
+      ResolutionStrategyWithCurrent(inner, currentCoordinates, {}, isPreRelease).componentSelection { rules ->
+        rules.all(
+          Action<ComponentSelectionWithCurrent> { current ->
+            if (current.isPreRelease() && isSuperseded(current, preReleases) && !isExempt(current)) {
+              current.reject(PRE_RELEASE_REASON)
+            }
+          },
+        )
+      }
+    }
+  }
+
+  private fun isSuperseded(
+    current: ComponentSelectionWithCurrent,
+    preReleases: Map<Coordinate.Key, String>,
+  ): Boolean {
+    val candidate = current.candidate
+    if (versionComparator.compare(candidate.version, current.currentVersion) <= 0) {
+      return true
+    }
+    val recorded = preReleases[Coordinate.Key(candidate.group, candidate.module)]
+    return (recorded != null) && (versionComparator.compare(candidate.version, recorded) <= 0)
+  }
+
+  /**
    * Adds the filter that leaves out a pre-release candidate while the current version is a release,
    * as [ComponentSelectionWithCurrent.isPreRelease] reads both, and records the newest candidate it
    * rejects as the row's pre-release step. Registered on the configuration rather than through
@@ -736,9 +780,9 @@ class Resolver internal constructor(
    * version exact: a rejected candidate is not passed to the rules that follow, so a candidate that
    * reaches this filter passed every other one, and the first rejection here is the newest version
    * that fails the pre-release check alone. The cost of the later position is the revision filter's
-   * metadata read on the pre-release candidates above the verdict, bounded by how many of those a
-   * repository publishes. The build's own rules are now evaluated for those candidates, which the
-   * earlier position kept from them.
+   * metadata read on the pre-release candidates above the verdict, which
+   * [addSupersededPreReleaseFilter] limits to those that could become the step. The build's own
+   * rules are now evaluated for those candidates, which the earlier position kept from them.
    *
    * The newest rejection is kept by the comparator rather than the first one reached. A module
    * found in more than one repository is walked newest-first per repository rather than newest-first
@@ -762,7 +806,7 @@ class Resolver internal constructor(
               preReleases.merge(key, candidate.version) { seen, found ->
                 if (versionComparator.compare(seen, found) >= 0) seen else found
               }
-              current.reject("Pre-release rejected by rejectPreReleases")
+              current.reject(PRE_RELEASE_REASON)
             }
           },
         )
@@ -1349,6 +1393,8 @@ class Resolver internal constructor(
   )
 
   companion object {
+    private const val PRE_RELEASE_REASON = "Pre-release rejected by rejectPreReleases"
+
     private val PROJECT_PROPERTY = Regex("""\$\{project\.(groupId|artifactId|version)}""")
     private val ABSOLUTE_URL = Regex("""^[a-zA-Z][a-zA-Z0-9+.-]*://""")
     private val DESUGARED_CATEGORY = Attribute.of(Category.CATEGORY_ATTRIBUTE.name, String::class.java)

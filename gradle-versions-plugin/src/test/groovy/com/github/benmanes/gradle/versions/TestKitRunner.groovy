@@ -6,6 +6,7 @@ import static java.nio.file.StandardOpenOption.WRITE
 import java.nio.channels.FileChannel
 import java.nio.channels.FileLock
 import org.gradle.testkit.runner.GradleRunner
+import org.gradle.util.GradleVersion
 
 /**
  * Creates the runners of the functional specs, so that a task forking its test worker onto an older
@@ -38,6 +39,11 @@ final class TestKitRunner {
       runner = runner.withTestKitDir(TEST_KIT_DIR)
     }
     return PINNED ? runner.withGradleVersion(PINNED) : runner
+  }
+
+  /** The Gradle version that {@link #create} runs. */
+  static GradleVersion gradleVersion() {
+    return PINNED ? GradleVersion.version(PINNED) : GradleVersion.current()
   }
 
   /** Locks the first free directory of the pool until the worker exits, or returns null without a pool. */
