@@ -81,6 +81,11 @@ class VersionMapping(
         unresolved.add(status.coordinate)
       }
     }
+    // A step found in one repository or configuration can be older than the latest version found
+    // in another.
+    preReleaseByCurrent.entries.removeIf { (coordinate, step) ->
+      comparator.compare(step, latestByCurrent.getValue(coordinate).version) <= 0
+    }
     keepAgreed(patchVotes, patchByCurrent)
     keepAgreed(minorVotes, minorByCurrent)
     for ((coordinate, status) in newestByCurrent) {

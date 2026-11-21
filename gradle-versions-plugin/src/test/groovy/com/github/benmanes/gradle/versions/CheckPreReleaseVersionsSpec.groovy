@@ -2,12 +2,16 @@ package com.github.benmanes.gradle.versions
 
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
+import com.github.benmanes.gradle.versions.updates.PartialStatus
+import com.github.benmanes.gradle.versions.updates.VersionMapping
 import groovy.json.JsonSlurper
 import groovy.xml.XmlSlurper
+import org.gradle.api.logging.Logging
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import spock.lang.Issue
+import spock.lang.Requires
 import spock.lang.Specification
 
 /**
@@ -209,13 +213,14 @@ final class CheckPreReleaseVersionsSpec extends Specification {
       .contains(' - com.example:prerelease-widget [1.0 -> 1.2-beta]')
   }
 
-  private void runUpdates(List<String> extraArguments = []) {
+  private String runUpdates(List<String> extraArguments = []) {
     def result = TestKitRunner.create()
       .withProjectDir(testProjectDir.root)
       .withArguments(['dependencyUpdates'] + extraArguments)
       .withPluginClasspath()
       .build()
     assert result.task(':dependencyUpdates').outcome == SUCCESS
+    return result.output
   }
 
   def 'a pre-release candidate is the step after the version in use by default'() {
@@ -292,6 +297,145 @@ final class CheckPreReleaseVersionsSpec extends Specification {
     then:
     report.outdated.dependencies*.name == ['prerelease-peer']
     report.outdated.dependencies[0].available.milestone == '1.0-beta'
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1169')
+  def 'a milestone repository with only older pre-releases leaves the row up to date'() {
+    given:
+    writeMilestoneBuildFile('2.0', ['1.1-M1', '1.1-RC1', '2.0-M1', '2.0-RC1'])
+
+    when:
+    def report = runReport()
+
+    then:
+    report.current.dependencies*.name == ['milestoned']
+    report.outdated.dependencies.isEmpty()
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1169')
+  def 'a newer pre-release from a milestone repository is the step after the release'() {
+    given:
+    writeMilestoneBuildFile('1.0', ['2.0-M1', '2.0-RC1', '2.1-M1', '2.1-RC1'])
+
+    when:
+    def report = runReport()
+
+    then:
+    report.outdated.dependencies*.name == ['milestoned']
+    report.outdated.dependencies[0].available.milestone == '2.0'
+    report.outdated.dependencies[0].available.preRelease == '2.1-RC1'
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1169')
+  def 'a pre-release from a milestone repository that is older than the release is not the step'() {
+    given:
+    writeMilestoneBuildFile('1.0', ['2.0-M1', '2.0-RC1'])
+
+    when:
+    def report = runReport()
+
+    then:
+    report.outdated.dependencies*.name == ['milestoned']
+    report.outdated.dependencies[0].available.milestone == '2.0'
+    report.outdated.dependencies[0].available.preRelease == null
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1169')
+  def 'a step is kept only when newer than the latest version of the merged row'() {
+    when:
+    def versions = new VersionMapping(Logging.getLogger(CheckPreReleaseVersionsSpec),
+      [statusOf('2.0', step), statusOf('3.0', null)])
+
+    then:
+    versions.preReleaseByCurrent.values() as List == kept
+
+    where:
+    step      || kept
+    '2.1-RC1' || []
+    '3.1-RC1' || ['3.1-RC1']
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1169')
+  @Requires({ GradleVersions.rulesRunBeforeAttributeMatching(TestKitRunner.gradleVersion()) })
+  def 'the metadata of a pre-release that cannot be the step is not read'() {
+    given:
+    writeMilestoneBuildFile(version, milestones)
+
+    when:
+    def output = runUpdates()
+
+    then:
+    preReleaseMetadataReads(output) == read
+
+    where:
+    version | milestones                                 || read
+    '2.0'   | ['1.1-M1', '1.1-RC1', '2.0-M1', '2.0-RC1'] || []
+    '1.0'   | ['2.0-M1', '2.0-RC1', '2.1-M1', '2.1-RC1'] || ['2.1-RC1']
+  }
+
+  /**
+   * Writes a build with a release repository of 1.0 and 2.0 and a milestone repository of only
+   * {@code milestones}. A metadata rule prints each version whose metadata is read.
+   */
+  private void writeMilestoneBuildFile(String version, List<String> milestones) {
+    def releases = publishMilestoned('releases', ['1.0', '2.0'])
+    def milestoneRepository = publishMilestoned('milestones', milestones)
+    testProjectDir.newFile('build.gradle') <<
+      """
+        buildscript {
+          dependencies {
+            classpath files($classpathString)
+          }
+        }
+
+        apply plugin: 'java'
+        apply plugin: 'io.github.ben-manes.versions'
+
+        repositories {
+          maven { url '${releases}' }
+          maven { url '${milestoneRepository}' }
+        }
+
+        dependencies {
+          implementation 'com.example:milestoned:${version}'
+          components.all { details ->
+            println "Read the metadata of \${details.id.version}"
+          }
+        }
+
+        tasks.named('dependencyUpdates').configure {
+          outputFormatter = 'json'
+          checkForGradleUpdate = false
+        }
+        """.stripIndent()
+  }
+
+  private URI publishMilestoned(String repository, List<String> versions) {
+    def module = new File(testProjectDir.root, "${repository}/com/example/milestoned")
+    versions.each { version ->
+      def directory = new File(module, version)
+      directory.mkdirs()
+      new File(directory, "milestoned-${version}.pom").text =
+        """<project><modelVersion>4.0.0</modelVersion><groupId>com.example</groupId>
+          <artifactId>milestoned</artifactId><version>${version}</version><packaging>pom</packaging></project>"""
+    }
+    new File(module, 'maven-metadata.xml').text =
+      """<metadata><groupId>com.example</groupId><artifactId>milestoned</artifactId><versioning><versions>
+        ${versions.collect { "<version>${it}</version>" }.join()}</versions></versioning></metadata>"""
+    return new File(testProjectDir.root, repository).toURI()
+  }
+
+  private static PartialStatus statusOf(String latestVersion, String preReleaseVersion) {
+    return new PartialStatus('com.example', 'widget', '1.0', null, latestVersion, null, null,
+      false, [], ':', [], [], false, null, [], false, preReleaseVersion, false, null, null)
+  }
+
+  private static List<String> preReleaseMetadataReads(String output) {
+    return output.readLines()
+      .findAll { it.startsWith('Read the metadata of ') }
+      .collect { it.substring('Read the metadata of '.length()) }
+      .findAll { it.contains('-') }
+      .unique()
   }
 
   def 'a rejectVersionIf filter covers a convention the built-in markers do not'() {

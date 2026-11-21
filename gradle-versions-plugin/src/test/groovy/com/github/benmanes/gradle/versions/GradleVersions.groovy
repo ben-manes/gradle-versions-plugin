@@ -13,6 +13,7 @@ final class GradleVersions {
 
   private static final GradleVersion GRADLE_9 = GradleVersion.version('9.0')
   private static final GradleVersion FIRST_ON_JAVA_25 = GradleVersion.version('9.1.0')
+  private static final GradleVersion RULES_BEFORE_ATTRIBUTES = GradleVersion.version('8.14.2')
 
   /**
    * Returns whether the running JVM drives the given Gradle release, so that a spec pinning one
@@ -28,5 +29,10 @@ final class GradleVersions {
     def gradle = GradleVersion.version(gradleVersion).baseVersion
     // Gradle 9 does not start below Java 17, and Java 25 is listed from Gradle 9.1.0 onwards.
     return !(gradle >= GRADLE_9 && java < 17) && !(java >= 25 && gradle < FIRST_ON_JAVA_25)
+  }
+
+  /** Whether the rules run before attribute matching, which reads the metadata (gradle/gradle#33717). */
+  static boolean rulesRunBeforeAttributeMatching(GradleVersion gradleVersion) {
+    return gradleVersion.baseVersion >= RULES_BEFORE_ATTRIBUTES
   }
 }
