@@ -308,12 +308,6 @@ class Resolver internal constructor(
           val projectUrl = getProjectUrl(moduleVersion)
           val contributed = coord.key in current.contributedKeys
           val configurations = current.contributedConfigurations[coord.key].orEmpty()
-          // Repositories are walked separately, so the pre-release recorded in one can be older than
-          // the latest version found in another.
-          val preRelease =
-            preReleases[coord.key]?.takeIf { step ->
-              versionComparator.compare(step, resolvedCoordinate.version) > 0
-            }
           result.add(
             DependencyStatus(
               coord,
@@ -321,7 +315,7 @@ class Resolver internal constructor(
               projectUrl,
               contributed,
               configurations,
-              preRelease,
+              preReleases[coord.key],
             ),
           )
         }

@@ -2,8 +2,11 @@ package com.github.benmanes.gradle.versions
 
 import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
+import com.github.benmanes.gradle.versions.updates.PartialStatus
+import com.github.benmanes.gradle.versions.updates.VersionMapping
 import groovy.json.JsonSlurper
 import groovy.xml.XmlSlurper
+import org.gradle.api.logging.Logging
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
@@ -338,6 +341,21 @@ final class CheckPreReleaseVersionsSpec extends Specification {
   }
 
   @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1169')
+  def 'a step is kept only when newer than the latest version of the merged row'() {
+    when:
+    def versions = new VersionMapping(Logging.getLogger(CheckPreReleaseVersionsSpec),
+      [statusOf('2.0', step), statusOf('3.0', null)])
+
+    then:
+    versions.preReleaseByCurrent.values() as List == kept
+
+    where:
+    step      || kept
+    '2.1-RC1' || []
+    '3.1-RC1' || ['3.1-RC1']
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/1169')
   @Requires({ GradleVersions.rulesRunBeforeAttributeMatching(TestKitRunner.gradleVersion()) })
   def 'the metadata of a pre-release that cannot be the step is not read'() {
     given:
@@ -405,6 +423,11 @@ final class CheckPreReleaseVersionsSpec extends Specification {
       """<metadata><groupId>com.example</groupId><artifactId>milestoned</artifactId><versioning><versions>
         ${versions.collect { "<version>${it}</version>" }.join()}</versions></versioning></metadata>"""
     return new File(testProjectDir.root, repository).toURI()
+  }
+
+  private static PartialStatus statusOf(String latestVersion, String preReleaseVersion) {
+    return new PartialStatus('com.example', 'widget', '1.0', null, latestVersion, null, null,
+      false, [], ':', [], [], false, null, [], false, preReleaseVersion, false, null, null)
   }
 
   private static List<String> preReleaseMetadataReads(String output) {
