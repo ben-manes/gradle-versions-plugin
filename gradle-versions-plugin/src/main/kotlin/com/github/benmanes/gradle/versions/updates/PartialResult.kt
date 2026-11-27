@@ -76,6 +76,12 @@ data class PartialStatus
     val patchVersion: String? = null,
     /** The newest version sharing the major part of the declared one, null on the same terms. */
     val minorVersion: String? = null,
+    /**
+     * The description in the POM of [latestVersion], null where it has none or the partial was
+     * written by an older release. Trails for the same reason as [platformProjects].
+     * https://github.com/ben-manes/gradle-versions-plugin/issues/266
+     */
+    val description: String? = null,
   ) {
     val coordinate: Coordinate
       get() = Coordinate(group, name, declaredVersion, userReason, divergentLatest)
@@ -221,6 +227,56 @@ data class PartialStatus
         splitByLatest,
         constraint,
         platformConstraints,
+      )
+
+    /**
+     * Keeps the `copy` a release shipped callable. The generated one no longer is, now that the
+     * description moved it past twenty parameters.
+     */
+    fun copy(
+      group: String = this.group,
+      name: String = this.name,
+      declaredVersion: String = this.declaredVersion,
+      userReason: String? = this.userReason,
+      latestVersion: String = this.latestVersion,
+      projectUrl: String? = this.projectUrl,
+      unresolved: UnresolvedInfo? = this.unresolved,
+      contributed: Boolean = this.contributed,
+      configurations: List<String> = this.configurations,
+      projectPath: String? = this.projectPath,
+      platformProjects: List<String> = this.platformProjects,
+      constrainedBy: List<String> = this.constrainedBy,
+      splitByLatest: Boolean = this.splitByLatest,
+      constraint: ConstraintInfo? = this.constraint,
+      platformConstraints: List<ConstraintInfo> = this.platformConstraints,
+      onScriptClasspath: Boolean = this.onScriptClasspath,
+      preReleaseVersion: String? = this.preReleaseVersion,
+      embeddedKotlin: Boolean = this.embeddedKotlin,
+      patchVersion: String? = this.patchVersion,
+      minorVersion: String? = this.minorVersion,
+    ): PartialStatus =
+      copy(
+        group,
+        name,
+        declaredVersion,
+        userReason,
+        latestVersion,
+        projectUrl,
+        unresolved,
+        contributed,
+        configurations,
+        projectPath,
+        platformProjects,
+        constrainedBy,
+        splitByLatest,
+        constraint,
+        platformConstraints,
+        onScriptClasspath,
+        preReleaseVersion,
+        embeddedKotlin,
+        patchVersion,
+        minorVersion,
+        description,
       )
   }
 

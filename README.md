@@ -1588,6 +1588,11 @@ Gradle release-candidate updates:
 
 Alternatively, the report may be output to a structured file.
 
+The JSON and XML reports also include a dependency's `description` where the
+POM of its latest version has one, on a single line. A description inherited
+from a parent POM is left out, as it describes the parent rather than the
+dependency.
+
 <details>
 <summary>JSON report</summary>
 
@@ -2729,6 +2734,22 @@ build is on and work upward. Each section migrates to the version covered by
 the section above it, and the topmost migrates to the current release.
 *Important*s are must-dos, *Tip*s are actions you should or may want to take,
 and *Note*s are things worth knowing that need no action.
+
+### v0.67.0
+
+In v0.68.0, the JSON and XML reports include each dependency's description:
+
+> [!NOTE]
+> - Each dependency in the JSON and XML reports has a `description` where the
+>   POM of its latest version has one, or of its module for an unresolved
+>   dependency. A description that only a parent POM declares is left out (see
+>   [Report format](#report-format)).
+> - A `description` argument was added to `Dependency`, `DependencyOutdated`,
+>   `DependencyLatest`, and `DependencyUnresolved`. Every constructor arity and
+>   every `copy` the last release shipped is still callable, so Java and Groovy
+>   callers are unaffected. Kotlin code that constructs one of these while
+>   leaving an argument to its default has to be recompiled. A formatter that
+>   only reads the report, as the documented ones do, needs nothing.
 
 ### v0.65.0
 

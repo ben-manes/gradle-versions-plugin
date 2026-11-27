@@ -50,6 +50,13 @@ class VersionMapping(
    * https://github.com/ben-manes/gradle-versions-plugin/issues/844
    */
   internal val projectUrlByCurrent = hashMapOf<Coordinate, String>()
+
+  /**
+   * The description read from the POM of each declared coordinate's latest version, absent where
+   * that POM has none, taken on the same terms as [projectUrlByCurrent].
+   * https://github.com/ben-manes/gradle-versions-plugin/issues/266
+   */
+  internal val descriptionByCurrent = hashMapOf<Coordinate, String>()
   private var comparator = makeVersionComparator()
 
   init {
@@ -60,7 +67,13 @@ class VersionMapping(
     val byLatestVersion =
       compareBy(comparator) { status: PartialStatus -> status.latestVersion }
         .thenBy(nullsFirst()) { it.projectUrl?.ifEmpty { null } }
+    // Picked apart from the url, so that a status of the version without a description does not
+    // hide one that has it only because its url sorts later.
+    val byDescribedVersion =
+      compareBy(comparator) { status: PartialStatus -> status.latestVersion }
+        .thenBy(nullsFirst()) { it.description?.ifEmpty { null } }
     val newestByCurrent = hashMapOf<Coordinate, PartialStatus>()
+    val newestDescribedByCurrent = hashMapOf<Coordinate, PartialStatus>()
     for (status in statuses) {
       current.add(status.coordinate)
       if (status.unresolved == null) {
@@ -74,6 +87,10 @@ class VersionMapping(
         if (newest == null || byLatestVersion.compare(newest, status) < 0) {
           newestByCurrent[status.coordinate] = status
         }
+        val described = newestDescribedByCurrent[status.coordinate]
+        if (described == null || byDescribedVersion.compare(described, status) < 0) {
+          newestDescribedByCurrent[status.coordinate] = status
+        }
         keepNewest(preReleaseByCurrent, status.coordinate, status.preReleaseVersion)
         status.patchVersion?.let { patchVotes.getOrPut(status.coordinate) { hashSetOf() }.add(it) }
         status.minorVersion?.let { minorVotes.getOrPut(status.coordinate) { hashSetOf() }.add(it) }
@@ -85,6 +102,9 @@ class VersionMapping(
     keepAgreed(minorVotes, minorByCurrent)
     for ((coordinate, status) in newestByCurrent) {
       status.projectUrl?.ifEmpty { null }?.let { projectUrlByCurrent[coordinate] = it }
+    }
+    for ((coordinate, status) in newestDescribedByCurrent) {
+      status.description?.ifEmpty { null }?.let { descriptionByCurrent[coordinate] = it }
     }
     organize()
   }

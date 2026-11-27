@@ -262,6 +262,7 @@ class XmlReporter(
         appendTextChild(document, element, "project", project)
       }
     }
+    appendTextChild(document, dependencyElement, "description", dependency.description)
     return dependencyElement
   }
 

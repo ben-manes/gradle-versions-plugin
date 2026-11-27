@@ -110,4 +110,20 @@ private class AbsentWhenNullAdapter {
   @FromJson
   @AbsentWhenNull
   fun contributedFromJson(reader: JsonReader): Boolean? = reader.nextBoolean()
+
+  @ToJson
+  fun textToJson(
+    writer: JsonWriter,
+    @AbsentWhenNull text: String?,
+  ) {
+    if (text == null) {
+      writer.absentValue()
+    } else {
+      writer.value(text)
+    }
+  }
+
+  @FromJson
+  @AbsentWhenNull
+  fun textFromJson(reader: JsonReader): String? = reader.nextString()
 }

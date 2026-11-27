@@ -39,6 +39,11 @@ open class Dependency
      * version. Not set for an unresolved dependency, or for one declared without a version.
      */
     @AbsentWhenNull open val declaringProjects: List<String>? = null,
+    /**
+     * The description in the POM of the dependency's latest version, or of its module for an
+     * unresolved dependency. Not set where that POM has none, as a parent's is not taken for it.
+     */
+    @AbsentWhenNull open val description: String? = null,
   ) : Comparable<Dependency> {
     /**
      * The projects are compared last, so that two rows of one declared version with different

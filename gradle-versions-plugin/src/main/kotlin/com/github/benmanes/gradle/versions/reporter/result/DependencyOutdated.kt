@@ -15,6 +15,7 @@ data class DependencyOutdated
     @AbsentWhenNull override val platformProjects: List<String>? = null,
     @AbsentWhenNull override val constrainedBy: List<String>? = null,
     @AbsentWhenNull override val declaringProjects: List<String>? = null,
+    @AbsentWhenNull override val description: String? = null,
   ) : Dependency() {
     /**
      * The available version is compared after everything the base class compares, so that two
@@ -95,5 +96,39 @@ data class DependencyOutdated
         platformProjects,
         constrainedBy,
         declaringProjects,
+      )
+
+    /**
+     * Keeps the `copy` a release shipped callable, as the ones above do, now that the description
+     * was added.
+     */
+    fun copy(
+      group: String? = this.group,
+      name: String? = this.name,
+      version: String? = this.version,
+      projectUrl: String? = this.projectUrl,
+      userReason: String? = this.userReason,
+      available: VersionAvailable = this.available,
+      projects: List<String>? = this.projects,
+      contributed: Boolean? = this.contributed,
+      configurations: List<String>? = this.configurations,
+      platformProjects: List<String>? = this.platformProjects,
+      constrainedBy: List<String>? = this.constrainedBy,
+      declaringProjects: List<String>? = this.declaringProjects,
+    ): DependencyOutdated =
+      copy(
+        group,
+        name,
+        version,
+        projectUrl,
+        userReason,
+        available,
+        projects,
+        contributed,
+        configurations,
+        platformProjects,
+        constrainedBy,
+        declaringProjects,
+        description,
       )
   }
