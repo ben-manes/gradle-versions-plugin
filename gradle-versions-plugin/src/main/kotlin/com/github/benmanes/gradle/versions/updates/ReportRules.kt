@@ -24,6 +24,17 @@ internal fun urlByVersion(statuses: List<PartialStatus>): Map<Triple<String, Str
     .mapValues { (_, urls) -> urls.max() }
 
 /**
+ * Returns the description read for each version in [statuses], by group, name, and version, for
+ * [ReportRules.applyTo], on the same terms as [urlByVersion].
+ * https://github.com/ben-manes/gradle-versions-plugin/issues/266
+ */
+internal fun descriptionByVersion(statuses: List<PartialStatus>): Map<Triple<String, String, String>, String> =
+  statuses
+    .filter { it.unresolved == null && !it.description.isNullOrEmpty() }
+    .groupBy({ Triple(it.group, it.name, it.latestVersion) }, { it.description.orEmpty() })
+    .mapValues { (_, descriptions) -> descriptions.max() }
+
+/**
  * Replays the aggregating build's own component-selection rules over each row's recorded
  * candidates, starting at the row's baked verdict (the first-accept walk's answer) and walking
  * older, never newer. The baked verdict is the ceiling: the revision filter, the
@@ -113,12 +124,17 @@ internal class ReportRules(
    * url with that version rewritten. The urls read are passed in for a report that applies this to
    * more than one list of rows, since the url for a version can be on a row in another list.
    * https://github.com/ben-manes/gradle-versions-plugin/issues/844
+   *
+   * A moved row is given the description read for that version on the same terms, and otherwise
+   * keeps its own. A description seldom names a version, so there is no counterpart to the rewrite.
+   * https://github.com/ben-manes/gradle-versions-plugin/issues/266
    */
   @JvmOverloads
   fun applyTo(
     statuses: List<PartialStatus>,
     candidatesByProjectPath: Map<String, List<String>>,
     urlsRead: Map<Triple<String, String, String>, String> = urlByVersion(statuses),
+    descriptionsRead: Map<Triple<String, String, String>, String> = descriptionByVersion(statuses),
   ): List<PartialStatus> {
     if (!hasRules && !checksPreReleases) {
       return statuses
@@ -130,9 +146,10 @@ internal class ReportRules(
         if (applied.unresolved != null || applied.latestVersion == status.latestVersion) {
           applied
         } else {
-          val urlRead = urlsRead[Triple(status.group, status.name, applied.latestVersion)]
+          val moved = Triple(status.group, status.name, applied.latestVersion)
           applied.copy(
-            projectUrl = urlRead ?: status.projectUrl?.let { rewriteVersion(it, status.latestVersion, applied.latestVersion) },
+            projectUrl = urlsRead[moved] ?: status.projectUrl?.let { rewriteVersion(it, status.latestVersion, applied.latestVersion) },
+            description = descriptionsRead[moved] ?: status.description,
           )
         }
       }

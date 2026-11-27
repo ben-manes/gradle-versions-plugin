@@ -242,6 +242,34 @@ final class PartialResultSpec extends Specification {
     !decoded.statuses[0].embeddedKotlin
   }
 
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/266')
+  def 'The description survives the round trip'() {
+    given:
+    def result = PartialResult.fromJson(
+      '{"formatVersion":3,"projectPath":":","statuses":[{"group":"com.google.guava","name":"guava",' +
+        '"declaredVersion":"1.0","latestVersion":"2.0","description":"Guava"}],"buildscriptStatuses":[]}')
+
+    when:
+    def decoded = PartialResult.fromJson(result.toJson())
+
+    then:
+    decoded == result
+    decoded.statuses[0].description == 'Guava'
+  }
+
+  @Issue('https://github.com/ben-manes/gradle-versions-plugin/issues/266')
+  def 'A partial from before the description reads as having none'() {
+    given:
+    def json = '{"formatVersion":3,"projectPath":":","statuses":[{"group":"com.google.guava",' +
+      '"name":"guava","declaredVersion":"1.0","latestVersion":"2.0"}],"buildscriptStatuses":[]}'
+
+    when:
+    def decoded = PartialResult.fromJson(json)
+
+    then:
+    decoded.statuses[0].description == null
+  }
+
   def 'The embedded Kotlin marks survive the round trip'() {
     given:
     def result = PartialResult.fromJson(

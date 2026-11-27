@@ -106,6 +106,15 @@ class DependencyUpdatesReporter(
    */
   internal var projectUrlByCurrent: Map<Coordinate, String>? = null
 
+  /**
+   * The POM description of each row's latest version, absent where none is known.
+   * https://github.com/ben-manes/gradle-versions-plugin/issues/266
+   */
+  internal var descriptionByCurrent: Map<Coordinate, String> = emptyMap()
+
+  /** The POM description of each module, which an unresolved row is reported with, as [projectUrls] is. */
+  internal var descriptions: Map<Map<String, String>, String> = emptyMap()
+
   /** Creates the Problems API reporter, set by the task, as the `problems` formatter needs one. */
   internal var objects: ObjectFactory? = null
 
@@ -399,6 +408,7 @@ class DependencyUpdatesReporter(
       platformProjects = platformProjectsByCoordinate[coordinate],
       constrainedBy = constrainedByCoordinate[coordinate],
       declaringProjects = declaringProjectsByCoordinate[coordinate],
+      description = descriptionByCurrent[coordinate],
     )
 
   private fun buildExceededDependency(
@@ -418,6 +428,7 @@ class DependencyUpdatesReporter(
       platformProjects = platformProjectsByCoordinate[coordinate],
       constrainedBy = constrainedByCoordinate[coordinate],
       declaringProjects = declaringProjectsByCoordinate[coordinate],
+      description = descriptionByCurrent[coordinate],
     )
 
   /** Returns true when the coordinate was only contributed by a plugin, otherwise null. */
@@ -448,6 +459,7 @@ class DependencyUpdatesReporter(
       configurations = configurationsByCoordinate[declared],
       platformProjects = platformProjectsByCoordinate[declared],
       constrainedBy = constrainedByCoordinate[declared],
+      description = descriptions[keyOf(info)],
     )
   }
 
@@ -506,6 +518,7 @@ class DependencyUpdatesReporter(
       platformProjects = platformProjectsByCoordinate[coordinate],
       constrainedBy = constrainedByCoordinate[coordinate],
       declaringProjects = declaringProjectsByCoordinate[coordinate],
+      description = descriptionByCurrent[coordinate],
     )
   }
 
@@ -639,6 +652,8 @@ fun reporterFor(
     it.minorByCurrent = versions.minorByCurrent
     it.declaringProjectsByCoordinate = declaringProjects(split)
     it.projectUrlByCurrent = versions.projectUrlByCurrent
+    it.descriptionByCurrent = versions.descriptionByCurrent
+    it.descriptions = newestOfModules(split) { status -> status.description }
   }
 }
 
@@ -647,14 +662,24 @@ fun reporterFor(
  * newest version among its statuses so that the url does not depend on the order they arrive in.
  * https://github.com/ben-manes/gradle-versions-plugin/issues/844
  */
-private fun projectUrlsOf(statuses: List<PartialStatus>): Map<Map<String, String>, String> {
+private fun projectUrlsOf(statuses: List<PartialStatus>): Map<Map<String, String>, String> =
+  newestOfModules(statuses) { status -> status.projectUrl }
+
+/**
+ * Returns the value of each module read from the newest version among the statuses that have one,
+ * ties broken by the value, so that it does not depend on the order the statuses arrive in.
+ */
+private fun newestOfModules(
+  statuses: List<PartialStatus>,
+  valueOf: (PartialStatus) -> String?,
+): Map<Map<String, String>, String> {
   val byLatestVersion =
     compareBy(VersionMapping.versionComparator()) { status: PartialStatus -> status.latestVersion }
-      .thenBy { it.projectUrl }
+      .thenBy { valueOf(it) }
   return statuses
-    .filter { !it.projectUrl.isNullOrEmpty() }
+    .filter { !valueOf(it).isNullOrEmpty() }
     .groupBy { mapOf("group" to it.group, "name" to it.name) }
-    .mapValues { (_, statusesOfKey) -> statusesOfKey.maxWith(byLatestVersion).projectUrl.toString() }
+    .mapValues { (_, statusesOfKey) -> valueOf(statusesOfKey.maxWith(byLatestVersion)).toString() }
 }
 
 /** Returns the coordinates that only lazy actions contributed, with no project declaring them. */

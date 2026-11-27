@@ -21,6 +21,13 @@ class DependencyStatus {
   /** The newest candidate left out by the pre-release check, null when none was left out. */
   val preReleaseVersion: String?
 
+  /**
+   * The description in the POM of the latest version, null where it has none. Set after construction,
+   * as the tier versions are, so that the constructors keep their signatures.
+   */
+  var description: String? = null
+    internal set
+
   /** The latest version sharing the major and minor parts of the declared one, null where none is later. */
   internal var patchVersion: String? = null
     private set
@@ -119,6 +126,7 @@ class DependencyStatus {
       preReleaseVersion = preReleaseVersion,
       patchVersion = patchVersion,
       minorVersion = minorVersion,
+      description = description,
     )
   }
 

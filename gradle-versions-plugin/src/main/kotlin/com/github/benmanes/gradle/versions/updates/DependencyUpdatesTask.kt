@@ -614,9 +614,10 @@ open class DependencyUpdatesTask : DefaultTask() { // tasks can't be final
     val reportsEmbeddedKotlin = checkEmbeddedKotlin
     val reported = { status: PartialStatus -> reportsEmbeddedKotlin || !status.embeddedKotlin }
     val urlsRead = urlByVersion(projectRows + buildscriptRows)
+    val descriptionsRead = descriptionByVersion(projectRows + buildscriptRows)
     val statuses =
-      mergeStatuses(reportRules.applyTo(projectRows.filter(reported), candidatesByProjectPath, urlsRead)) +
-        mergeStatuses(reportRules.applyTo(buildscriptRows.filter(reported), candidatesByProjectPath, urlsRead))
+      mergeStatuses(reportRules.applyTo(projectRows.filter(reported), candidatesByProjectPath, urlsRead, descriptionsRead)) +
+        mergeStatuses(reportRules.applyTo(buildscriptRows.filter(reported), candidatesByProjectPath, urlsRead, descriptionsRead))
     // Counted by row rather than by status, as one project observes a module through each
     // configuration that reaches it, and a row still printed for another project is not counted.
     val printed = statuses.mapTo(HashSet()) { Triple(it.group, it.name, it.declaredVersion) }

@@ -316,7 +316,7 @@ class Resolver internal constructor(
               contributed,
               configurations,
               preReleases[coord.key],
-            ),
+            ).also { it.description = getDescription(moduleVersion) },
           )
         }
         is UnresolvedDependencyResult -> {
@@ -1232,7 +1232,16 @@ class Resolver internal constructor(
     }
   }
 
-  private fun getProjectUrl(id: ModuleVersionIdentifier): String? {
+  private fun getProjectUrl(id: ModuleVersionIdentifier): String? = pomOf(id)?.url
+
+  /**
+   * Returns the description in the module's own POM. Unlike the url, it is not taken from a parent,
+   * since a parent's description is that of the parent rather than of the module.
+   * https://github.com/ben-manes/gradle-versions-plugin/issues/266
+   */
+  private fun getDescription(id: ModuleVersionIdentifier): String? = pomOf(id)?.description
+
+  private fun pomOf(id: ModuleVersionIdentifier): ProjectUrl? {
     if (project.gradle.startParameter.isOffline) {
       return null
     }
@@ -1244,13 +1253,17 @@ class Resolver internal constructor(
     synchronized(projectUrl) {
       if (!projectUrl.resolved) {
         projectUrl.resolved = true
-        projectUrl.url = resolveProjectUrl(id)
+        projectUrl.url = resolveProjectUrl(id, projectUrl)
       }
-      return projectUrl.url
+      return projectUrl
     }
   }
 
-  private fun resolveProjectUrl(id: ModuleVersionIdentifier): String? {
+  /** Returns the url read from the module's POM or a parent's, recording its description in [read]. */
+  private fun resolveProjectUrl(
+    id: ModuleVersionIdentifier,
+    read: ProjectUrl,
+  ): String? {
     return try {
       // https://github.com/ben-manes/gradle-versions-plugin/issues/1095
       // An ArtifactResolutionQuery cannot be exempted from dependency verification, as there is
@@ -1283,6 +1296,7 @@ class Resolver internal constructor(
       for (artifact in artifacts) {
         val file = artifact.file
         project.logger.info("Pom file for $id is $file")
+        read.description = getDescriptionFromPom(file, id)
         var url = interpolate(getUrlFromPom(file), id)
         if (!url.isNullOrEmpty()) {
           project.logger.info("Found url for $id: $url")
@@ -1351,6 +1365,7 @@ class Resolver internal constructor(
   companion object {
     private val PROJECT_PROPERTY = Regex("""\$\{project\.(groupId|artifactId|version)}""")
     private val ABSOLUTE_URL = Regex("""^[a-zA-Z][a-zA-Z0-9+.-]*://""")
+    private val WHITESPACE = Regex("""\s+""")
     private val DESUGARED_CATEGORY = Attribute.of(Category.CATEGORY_ATTRIBUTE.name, String::class.java)
 
     /**
@@ -1411,6 +1426,30 @@ class Resolver internal constructor(
         ?: ((pom.getProperty("scm") as NodeChildren?)?.getProperty("url") as NodeChildren?)?.text()
     }
 
+    /**
+     * Returns the POM's description on one line, with the project properties resolved, or null where
+     * it has none or names a property that cannot be resolved from the coordinates.
+     */
+    private fun getDescriptionFromPom(
+      file: File,
+      id: ModuleVersionIdentifier,
+    ): String? {
+      val pom = XmlSlurper(false, false).parse(file)
+      val description = (pom.getProperty("description") as NodeChildren?)?.text() ?: return null
+      val resolved = PROJECT_PROPERTY.replace(description) { match -> propertyOf(match, id) }
+      return WHITESPACE.replace(resolved, " ").trim().takeIf { it.isNotEmpty() && !it.contains("\${") }
+    }
+
+    private fun propertyOf(
+      match: MatchResult,
+      id: ModuleVersionIdentifier,
+    ): String =
+      when (match.groupValues[1]) {
+        "groupId" -> id.group
+        "artifactId" -> id.name
+        else -> id.version
+      }
+
     /** Returns the url with the project properties resolved, or null if it is not usable as one. */
     private fun interpolate(
       url: String?,
@@ -1419,14 +1458,7 @@ class Resolver internal constructor(
       if (url == null || !url.contains("\${")) {
         return url
       }
-      val resolved =
-        PROJECT_PROPERTY.replace(url) { match ->
-          when (match.groupValues[1]) {
-            "groupId" -> id.group
-            "artifactId" -> id.name
-            else -> id.version
-          }
-        }
+      val resolved = PROJECT_PROPERTY.replace(url) { match -> propertyOf(match, id) }
       return resolved.takeIf { !it.contains("\${") && ABSOLUTE_URL.containsMatchIn(it) }
     }
 
@@ -1447,6 +1479,9 @@ class Resolver internal constructor(
     class ProjectUrl {
       var resolved: Boolean = false
       var url: String? = null
+
+      /** The description in the module's own POM, null where it has none. */
+      var description: String? = null
     }
   }
 }
